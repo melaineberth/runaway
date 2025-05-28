@@ -661,6 +661,32 @@ class _HomeScreenState extends State<HomeScreen> {
                     styleUri: mapStyleState.style.style,
                   ),
                 ),
+                if (!isTrackingUser) 
+                Positioned(
+                  top: MediaQuery.of(context).size.height - kToolbarHeight * 3,
+                  child: GestureDetector(
+                    onTap: () {
+                       
+                    },
+                    child: Container(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 15,
+                        vertical: 8,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.5),
+                        borderRadius: BorderRadius.circular(100)
+                      ),
+                      child: Text(
+                        "Pointer ici",
+                        style: context.bodySmall?.copyWith(
+                          fontSize: 15,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
                 SizedBox(
                   width: MediaQuery.of(context).size.width,
                   height: MediaQuery.of(context).size.height - kToolbarHeight,
