@@ -55,7 +55,7 @@ ThemeData getAppTheme(Brightness brightness) {
       foregroundColor: isDark ? AppColorsDark.textPrimary : AppColors.textPrimary,
       elevation: 0,
     ),
-    cardTheme: CardTheme(
+    cardTheme: CardThemeData(
       color: isDark ? AppColorsDark.surface : AppColors.surface,
       elevation: 2,
       shape: const RoundedRectangleBorder(

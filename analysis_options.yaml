@@ -10,6 +10,7 @@
 analyzer:
   errors:
     constant_identifier_names: ignore
+    constant_pattern_never_matches_value_type: ignore
 include: package:flutter_lints/flutter.yaml
 
 linter:

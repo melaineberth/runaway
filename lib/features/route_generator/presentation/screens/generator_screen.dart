@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:hugeicons/hugeicons.dart';
+import 'package:progressive_blur/progressive_blur.dart';
 import 'package:runaway/config/colors.dart';
 import 'package:runaway/config/extensions.dart';
 import 'package:runaway/core/widgets/icon_btn.dart';
@@ -91,25 +92,14 @@ class _GeneratorScreenState extends State<GeneratorScreen> with SingleTickerProv
     
               // Content
               Expanded(
-                child: SoftEdgeBlur(
-                  edges: [
-                    EdgeBlur(
-                      type: EdgeType.bottomEdge,
-                      size: 150,
-                      sigma: 20,
-                      tintColor: Colors.white.withValues(alpha: 0.8),
-                      controlPoints: [
-                        ControlPoint(
-                          position: 0.7,
-                          type: ControlPointType.visible,
-                        ),
-                        ControlPoint(
-                          position: 1,
-                          type: ControlPointType.transparent,
-                        )
-                      ],
-                    )
-                  ],
+                child: ProgressiveBlurWidget(
+                  sigma: 50.0,
+                  linearGradientBlur: const LinearGradientBlur(
+                    values: [0, 1], // 0 - no blur, 1 - full blur
+                    stops: [0.5, 0.9],
+                    start: Alignment.center,
+                    end: Alignment.bottomCenter,
+                  ),
                   child: TabBarView(
                     controller: _tabController,
                     children: [

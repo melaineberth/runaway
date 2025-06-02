@@ -1,12 +1,17 @@
 import 'dart:async';
+import 'dart:convert';
+import 'dart:io';
 import 'dart:math' as math;
+import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart' as mp;
 import 'package:hugeicons/hugeicons.dart';
 import 'package:geolocator/geolocator.dart' as gl;
+import 'package:path_provider/path_provider.dart';
 import 'package:runaway/config/extensions.dart';
+import 'package:runaway/core/widgets/loading_overlay.dart';
 import 'package:runaway/features/home/presentation/screens/maps_styles_screen.dart';
 import 'package:share_plus/share_plus.dart';
 
@@ -32,7 +37,6 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {  
-  final _geoJsonService = GeoJsonService();
   mp.MapboxMap? mapboxMap;
   StreamSubscription? userPositionStream;
   mp.PointAnnotationManager? pointAnnotationManager;
@@ -42,6 +46,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
   mp.CircleAnnotationManager? markerCircleManager;
   List<mp.CircleAnnotation> locationMarkers = [];
+
+  bool isGenerateEnabled = false;
   
   // Position utilisateur
   double? userLongitude;
@@ -56,10 +62,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
   // État du suivi en temps réel
   bool isTrackingUser = true;
-
-  // Variables pour stocker les POIs sans les afficher
-  List<Map<String, dynamic>> _cachedPois = [];
-  bool _poisLoaded = false;
 
   mp.PolylineAnnotationManager? polylineManager;
   mp.PolylineAnnotation? currentRoutePolyline;
@@ -418,222 +420,389 @@ class _HomeScreenState extends State<HomeScreen> {
   }
   
   void _handleRouteGeneration() async {
-    OverlayEntry? loadingOverlay;
+    setState(() {
+      isGenerateEnabled = true;
+    });
     
     try {
-      // Créer l'overlay de chargement
-      loadingOverlay = OverlayEntry(
-        builder: (context) => Container(
-          color: Colors.black54,
-          child: Center(
-            child: Container(
-              padding: EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  CircularProgressIndicator(),
-                  16.h,
-                  Text(
-                    'Analyse de la zone...',
-                    style: context.bodySmall,
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
+      // Utiliser le service optimisé
+      final optimizedService = GeoJsonService();
+            
+      // Générer le réseau optimisé
+      final networkFile = await optimizedService.generateOptimizedNetworkGeoJson(
+        currentLatitude ?? userLatitude ?? 0.0,
+        currentLongitude ?? userLongitude ?? 0.0,
+        defaultRadius,
       );
-      
-      // Afficher l'overlay
-      Overlay.of(context).insert(loadingOverlay);
 
-      await _onGenerateGeoJson();
-
-      // Récupérer les POIs essentiels
-      final pois = await OverpassPoiService.fetchPoisInRadius(
+      // Récupérer les POIs en parallèle (plus rapide)
+      final poisFuture = OverpassPoiService.fetchPoisInRadius(
         latitude: currentLatitude ?? userLatitude ?? 0.0,
         longitude: currentLongitude ?? userLongitude ?? 0.0,
         radiusInMeters: defaultRadius,
       );
 
-      // Stocker les POIs pour la génération de parcours
-      _cachedPois = pois;
-      _poisLoaded = true;
+      final pois = await poisFuture;
+      final poisFile = await _savePoisToGeoJson(pois);
 
-      // Supprimer l'overlay
-      loadingOverlay.remove();
-      loadingOverlay = null;
+      // Analyser le réseau généré
+      final networkStats = await _analyzeNetworkFile(networkFile);
 
       if (!mounted) return;
 
-      if (pois.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Row(
-              children: [
-                HugeIcon(
-                  icon: HugeIcons.strokeRoundedAlert02,
-                  color: Colors.white,
-                  size: 24,
-                ),
-                12.w,
-                Text('Zone peu adaptée aux parcours'),
-              ],
-            ),
-            backgroundColor: Colors.orange,
-            behavior: SnackBarBehavior.floating,
-            margin: EdgeInsets.all(16),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-          ),
-        );
-        return;
-      }
+      // Afficher les résultats optimisés
+      _showOptimizedResults(networkFile, poisFile, pois, networkStats);
 
-      // Afficher un résumé simple sans afficher les POIs
-      final parksCount = pois.where((p) => p['type'] == 'Parc').length;
-      final waterCount = pois.where((p) => p['type'] == 'Point d\'eau').length;
+      setState(() {
+        isGenerateEnabled = false;
+      });
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Row(
-            children: [
-              HugeIcon(
+    } catch (e) {      
+      print('❌ Erreur : $e');
+      
+      if (!mounted) return;
+
+      setState(() {
+        isGenerateEnabled = false;
+      });
+      
+      _showErrorSnackBar('Erreur lors de la génération du réseau');
+    }
+  }
+
+  Future<Map<String, dynamic>> _analyzeNetworkFile(File networkFile) async {
+    try {
+      final jsonString = await networkFile.readAsString();
+      final data = json.decode(jsonString);
+      return data['metadata']['statistics'] ?? {};
+    } catch (e) {
+      return {};
+    }
+  }
+
+  Future<File> _savePoisToGeoJson(List<Map<String, dynamic>> pois) async {
+    final poisGeoJson = {
+      'type': 'FeatureCollection',
+      'metadata': {
+        'generated_at': DateTime.now().toIso8601String(),
+        'generator': 'RunAway App - POIs',
+        'total_features': pois.length,
+      },
+      'features': pois.map((poi) => {
+        'type': 'Feature',
+        'properties': {
+          'id': poi['id'],
+          'name': poi['name'],
+          'type': poi['type'],
+          'distance_from_center': poi['distance']?.round(),
+          'amenity': poi['tags']?['amenity'],
+          'leisure': poi['tags']?['leisure'],
+          'natural': poi['tags']?['natural'],
+          'tourism': poi['tags']?['tourism'],
+        },
+        'geometry': {
+          'type': 'Point',
+          'coordinates': poi['coordinates'],
+        }
+      }).toList(),
+    };
+
+    final dir = await getApplicationDocumentsDirectory();
+    final timestamp = DateTime.now().millisecondsSinceEpoch;
+    final file = File('${dir.path}/route_pois_$timestamp.geojson');
+    
+    final jsonString = JsonEncoder.withIndent('  ').convert(poisGeoJson);
+    await file.writeAsString(jsonString);
+    
+    return file;
+  }
+
+  void _showOptimizedResults(
+    File networkFile, 
+    File poisFile, 
+    List<Map<String, dynamic>> pois,
+    Map<String, dynamic> networkStats) {
+  
+    final parksCount = pois.where((p) => p['type'] == 'Parc').length;
+    final waterCount = pois.where((p) => p['type'] == 'Point d\'eau').length;
+    
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            Container(
+              padding: EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.green.withAlpha(30),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: HugeIcon(
                 icon: HugeIcons.strokeRoundedCheckmarkCircle02,
-                color: Colors.white,
+                color: Colors.green,
                 size: 24,
               ),
-              12.w,
-              Expanded(
+            ),
+            12.w,
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Réseau optimisé !', style: context.titleMedium),
+                  Text(
+                    'Prêt pour génération de parcours',
+                    style: context.bodySmall?.copyWith(
+                      fontSize: 14,
+                      color: Colors.grey.shade600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Statistiques du réseau
+              _buildStatsCard('Réseau de chemins', [
+                '📏 ${networkStats['total_length_km'] ?? 'N/A'} km total',
+                '🛤️ ${networkStats['total_features'] ?? 'N/A'} segments',
+                '🏃‍♂️ ${networkStats['running_segments'] ?? 'N/A'} adaptés course',
+                '🚴‍♂️ ${networkStats['cycling_segments'] ?? 'N/A'} adaptés vélo',
+                '⭐ Score qualité: ${networkStats['average_quality_score'] ?? 'N/A'}/20',
+              ]),
+              
+              16.h,
+              
+              // Statistiques des POIs
+              _buildStatsCard('Points d\'intérêt', [
+                if (parksCount > 0) '🌳 $parksCount parc${parksCount > 1 ? "s" : ""}',
+                if (waterCount > 0) '💧 $waterCount point${waterCount > 1 ? "s" : ""} d\'eau',
+                '📍 ${pois.length} POIs au total',
+                if (pois.isEmpty) '⚠️ Zone peu fournie en POIs',
+              ]),
+              
+              16.h,
+              
+              // Fichiers créés
+              Container(
+                padding: EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade50,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.grey.shade200),
+                ),
                 child: Column(
-                  mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      'Zone analysée!',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    if (parksCount > 0 || waterCount > 0)
-                      Text(
-                        '${parksCount > 0 ? "$parksCount parc${parksCount > 1 ? "s" : ""}" : ""}'
-                        '${parksCount > 0 && waterCount > 0 ? ", " : ""}'
-                        '${waterCount > 0 ? "$waterCount point${waterCount > 1 ? "s" : ""} d\'eau" : ""}',
-                        style: TextStyle(
-                          color: Colors.white.withAlpha(220),
-                          fontSize: 14,
-                        ),
-                      ),
+                    Text('📁 Fichiers générés:', 
+                        style: context.bodySmall?.copyWith(fontWeight: FontWeight.w600)),
+                    4.h,
+                    Text('• ${networkFile.path.split('/').last}', 
+                        style: context.bodySmall?.copyWith(fontSize: 12)),
+                    Text('• ${poisFile.path.split('/').last}', 
+                        style: context.bodySmall?.copyWith(fontSize: 12)),
                   ],
                 ),
               ),
             ],
           ),
-          backgroundColor: Colors.green,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-          margin: EdgeInsets.all(16),
-          duration: Duration(seconds: 3),
-          action: SnackBarAction(
-            label: 'Générer',
-            textColor: Colors.white,
-            onPressed: () {
-              _generateRouteWithPois();
-            },
-          ),
         ),
-      );
-
-    } catch (e) {
-      // Supprimer l'overlay en cas d'erreur
-      loadingOverlay?.remove();
-      
-      print('❌ Erreur : $e');
-      
-      if (!mounted) return;
-      
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Row(
-            children: [
-              HugeIcon(
-                icon: HugeIcons.strokeRoundedAlert02,
-                color: Colors.white,
-                size: 24,
-              ),
-              12.w,
-              Expanded(
-                child: Text(
-                  'Erreur lors de l\'analyse',
-                  style: TextStyle(color: Colors.white),
-                ),
-              ),
-            ],
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text('Fermer'),
           ),
-          backgroundColor: Colors.red,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-          margin: EdgeInsets.all(16),
-        ),
-      );
-    }
+          if (networkStats['total_features'] != null && 
+              (networkStats['total_features'] as int) > 0) ...[
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                _shareNetworkFiles(networkFile, poisFile);
+              },
+              child: Text('Partager'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                openGenerator(); // Ouvrir directement le générateur
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Theme.of(context).primaryColor,
+                foregroundColor: Colors.white,
+              ),
+              child: Text('Créer un parcours'),
+            ),
+          ],
+        ],
+      ),
+    );
   }
 
-  Future<void> _onGenerateGeoJson() async {
+  Widget _buildStatsCard(String title, List<String> stats) {
+    return Container(
+      padding: EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.blue.shade50,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.blue.shade100),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: context.bodySmall?.copyWith(
+              fontWeight: FontWeight.w600,
+              color: Colors.blue.shade700,
+            ),
+          ),
+          8.h,
+          ...stats.map((stat) => Padding(
+            padding: EdgeInsets.only(bottom: 2),
+            child: Text(
+              stat,
+              style: context.bodySmall?.copyWith(fontSize: 14),
+            ),
+          )).toList(),
+        ],
+      ),
+    );
+  }
+
+  void _showErrorSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            HugeIcon(
+              icon: HugeIcons.strokeRoundedAlert02,
+              color: Colors.white,
+              size: 24,
+            ),
+            12.w,
+            Expanded(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    message,
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  Text(
+                    'Réessayez avec un rayon plus petit',
+                    style: TextStyle(
+                      color: Colors.white.withAlpha(220),
+                      fontSize: 14,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        backgroundColor: Colors.red,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+        margin: EdgeInsets.all(16),
+        duration: Duration(seconds: 4),
+        action: SnackBarAction(
+          label: 'Réduire zone',
+          textColor: Colors.white,
+          onPressed: () {
+            setState(() {
+              defaultRadius = defaultRadius * 0.7; // Réduire de 30%
+            });
+            if (currentLongitude != null && currentLatitude != null) {
+              _updateRadiusCircle(currentLongitude!, currentLatitude!);
+            }
+          },
+        ),
+      ),
+    );
+  }
+
+  void _shareNetworkFiles(File networkFile, File poisFile) async {
     try {
-      final params = context.read<RouteParametersBloc>().state.parameters;
-      final file = await _geoJsonService.generateNetworkGeoJson(
-        params.startLatitude,
-        params.startLongitude,
-        params.searchRadius,
-      );
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('GeoJSON généré: \${file.path}')),
-      );
       final shareParams = ShareParams(
-        text: 'Voici le réseau GeoJSON',
-        files: [XFile('${file.path}/image.jpg')], 
+        text: 'Réseau de chemins et POIs générés par RunAway',
+        files: [
+          XFile(networkFile.path),
+          XFile(poisFile.path),
+        ],
       );
 
-      final result = await SharePlus.instance.share(shareParams);
-
-      if (result.status == ShareResultStatus.success) {
-          print('Thank you for sharing the picture!');
-      }
+      await SharePlus.instance.share(shareParams);
     } catch (e) {
-      print(e);
+      print('Erreur partage: $e');
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erreur génération GeoJSON: $e')),
+        SnackBar(content: Text('Erreur lors du partage: $e')),
       );
     }
   }
 
-  void _generateRouteWithPois() {
-    if (!_poisLoaded || _cachedPois.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Veuillez d\'abord analyser la zone'),
-          backgroundColor: Colors.orange,
-        ),
-      );
-      return;
-    }
+  Future<void> _lockPositionOnScreenCenter() async {
+    if (mapboxMap == null) return;
 
-    print('🚀 Génération du parcours avec ${_cachedPois.length} POIs');
-    
-    // Ouvrir le générateur de paramètres
-    openGenerator();
+    final cam = await mapboxMap!.getCameraState();     // CameraState
+    final mp.Position pos = cam.center.coordinates;    // <-- Position
+
+    final double lon = pos.lng.toDouble();             // getter `lng`
+    final double lat = pos.lat.toDouble();             // getter `lat`
+
+    setState(() {
+      currentLongitude = lon;
+      currentLatitude  = lat;
+    });
+
+    // Supprimer les marqueurs précédents s'ils existent
+    await _clearLocationMarkers();
+
+    // redessiner le cercle
+    await _updateRadiusCircle(lon, lat);
+
+        // Créer un CircleAnnotationManager si pas déjà fait
+    markerCircleManager ??= await mapboxMap!.annotations.createCircleAnnotationManager();
+
+    // Créer un cercle rouge comme marqueur
+    final redMarker = await markerCircleManager!.create(
+      mp.CircleAnnotationOptions(
+        geometry: mp.Point(coordinates: mp.Position(lon, lat)),
+        circleColor: Colors.red.toARGB32(),
+        circleRadius: 12.0,
+        circleStrokeWidth: 3.0,
+        circleStrokeColor: Colors.white.toARGB32(),
+      ),
+    );
+    locationMarkers.add(redMarker);
+
+    // Créer un cercle plus petit au centre pour l'effet de pin
+    final whiteCenter = await markerCircleManager!.create(
+      mp.CircleAnnotationOptions(
+        geometry: mp.Point(coordinates: mp.Position(lon, lat)),
+        circleColor: Colors.white.toARGB32(),
+        circleRadius: 4.0,
+      ),
+    );
+    locationMarkers.add(whiteCenter);
+
+    // Mettre à jour la position dans le BLoC
+    context.read<RouteParametersBloc>().add(
+      StartLocationUpdated(
+        longitude: lon,
+        latitude: lat,
+      ),
+    );
   }
 
   @override
@@ -652,6 +821,7 @@ class _HomeScreenState extends State<HomeScreen> {
             body: Stack(
               alignment: Alignment.center,
               children: [
+                // Carte
                 SizedBox(
                   width: MediaQuery.of(context).size.width,
                   height: MediaQuery.of(context).size.height,
@@ -661,12 +831,14 @@ class _HomeScreenState extends State<HomeScreen> {
                     styleUri: mapStyleState.style.style,
                   ),
                 ),
+
+                // Overlays (boutons, recherche, etc.)
                 if (!isTrackingUser) 
                 Positioned(
                   top: MediaQuery.of(context).size.height - kToolbarHeight * 3,
                   child: GestureDetector(
-                    onTap: () {
-                       
+                    onTap: () async {
+                      await _lockPositionOnScreenCenter();
                     },
                     child: Container(
                       padding: EdgeInsets.symmetric(
@@ -674,7 +846,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         vertical: 8,
                       ),
                       decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.5),
+                        color: Colors.black,
                         borderRadius: BorderRadius.circular(100)
                       ),
                       child: Text(
@@ -739,13 +911,16 @@ class _HomeScreenState extends State<HomeScreen> {
                         20.h,
                         IconBtn(
                           icon: HugeIcons.strokeRoundedAppleIntelligence, 
-                          label: "Créer un parcours",
+                          label: isGenerateEnabled ? "Génération en cours..." : "Créer un parcours",
                           onPressed: () => _handleRouteGeneration(),
                         ),
                       ],
                     ),
                   ),
                 ),            
+              
+                if (isGenerateEnabled)
+                LoadingOverlay(),
               ],
             ),
           ),

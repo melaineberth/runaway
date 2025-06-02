@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:runaway/config/extensions.dart';
+import 'package:runaway/core/widgets/squircle_container.dart';
 import 'package:runaway/features/home/domain/models/maps_styles.dart';
 
 class MapsStylesSelector extends StatelessWidget {
@@ -34,20 +36,21 @@ class MapsStylesSelector extends StatelessWidget {
             ),
           ),
           15.h,
-          Row(
-            children: MapsStyles.values.map((style) {
-              final isSelected = style == selectedStyle;
-              return Expanded(
-                child: Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 4),
-                  child: _MapStyleCard(
-                    styles: style,
-                    isSelected: isSelected,
-                    onTap: () => onStyleSelected(style),
-                  ),
-                ),
+          AlignedGridView.count(
+            padding: EdgeInsets.zero,
+            shrinkWrap: true,
+            itemCount: MapsStyles.values.length,
+            crossAxisCount: 2,
+            mainAxisSpacing: 10,
+            crossAxisSpacing: 10,
+            itemBuilder: (context, index) {
+              final isSelected = MapsStyles.values[index] == selectedStyle;
+              return _MapStyleCard(
+                styles: MapsStyles.values[index],
+                isSelected: isSelected,
+                onTap: () => onStyleSelected(MapsStyles.values[index]),
               );
-            }).toList(),
+            },
           ),
         ],
       ),
@@ -70,45 +73,41 @@ class _MapStyleCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
-      child: AnimatedContainer(
-        duration: Duration(milliseconds: 200),
-        height: 120,
-        decoration: BoxDecoration(
-          color: isSelected 
-              ? Theme.of(context).primaryColor 
-              : Colors.grey.shade200,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
+      child: SquircleContainer(
+        child: AnimatedContainer(
+          curve: Curves.easeInOut,
+          duration: Duration(milliseconds: 200),
+          height: 120,
+          decoration: BoxDecoration(
             color: isSelected 
                 ? Theme.of(context).primaryColor 
-                : Colors.transparent,
-            width: 2,
-          ),
-          boxShadow: isSelected ? [
-            BoxShadow(
-              color: Theme.of(context).primaryColor.withAlpha(40),
-              blurRadius: 12,
-              offset: Offset(0, 4),
-            ),
-          ] : [],
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            HugeIcon(
-              icon: styles.icon,
-              size: 30,
-              color: isSelected ? Colors.white : Colors.grey.shade700,
-            ),
-            5.h,
-            Text(
-              styles.title,
-              style: context.bodySmall?.copyWith(
-                color: isSelected ? Colors.white : Colors.grey.shade700,
-                fontWeight: FontWeight.w600,
+                : Colors.grey.shade200,
+            boxShadow: isSelected ? [
+              BoxShadow(
+                color: Theme.of(context).primaryColor.withAlpha(40),
+                blurRadius: 12,
+                offset: Offset(0, 4),
               ),
-            ),
-          ],
+            ] : [],
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              HugeIcon(
+                icon: styles.icon,
+                size: 30,
+                color: isSelected ? Colors.white : Colors.grey.shade700,
+              ),
+              5.h,
+              Text(
+                styles.title,
+                style: context.bodySmall?.copyWith(
+                  color: isSelected ? Colors.white : Colors.grey.shade700,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
