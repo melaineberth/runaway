@@ -20,7 +20,9 @@ class ActivitySelector extends StatelessWidget {
       children: [
         Text(
           'Type d\'activité',
-          style: context.bodySmall,
+          style: context.bodySmall?.copyWith(
+            color: Colors.white,
+          ),
         ),
         15.h,
         Row(
@@ -58,45 +60,45 @@ class _ActivityCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
-      child: AnimatedContainer(
-        duration: Duration(milliseconds: 200),
-        height: 120,
-        decoration: BoxDecoration(
-          color: isSelected 
-              ? Theme.of(context).primaryColor 
-              : Colors.grey.shade200,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
+      child: ClipPath(
+        clipper: ShapeBorderClipper(
+          shape: ContinuousRectangleBorder(
+            borderRadius: BorderRadius.all(Radius.circular(60)),
+          ),
+        ),
+        child: AnimatedContainer(
+          duration: Duration(milliseconds: 200),
+          height: 120,
+          decoration: BoxDecoration(
             color: isSelected 
                 ? Theme.of(context).primaryColor 
-                : Colors.transparent,
-            width: 2,
-          ),
-          boxShadow: isSelected ? [
-            BoxShadow(
-              color: Theme.of(context).primaryColor.withAlpha(40),
-              blurRadius: 12,
-              offset: Offset(0, 4),
-            ),
-          ] : [],
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            HugeIcon(
-              icon: activity.icon,
-              size: 50,
-              color: isSelected ? Colors.white : Colors.grey.shade700,
-            ),
-            5.h,
-            Text(
-              activity.title,
-              style: context.bodySmall?.copyWith(
-                color: isSelected ? Colors.white : Colors.grey.shade700,
-                fontWeight: FontWeight.w600,
+                : Colors.white12,
+            boxShadow: isSelected ? [
+              BoxShadow(
+                color: Theme.of(context).primaryColor.withAlpha(40),
+                blurRadius: 12,
+                offset: Offset(0, 4),
               ),
-            ),
-          ],
+            ] : [],
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              HugeIcon(
+                icon: activity.icon,
+                size: 50,
+                color: isSelected ? Colors.black : Colors.white24,
+              ),
+              5.h,
+              Text(
+                activity.title,
+                style: context.bodySmall?.copyWith(
+                  color: isSelected ? Colors.black : Colors.white24,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

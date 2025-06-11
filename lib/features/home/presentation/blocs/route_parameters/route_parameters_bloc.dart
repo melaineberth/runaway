@@ -113,12 +113,7 @@ class RouteParametersBloc extends HydratedBloc<RouteParametersEvent, RouteParame
       ));
       return;
     }
-
-    double newRadius = state.parameters.searchRadius;
-    if (newRadius < km * 500) {
-      newRadius = km * 1000;
-    }
-
+    
     final ratio = km / state.parameters.distanceKm;
     final newElevation = state.parameters.elevationGain * ratio;
 
@@ -126,7 +121,6 @@ class RouteParametersBloc extends HydratedBloc<RouteParametersEvent, RouteParame
       emit,
       state.parameters.copyWith(
         distanceKm: km,
-        searchRadius: newRadius,
         elevationGain: newElevation,
       ),
     );

@@ -1,0 +1,217 @@
+import 'package:flutter/material.dart';
+import 'package:hugeicons/hugeicons.dart';
+import 'package:runaway/config/extensions.dart';
+import 'package:runaway/core/widgets/icon_btn.dart';
+import 'package:runaway/core/widgets/squircle_container.dart';
+
+/// Widget pour afficher les informations de la route générée
+class RouteInfoCard extends StatelessWidget {
+  final double distance;
+  final bool isLoop;
+  final int waypointCount;
+  final VoidCallback onClear;
+  final VoidCallback onNavigate;
+  final VoidCallback onShare;
+
+  const RouteInfoCard({
+    super.key,
+    required this.distance,
+    required this.isLoop,
+    required this.waypointCount,
+    required this.onClear,
+    required this.onNavigate,
+    required this.onShare,
+  });
+
+  static const _innerRadius = 35.0;
+  static const _padding = 15.0;
+
+  @override
+  Widget build(BuildContext context) {
+    return SquircleContainer(
+      padding: EdgeInsets.all(_padding),
+      color: Colors.white,
+      radius: _innerRadius.outerRadius(_padding),
+      boxShadow: [
+        BoxShadow(
+          color: Colors.black.withValues(alpha: 0.18),
+          spreadRadius: 2,
+          blurRadius: 30,
+          offset: Offset(0, 0), // changes position of shadow
+        ),
+      ],
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // En-tête avec infos principales
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              IconBtn(
+                icon: HugeIcons.solidRoundedRouteBlock,
+                iconColor: Theme.of(context).primaryColor,
+                iconSize: 30,
+                radius: 12,
+                backgroundColor: Theme.of(context).primaryColor.withAlpha(30),
+              ),
+              12.w,
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Parcours généré',
+                      style: context.bodySmall,
+                    ),
+                    4.h,
+                    Row(
+                      children: [
+                        _InfoChip(
+                          icon: HugeIcons.solidRoundedWorkoutRun,
+                          label: '${distance.toStringAsFixed(1)} km',
+                        ),
+                        8.w,
+                        _InfoChip(
+                          icon: isLoop 
+                              ? HugeIcons.solidRoundedArrowReloadHorizontal 
+                              : HugeIcons.strokeRoundedArrowRight01,
+                          label: isLoop ? 'Boucle' : 'Aller',
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              // Bouton fermer
+              IconButton(
+                onPressed: onClear,
+                icon: HugeIcon(
+                  icon: HugeIcons.solidRoundedCancelCircle,
+                  color: Colors.grey.shade600,
+                  size: 24,
+                ),
+              ),
+            ],
+          ),
+          
+          16.h,
+          
+          // Boutons d'action
+          Row(
+            children: [
+              Expanded(
+                child: _ActionButton(
+                  radius: _innerRadius,
+                  icon: HugeIcons.solidRoundedNavigation03,
+                  label: 'Commencer',
+                  onTap: onNavigate,
+                  isPrimary: true,
+                ),
+              ),
+              12.w,
+              _ActionButton(
+                radius: _innerRadius,
+                icon: HugeIcons.strokeRoundedShare08,
+                label: 'Partager',
+                onTap: onShare,
+                isPrimary: false,
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Chip d'information
+class _InfoChip extends StatelessWidget {
+  final dynamic icon;
+  final String label;
+
+  const _InfoChip({
+    required this.icon,
+    required this.label,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        border: Border.all(
+          color: Theme.of(context).primaryColor,
+          width: 1.5,
+        ),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          HugeIcon(
+            icon: icon,
+            size: 16,
+            color: Theme.of(context).primaryColor,
+          ),
+          6.w,
+          Text(
+            label,
+            style: context.bodySmall?.copyWith(
+              fontSize: 14,
+              color: Theme.of(context).primaryColor,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Bouton d'action
+class _ActionButton extends StatelessWidget {
+  final dynamic icon;
+  final String label;
+  final VoidCallback onTap;
+  final bool isPrimary;
+  final double radius;
+
+  const _ActionButton({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+    required this.isPrimary,
+    required this.radius,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: SquircleContainer(
+        padding: EdgeInsets.symmetric(vertical: 12.0, horizontal: 15.0),
+        radius: radius,
+        color: isPrimary 
+            ? Theme.of(context).primaryColor 
+            : Colors.grey.shade100,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            HugeIcon(
+              icon: icon,
+              size: 20,
+              color: isPrimary ? Colors.white : Colors.grey.shade700,
+            ),
+            8.w,
+            Text(
+              label,
+              style: context.bodySmall?.copyWith(
+                color: isPrimary ? Colors.white : Colors.grey.shade700,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}

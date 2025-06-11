@@ -1,24 +1,40 @@
+import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:runaway/core/widgets/main_scaffold.dart';
+import 'package:runaway/features/account/presentation/screens/account_screen.dart';
 import '../features/home/presentation/screens/home_screen.dart';
 
 final GoRouter router = GoRouter(
   initialLocation: '/home',
   routes: [
-    GoRoute(
-      path: '/home',
-      builder: (context, state) => const HomeScreen(),
+    ShellRoute(
+      builder: (BuildContext context, GoRouterState state, Widget child) {
+        return MainScaffold(child: child);
+      },
+      routes: [
+        GoRoute(
+          path: '/home',
+          pageBuilder: (context, state) => NoTransitionPage(
+            key: state.pageKey,
+            child: const HomeScreen(),
+          ),
+        ),
+        GoRoute(
+          path: '/activity',
+          pageBuilder: (context, state) => NoTransitionPage(key: state.pageKey, child: Scaffold(backgroundColor: Colors.black, body: Center(child: Text("Activity")))),
+        ),
+        GoRoute(
+          path: '/historic',
+          pageBuilder: (context, state) => NoTransitionPage(key: state.pageKey, child: Scaffold(backgroundColor: Colors.black, body: Center(child: Text("Historic")))),
+        ),
+        GoRoute(
+          path: '/account',
+          pageBuilder: (context, state) => NoTransitionPage(
+            key: state.pageKey,
+            child: const AccountScreen(),
+          ),
+        ),
+      ],
     ),
-    // GoRoute(
-    //   path: '/parameters',
-    //   builder: (context, state) => const ParameterSelectionScreen(),
-    // ),
-    // GoRoute(
-    //   path: '/route-preview',
-    //   builder: (context, state) => const RoutePreviewScreen(),
-    // ),
-    // GoRoute(
-    //   path: '/map',
-    //   builder: (context, state) => const MapScreen(),
-    // ),
   ],
 );

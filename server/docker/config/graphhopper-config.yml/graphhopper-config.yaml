@@ -1,0 +1,68 @@
+graphhopper:
+  datareader.file: /data/osm/france-latest.osm.pbf
+  graph.location: /data/graphhopper
+  
+  # Profils de routage personnalisés
+  profiles:
+    - name: running
+      vehicle: foot
+      weighting: custom
+      turn_costs: false
+      custom_model_files: [running.json]
+    
+    - name: running_scenic
+      vehicle: foot
+      weighting: custom
+      turn_costs: false
+      custom_model_files: [running_scenic.json]
+    
+    - name: cycling
+      vehicle: bike
+      weighting: custom
+      turn_costs: false
+      custom_model_files: [cycling.json]
+    
+    - name: cycling_safe
+      vehicle: bike
+      weighting: custom
+      turn_costs: false
+      custom_model_files: [cycling_safe.json]
+    
+    - name: walking
+      vehicle: foot
+      weighting: shortest
+      turn_costs: false
+
+  # Profils actifs
+  profiles_ch:
+    - profile: running
+    - profile: running_scenic
+    - profile: cycling
+    - profile: cycling_safe
+    - profile: walking
+
+  # Import des données
+  import.osm.ignored_highways: ""
+  graph.encoded_values: |
+    road_class,
+    road_environment,
+    surface,
+    track_type,
+    smoothness,
+    max_speed,
+    foot_access,
+    bike_access,
+    get_off_bike,
+    roundabout
+
+  # Élévation
+  graph.elevation.provider: srtm
+  graph.elevation.cache_dir: /data/elevation-cache/
+  graph.elevation.dataaccess: MMAP
+
+  # API
+  web.cors.allowed_origins: "*"
+  prepare.min_network_size: 200
+  prepare.min_one_way_network_size: 200
+  routing.max_visited_nodes: 1000000
+  routing.max_round_trip_distance: 100000

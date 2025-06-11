@@ -10,6 +10,8 @@ class IconBtn extends StatelessWidget {
   final Color? labelColor;
   final Function()? onPressed;
   final String? label;
+  final double? radius;
+  final double? padding;
 
   const IconBtn({
     super.key, 
@@ -20,6 +22,8 @@ class IconBtn extends StatelessWidget {
     this.iconColor, 
     this.onPressed, 
     this.label,
+    this.radius,
+    this.padding,
   });
 
   @override
@@ -27,10 +31,10 @@ class IconBtn extends StatelessWidget {
     return GestureDetector(
       onTap: onPressed,
       child: Container(
-        padding: EdgeInsets.all(15.0),
+        padding: EdgeInsets.all(padding ?? 15.0),
         decoration: BoxDecoration(
-          color: backgroundColor ?? Colors.white,
-          borderRadius: BorderRadius.circular(100),
+          color: backgroundColor ?? Colors.black,
+          borderRadius: BorderRadius.circular(radius ?? 100),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withValues(alpha: 0.18),
@@ -48,7 +52,7 @@ class IconBtn extends StatelessWidget {
               HugeIcon(
                 icon: icon, 
                 size: iconSize ?? 28, 
-                color: iconColor ?? Colors.black,
+                color: iconColor ?? Colors.white,
               ),
             ],
             if (label != null && label!.isNotEmpty) ...[
@@ -58,7 +62,7 @@ class IconBtn extends StatelessWidget {
                 child: Text(
                   label!, 
                   style: context.bodySmall?.copyWith(
-                    color: labelColor ?? Colors.black,
+                    color: labelColor ?? Colors.white,
                   ),
                 ),
               ),

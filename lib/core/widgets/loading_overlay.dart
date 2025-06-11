@@ -14,7 +14,7 @@ class _LoadingOverlayState extends State<LoadingOverlay> {
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: Colors.black.withValues(alpha: 0.9),
+      color: Colors.black.withValues(alpha: 0.95),
       height: double.infinity,
       width: double.infinity,
       child: ClipRRect(

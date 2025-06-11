@@ -2,19 +2,18 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:runaway/config/extensions.dart';
+import 'package:runaway/core/widgets/squircle_container.dart';
 
 import '../../../../core/services/geocoding_service.dart';
 
 class LocationSearchBar extends StatefulWidget {
   final Function(double longitude, double latitude, String placeName)? onLocationSelected;
-  final VoidCallback? onSearchCleared;
   final double? userLongitude;
   final double? userLatitude;
 
   const LocationSearchBar({
     super.key,
     this.onLocationSelected,
-    this.onSearchCleared,
     this.userLongitude,
     this.userLatitude,
   });
@@ -107,54 +106,46 @@ class _LocationSearchBarState extends State<LocationSearchBar> {
         top: offset.dy + size.height + 5,
         width: size.width,
         child: Material(
-          elevation: 8,
+          elevation: 0,
           borderRadius: BorderRadius.circular(20),
           child: Container(
             constraints: BoxConstraints(maxHeight: 300),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: Colors.black,
               borderRadius: BorderRadius.circular(20),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.1),
+                  color: Colors.black.withValues(alpha: 0.18),
                   spreadRadius: 2,
-                  blurRadius: 10,
-                  offset: Offset(0, 3),
+                  blurRadius: 30,
+                  offset: Offset(0, 0),
                 ),
               ],
             ),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(20),
-              child: ListView.separated(
+              child: ListView.builder(
                 padding: EdgeInsets.symmetric(vertical: 8),
                 shrinkWrap: true,
                 itemCount: _suggestions.length,
-                separatorBuilder: (context, index) => Divider(
-                  height: 1,
-                  indent: 16,
-                  endIndent: 16,
-                  color: Colors.grey.shade200,
-                ),
                 itemBuilder: (context, index) {
                   final suggestion = _suggestions[index];
                   return InkWell(
                     onTap: () => _selectSuggestion(suggestion),
                     child: Padding(
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
+                        horizontal: 25,
                         vertical: 12,
                       ),
                       child: Row(
                         children: [
-                          Container(
+                          SquircleContainer(
+                            radius: 20,
                             padding: EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              color: Colors.grey.shade100,
-                              borderRadius: BorderRadius.circular(8),
-                            ),
+                            color: Colors.grey.shade100,
                             child: HugeIcon(
                               icon: HugeIcons.strokeRoundedLocation01,
-                              size: 20,
+                              size: 25,
                               color: Colors.grey.shade600,
                             ),
                           ),
@@ -167,6 +158,7 @@ class _LocationSearchBarState extends State<LocationSearchBar> {
                                   suggestion.placeName.split(',').first,
                                   style: context.bodySmall?.copyWith(
                                     fontWeight: FontWeight.w600,
+                                    color: Colors.white,
                                   ),
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
@@ -177,7 +169,7 @@ class _LocationSearchBarState extends State<LocationSearchBar> {
                                     suggestion.placeName.split(',').skip(1).join(',').trim(),
                                     style: context.bodySmall?.copyWith(
                                       fontSize: 14,
-                                      color: Colors.grey.shade600,
+                                      color: Colors.white60,
                                       fontWeight: FontWeight.normal,
                                     ),
                                     maxLines: 1,
@@ -224,18 +216,15 @@ class _LocationSearchBarState extends State<LocationSearchBar> {
     _suggestions = [];
     _removeOverlay();
     setState(() {});
-
-    // Appeler le callback pour réinitialiser la position
-    widget.onSearchCleared?.call();
   }
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      height: 60,
+      padding: EdgeInsets.symmetric(horizontal: 15, vertical: 8),
+      height: 50,
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Colors.black,
         borderRadius: BorderRadius.circular(100),
         boxShadow: [
           BoxShadow(
@@ -250,8 +239,8 @@ class _LocationSearchBarState extends State<LocationSearchBar> {
         children: [
           HugeIcon(
             icon: HugeIcons.solidRoundedSearch01,
-            size: 30,
-            color: Colors.black38,
+            size: 22,
+            color: Colors.white38,
           ),
           12.w,
           Expanded(
@@ -261,14 +250,18 @@ class _LocationSearchBarState extends State<LocationSearchBar> {
               onChanged: _onSearchChanged,
               style: context.bodySmall?.copyWith(
                 fontWeight: FontWeight.w500,
+                color: Colors.white,
               ),
+              // onTapOutside: (event) {
+              //   FocusScope.of(context).unfocus();
+              // },
               textCapitalization: TextCapitalization.sentences,
               decoration: InputDecoration(
                 hintText: "Entrer une destination",
                 hintStyle: context.bodySmall?.copyWith(
-                  color: Colors.black38,
-                  fontWeight: FontWeight.w400,
-                  fontSize: 18,
+                  color: Colors.white38,
+                  fontWeight: FontWeight.w500,
+                  fontSize: 17,
                 ),
                 border: InputBorder.none,
                 contentPadding: EdgeInsets.zero,
@@ -283,7 +276,7 @@ class _LocationSearchBarState extends State<LocationSearchBar> {
               height: 20,
               child: CircularProgressIndicator(
                 strokeWidth: 2,
-                valueColor: AlwaysStoppedAnimation<Color>(Colors.grey.shade400),
+                valueColor: AlwaysStoppedAnimation<Color>(Colors.white70),
               ),
             ),
           ] else if (_searchController.text.isNotEmpty) ...[
@@ -293,7 +286,7 @@ class _LocationSearchBarState extends State<LocationSearchBar> {
               child: HugeIcon(
                 icon: HugeIcons.solidRoundedCancelCircle,
                 size: 25,
-                color: Colors.grey.shade400,
+                color: Colors.white38,
               ),
             ),
           ],

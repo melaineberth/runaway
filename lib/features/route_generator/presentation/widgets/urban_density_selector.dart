@@ -19,7 +19,9 @@ class UrbanDensitySelector extends StatelessWidget {
       children: [
         Text(
           'Niveau d\'urbanisation',
-          style: context.bodySmall,
+          style: context.bodySmall?.copyWith(
+            color: Colors.white,
+          ),
         ),
         3.h,
         Text(
@@ -42,9 +44,9 @@ class UrbanDensitySelector extends StatelessWidget {
                 selected: isSelected,
                 onSelected: (_) => onDensitySelected(density),
                 selectedColor: Theme.of(context).primaryColor,
-                backgroundColor: Colors.grey.shade100,
+                backgroundColor: const Color.fromARGB(255, 38, 38, 38),
                 labelStyle: TextStyle(
-                  color: isSelected ? Colors.white : Colors.grey.shade700,
+                  color: isSelected ? Colors.black : Colors.white24,
                   fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
                 ),
                 padding: EdgeInsets.symmetric(horizontal: 15, vertical: 10),

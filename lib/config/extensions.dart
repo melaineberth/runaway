@@ -28,3 +28,10 @@ extension TextStyleExtension on BuildContext {
   TextStyle? get labelMedium => textTheme.labelMedium;
   TextStyle? get labelSmall => textTheme.labelSmall;
 }
+
+extension OuterRadiusExt on double {
+  double outerRadius(double padding) {
+    assert(padding >= 0, 'Le padding doit être positif');
+    return this + padding;
+  }
+}

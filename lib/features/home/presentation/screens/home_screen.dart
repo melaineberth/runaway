@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:math' as math;
-import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -10,19 +9,19 @@ import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart' as mp;
 import 'package:hugeicons/hugeicons.dart';
 import 'package:geolocator/geolocator.dart' as gl;
 import 'package:path_provider/path_provider.dart';
+import 'package:runaway/config/colors.dart';
 import 'package:runaway/config/extensions.dart';
 import 'package:runaway/core/widgets/loading_overlay.dart';
-import 'package:runaway/features/home/presentation/screens/maps_styles_screen.dart';
+import 'package:runaway/features/home/presentation/widgets/route_info_card.dart';
+import 'package:runaway/features/route_generator/domain/models/route_parameters.dart';
 import 'package:share_plus/share_plus.dart';
-
-import '../../../../core/services/geojson_service.dart';
+import 'package:smooth_gradient/smooth_gradient.dart';
+import '../../../route_generator/data/services/ai_configuration_service.dart';
+import '../../../route_generator/data/services/integrated_route_generation_service.dart';
 import '../blocs/map_style/map_style_bloc.dart';
 import '../blocs/map_style/map_style_event.dart';
 import '../blocs/map_style/map_style_state.dart';
-
-import '../../../route_generator/data/services/overpass_poi_service.dart';
-import '../../../route_generator/presentation/screens/generator_screen.dart' as gen;
-
+import '../../../route_generator/presentation/screens/route_parameter.dart' as gen;
 import '../../../../core/widgets/icon_btn.dart';
 import '../blocs/route_parameters/route_parameters_bloc.dart';
 import '../blocs/route_parameters/route_parameters_event.dart';
@@ -66,23 +65,118 @@ class _HomeScreenState extends State<HomeScreen> {
   mp.PolylineAnnotationManager? polylineManager;
   mp.PolylineAnnotation? currentRoutePolyline;
 
+  // État de la route générée
+  IntegratedRouteResult? generatedRouteResult;
+  List<List<double>>? generatedRouteCoordinates;
+  Map<String, dynamic>? generatedRouteStats;
+  File? generatedRouteFile;
+  // Configuration IA
+  bool useAIGeneration = true;
+  AIGenerationConfig? customAIConfig;
+
   @override
   void initState() {
     super.initState();
     _setupPositionTracking();
+    _checkAIAvailability();
   }
 
   @override
   void dispose() {
+    _clearRoute(); // Nettoyer la route
     userPositionStream?.cancel();
     _clearLocationMarkers();
-    
-    // Désenregistrer la carte du BLoC
-    // if (mapboxMap != null) {
-    //   context.read<MapStyleBloc>().add(MapUnregistered());
-    // }
-    
     super.dispose();
+  }
+
+  // Vérifier la disponibilité de l'IA
+  void _checkAIAvailability() {
+    final status = AIConfigurationService.checkAIAvailability();
+    if (!status.isAvailable) {
+      print('⚠️ IA non disponible: ${status.reason}');
+      setState(() {
+        useAIGeneration = false;
+      });
+    } else {
+      print('✅ IA disponible: ${status.reason}');
+    }
+  }
+
+  Future<void> _setActiveLocation({
+    required double latitude,
+    required double longitude,
+    bool userPosition = false,
+    bool moveCamera = true,
+    bool addMarker = false,
+  }) async {
+    if (mapboxMap == null || circleAnnotationManager == null) return;
+
+    // 1) Pause ou resume le suivi
+    if (userPosition) {
+      userPositionStream?.resume();
+    } else {
+      userPositionStream?.pause();
+    }
+    setState(() => isTrackingUser = userPosition);
+
+    // 2) Nettoyage des anciens cercles + marqueurs si on en pose un nouveau
+    await circleAnnotationManager!.deleteAll();
+    if (addMarker && markerCircleManager != null) {
+      for (final m in locationMarkers) {
+        await markerCircleManager!.delete(m);
+      }
+      locationMarkers.clear();
+    }
+
+    // 3) Centrage caméra (si demandé)
+    if (moveCamera) {
+      await mapboxMap!.flyTo(
+        mp.CameraOptions(
+          center: mp.Point(coordinates: mp.Position(longitude, latitude)),
+          zoom: userPosition ? 13 : 13,
+          pitch: 0,
+          bearing: 0,
+        ),
+        mp.MapAnimationOptions(duration: 1000),
+      );
+    }
+
+    // 4) Dessin du halo
+    final camState = await mapboxMap!.getCameraState();
+    final zoom = camState.zoom;
+    final radiusPx = _calculateCircleRadiusForZoom(zoom);
+    await circleAnnotationManager!.create(
+      mp.CircleAnnotationOptions(
+        geometry: mp.Point(coordinates: mp.Position(longitude, latitude)),
+        circleRadius: radiusPx,
+        circleColor: AppColors.primary.withAlpha(50).toARGB32(),
+        circleOpacity: 0.3,
+      ),
+    );
+
+    // 5) Marqueur rouge (facultatif)
+    if (addMarker) {
+      markerCircleManager ??= await mapboxMap!.annotations.createCircleAnnotationManager();
+      final red = await markerCircleManager!.create(
+        mp.CircleAnnotationOptions(
+          geometry: mp.Point(coordinates: mp.Position(longitude, latitude)),
+          circleColor: AppColors.primary.toARGB32(),
+          circleRadius: 7,
+          circleStrokeWidth: 2,
+          circleStrokeColor: Colors.white.toARGB32(),
+        ),
+      );
+      locationMarkers.add(red);
+    }
+
+    // 6) Mise à jour du state / BLoC
+    setState(() {
+      currentLatitude = latitude;
+      currentLongitude = longitude;
+    });
+    context.read<RouteParametersBloc>().add(
+      StartLocationUpdated(longitude: longitude, latitude: latitude),
+    );
   }
 
   Future<void> _setupPositionTracking() async {
@@ -114,23 +208,20 @@ class _HomeScreenState extends State<HomeScreen> {
 
     userPositionStream?.cancel();
     userPositionStream = gl.Geolocator.getPositionStream(locationSettings: locationSettings)
-      .listen((gl.Position? position) {
-        if (position != null) {
+      .listen((gl.Position? pos) {
+        if (pos != null) {
           setState(() {
-            userLongitude = position.longitude;
-            userLatitude = position.latitude;
+            userLongitude = pos.longitude;
+            userLatitude = pos.latitude;
             
             // Si aucune position de recherche n'est définie, utiliser la position utilisateur
             if (currentLongitude == null || currentLatitude == null) {
-              currentLongitude = position.longitude;
-              currentLatitude = position.latitude;
-              
-              // Mettre à jour la position dans le BLoC
-              context.read<RouteParametersBloc>().add(
-                StartLocationUpdated(
-                  longitude: position.longitude,
-                  latitude: position.latitude,
-                ),
+              _setActiveLocation(
+                latitude: pos.latitude,
+                longitude: pos.longitude,
+                userPosition: true,
+                moveCamera: true,
+                addMarker: false,
               );
             }
           });
@@ -142,15 +233,15 @@ class _HomeScreenState extends State<HomeScreen> {
                 zoom: 13,
                 center: mp.Point(
                   coordinates: mp.Position(
-                    position.longitude, 
-                    position.latitude,
+                    pos.longitude, 
+                    pos.latitude,
                   )
                 ),
               ),
             );
             
             // Mettre à jour le cercle de rayon
-            _updateRadiusCircle(position.longitude, position.latitude);
+            _updateRadiusCircle(pos.longitude, pos.latitude);
           }
         } else {
           mapboxMap?.setCamera(
@@ -222,32 +313,26 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _updateRadiusCircle(double longitude, double latitude) async {
     if (circleAnnotationManager == null || mapboxMap == null) return;
 
-    // Obtenir le zoom actuel
+    // 1) supprimer **tous** les anciens cercles
+    await circleAnnotationManager!.deleteAll();
+
+    // 2) recalc du zoom / pixel → radius
     final cameraState = await mapboxMap!.getCameraState();
     final currentZoom = cameraState.zoom;
-
-    // Supprimer l'ancien cercle s'il existe
-    if (radiusCircle != null) {
-      await circleAnnotationManager!.delete(radiusCircle!);
-    }
-
-    // Calculer le rayon en pixels basé sur le zoom
     double radiusInPixels = _calculateCircleRadiusForZoom(currentZoom);
 
-    // Créer le nouveau cercle de rayon
+    // 3) recréer le cercle UNIQUE
     radiusCircle = await circleAnnotationManager!.create(
       mp.CircleAnnotationOptions(
-        geometry: mp.Point(coordinates: mp.Position(longitude, latitude)),
+        geometry: mp.Point(
+          coordinates: mp.Position(longitude, latitude),
+        ),
         circleRadius: radiusInPixels,
-        circleColor: Colors.green.withAlpha(50).toARGB32(),
-        circleStrokeWidth: 2.0,
-        circleStrokeColor: Colors.green.shade700.toARGB32(),
-        circleStrokeOpacity: 0.8,
+        circleColor: AppColors.primary.withAlpha(100).toARGB32(),
         circleOpacity: 0.3,
       ),
     );
-    
-    // Mettre à jour la position actuelle
+
     setState(() {
       currentLongitude = longitude;
       currentLatitude = latitude;
@@ -257,13 +342,13 @@ class _HomeScreenState extends State<HomeScreen> {
   void _onLocationSelected(double longitude, double latitude, String placeName) async {
     if (mapboxMap == null) return;
 
-    // Désactiver le suivi automatique lors de la sélection d'une adresse
-    setState(() {
-      isTrackingUser = false;
-    });
+    // désactive les mises à jour automatiques
+    userPositionStream?.pause();
+    setState(() => isTrackingUser = false);
 
-    // Supprimer les marqueurs précédents s'ils existent
+    // nettoyer markers + ancien cercle (au cas où)
     await _clearLocationMarkers();
+    await circleAnnotationManager?.deleteAll();
 
     // Si aucune position de recherche n'est définie, utiliser la position utilisateur
     if (currentLongitude == null || currentLatitude == null) {
@@ -292,23 +377,13 @@ class _HomeScreenState extends State<HomeScreen> {
     final redMarker = await markerCircleManager!.create(
       mp.CircleAnnotationOptions(
         geometry: mp.Point(coordinates: mp.Position(longitude, latitude)),
-        circleColor: Colors.red.toARGB32(),
-        circleRadius: 12.0,
-        circleStrokeWidth: 3.0,
+        circleColor: AppColors.primary.toARGB32(),
+        circleRadius: 7.0,
+        circleStrokeWidth: 2.0,
         circleStrokeColor: Colors.white.toARGB32(),
       ),
     );
     locationMarkers.add(redMarker);
-
-    // Créer un cercle plus petit au centre pour l'effet de pin
-    final whiteCenter = await markerCircleManager!.create(
-      mp.CircleAnnotationOptions(
-        geometry: mp.Point(coordinates: mp.Position(longitude, latitude)),
-        circleColor: Colors.white.toARGB32(),
-        circleRadius: 4.0,
-      ),
-    );
-    locationMarkers.add(whiteCenter);
 
     // Mettre à jour la position dans le BLoC
     context.read<RouteParametersBloc>().add(
@@ -331,15 +406,17 @@ class _HomeScreenState extends State<HomeScreen> {
 
   void openGenerator() {
     showModalBottomSheet(
-      backgroundColor: Colors.transparent,
+      useRootNavigator: true,
       isScrollControlled: true,
       isDismissible: true,
-      enableDrag: true,
+      enableDrag: false,
       context: context, 
+      backgroundColor: Colors.black,
       builder: (modalCtx) {
-        return gen.GeneratorScreen(
+        return gen.RouteParameterScreen(
           startLongitude: currentLongitude ?? userLongitude ?? 0.0,
           startLatitude: currentLatitude ?? userLatitude ?? 0.0,
+          generateRoute: _handleRouteGeneration,
           onRadiusChanged: (newRadius) async {
             setState(() {
               defaultRadius = newRadius;
@@ -354,17 +431,17 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  void openMapsStyles() {
-    showModalBottomSheet(
-      isScrollControlled: true,
-      isDismissible: true,
-      enableDrag: true,
-      context: context, 
-      builder: (modalCtx) {
-        return MapsStylesScreen();
-      }
-    );
-  }
+  // void openMapsStyles() {
+  //   showModalBottomSheet(
+  //     isScrollControlled: true,
+  //     isDismissible: true,
+  //     enableDrag: true,
+  //     context: context, 
+  //     builder: (modalCtx) {
+  //       return MapsStylesScreen();
+  //     }
+  //   );
+  // }
 
   void _onSearchCleared() async {
     // Supprimer les marqueurs de localisation
@@ -393,6 +470,7 @@ class _HomeScreenState extends State<HomeScreen> {
   void _goToUserLocation() async {
     if (userLongitude != null && userLatitude != null && mapboxMap != null) {
       // Activer le suivi en temps réel
+      userPositionStream?.resume();
       setState(() {
         isTrackingUser = true;
         currentLongitude = userLongitude;
@@ -409,9 +487,12 @@ class _HomeScreenState extends State<HomeScreen> {
         mp.MapAnimationOptions(duration: 1000),
       );
 
+      // Attendre la fin de l'animation
+      await Future.delayed(Duration(milliseconds: 1100));
+
       _onSearchCleared();
       
-      // Mettre à jour le cercle autour de la position utilisateur
+      // Forcer la mise à jour du cercle après l'animation
       await _updateRadiusCircle(userLongitude!, userLatitude!);
     } else {
       // Si la position n'est pas disponible, essayer de l'obtenir
@@ -425,40 +506,45 @@ class _HomeScreenState extends State<HomeScreen> {
     });
     
     try {
-      // Utiliser le service optimisé
-      final optimizedService = GeoJsonService();
-            
-      // Générer le réseau optimisé
-      final networkFile = await optimizedService.generateOptimizedNetworkGeoJson(
-        currentLatitude ?? userLatitude ?? 0.0,
-        currentLongitude ?? userLongitude ?? 0.0,
-        defaultRadius,
-      );
-
-      // Récupérer les POIs en parallèle (plus rapide)
-      final poisFuture = OverpassPoiService.fetchPoisInRadius(
+      final parameters = context.read<RouteParametersBloc>().state.parameters;
+      
+      print('🚀 Génération ${useAIGeneration ? "IA" : "classique"} du parcours...');
+      
+      // NOUVEAU: Utiliser le service intégré
+      final result = await IntegratedRouteGenerationService.generateOptimalRoute(
+        parameters: parameters,
         latitude: currentLatitude ?? userLatitude ?? 0.0,
         longitude: currentLongitude ?? userLongitude ?? 0.0,
-        radiusInMeters: defaultRadius,
+        forceClassicAlgorithm: !useAIGeneration,
+        customConfig: customAIConfig,
       );
 
-      final pois = await poisFuture;
-      final poisFile = await _savePoisToGeoJson(pois);
-
-      // Analyser le réseau généré
-      final networkStats = await _analyzeNetworkFile(networkFile);
-
       if (!mounted) return;
 
-      // Afficher les résultats optimisés
-      _showOptimizedResults(networkFile, poisFile, pois, networkStats);
+      // Vérifier la qualité du résultat
+      if (!result.isSuccessful) {
+        throw Exception('Qualité de route insuffisante (score: ${result.qualityScore}/10)');
+      }
 
+      // Afficher la route sur la carte
+      await _displayRoute(result.coordinates);
+      
+      // Sauvegarder les résultats
+      final routeFile = await _saveRouteToGeoJson(result.coordinates, parameters);
+      
       setState(() {
+        generatedRouteResult = result;
+        generatedRouteCoordinates = result.coordinates;
+        generatedRouteStats = _buildUIStats(result);
+        generatedRouteFile = routeFile;
         isGenerateEnabled = false;
       });
+      
+      // Afficher les résultats avec informations IA
+      _showEnhancedRouteResults(result, routeFile);
 
     } catch (e) {      
-      print('❌ Erreur : $e');
+      print('❌ Erreur génération: $e');
       
       if (!mounted) return;
 
@@ -466,67 +552,33 @@ class _HomeScreenState extends State<HomeScreen> {
         isGenerateEnabled = false;
       });
       
-      _showErrorSnackBar('Erreur lors de la génération du réseau');
+      _showErrorSnackBar('Erreur lors de la génération: ${e.toString()}');
     }
   }
 
-  Future<Map<String, dynamic>> _analyzeNetworkFile(File networkFile) async {
-    try {
-      final jsonString = await networkFile.readAsString();
-      final data = json.decode(jsonString);
-      return data['metadata']['statistics'] ?? {};
-    } catch (e) {
-      return {};
-    }
-  }
-
-  Future<File> _savePoisToGeoJson(List<Map<String, dynamic>> pois) async {
-    final poisGeoJson = {
-      'type': 'FeatureCollection',
-      'metadata': {
-        'generated_at': DateTime.now().toIso8601String(),
-        'generator': 'RunAway App - POIs',
-        'total_features': pois.length,
-      },
-      'features': pois.map((poi) => {
-        'type': 'Feature',
-        'properties': {
-          'id': poi['id'],
-          'name': poi['name'],
-          'type': poi['type'],
-          'distance_from_center': poi['distance']?.round(),
-          'amenity': poi['tags']?['amenity'],
-          'leisure': poi['tags']?['leisure'],
-          'natural': poi['tags']?['natural'],
-          'tourism': poi['tags']?['tourism'],
-        },
-        'geometry': {
-          'type': 'Point',
-          'coordinates': poi['coordinates'],
-        }
-      }).toList(),
+  // Construction des stats pour l'UI
+  Map<String, dynamic> _buildUIStats(IntegratedRouteResult result) {
+    final distance = result.actualDistanceKm.toStringAsFixed(2);
+    final isLoop = result.metadata['route_type'] == 'loop';
+    final duration = result.metadata['estimated_duration_minutes'] ?? 0;
+    
+    return {
+      'distance_km': distance,
+      'is_loop': isLoop,
+      'points_count': result.coordinates.length,
+      'generation_method': result.generationMethod.name,
+      'ai_model': result.aiModel,
+      'quality_score': result.qualityScore,
+      'generation_time_ms': result.totalGenerationTime ?? 0,
+      'fallback_used': result.fallbackUsed,
+      'validation_passed': result.validationResult?.isValid ?? true,
     };
-
-    final dir = await getApplicationDocumentsDirectory();
-    final timestamp = DateTime.now().millisecondsSinceEpoch;
-    final file = File('${dir.path}/route_pois_$timestamp.geojson');
-    
-    final jsonString = JsonEncoder.withIndent('  ').convert(poisGeoJson);
-    await file.writeAsString(jsonString);
-    
-    return file;
   }
 
-  void _showOptimizedResults(
-    File networkFile, 
-    File poisFile, 
-    List<Map<String, dynamic>> pois,
-    Map<String, dynamic> networkStats) {
-  
-    final parksCount = pois.where((p) => p['type'] == 'Parc').length;
-    final waterCount = pois.where((p) => p['type'] == 'Point d\'eau').length;
-    
+  // Dialogue de résultats amélioré avec infos IA
+  void _showEnhancedRouteResults(IntegratedRouteResult result, File routeFile) {
     showDialog(
+      useRootNavigator: true,
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -535,12 +587,18 @@ class _HomeScreenState extends State<HomeScreen> {
             Container(
               padding: EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: Colors.green.withAlpha(30),
+                color: result.generationMethod == RouteGenerationMethod.ai 
+                    ? Colors.purple.withAlpha(30)
+                    : Colors.green.withAlpha(30),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: HugeIcon(
-                icon: HugeIcons.strokeRoundedCheckmarkCircle02,
-                color: Colors.green,
+                icon: result.generationMethod == RouteGenerationMethod.ai 
+                    ? HugeIcons.strokeRoundedAiInnovation03
+                    : HugeIcons.strokeRoundedRoute03,
+                color: result.generationMethod == RouteGenerationMethod.ai 
+                    ? Colors.purple
+                    : Colors.green,
                 size: 24,
               ),
             ),
@@ -549,9 +607,9 @@ class _HomeScreenState extends State<HomeScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Réseau optimisé !', style: context.titleMedium),
+                  Text('Parcours généré !', style: context.titleMedium),
                   Text(
-                    'Prêt pour génération de parcours',
+                    '${result.actualDistanceKm.toStringAsFixed(2)} km • ${result.generationMethod == RouteGenerationMethod.ai ? "IA" : "Algorithme"} • ⭐${result.qualityScore.toStringAsFixed(1)}/10',
                     style: context.bodySmall?.copyWith(
                       fontSize: 14,
                       color: Colors.grey.shade600,
@@ -567,28 +625,69 @@ class _HomeScreenState extends State<HomeScreen> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Statistiques du réseau
-              _buildStatsCard('Réseau de chemins', [
-                '📏 ${networkStats['total_length_km'] ?? 'N/A'} km total',
-                '🛤️ ${networkStats['total_features'] ?? 'N/A'} segments',
-                '🏃‍♂️ ${networkStats['running_segments'] ?? 'N/A'} adaptés course',
-                '🚴‍♂️ ${networkStats['cycling_segments'] ?? 'N/A'} adaptés vélo',
-                '⭐ Score qualité: ${networkStats['average_quality_score'] ?? 'N/A'}/20',
+              // Informations sur la génération
+              _buildStatsCard('Méthode de génération', [
+                '🤖 ${result.generationMethod == RouteGenerationMethod.ai ? "Intelligence Artificielle" : "Algorithme classique"}',
+                if (result.aiModel != null) '🧠 Modèle: ${result.aiModel}',
+                '⏱️ Généré en ${result.totalGenerationTime ?? 0}ms',
+                if (result.fallbackUsed) '🔄 Fallback utilisé',
+                '✅ Qualité: ${result.qualityScore.toStringAsFixed(1)}/10',
               ]),
               
               16.h,
               
-              // Statistiques des POIs
-              _buildStatsCard('Points d\'intérêt', [
-                if (parksCount > 0) '🌳 $parksCount parc${parksCount > 1 ? "s" : ""}',
-                if (waterCount > 0) '💧 $waterCount point${waterCount > 1 ? "s" : ""} d\'eau',
-                '📍 ${pois.length} POIs au total',
-                if (pois.isEmpty) '⚠️ Zone peu fournie en POIs',
+              // Statistiques du parcours
+              _buildStatsCard('Parcours généré', [
+                '📏 ${result.actualDistanceKm.toStringAsFixed(2)} km',
+                '📍 ${result.coordinates.length} points GPS',
+                '${result.metadata['route_type'] == 'loop' ? "🔄" : "➡️"} ${result.metadata['route_type'] == 'loop' ? "Parcours en boucle" : "Aller simple"}',
+                '⏰ ~${result.metadata['estimated_duration_minutes'] ?? 0} minutes',
+              ]),
+              
+              // Raisonnement IA si disponible
+              if (result.aiReasoning != null) ...[
+                16.h,
+                _buildStatsCard('Raisonnement IA', [
+                  result.aiReasoning!,
+                ]),
+              ],
+              
+              // Avertissements de validation
+              if (result.validationResult?.hasWarnings == true) ...[
+                16.h,
+                Container(
+                  padding: EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.shade50,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.orange.shade200),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('⚠️ Avertissements:', 
+                          style: context.bodySmall?.copyWith(fontWeight: FontWeight.w600)),
+                      4.h,
+                      ...result.validationResult!.warnings.map((w) => 
+                        Text('• $w', style: context.bodySmall?.copyWith(fontSize: 12))),
+                    ],
+                  ),
+                ),
+              ],
+              
+              16.h,
+              
+              // Rappel des paramètres
+              _buildStatsCard('Paramètres utilisés', [
+                '🏃‍♂️ ${context.read<RouteParametersBloc>().state.parameters.activityType.title}',
+                '⛰️ ${context.read<RouteParametersBloc>().state.parameters.terrainType.title}',
+                '🏙️ ${context.read<RouteParametersBloc>().state.parameters.urbanDensity.title}',
+                '📐 ${context.read<RouteParametersBloc>().state.parameters.elevationGain.toStringAsFixed(0)}m de dénivelé',
               ]),
               
               16.h,
               
-              // Fichiers créés
+              // Fichier généré
               Container(
                 padding: EdgeInsets.all(12),
                 decoration: BoxDecoration(
@@ -599,12 +698,10 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('📁 Fichiers générés:', 
+                    Text('📁 Fichier généré:', 
                         style: context.bodySmall?.copyWith(fontWeight: FontWeight.w600)),
                     4.h,
-                    Text('• ${networkFile.path.split('/').last}', 
-                        style: context.bodySmall?.copyWith(fontSize: 12)),
-                    Text('• ${poisFile.path.split('/').last}', 
+                    Text('• ${routeFile.path.split('/').last}', 
                         style: context.bodySmall?.copyWith(fontSize: 12)),
                   ],
                 ),
@@ -617,30 +714,233 @@ class _HomeScreenState extends State<HomeScreen> {
             onPressed: () => Navigator.of(context).pop(),
             child: Text('Fermer'),
           ),
-          if (networkStats['total_features'] != null && 
-              (networkStats['total_features'] as int) > 0) ...[
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-                _shareNetworkFiles(networkFile, poisFile);
-              },
-              child: Text('Partager'),
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              _shareRouteFiles(routeFile);
+            },
+            child: Text('Partager'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              _startNavigation();
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Theme.of(context).primaryColor,
+              foregroundColor: Colors.white,
             ),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-                openGenerator(); // Ouvrir directement le générateur
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Theme.of(context).primaryColor,
-                foregroundColor: Colors.white,
-              ),
-              child: Text('Créer un parcours'),
-            ),
-          ],
+            child: Text('Commencer'),
+          ),
         ],
       ),
     );
+  }
+
+  Future<void> _displayRoute(List<List<double>> coordinates) async {
+    if (mapboxMap == null || coordinates.isEmpty) return;
+
+    // Sauvegarder les coordonnées
+    setState(() {
+      generatedRouteCoordinates = coordinates;
+    });
+
+    // Créer un gestionnaire de polylignes si nécessaire
+    polylineManager ??= await mapboxMap!.annotations.createPolylineAnnotationManager();
+
+    // Supprimer l'ancienne route si elle existe
+    if (currentRoutePolyline != null) {
+      await polylineManager!.delete(currentRoutePolyline!);
+    }
+
+    // Créer la nouvelle polyligne
+    currentRoutePolyline = await polylineManager!.create(
+      mp.PolylineAnnotationOptions(
+        geometry: mp.LineString(
+          coordinates: coordinates.map((coord) => 
+            mp.Position(coord[0], coord[1])
+          ).toList(),
+        ),
+        lineColor: Theme.of(context).primaryColor.toARGB32(),
+        lineWidth: 4.0,
+        lineOpacity: 0.9,
+        lineJoin: mp.LineJoin.ROUND,
+        // Retirer lineCap qui n'existe pas
+      ),
+    );
+
+    // Ajuster la vue pour montrer toute la route
+    final bounds = _calculateBounds(coordinates);
+
+    // Calculer le centre et le zoom approprié
+    final centerLon = (bounds.southwest.coordinates.lng + bounds.northeast.coordinates.lng) / 2;
+    final centerLat = (bounds.southwest.coordinates.lat + bounds.northeast.coordinates.lat) / 2;
+
+    // Calculer le zoom pour afficher toute la route
+    final latDiff = bounds.northeast.coordinates.lat - bounds.southwest.coordinates.lat;
+    final lonDiff = bounds.northeast.coordinates.lng - bounds.southwest.coordinates.lng;
+    final maxDiff = math.max(latDiff, lonDiff);
+
+    // Estimation du zoom basée sur la différence max
+    double zoom = 13.0;
+    if (maxDiff > 0.1) zoom = 11.0;
+    else if (maxDiff > 0.05) zoom = 12.0;
+    else if (maxDiff > 0.02) zoom = 13.0;
+    else if (maxDiff > 0.01) zoom = 14.0;
+    else zoom = 15.0;
+
+    await mapboxMap!.flyTo(
+      mp.CameraOptions(
+        center: mp.Point(coordinates: mp.Position(centerLon, centerLat)),
+        zoom: zoom - 0.5, // Un peu de marge pour voir toute la route
+        pitch: 0,
+        bearing: 0,
+      ),
+      mp.MapAnimationOptions(duration: 1500),
+    );
+
+    // Ajouter des marqueurs pour le début et la fin
+    await _addRouteMarkers(coordinates);
+  }
+
+  mp.CoordinateBounds _calculateBounds(List<List<double>> coordinates) {
+  double minLon = coordinates.first[0];
+  double maxLon = coordinates.first[0];
+  double minLat = coordinates.first[1];
+  double maxLat = coordinates.first[1];
+
+  for (final coord in coordinates) {
+    minLon = math.min(minLon, coord[0]);
+    maxLon = math.max(maxLon, coord[0]);
+    minLat = math.min(minLat, coord[1]);
+    maxLat = math.max(maxLat, coord[1]);
+  }
+
+  return mp.CoordinateBounds(
+    southwest: mp.Point(coordinates: mp.Position(minLon, minLat)),
+    northeast: mp.Point(coordinates: mp.Position(maxLon, maxLat)),
+    infiniteBounds: false, // Ajout du paramètre requis
+  );
+}
+
+  Future<void> _addRouteMarkers(List<List<double>> coordinates) async {
+    if (coordinates.isEmpty) return;
+
+    // Marqueur de départ (vert)
+    await markerCircleManager!.create(
+      mp.CircleAnnotationOptions(
+        geometry: mp.Point(coordinates: mp.Position(
+          coordinates.first[0], 
+          coordinates.first[1]
+        )),
+        circleColor: Colors.green.toARGB32(),
+        circleRadius: 10.0,
+        circleStrokeWidth: 3.0,
+        circleStrokeColor: Colors.white.toARGB32(),
+      ),
+    );
+
+    // Marqueur d'arrivée (rouge) si différent du départ
+    final isLoop = (coordinates.first[0] - coordinates.last[0]).abs() < 0.0001 &&
+                  (coordinates.first[1] - coordinates.last[1]).abs() < 0.0001;
+                  
+    if (!isLoop) {
+      await markerCircleManager!.create(
+        mp.CircleAnnotationOptions(
+          geometry: mp.Point(coordinates: mp.Position(
+            coordinates.last[0], 
+            coordinates.last[1]
+          )),
+          circleColor: Colors.red.toARGB32(),
+          circleRadius: 10.0,
+          circleStrokeWidth: 3.0,
+          circleStrokeColor: Colors.white.toARGB32(),
+        ),
+      );
+    }
+  }
+
+  Future<File> _saveRouteToGeoJson(List<List<double>> coordinates, RouteParameters parameters) async {
+    final routeGeoJson = {
+      'type': 'FeatureCollection',
+      'metadata': {
+        'generated_at': DateTime.now().toIso8601String(),
+        'generator': 'RunAway App - Generated Route',
+        'parameters': {
+          'activity': parameters.activityType.title,
+          'distance_km': parameters.distanceKm,
+          'terrain': parameters.terrainType.title,
+          'urban_density': parameters.urbanDensity.title,
+          'elevation_gain': parameters.elevationGain,
+          'is_loop': parameters.isLoop,
+        },
+      },
+      'features': [
+        {
+          'type': 'Feature',
+          'properties': {
+            'name': 'Generated Route',
+            'distance_km': _calculateTotalDistance(coordinates).toStringAsFixed(2),
+          },
+          'geometry': {
+            'type': 'LineString',
+            'coordinates': coordinates,
+          }
+        }
+      ],
+    };
+
+    final dir = await getApplicationDocumentsDirectory();
+    final timestamp = DateTime.now().millisecondsSinceEpoch;
+    final file = File('${dir.path}/generated_route_$timestamp.geojson');
+    
+    final jsonString = JsonEncoder.withIndent('  ').convert(routeGeoJson);
+    await file.writeAsString(jsonString);
+    
+    return file;
+  }
+
+  double _calculateDistance(double lat1, double lon1, double lat2, double lon2) {
+    const double R = 6371000; // Rayon de la Terre en mètres
+    final double dLat = (lat2 - lat1) * math.pi / 180;
+    final double dLon = (lon2 - lon1) * math.pi / 180;
+    
+    final double a = 
+        math.sin(dLat / 2) * math.sin(dLat / 2) +
+        math.cos(lat1 * math.pi / 180) * math.cos(lat2 * math.pi / 180) *
+        math.sin(dLon / 2) * math.sin(dLon / 2);
+    
+    final double c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a));
+    return R * c;
+  }
+
+  void _shareRouteFiles(File routeFile) async {
+    try {
+      final shareParams = ShareParams(
+        text: 'Parcours généré par RunAway',
+        files: [
+          XFile(routeFile.path),
+        ],
+      );
+
+      await SharePlus.instance.share(shareParams);
+    } catch (e) {
+      print('Erreur partage: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Erreur lors du partage: $e')),
+      );
+    }
+  }
+
+  double _calculateTotalDistance(List<List<double>> coords) {
+    double total = 0;
+    for (int i = 0; i < coords.length - 1; i++) {
+      total += _calculateDistance(
+        coords[i][1], coords[i][0],
+        coords[i + 1][1], coords[i + 1][0],
+      );
+    }
+    return total / 1000; // Convertir en km
   }
 
   Widget _buildStatsCard(String title, List<String> stats) {
@@ -668,7 +968,7 @@ class _HomeScreenState extends State<HomeScreen> {
               stat,
               style: context.bodySmall?.copyWith(fontSize: 14),
             ),
-          )).toList(),
+          )),
         ],
       ),
     );
@@ -732,25 +1032,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  void _shareNetworkFiles(File networkFile, File poisFile) async {
-    try {
-      final shareParams = ShareParams(
-        text: 'Réseau de chemins et POIs générés par RunAway',
-        files: [
-          XFile(networkFile.path),
-          XFile(poisFile.path),
-        ],
-      );
-
-      await SharePlus.instance.share(shareParams);
-    } catch (e) {
-      print('Erreur partage: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erreur lors du partage: $e')),
-      );
-    }
-  }
-
   Future<void> _lockPositionOnScreenCenter() async {
     if (mapboxMap == null) return;
 
@@ -778,23 +1059,13 @@ class _HomeScreenState extends State<HomeScreen> {
     final redMarker = await markerCircleManager!.create(
       mp.CircleAnnotationOptions(
         geometry: mp.Point(coordinates: mp.Position(lon, lat)),
-        circleColor: Colors.red.toARGB32(),
-        circleRadius: 12.0,
-        circleStrokeWidth: 3.0,
+        circleColor: AppColors.primary.toARGB32(),
+        circleRadius: 7.0,
+        circleStrokeWidth: 2.0,
         circleStrokeColor: Colors.white.toARGB32(),
       ),
     );
     locationMarkers.add(redMarker);
-
-    // Créer un cercle plus petit au centre pour l'effet de pin
-    final whiteCenter = await markerCircleManager!.create(
-      mp.CircleAnnotationOptions(
-        geometry: mp.Point(coordinates: mp.Position(lon, lat)),
-        circleColor: Colors.white.toARGB32(),
-        circleRadius: 4.0,
-      ),
-    );
-    locationMarkers.add(whiteCenter);
 
     // Mettre à jour la position dans le BLoC
     context.read<RouteParametersBloc>().add(
@@ -802,6 +1073,51 @@ class _HomeScreenState extends State<HomeScreen> {
         longitude: lon,
         latitude: lat,
       ),
+    );
+  }
+
+  Future<void> _clearRoute() async {
+    if (polylineManager != null && currentRoutePolyline != null) {
+      await polylineManager!.delete(currentRoutePolyline!);
+      currentRoutePolyline = null;
+    }
+    
+    // Nettoyer les marqueurs de début/fin
+    if (markerCircleManager != null) {
+      await markerCircleManager!.deleteAll();
+      locationMarkers.clear();
+    }
+    
+    setState(() {
+      generatedRouteCoordinates = null;
+      generatedRouteStats = null;
+      generatedRouteFile = null;
+    });
+    
+    // Réafficher le marqueur de position si nécessaire
+    if (currentLongitude != null && currentLatitude != null && !isTrackingUser) {
+      _onLocationSelected(currentLongitude!, currentLatitude!, "Position actuelle");
+    }
+  }
+
+  void _startNavigation() {
+    if (generatedRouteCoordinates == null) return;
+    
+    // TODO: Implémenter la navigation
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Navigation à venir dans une prochaine version'),
+        backgroundColor: Colors.blue,
+      ),
+    );
+  }
+
+  void _shareCurrentRoute() {
+    if (generatedRouteFile == null) return;
+    
+    Share.shareXFiles(
+      [XFile(generatedRouteFile!.path)],
+      text: 'Mon parcours RunAway de ${generatedRouteStats?['distance_km'] ?? '?'} km',
     );
   }
 
@@ -817,9 +1133,10 @@ class _HomeScreenState extends State<HomeScreen> {
             }
           },
           child: Scaffold(
+            extendBody: true,
             resizeToAvoidBottomInset: false,
             body: Stack(
-              alignment: Alignment.center,
+              alignment: Alignment.bottomCenter,
               children: [
                 // Carte
                 SizedBox(
@@ -832,95 +1149,116 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ),
 
-                // Overlays (boutons, recherche, etc.)
-                if (!isTrackingUser) 
-                Positioned(
-                  top: MediaQuery.of(context).size.height - kToolbarHeight * 3,
-                  child: GestureDetector(
-                    onTap: () async {
-                      await _lockPositionOnScreenCenter();
-                    },
-                    child: Container(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: 15,
-                        vertical: 8,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.black,
-                        borderRadius: BorderRadius.circular(100)
-                      ),
-                      child: Text(
-                        "Pointer ici",
-                        style: context.bodySmall?.copyWith(
-                          fontSize: 15,
-                          color: Colors.white,
-                        ),
+                IgnorePointer(
+                  ignoring: true,
+                  child: Container(
+                    height: MediaQuery.of(context).size.height / 3,
+                    decoration: BoxDecoration(
+                      gradient: SmoothGradient(
+                        from: Colors.black.withValues(alpha: 0),
+                        to: Colors.black,
+                        curve: Curves.linear,
+                        steps: 25,
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
                       ),
                     ),
                   ),
                 ),
-                SizedBox(
-                  width: MediaQuery.of(context).size.width,
-                  height: MediaQuery.of(context).size.height - kToolbarHeight,
-                  child: SafeArea(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 15.0),
-                          child: LocationSearchBar(
-                            onLocationSelected: _onLocationSelected,
-                            onSearchCleared: _onSearchCleared,
-                            userLongitude: userLongitude,
-                            userLatitude: userLatitude,
-                          ),
-                        ),
-                        Expanded(
-                          child: Padding(
-                            padding: const EdgeInsets.only(right: 15.0),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.end,
-                              crossAxisAlignment: CrossAxisAlignment.end,
-                              children: [
-                                Column(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    IconBtn(
-                                      icon: HugeIcons.strokeRoundedMaping, 
-                                      onPressed: openMapsStyles,
-                                    ),
-                                    15.h,
-                                    IconBtn(
-                                      icon: HugeIcons.strokeRoundedSettings02, 
-                                      onPressed: openGenerator,
-                                    ),
-                                    15.h,
-                                    IconBtn(
-                                      icon: isTrackingUser 
-                                          ? HugeIcons.solidRoundedLocationShare02 
-                                          : HugeIcons.strokeRoundedLocationShare02, 
-                                      onPressed: _goToUserLocation,
-                                      iconColor: isTrackingUser ? Colors.blue : Colors.black,
-                                    ),
-                                  ],
-                                ),
-                              ],
+                
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 30.0,
+                  ),
+                  child: SizedBox(
+                    width: MediaQuery.of(context).size.width,
+                    height: MediaQuery.of(context).size.height,
+                    child: SafeArea(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 15.0),
+                            child: LocationSearchBar(
+                              onLocationSelected: _onLocationSelected,
+                              userLongitude: userLongitude,
+                              userLatitude: userLatitude,
                             ),
                           ),
-                        ),
-                        20.h,
-                        IconBtn(
-                          icon: HugeIcons.strokeRoundedAppleIntelligence, 
-                          label: isGenerateEnabled ? "Génération en cours..." : "Créer un parcours",
-                          onPressed: () => _handleRouteGeneration(),
-                        ),
-                      ],
+
+                          Expanded(
+                            child: Padding(
+                              padding: const EdgeInsets.only(right: 15.0),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.end,
+                                crossAxisAlignment: CrossAxisAlignment.end,
+                                children: [
+                                  Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      IconBtn(
+                                        padding: 10.0,
+                                        icon: HugeIcons.strokeRoundedGpsOff02, 
+                                        onPressed: !isTrackingUser ? () async => await _lockPositionOnScreenCenter() : null, 
+                                        iconColor: isTrackingUser ? Colors.white38 : Colors.white,
+                                      ),
+                                      15.h,
+                                      IconBtn(
+                                        padding: 10.0,
+                                        icon: isTrackingUser 
+                                            ? HugeIcons.solidRoundedLocationShare02 
+                                            : HugeIcons.strokeRoundedLocationShare02, 
+                                        onPressed: _goToUserLocation,
+                                        iconColor: isTrackingUser ? AppColors.primary : Colors.white,
+                                      ),
+                                      15.h,
+                                      IconBtn(
+                                        padding: 10.0,
+                                        icon: HugeIcons.strokeRoundedAiMagic, 
+                                        onPressed: openGenerator,
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          // 20.h,
+                          // IconBtn(
+                          //   icon: HugeIcons.strokeRoundedAppleIntelligence, 
+                          //   label: isGenerateEnabled 
+                          //       ? "Génération en cours..." 
+                          //       : generatedRouteCoordinates != null 
+                          //           ? "Effacer d'abord la route" 
+                          //           : "Créer un parcours",
+                          //   onPressed: generatedRouteCoordinates != null 
+                          //       ? null 
+                          //       : () => _handleRouteGeneration(),
+                          // ),
+                        ],
+                      ),
                     ),
                   ),
                 ),            
               
                 if (isGenerateEnabled)
                 LoadingOverlay(),
+
+                // Info sur la route générée
+                if (generatedRouteCoordinates != null && generatedRouteStats != null)
+                Positioned(
+                  bottom: 40,
+                  left: 15,
+                  right: 15,
+                  child: RouteInfoCard(
+                    distance: double.parse(generatedRouteStats!['distance_km'] ?? '0'),
+                    isLoop: generatedRouteStats!['is_loop'] ?? false,
+                    waypointCount: generatedRouteStats!['points_count'] ?? 0,
+                    onClear: _clearRoute,
+                    onNavigate: _startNavigation,
+                    onShare: _shareCurrentRoute,
+                  ),
+                ),
               ],
             ),
           ),

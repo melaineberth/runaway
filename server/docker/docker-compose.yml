@@ -1,0 +1,50 @@
+services:
+  graphhopper:
+    image: israelhikingmap/graphhopper:latest
+    container_name: runaway-graphhopper
+    ports:
+      - "8989:8989"
+    volumes:
+      - ./data:/data
+      - ./config/graphhopper-config.yml:/graphhopper/config.yml
+    environment:
+      - JAVA_OPTS=-Xmx4g -Xms2g
+    command:
+      - /graphhopper/bin/graphhopper.sh
+      - -c
+      - /graphhopper/config.yml
+      - -i
+      - /data/osm/france-latest.osm.pbf
+      - -o
+      - /data/graphhopper
+      - --import
+    restart: unless-stopped
+
+  api:
+    build:
+      context: ..             
+      dockerfile: docker/Dockerfile
+    container_name: runaway-api
+    ports:
+      - "3001:3000"
+    depends_on:
+      - graphhopper
+    environment:
+      - NODE_ENV=production
+      - GRAPHHOPPER_URL=http://graphhopper:8989
+      - PORT=3000
+    volumes:
+      - ../src:/app/src
+    restart: unless-stopped
+
+  redis:
+    image: redis:alpine
+    container_name: runaway-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    restart: unless-stopped
+
+volumes:
+  redis-data:

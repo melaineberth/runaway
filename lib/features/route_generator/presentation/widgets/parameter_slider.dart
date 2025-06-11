@@ -27,50 +27,46 @@ class ParameterSlider extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.grey.shade50,
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Column(
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                title,
-                style: context.bodySmall,
+    return Column(
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              title,
+              style: context.bodySmall?.copyWith(
+                color: Colors.white,
               ),
-              Text(
-                '${value.toStringAsFixed(value < 10 ? 1 : 0)} $unit',
-                style: context.bodyLarge?.copyWith(
-                  color: Theme.of(context).primaryColor,
-                  fontWeight: FontWeight.bold,
-                ),
+            ),
+            Text(
+              '${value.toStringAsFixed(value < 10 ? 1 : 0)} $unit',
+              style: context.bodyLarge?.copyWith(
+                color: Theme.of(context).primaryColor,
+                fontWeight: FontWeight.bold,
               ),
-            ],
-          ),
-          12.h,
-          SliderTheme(
-            data: SliderTheme.of(context).copyWith(
-              activeTrackColor: Theme.of(context).primaryColor,
-              inactiveTrackColor: Colors.grey.shade300,
-              thumbColor: Theme.of(context).primaryColor,
-              overlayColor: Theme.of(context).primaryColor.withAlpha(30),
-              trackHeight: 6,
-              thumbShape: RoundSliderThumbShape(enabledThumbRadius: 10),
             ),
-            child: Slider(
-              value: value.clamp(min, max),
-              min: min,
-              max: max,
-              divisions: divisions ?? ((max - min) * 10).round(),
-              onChanged: onChanged,
-              padding: EdgeInsets.zero,
-            ),
+          ],
+        ),
+        12.h,
+        SliderTheme(
+          data: SliderTheme.of(context).copyWith(
+            activeTrackColor: Theme.of(context).primaryColor,
+            inactiveTrackColor: Colors.white12,
+            thumbColor: Theme.of(context).primaryColor,
+            overlayColor: Theme.of(context).primaryColor.withAlpha(30),
+            trackHeight: 6,
+            thumbShape: RoundSliderThumbShape(enabledThumbRadius: 10),
           ),
-        ],
-      ),
+          child: Slider(
+            value: value.clamp(min, max),
+            min: min,
+            max: max,
+            divisions: divisions ?? ((max - min) * 10).round(),
+            onChanged: onChanged,
+            padding: EdgeInsets.zero,
+          ),
+        ),
+      ],
     );
   }
 }

@@ -10,35 +10,48 @@ class GeoJsonService {
   Future<List<dynamic>> fetchHighQualityOsmWays(
       double lat, double lon, double radius) async {
     
-    // Ajuster le rayon selon la densité (plus petit en ville)
-    final adjustedRadius = math.min(radius, 8000); // Max 8km
+    // Ajuster le rayon selon la densité
+    final adjustedRadius = math.min(radius, 10000); // Max 10km
     
-    // Requête Overpass très sélective
+    // Requête Overpass améliorée pour un meilleur réseau connecté
     final query = '''
-[out:json][timeout:25];
+[out:json][timeout:30];
 (
-  // Chemins piétons de qualité avec noms (priorité haute)
-  way["highway"="footway"]["name"]["surface"~"^(asphalt|paved|concrete)\$"](around:${adjustedRadius.toInt()},$lat,$lon);
-  way["highway"="path"]["name"]["surface"~"^(asphalt|paved|gravel)\$"](around:${adjustedRadius.toInt()},$lat,$lon);
-  
-  // Pistes cyclables dédiées (priorité haute)
+  // 1. Pistes cyclables et voies vertes (excellentes pour course et vélo)
   way["highway"="cycleway"](around:${adjustedRadius.toInt()},$lat,$lon);
+  way["highway"="path"]["bicycle"="designated"](around:${adjustedRadius.toInt()},$lat,$lon);
+  way["route"="bicycle"](around:${adjustedRadius.toInt()},$lat,$lon);
   
-  // Chemins dans les parcs (priorité haute)
-  way["highway"~"^(footway|path)\$"]["leisure"="park"](around:${adjustedRadius.toInt()},$lat,$lon);
+  // 2. Chemins piétons de qualité
+  way["highway"="footway"]["surface"~"^(asphalt|paved|concrete|gravel)\$"](around:${adjustedRadius.toInt()},$lat,$lon);
+  way["highway"="footway"]["footway"~"^(sidewalk|crossing)\$"](around:${adjustedRadius.toInt()},$lat,$lon);
   
-  // Routes résidentielles très calmes uniquement
-  way["highway"="residential"]["maxspeed"~"^([1-2][0-9]|30)\$"]["name"](around:${adjustedRadius.toInt()},$lat,$lon);
+  // 3. Chemins dans les parcs et espaces verts
+  way["highway"~"^(footway|path|track)\$"]["leisure"="park"](around:${adjustedRadius.toInt()},$lat,$lon);
+  way["highway"~"^(footway|path)\$"]["landuse"~"^(recreation_ground|grass)\$"](around:${adjustedRadius.toInt()},$lat,$lon);
+  
+  // 4. Sentiers et chemins naturels
+  way["highway"="path"]["surface"!="sand"]["surface"!="mud"](around:${adjustedRadius.toInt()},$lat,$lon);
+  way["highway"="track"]["tracktype"~"^(grade1|grade2)\$"](around:${adjustedRadius.toInt()},$lat,$lon);
+  
+  // 5. Routes résidentielles calmes et zones piétonnes
+  way["highway"="pedestrian"](around:${adjustedRadius.toInt()},$lat,$lon);
   way["highway"="living_street"](around:${adjustedRadius.toInt()},$lat,$lon);
+  way["highway"="residential"]["maxspeed"~"^(10|20|30)\$"](around:${adjustedRadius.toInt()},$lat,$lon);
+  way["highway"="residential"]["traffic_calming"](around:${adjustedRadius.toInt()},$lat,$lon);
   
-  // Chemins en forêt/nature avec noms
-  way["highway"~"^(footway|path|track)\$"]["landuse"="forest"]["name"](around:${adjustedRadius.toInt()},$lat,$lon);
-  way["highway"~"^(footway|path)\$"]["natural"~"^(wood|heath)\$"](around:${adjustedRadius.toInt()},$lat,$lon);
+  // 6. Voies partagées et zones 30
+  way["highway"="service"]["service"!="parking_aisle"]["access"!="private"](around:${adjustedRadius.toInt()},$lat,$lon);
+  way["highway"="unclassified"]["maxspeed"="30"](around:${adjustedRadius.toInt()},$lat,$lon);
+  
+  // 7. Chemins le long de l'eau
+  way["highway"~"^(footway|path|track)\$"]["waterway"](around:${adjustedRadius.toInt()},$lat,$lon);
+  way["highway"~"^(footway|path)\$"]["natural"="coastline"](around:${adjustedRadius.toInt()},$lat,$lon);
 );
 out body geom;
 ''';
 
-    print('🔍 Requête Overpass sélective (rayon: ${(adjustedRadius/1000).toStringAsFixed(1)}km)');
+    print('🔍 Requête Overpass optimisée (rayon: ${(adjustedRadius/1000).toStringAsFixed(1)}km)');
 
     final response = await http.post(
       Uri.parse('https://overpass-api.de/api/interpreter'),
@@ -53,7 +66,7 @@ out body geom;
     final data = json.decode(response.body) as Map<String, dynamic>;
     final elements = data['elements'] as List<dynamic>;
     
-    print('✅ ${elements.length} segments de qualité récupérés');
+    print('✅ ${elements.length} segments récupérés');
     return elements;
   }
 
@@ -122,8 +135,8 @@ out body geom;
     features.sort((a, b) => (b['properties']['quality_score'] as int)
         .compareTo(a['properties']['quality_score'] as int));
 
-    // Limiter le nombre total (garder les 2000 meilleurs max)
-    final limitedFeatures = features.take(2000).toList();
+    // Limiter le nombre total (garder les 5000 meilleurs max pour un réseau plus dense)
+    final limitedFeatures = features.take(5000).toList();
     
     print('📊 ${limitedFeatures.length} segments conservés après filtrage');
     return limitedFeatures;
@@ -135,30 +148,29 @@ out body geom;
     if (coords.length < 2) return false;
     
     final length = _calculateSegmentLength(coords);
-    if (length < 20) return false; // Au moins 20m
-    if (length > 5000) return false; // Max 5km (probablement une autoroute)
+    if (length < 10) return false; // Au moins 10m (réduit de 20m)
+    if (length > 10000) return false; // Max 10km
 
     final highway = tags['highway'] as String?;
     final access = tags['access'] as String?;
     final surface = tags['surface'] as String?;
 
-    // Exclure les accès interdits
-    if (access == 'private' || access == 'no') return false;
+    // Exclure les accès strictement interdits
+    if (access == 'no') return false;
 
     // Exclure les routes dangereuses
-    if (highway == 'motorway' || highway == 'trunk' || highway == 'primary') return false;
+    if (highway == 'motorway' || highway == 'trunk' || highway == 'motorway_link' || highway == 'trunk_link') return false;
 
-    // Exclure les surfaces vraiment mauvaises
-    if (surface == 'sand' || surface == 'mud') return false;
+    // Exclure les surfaces vraiment impraticables
+    if (surface == 'mud') return false;
 
-    // Privilégier les segments avec noms (plus intéressants)
-    final hasName = tags['name'] != null && (tags['name'] as String).isNotEmpty;
-    final isInGreenSpace = tags['leisure'] == 'park' || 
-                          tags['landuse'] == 'forest' || 
-                          tags['natural'] != null;
-
-    // Garder si : a un nom OU est dans un espace vert OU est une piste cyclable
-    return hasName || isInGreenSpace || highway == 'cycleway' || highway == 'footway';
+    // Accepter plus largement les segments
+    // - Tous les chemins piétons et cyclables
+    // - Les routes résidentielles calmes
+    // - Les chemins dans les parcs et espaces verts
+    // - Les chemins même sans nom s'ils sont dans des zones intéressantes
+    
+    return true; // Accepter par défaut
   }
 
   /// Génère une clé unique pour détecter les doublons géographiques
@@ -177,37 +189,50 @@ out body geom;
     // Points pour le type de voie
     final highway = tags['highway'] as String?;
     switch (highway) {
-      case 'cycleway': score += 10; break;
-      case 'footway': score += 8; break;
-      case 'path': score += 6; break;
+      case 'cycleway': score += 12; break;
+      case 'footway': score += 10; break;
+      case 'path': score += 8; break;
+      case 'pedestrian': score += 9; break;
       case 'living_street': score += 7; break;
-      case 'residential': score += 4; break;
-      case 'track': score += 3; break;
+      case 'residential': score += 5; break;
+      case 'track': score += 4; break;
+      case 'service': score += 3; break;
+      case 'unclassified': score += 2; break;
     }
 
     // Points pour la surface
     final surface = tags['surface'] as String?;
     switch (surface) {
-      case 'asphalt': case 'paved': case 'concrete': score += 5; break;
-      case 'gravel': case 'fine_gravel': score += 3; break;
-      case 'dirt': case 'earth': score += 1; break;
+      case 'asphalt': case 'paved': case 'concrete': score += 6; break;
+      case 'gravel': case 'fine_gravel': case 'compacted': score += 4; break;
+      case 'ground': case 'earth': score += 2; break;
+      case 'grass': score += 1; break;
     }
 
     // Points pour l'environnement
-    if (tags['leisure'] == 'park') score += 8;
-    if (tags['landuse'] == 'forest') score += 6;
-    if (tags['natural'] != null) score += 4;
+    if (tags['leisure'] == 'park') score += 10;
+    if (tags['landuse'] == 'forest') score += 8;
+    if (tags['landuse'] == 'recreation_ground') score += 7;
+    if (tags['natural'] != null) score += 6;
+    if (tags['waterway'] != null) score += 5;
 
     // Points pour avoir un nom
-    if (tags['name'] != null && (tags['name'] as String).isNotEmpty) score += 5;
+    if (tags['name'] != null && (tags['name'] as String).isNotEmpty) score += 4;
 
-    // Points pour la longueur optimale (200-800m)
-    if (length >= 200 && length <= 800) score += 3;
-    else if (length >= 100 && length <= 1500) score += 1;
+    // Points pour la longueur optimale (100-1000m)
+    if (length >= 100 && length <= 1000) score += 4;
+    else if (length >= 50 && length <= 2000) score += 2;
+
+    // Points pour les aménagements
+    if (tags['lit'] == 'yes') score += 2; // Éclairage
+    if (tags['bicycle'] == 'designated' || tags['bicycle'] == 'yes') score += 3;
+    if (tags['foot'] == 'designated' || tags['foot'] == 'yes') score += 2;
+    if (tags['segregated'] == 'yes') score += 2; // Séparation piétons/vélos
 
     // Malus pour accès restreint
     if (tags['access'] == 'destination') score -= 2;
-    if (tags['foot'] == 'discouraged') score -= 3;
+    if (tags['access'] == 'private') score -= 5;
+    if (tags['foot'] == 'no') score -= 10;
 
     return math.max(0, score);
   }
@@ -444,21 +469,66 @@ out body geom;
     final access = tags['access'] as String?;
     final foot = tags['foot'] as String?;
     final bicycle = tags['bicycle'] as String?;
+    final surface = tags['surface'] as String?;
     
     bool runningOk = true;
     bool cyclingOk = true;
     
-    if (access == 'private' || access == 'no') {
+    // Vérifier l'accès général
+    if (access == 'no') {
       runningOk = false;
       cyclingOk = false;
     }
     
+    // Vérifier les interdictions spécifiques
     if (foot == 'no') runningOk = false;
     if (bicycle == 'no') cyclingOk = false;
     
-    if (highway == 'motorway' || highway == 'trunk' || highway == 'primary') {
+    // Vérifier le type de voie
+    if (highway == 'motorway' || highway == 'trunk' || highway == 'motorway_link' || highway == 'trunk_link') {
       runningOk = false;
       cyclingOk = false;
+    }
+    
+    // Routes principales : ok pour le vélo seulement si aménagé
+    if (highway == 'primary' || highway == 'secondary') {
+      runningOk = false;
+      if (bicycle != 'designated' && bicycle != 'yes') {
+        cyclingOk = false;
+      }
+    }
+    
+    // Autorisations explicites
+    if (foot == 'designated' || foot == 'yes') runningOk = true;
+    if (bicycle == 'designated' || bicycle == 'yes') cyclingOk = true;
+    
+    // Surfaces impraticables
+    if (surface == 'mud') {
+      runningOk = false;
+      cyclingOk = false;
+    } else if (surface == 'sand' || surface == 'grass') {
+      cyclingOk = false; // Difficile en vélo mais possible en course
+    }
+    
+    // Cas spéciaux par type de voie
+    switch (highway) {
+      case 'cycleway':
+        cyclingOk = true;
+        runningOk = foot != 'no'; // Autorisé sauf interdiction explicite
+        break;
+      case 'footway':
+      case 'pedestrian':
+        runningOk = true;
+        cyclingOk = bicycle == 'yes' || bicycle == 'designated';
+        break;
+      case 'path':
+      case 'track':
+        // Dépend des tags spécifiques et de la surface
+        if (surface == 'paved' || surface == 'asphalt') {
+          runningOk = foot != 'no';
+          cyclingOk = bicycle != 'no';
+        }
+        break;
     }
     
     return {

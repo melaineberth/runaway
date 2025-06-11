@@ -133,10 +133,9 @@ class ParticlesSparkPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     for (final particle in particles) {
       final paint = Paint()
-        ..color = particle.color.withOpacity(easedOpacity(particle.progress))
+        ..color = particle.color.withValues(alpha: easedOpacity(particle.progress))
         ..style = PaintingStyle.fill;
 
-      final path = Path();
       final currentPoint = _calculateBezierPoint(
         particle.progress,
         Offset(particle.startX, particle.startY),

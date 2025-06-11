@@ -6,8 +6,7 @@ ThemeData getAppTheme(Brightness brightness) {
 
   return ThemeData(
     useMaterial3: true,
-    brightness: brightness,
-    scaffoldBackgroundColor: isDark ? AppColorsDark.background : AppColors.background,
+    scaffoldBackgroundColor: AppColorsDark.background,
     colorScheme: ColorScheme(
       brightness: brightness,
       primary: isDark ? AppColorsDark.primary : AppColors.primary,
@@ -51,8 +50,8 @@ ThemeData getAppTheme(Brightness brightness) {
       ),
     ),
     appBarTheme: AppBarTheme(
-      backgroundColor: isDark ? AppColorsDark.surface : AppColors.surface,
-      foregroundColor: isDark ? AppColorsDark.textPrimary : AppColors.textPrimary,
+      backgroundColor: AppColorsDark.background,
+      foregroundColor: AppColorsDark.textPrimary,
       elevation: 0,
     ),
     cardTheme: CardThemeData(

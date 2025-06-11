@@ -80,15 +80,6 @@ class OverpassPoiService {
 
         print('✅ ${pois.length} POIs retenus pour la génération');
 
-        // print('POIs : ${pois}');
-
-        // for (var poi in pois) {
-        //   final name = poi['name'];
-        //   if (name != null) {
-        //     print('🗺️  $name');
-        //   }
-        // }
-
         return pois;
       } else {
         throw Exception('Overpass API error: ${response.statusCode}');
