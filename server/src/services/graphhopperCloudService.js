@@ -168,36 +168,168 @@ class GraphHopperCloudService {
         elevation: 0
       }));
     }
-
+  
     try {
-      const points = coordinates.map(coord => ({
-        lat: coord[1] || coord.lat,
-        lng: coord[0] || coord.lon
-      }));
-
-      const response = await axios.post(`${this.baseUrl}/elevation`, {
-        points
-      }, {
-        params: { key: this.apiKey },
+      // FIX: GraphHopper Cloud elevation API utilise un format différent
+      // Il faut faire une requête GET avec les coordonnées dans l'URL
+      const points = coordinates.slice(0, 50).map(coord => {
+        const lat = coord[1] || coord.lat;
+        const lon = coord[0] || coord.lon;
+        return `${lat},${lon}`;
+      }).join('|');
+  
+      const url = `${this.baseUrl}/elevation`;
+      const params = {
+        key: this.apiKey,
+        point: points,
+        format: 'json'
+      };
+  
+      logger.info('Demande élévation GraphHopper:', {
+        points_count: coordinates.length,
+        url_params: { ...params, key: '***' }
+      });
+  
+      const response = await axios.get(url, {
+        params,
         timeout: 15000
       });
-
-      return response.data.elevations.map((elevation, index) => ({
-        lat: points[index].lat,
-        lon: points[index].lng,
-        elevation
-      }));
-
+  
+      // FIX: Traiter la réponse selon le format GraphHopper
+      if (response.data && Array.isArray(response.data)) {
+        return response.data.map((point, index) => ({
+          lat: coordinates[index][1] || coordinates[index].lat,
+          lon: coordinates[index][0] || coordinates[index].lon,
+          elevation: point.elevation || 0
+        }));
+      }
+  
+      // Si le format n'est pas celui attendu, retourner des valeurs par défaut
+      throw new Error('Format de réponse inattendu de GraphHopper elevation');
+  
     } catch (error) {
-      logger.error('Erreur récupération élévation:', error.message);
-      // Retourner des élévations par défaut en cas d'erreur
-      return coordinates.map(coord => ({
-        lat: coord[1] || coord.lat,
-        lon: coord[0] || coord.lon,
-        elevation: 0
+      logger.warn('Élévation GraphHopper échouée, fallback vers Open-Elevation:', {
+        message: error.message,
+        status: error.response?.status,
+        coordinates_count: coordinates.length
+      });
+      
+      // Fallback immédiat vers Open-Elevation
+      return this.getOpenElevation(coordinates);
+    }
+  }  
+
+  // Dans graphhopperCloudService.js - Méthode getElevation corrigée
+
+async getElevation(coordinates) {
+  if (!this.apiKey) {
+    logger.warn('API key manquante pour élévation, retour élévations zéro');
+    return coordinates.map(coord => ({
+      lat: coord[1] || coord.lat,
+      lon: coord[0] || coord.lon,
+      elevation: 0
+    }));
+  }
+
+  try {
+    // FIX: GraphHopper Cloud elevation API utilise un format différent
+    // Il faut faire une requête GET avec les coordonnées dans l'URL
+    const points = coordinates.slice(0, 50).map(coord => {
+      const lat = coord[1] || coord.lat;
+      const lon = coord[0] || coord.lon;
+      return `${lat},${lon}`;
+    }).join('|');
+
+    const url = `${this.baseUrl}/elevation`;
+    const params = {
+      key: this.apiKey,
+      point: points,
+      format: 'json'
+    };
+
+    logger.info('Demande élévation GraphHopper:', {
+      points_count: coordinates.length,
+      url_params: { ...params, key: '***' }
+    });
+
+    const response = await axios.get(url, {
+      params,
+      timeout: 15000
+    });
+
+    // FIX: Traiter la réponse selon le format GraphHopper
+    if (response.data && Array.isArray(response.data)) {
+      return response.data.map((point, index) => ({
+        lat: coordinates[index][1] || coordinates[index].lat,
+        lon: coordinates[index][0] || coordinates[index].lon,
+        elevation: point.elevation || 0
       }));
     }
+
+    // Si le format n'est pas celui attendu, retourner des valeurs par défaut
+    throw new Error('Format de réponse inattendu de GraphHopper elevation');
+
+  } catch (error) {
+    logger.warn('Élévation GraphHopper échouée, fallback vers Open-Elevation:', {
+      message: error.message,
+      status: error.response?.status,
+      coordinates_count: coordinates.length
+    });
+    
+    // Fallback immédiat vers Open-Elevation
+    return this.getOpenElevation(coordinates);
   }
+}
+
+/**
+ * Fallback vers Open-Elevation API (méthode ajoutée)
+ */
+async getOpenElevation(coordinates) {
+  try {
+    const axios = require('axios');
+    
+    // Limiter à 100 points max pour Open-Elevation
+    const limitedCoords = coordinates.slice(0, 100);
+    
+    const locations = limitedCoords.map(coord => ({
+      latitude: coord[1] || coord.lat,
+      longitude: coord[0] || coord.lon
+    }));
+
+    const response = await axios.post('https://api.open-elevation.com/api/v1/lookup', {
+      locations
+    }, {
+      timeout: 10000,
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (!response.data || !response.data.results) {
+      throw new Error('Invalid response from Open-Elevation');
+    }
+
+    logger.info('Open-Elevation réussie:', {
+      points_processed: response.data.results.length
+    });
+
+    return response.data.results.map((result, index) => ({
+      lat: limitedCoords[index][1] || limitedCoords[index].lat,
+      lon: limitedCoords[index][0] || limitedCoords[index].lon,
+      elevation: result.elevation || 0
+    }));
+
+  } catch (error) {
+    logger.error('Open-Elevation également échouée:', error.message);
+    
+    // Dernier fallback: élévations par défaut
+    return coordinates.map(coord => ({
+      lat: coord[1] || coord.lat,
+      lon: coord[0] || coord.lon,
+      elevation: 0
+    }));
+  }
+}
 
   /**
    * Vérifie l'état de l'API GraphHopper

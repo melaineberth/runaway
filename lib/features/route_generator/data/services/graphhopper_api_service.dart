@@ -1,6 +1,6 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:runaway/config/environment_config.dart';
 import 'package:runaway/core/errors/api_exceptions.dart';
 import 'package:runaway/core/errors/error_handler.dart';
@@ -13,54 +13,74 @@ import '../../domain/models/route_parameters.dart';
 class GraphHopperApiService {
   /// Génère un parcours via l'API GraphHopper
   static Future<GraphHopperRouteResult> generateRoute({
-    required RouteParameters parameters,
-  }) async {
-    print('🛣️ Génération de parcours via API GraphHopper...');
-    print('📍 ${parameters.distanceKm}km, ${parameters.activityType.name}, ${parameters.terrainType.name}');
+  required RouteParameters parameters,
+}) async {
+  print('🛣️ Génération de parcours via API GraphHopper...');
+  print('📍 ${parameters.distanceKm}km, ${parameters.activityType.name}, ${parameters.terrainType.name}');
 
-    try {
-      final requestBody = {
-        'startLatitude': parameters.startLatitude,
-        'startLongitude': parameters.startLongitude,
-        'activityType': _mapActivityType(parameters.activityType),
-        'distanceKm': parameters.distanceKm,
-        'terrainType': _mapTerrainType(parameters.terrainType),
-        'urbanDensity': _mapUrbanDensity(parameters.urbanDensity),
-        'elevationGain': parameters.elevationGain.round(),
-        'isLoop': parameters.isLoop,
-        'avoidTraffic': parameters.avoidTraffic,
-        'preferScenic': parameters.preferScenic,
-      };
+  try {
+    final requestBody = {
+      'startLatitude': parameters.startLatitude,
+      'startLongitude': parameters.startLongitude,
+      'activityType': _mapActivityType(parameters.activityType),
+      'distanceKm': parameters.distanceKm,
+      'terrainType': _mapTerrainType(parameters.terrainType),
+      'urbanDensity': _mapUrbanDensity(parameters.urbanDensity),
+      'elevationGain': parameters.elevationGain.round(),
+      'isLoop': parameters.isLoop,
+      'avoidTraffic': parameters.avoidTraffic,
+      'preferScenic': parameters.preferScenic,
+    };
 
-      print('📤 Envoi requête: ${jsonEncode(requestBody)}');
+    print('📤 Envoi requête: ${jsonEncode(requestBody)}');
 
-      final response = await http.post(
-        Uri.parse('${EnvironmentConfig.apiBaseUrl}/routes/generate'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
-        body: jsonEncode(requestBody),
-      ).timeout(EnvironmentConfig.apiTimeout);
+    final response = await http.post(
+      Uri.parse('${EnvironmentConfig.apiBaseUrl}/routes/generate'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+      body: jsonEncode(requestBody),
+    ).timeout(EnvironmentConfig.apiTimeout);
 
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        if (data['success'] == true) {
-          return GraphHopperRouteResult.fromApiResponse(data);
-        } else {
-          throw RouteGenerationException(
-              data['error'] ?? 'Génération échouée');
-        }
-      } else {
-        throw ErrorHandler.handleHttpError(response);
+    print('📥 Réponse reçue: status=${response.statusCode}, body_length=${response.body.length}');
+
+    if (response.statusCode == 200) {
+      // FIX: Validation et parsing sécurisé
+      late Map<String, dynamic> data;
+      try {
+        data = jsonDecode(response.body) as Map<String, dynamic>;
+      } catch (e) {
+        throw RouteGenerationException('Réponse serveur invalide: impossible de parser le JSON');
       }
-      
-    } on AppException {
-      rethrow; // Re-lancer les exceptions déjà typées
-    } catch (e) {
-      throw ErrorHandler.handleNetworkError(e);
+
+      // FIX: Vérification du succès
+      if (data['success'] == true) {
+        print('✅ Parsing des données de route...');
+        return GraphHopperRouteResult.fromApiResponse(data);
+      } else {
+        final errorMsg = data['error'] as String? ?? 'Erreur inconnue du serveur';
+        throw RouteGenerationException('Génération échouée: $errorMsg');
+      }
+    } else {
+      // FIX: Gestion des erreurs HTTP
+      print('❌ Erreur HTTP ${response.statusCode}: ${response.body}');
+      throw ErrorHandler.handleHttpError(response);
     }
+    
+  } on AppException {
+    rethrow; // Re-lancer les exceptions déjà typées
+  } on FormatException catch (e) {
+    print('❌ Erreur format JSON: $e');
+    throw RouteGenerationException('Réponse serveur mal formatée');
+  } on TimeoutException catch (e) {
+    print('❌ Timeout: $e');
+    throw NetworkException('Délai d\'attente dépassé', code: 'TIMEOUT');
+  } catch (e) {
+    print('❌ Erreur inattendue: $e');
+    throw ErrorHandler.handleNetworkError(e);
   }
+}
 
   /// Analyse une route existante (optionnel)
   static Future<Map<String, dynamic>> analyzeRoute({

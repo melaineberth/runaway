@@ -53,9 +53,15 @@ class ElevationService {
         lat: coordinates[index][1] || coordinates[index].lat,
         elevation: point.elevation
       }));
-
+  
     } catch (error) {
-      logger.error('Erreur GraphHopper elevation:', error);
+      // FIX: Proper error logging
+      logger.error('Erreur GraphHopper elevation:', {
+        message: error.message,
+        status: error.response?.status,
+        coordinates_count: coordinates.length
+      });
+      
       // Fallback vers Open-Elevation API en cas d'échec
       return this.fetchOpenElevation(coordinates);
     }

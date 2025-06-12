@@ -19,25 +19,53 @@ class GraphHopperRouteResult {
 
   factory GraphHopperRouteResult.fromApiResponse(Map<String, dynamic> data) {
     try {
-      final route = data['route'] as Map<String, dynamic>? ?? {};
+      print('🔍 Parsing API response: ${data.keys}');
+      
+      // FIX: Vérifier la structure de la réponse
+      if (data['success'] != true) {
+        throw Exception('API response indicates failure: ${data['error'] ?? 'Unknown error'}');
+      }
+
+      final route = data['route'] as Map<String, dynamic>?;
+      if (route == null) {
+        throw Exception('Route data is missing from API response');
+      }
+
       final instructions = data['instructions'] as List<dynamic>? ?? [];
       
-      // Traitement sécurisé des coordonnées
-      final rawCoordinates = route['coordinates'] as List<dynamic>? ?? [];
+      // FIX: Traitement sécurisé des coordonnées avec vérification
+      final rawCoordinates = route['coordinates'] as List<dynamic>?;
+      if (rawCoordinates == null || rawCoordinates.isEmpty) {
+        throw Exception('Coordinates are missing or empty');
+      }
+
       final coordinates = rawCoordinates.map<List<double>>((coord) {
-        final coordList = coord as List<dynamic>? ?? [];
+        if (coord is! List || coord.length < 2) {
+          throw Exception('Invalid coordinate format: $coord');
+        }
         return <double>[
-          coordList.isNotEmpty ? (coordList[0] as num).toDouble() : 0.0, // longitude
-          coordList.length > 1 ? (coordList[1] as num).toDouble() : 0.0, // latitude
-          coordList.length > 2 ? (coordList[2] as num).toDouble() : 0.0, // elevation
+          (coord[0] as num).toDouble(), // longitude
+          (coord[1] as num).toDouble(), // latitude
+          coord.length > 2 ? (coord[2] as num).toDouble() : 0.0, // elevation
         ];
       }).toList();
       
+      // FIX: Validation des données essentielles
+      final distance = route['distance'] as num?;
+      final duration = route['duration'] as num?;
+      final elevationGain = route['elevationGain'] as num? ?? 0;
+      
+      if (distance == null) {
+        throw Exception('Distance is missing from route data');
+      }
+
+      print('✅ Successfully parsed ${coordinates.length} coordinates, ${(distance / 1000).toStringAsFixed(1)}km');
+      
       return GraphHopperRouteResult(
         coordinates: coordinates,
-        distanceKm: ((route['distance'] as num?) ?? 0) / 1000,
-        durationMinutes: (((route['duration'] as num?) ?? 0) / 60000).round(),
-        elevationGain: ((route['elevationGain'] as num?) ?? 0).toDouble(),
+        distanceKm: distance.toDouble() / 1000, // Convert meters to km
+        durationMinutes: duration != null ? (duration.toDouble() / 60000).round() : 0, // Convert ms to minutes
+        elevationGain: elevationGain.toDouble(),
         instructions: instructions.map((inst) {
           final instMap = inst as Map<String, dynamic>? ?? {};
           return RouteInstruction.fromJson(instMap);
@@ -45,18 +73,11 @@ class GraphHopperRouteResult {
         metadata: Map<String, dynamic>.from(route['metadata'] as Map? ?? {}),
         bbox: (data['bbox'] as List<dynamic>?)?.map<double>((e) => (e as num).toDouble()).toList() ?? [],
       );
+      
     } catch (e) {
       print('❌ Erreur parsing GraphHopper response: $e');
-      // Retourner un résultat vide en cas d'erreur
-      return GraphHopperRouteResult(
-        coordinates: [],
-        distanceKm: 0.0,
-        durationMinutes: 0,
-        elevationGain: 0.0,
-        instructions: [],
-        metadata: {},
-        bbox: [],
-      );
+      print('📄 Response data: $data');
+      rethrow; // Re-lancer l'exception pour qu'elle soit gérée par le caller
     }
   }
 
