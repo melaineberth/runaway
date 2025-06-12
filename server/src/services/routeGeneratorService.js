@@ -2,45 +2,79 @@
 const turf = require('@turf/turf');
 const logger = require('../config/logger'); // Import direct du logger
 const graphhopperCloud = require('./graphhopperCloudService');
+const { metricsService } = require('./metricsService');
 
 class RouteGeneratorService {
   constructor() {
     this.cache = new Map(); // Cache en mémoire
   }
 
-  /**
+/**
    * Génère un parcours selon les paramètres fournis
    */
-  async generateRoute(params) {
-    const {
-      startLat,
-      startLon,
-      activityType,
-      distanceKm,
-      terrainType,
-      urbanDensity,
-      elevationGain,
-      isLoop,
-      avoidTraffic,
-      preferScenic
-    } = params;
+async generateRoute(params) {
+  const startTime = Date.now();
+  const {
+    startLat,
+    startLon,
+    activityType,
+    distanceKm,
+    terrainType,
+    urbanDensity,
+    elevationGain,
+    isLoop,
+    avoidTraffic,
+    preferScenic
+  } = params;
 
-    logger.info('Génération de parcours:', params);
+  logger.info('Route generation started', { 
+    requestId: params.requestId,
+    activityType,
+    distanceKm,
+    terrainType,
+    urbanDensity,
+    startCoords: [startLat, startLon]
+  });
 
-    try {
-      // Sélectionner le profil GraphHopper approprié
-      const profile = graphhopperCloud.selectProfile(activityType, terrainType, preferScenic);
-      
-      if (isLoop) {
-        return await this.generateLoopRoute(params, profile);
-      } else {
-        return await this.generatePointToPointRoute(params, profile);
-      }
-    } catch (error) {
-      logger.error('Erreur génération parcours:', error);
-      throw error;
+  try {
+    // Sélectionner le profil GraphHopper approprié
+    const profile = graphhopperCloud.selectProfile(activityType, terrainType, preferScenic);
+    
+    let route;
+    if (isLoop) {
+      route = await this.generateLoopRoute(params, profile);
+    } else {
+      route = await this.generatePointToPointRoute(params, profile);
     }
+
+    const duration = Date.now() - startTime;
+    logger.info('Route generation completed', {
+      requestId: params.requestId,
+      duration: `${duration}ms`,
+      distance: route.distance,
+      coordinatesCount: route.coordinates.length,
+      profile
+    });
+    
+    // Enregistrer les métriques de succès
+    metricsService.recordRouteGeneration(true, route.distance / 1000);
+    
+    return route;
+
+  } catch (error) {
+    const duration = Date.now() - startTime;
+    logger.error('Route generation failed', {
+      requestId: params.requestId,
+      duration: `${duration}ms`,
+      error: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
+    
+    // Enregistrer les métriques d'échec
+    metricsService.recordRouteGeneration(false);
+    throw error;
   }
+}
 
   /**
    * Génère un parcours en boucle

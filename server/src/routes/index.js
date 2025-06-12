@@ -1,11 +1,23 @@
-// src/routes/index.js
+// server/src/routes/index.js - Ajout des routes métriques
 const express = require('express');
 const router = express.Router();
-const logger = require('../config/logger'); // Import direct du logger
+const logger = require('../config/logger');
 
 // Contrôleurs
 const healthController = require('../controllers/healthController');
 const routeController = require('../controllers/routeController');
+
+// Middlewares
+const { metricsMiddleware } = require('../services/metricsService');
+const RequestLogger = require('../middleware/requestLogger');
+
+// ============= MIDDLEWARES GLOBAUX =============
+
+// Logging des requêtes
+router.use(RequestLogger.middleware());
+
+// Métriques
+router.use(metricsMiddleware);
 
 // ============= ROUTES DE SANTÉ =============
 
@@ -18,6 +30,12 @@ router.get('/liveness', healthController.checkLiveness);
 // GraphHopper specific health
 router.get('/graphhopper/limits', healthController.getGraphHopperLimits);
 router.post('/test/route', healthController.testRoute);
+
+// ============= ROUTES DE MÉTRIQUES =============
+
+// Métriques système
+router.get('/metrics', healthController.getMetrics);
+router.post('/metrics/reset', healthController.resetMetrics);
 
 // ============= ROUTES DE GÉNÉRATION =============
 

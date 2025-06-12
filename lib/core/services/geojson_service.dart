@@ -220,8 +220,11 @@ out body geom;
     if (tags['name'] != null && (tags['name'] as String).isNotEmpty) score += 4;
 
     // Points pour la longueur optimale (100-1000m)
-    if (length >= 100 && length <= 1000) score += 4;
-    else if (length >= 50 && length <= 2000) score += 2;
+    if (length >= 100 && length <= 1000) {
+      score += 4;
+    } else if (length >= 50 && length <= 2000) {
+      score += 2;
+    }
 
     // Points pour les aménagements
     if (tags['lit'] == 'yes') score += 2; // Éclairage
@@ -240,9 +243,9 @@ out body geom;
   /// Ajoute l'élévation par batches optimisés
   Future<List<Map<String, dynamic>>> addOptimizedElevation(
       List<Map<String, dynamic>> features) async {
-    final _apiKey = dotenv.get('ORS_TOKEN');
+    final apiKey = dotenv.get('ORS_TOKEN');
     
-    if (_apiKey.isEmpty) {
+    if (apiKey.isEmpty) {
       print('⚠️ ORS_TOKEN manquant, élévations non ajoutées');
       return features;
     }
@@ -275,8 +278,8 @@ out body geom;
 
           // Points de début et fin seulement
           final elevations = await Future.wait([
-            _getElevationForPoint(startCoord[0], startCoord[1], _apiKey),
-            _getElevationForPoint(endCoord[0], endCoord[1], _apiKey),
+            _getElevationForPoint(startCoord[0], startCoord[1], apiKey),
+            _getElevationForPoint(endCoord[0], endCoord[1], apiKey),
           ]);
 
           if (elevations[0] != null && elevations[1] != null) {
@@ -297,7 +300,7 @@ out body geom;
 
       processed += batch.length;
       if (processed % 20 == 0) {
-        print('📍 ${processed}/${elevationFeatures.length} segments traités');
+        print('📍 $processed/${elevationFeatures.length} segments traités');
       }
 
       // Délai entre les batches

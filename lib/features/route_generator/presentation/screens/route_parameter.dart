@@ -117,7 +117,7 @@ class _RouteParameterScreenState extends State<RouteParameterScreen> with Single
                   curve: Curves.linear,
                   steps: 25,
                   begin: Alignment.center,
-                  end: Alignment.bottomCenter,
+                  end: Alignment.topCenter,
                 ),
               ),
             ),

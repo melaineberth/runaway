@@ -54,66 +54,50 @@ function validateRouteParams(params) {
     };
   }
 
-  // 🚨 FIX: Vérifier que value existe avant d'accéder à ses propriétés
-  if (!value) {
+  // ✅ FIX: Vérifier que value existe ET a les propriétés requises
+  if (!value || typeof value !== 'object') {
     return {
       valid: false,
       errors: [{ field: 'general', message: 'Données invalides' }]
     };
   }
 
-  // Validations supplémentaires
+  // Validations métier supplémentaires
   const additionalErrors = [];
 
-  // 🔑 FIX: Vérifier que searchRadius existe avant de l'utiliser
-  if (value.searchRadius && value.distanceKm && value.searchRadius < value.distanceKm * 500) {
-    additionalErrors.push({
-      field: 'searchRadius',
-      message: 'Le rayon de recherche doit être au moins 500m par km de distance'
-    });
+  // Vérification du rayon de recherche
+  if (value.searchRadius && value.distanceKm) {
+    const minRadius = value.distanceKm * 500; // 500m par km minimum
+    if (value.searchRadius < minRadius) {
+      additionalErrors.push({
+        field: 'searchRadius',
+        message: `Le rayon de recherche doit être au moins ${minRadius}m pour ${value.distanceKm}km`
+      });
+    }
   }
 
-  // Vérifier la cohérence dénivelé/distance
-  const maxElevationPerKm = {
-    flat: 50,
-    mixed: 100,
-    hilly: 200
-  };
-
-  const maxElevation = value.distanceKm * maxElevationPerKm[value.terrainType];
-  if (value.elevationGain > maxElevation) {
-    additionalErrors.push({
-      field: 'elevationGain',
-      message: `Le dénivelé maximum pour ${value.distanceKm}km en terrain ${value.terrainType} est ${maxElevation}m`
-    });
-  }
-
-  // Limites par activité
+  // Limites par activité avec vérification d'existence
   const activityLimits = {
     running: { minDistance: 1, maxDistance: 42 },
     cycling: { minDistance: 5, maxDistance: 200 },
     walking: { minDistance: 0.5, maxDistance: 30 }
   };
 
-  const limits = activityLimits[value.activityType];
-  if (value.distanceKm < limits.minDistance || value.distanceKm > limits.maxDistance) {
-    additionalErrors.push({
-      field: 'distanceKm',
-      message: `La distance pour ${value.activityType} doit être entre ${limits.minDistance} et ${limits.maxDistance} km`
-    });
+  if (value.activityType && value.distanceKm) {
+    const limits = activityLimits[value.activityType];
+    if (limits && (value.distanceKm < limits.minDistance || value.distanceKm > limits.maxDistance)) {
+      additionalErrors.push({
+        field: 'distanceKm',
+        message: `Distance pour ${value.activityType}: ${limits.minDistance}-${limits.maxDistance}km`
+      });
+    }
   }
 
   if (additionalErrors.length > 0) {
-    return {
-      valid: false,
-      errors: additionalErrors
-    };
+    return { valid: false, errors: additionalErrors };
   }
 
-  return {
-    valid: true,
-    value: value
-  };
+  return { valid: true, value };
 }
 
 /**

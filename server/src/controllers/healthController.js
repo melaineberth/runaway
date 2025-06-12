@@ -1,7 +1,8 @@
-// src/controllers/healthController.js
+// server/src/controllers/healthController.js
 const os = require('os');
-const logger = require('../config/logger'); // Import direct du logger
+const logger = require('../config/logger');
 const graphhopperCloud = require('../services/graphhopperCloudService');
+const { metricsService } = require('../services/metricsService');
 
 class HealthController {
   /**
@@ -118,7 +119,6 @@ class HealthController {
       });
 
     } catch (error) {
-      // CORRECTION: Utiliser le logger correctement importé
       logger.error('Error getting system status:', error);
       res.status(500).json({
         status: 'error',
@@ -245,6 +245,48 @@ class HealthController {
         success: false,
         error: error.message,
         timestamp: new Date().toISOString()
+      });
+    }
+  }
+
+  /**
+   * GET /api/metrics
+   * Métriques détaillées
+   */
+  async getMetrics(req, res) {
+    try {
+      const metrics = metricsService.getMetrics();
+      res.json({
+        success: true,
+        metrics,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      logger.error('Error getting metrics:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to retrieve metrics'
+      });
+    }
+  }
+
+  /**
+   * POST /api/metrics/reset
+   * Réinitialiser les métriques
+   */
+  async resetMetrics(req, res) {
+    try {
+      metricsService.reset();
+      res.json({
+        success: true,
+        message: 'Metrics reset successfully',
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      logger.error('Error resetting metrics:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to reset metrics'
       });
     }
   }

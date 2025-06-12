@@ -1,6 +1,9 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:runaway/config/environment_config.dart';
+import 'package:runaway/core/errors/api_exceptions.dart';
+import 'package:runaway/core/errors/error_handler.dart';
 import 'package:runaway/features/route_generator/domain/models/activity_type.dart';
 import 'package:runaway/features/route_generator/domain/models/graphhopper_route_result.dart';
 import 'package:runaway/features/route_generator/domain/models/terrain_type.dart';
@@ -8,16 +11,6 @@ import 'package:runaway/features/route_generator/domain/models/urban_density.dar
 import '../../domain/models/route_parameters.dart';
 
 class GraphHopperApiService {
-  // Configuration de l'API locale (à adapter selon votre déploiement)
-  static String get _baseUrl {
-    // En développement, utiliser localhost
-    if (dotenv.env['ENVIRONMENT'] == 'development') {
-      return 'http://localhost:3000/api';
-    }
-    // En production, utiliser l'URL de votre serveur déployé
-    return dotenv.env['GRAPHHOPPER_API_URL'] ?? 'http://localhost:3000/api';
-  }
-
   /// Génère un parcours via l'API GraphHopper
   static Future<GraphHopperRouteResult> generateRoute({
     required RouteParameters parameters,
@@ -42,33 +35,30 @@ class GraphHopperApiService {
       print('📤 Envoi requête: ${jsonEncode(requestBody)}');
 
       final response = await http.post(
-        Uri.parse('$_baseUrl/routes/generate'),
+        Uri.parse('${EnvironmentConfig.apiBaseUrl}/routes/generate'),
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
         },
         body: jsonEncode(requestBody),
-      ).timeout(Duration(seconds: 30));
-
-      print('📥 Réponse API: ${response.statusCode}');
+      ).timeout(EnvironmentConfig.apiTimeout);
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        
         if (data['success'] == true) {
           return GraphHopperRouteResult.fromApiResponse(data);
         } else {
-          throw GraphHopperApiException('API returned success=false: ${data['error'] ?? 'Unknown error'}');
+          throw RouteGenerationException(
+              data['error'] ?? 'Génération échouée');
         }
       } else {
-        final errorData = jsonDecode(response.body);
-        throw GraphHopperApiException('API Error ${response.statusCode}: ${errorData['error'] ?? response.body}');
+        throw ErrorHandler.handleHttpError(response);
       }
-
+      
+    } on AppException {
+      rethrow; // Re-lancer les exceptions déjà typées
     } catch (e) {
-      print('❌ Erreur API GraphHopper: $e');
-      if (e is GraphHopperApiException) rethrow;
-      throw GraphHopperApiException('Erreur de connexion: $e');
+      throw ErrorHandler.handleNetworkError(e);
     }
   }
 
@@ -78,7 +68,7 @@ class GraphHopperApiService {
   }) async {
     try {
       final response = await http.post(
-        Uri.parse('$_baseUrl/routes/analyze'),
+        Uri.parse('$EnvironmentConfig.apiBaseUrl/routes/analyze'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'coordinates': coordinates}),
       ).timeout(Duration(seconds: 15));
