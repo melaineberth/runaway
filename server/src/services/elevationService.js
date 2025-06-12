@@ -1,10 +1,13 @@
-const axios = require('axios');
-const { logger } = require('../../server');
+// src/services/elevationService.js
+const logger = require('../config/logger'); // Import direct du logger
+const graphhopperCloud = require('./graphhopperCloudService');
 
 class ElevationService {
   constructor() {
     this.cache = new Map();
     this.batchSize = 100; // Nombre de points par requête
+    this.cacheHits = 0;
+    this.cacheMisses = 0;
   }
 
   /**
@@ -41,26 +44,19 @@ class ElevationService {
    * Récupère l'élévation pour un batch de points
    */
   async fetchElevationBatch(coordinates) {
-    // Utiliser le service d'élévation de GraphHopper
-    const points = coordinates.map(coord => ({
-      lat: coord[1],
-      lng: coord[0]
-    }));
-
     try {
-      const response = await axios.post(
-        `${process.env.GRAPHHOPPER_URL}/elevation`,
-        { points },
-        { timeout: 10000 }
-      );
-
-      return response.data.elevations.map((elevation, index) => ({
-        lon: coordinates[index][0],
-        lat: coordinates[index][1],
-        elevation: elevation
+      // Utiliser le service d'élévation de GraphHopper Cloud
+      const elevationData = await graphhopperCloud.getElevation(coordinates);
+      
+      return elevationData.map((point, index) => ({
+        lon: coordinates[index][0] || coordinates[index].lon,
+        lat: coordinates[index][1] || coordinates[index].lat,
+        elevation: point.elevation
       }));
+
     } catch (error) {
-      // Si GraphHopper échoue, essayer avec Open-Elevation
+      logger.error('Erreur GraphHopper elevation:', error);
+      // Fallback vers Open-Elevation API en cas d'échec
       return this.fetchOpenElevation(coordinates);
     }
   }
@@ -70,72 +66,149 @@ class ElevationService {
    */
   async fetchOpenElevation(coordinates) {
     try {
+      const axios = require('axios');
+      
       const locations = coordinates.map(coord => ({
-        latitude: coord[1],
-        longitude: coord[0]
+        latitude: coord[1] || coord.lat,
+        longitude: coord[0] || coord.lon
       }));
 
-      const response = await axios.post(
-        'https://api.open-elevation.com/api/v1/lookup',
-        { locations },
-        { timeout: 10000 }
-      );
+      const response = await axios.post('https://api.open-elevation.com/api/v1/lookup', {
+        locations
+      }, {
+        timeout: parseInt(process.env.ELEVATION_TIMEOUT) || 15000,
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.data || !response.data.results) {
+        throw new Error('Invalid response from Open-Elevation');
+      }
 
       return response.data.results.map((result, index) => ({
-        lon: coordinates[index][0],
-        lat: coordinates[index][1],
-        elevation: result.elevation
+        lon: coordinates[index][0] || coordinates[index].lon,
+        lat: coordinates[index][1] || coordinates[index].lat,
+        elevation: result.elevation || 0
       }));
+
     } catch (error) {
-      logger.warn('Open-Elevation fallback échoué:', error.message);
-      // Retourner une élévation par défaut
+      logger.error('Erreur Open-Elevation:', error);
+      
+      // Dernier fallback: élévations par défaut
       return coordinates.map(coord => ({
-        lon: coord[0],
-        lat: coord[1],
-        elevation: 50 // Élévation par défaut
+        lon: coord[0] || coord.lon,
+        lat: coord[1] || coord.lat,
+        elevation: 0
       }));
     }
   }
 
   /**
-   * Crée des batches de coordonnées
+   * Divise les coordonnées en batches
    */
-  createBatches(array, batchSize) {
+  createBatches(coordinates, batchSize) {
     const batches = [];
-    for (let i = 0; i < array.length; i += batchSize) {
-      batches.push(array.slice(i, i + batchSize));
+    for (let i = 0; i < coordinates.length; i += batchSize) {
+      batches.push(coordinates.slice(i, i + batchSize));
     }
     return batches;
   }
 
   /**
-   * Calcule le profil d'élévation avec distances cumulées
+   * Récupère l'élévation pour un point unique avec cache
    */
-  calculateElevationProfile(coordinatesWithElevation) {
-    const profile = [];
-    let cumulativeDistance = 0;
-
-    for (let i = 0; i < coordinatesWithElevation.length; i++) {
-      const point = coordinatesWithElevation[i];
-      
-      if (i > 0) {
-        const prevPoint = coordinatesWithElevation[i - 1];
-        const distance = this.calculateDistance(
-          prevPoint.lat, prevPoint.lon,
-          point.lat, point.lon
-        );
-        cumulativeDistance += distance;
-      }
-
-      profile.push({
-        distance: Math.round(cumulativeDistance),
-        elevation: Math.round(point.elevation),
-        lat: point.lat,
-        lon: point.lon
-      });
+  async getElevationForPoint(lat, lon) {
+    const cacheKey = `${lat.toFixed(4)}_${lon.toFixed(4)}`;
+    
+    // Vérifier le cache
+    if (this.cache.has(cacheKey)) {
+      this.cacheHits++;
+      return this.cache.get(cacheKey);
     }
 
-    return profile;
+    this.cacheMisses++;
+
+    try {
+      const result = await this.addElevationData([[lon, lat]]);
+      const elevation = result[0]?.elevation || 0;
+      
+      // Mettre en cache
+      this.cache.set(cacheKey, elevation);
+      
+      // Nettoyer le cache si trop volumineux
+      if (this.cache.size > 1000) {
+        const firstKey = this.cache.keys().next().value;
+        this.cache.delete(firstKey);
+      }
+      
+      return elevation;
+
+    } catch (error) {
+      logger.error('Erreur élévation point unique:', error);
+      return 0;
+    }
+  }
+
+  /**
+   * Calcule le profil d'élévation pour un parcours
+   */
+  async generateElevationProfile(coordinates, sampleDistance = 100) {
+    if (!coordinates || coordinates.length < 2) {
+      return [];
+    }
+
+    try {
+      const turf = require('@turf/turf');
+      const line = turf.lineString(coordinates);
+      const lineLength = turf.length(line, { units: 'meters' });
+      
+      // Calculer le nombre d'échantillons
+      const numberOfSamples = Math.ceil(lineLength / sampleDistance);
+      const samplePoints = [];
+      
+      // Échantillonner des points le long de la ligne
+      for (let i = 0; i <= numberOfSamples; i++) {
+        const distance = (i / numberOfSamples) * lineLength;
+        const point = turf.along(line, distance, { units: 'meters' });
+        samplePoints.push(point.geometry.coordinates);
+      }
+      
+      // Récupérer les élévations pour les points échantillonnés
+      const elevationData = await this.addElevationData(samplePoints);
+      
+      // Ajouter la distance cumulative
+      let cumulativeDistance = 0;
+      const profile = elevationData.map((point, index) => {
+        if (index > 0) {
+          cumulativeDistance += turf.distance(
+            [elevationData[index - 1].lon, elevationData[index - 1].lat],
+            [point.lon, point.lat],
+            { units: 'meters' }
+          );
+        }
+        
+        return {
+          ...point,
+          distance: Math.round(cumulativeDistance),
+          index
+        };
+      });
+      
+      return profile;
+
+    } catch (error) {
+      logger.error('Erreur génération profil élévation:', error);
+      
+      // Fallback: profil basique avec élévations par défaut
+      return coordinates.map((coord, index) => ({
+        lon: coord[0],
+        lat: coord[1],
+        elevation: 0,
+        distance: index * sampleDistance,
+        index
+      }));
+    }
   }
 
   /**
@@ -144,179 +217,73 @@ class ElevationService {
   calculateElevationStats(elevationProfile) {
     if (!elevationProfile || elevationProfile.length === 0) {
       return {
-        totalGain: 0,
-        totalLoss: 0,
         minElevation: 0,
         maxElevation: 0,
-        averageElevation: 0,
-        maxGrade: 0,
-        averagePositiveGrade: 0,
-        averageNegativeGrade: 0
+        totalAscent: 0,
+        totalDescent: 0,
+        averageGrade: 0,
+        maxGrade: 0
       };
     }
 
-    let totalGain = 0;
-    let totalLoss = 0;
-    let minElevation = elevationProfile[0].elevation;
-    let maxElevation = elevationProfile[0].elevation;
-    let sumElevation = 0;
-    let maxGrade = 0;
-    let sumPositiveGrade = 0;
-    let countPositiveGrade = 0;
-    let sumNegativeGrade = 0;
-    let countNegativeGrade = 0;
-
-    for (let i = 0; i < elevationProfile.length; i++) {
-      const elevation = elevationProfile[i].elevation;
+    const elevations = elevationProfile.map(p => p.elevation);
+    const minElevation = Math.min(...elevations);
+    const maxElevation = Math.max(...elevations);
+    
+    let totalAscent = 0;
+    let totalDescent = 0;
+    const grades = [];
+    
+    for (let i = 1; i < elevationProfile.length; i++) {
+      const elevDiff = elevationProfile[i].elevation - elevationProfile[i - 1].elevation;
+      const distDiff = elevationProfile[i].distance - elevationProfile[i - 1].distance;
       
-      // Min/Max
-      minElevation = Math.min(minElevation, elevation);
-      maxElevation = Math.max(maxElevation, elevation);
-      sumElevation += elevation;
-
-      // Gains/Pertes et pentes
-      if (i > 0) {
-        const prevElevation = elevationProfile[i - 1].elevation;
-        const elevationDiff = elevation - prevElevation;
-        const distance = elevationProfile[i].distance - elevationProfile[i - 1].distance;
-
-        if (elevationDiff > 0) {
-          totalGain += elevationDiff;
-        } else {
-          totalLoss += Math.abs(elevationDiff);
-        }
-
-        // Calcul de la pente
-        if (distance > 0) {
-          const grade = (elevationDiff / distance) * 100;
-          maxGrade = Math.max(maxGrade, Math.abs(grade));
-
-          if (grade > 0) {
-            sumPositiveGrade += grade;
-            countPositiveGrade++;
-          } else if (grade < 0) {
-            sumNegativeGrade += Math.abs(grade);
-            countNegativeGrade++;
-          }
-        }
+      if (elevDiff > 0) {
+        totalAscent += elevDiff;
+      } else {
+        totalDescent += Math.abs(elevDiff);
+      }
+      
+      if (distDiff > 0) {
+        const grade = (elevDiff / distDiff) * 100;
+        grades.push(grade);
       }
     }
-
+    
+    const averageGrade = grades.length > 0 ? grades.reduce((a, b) => a + b, 0) / grades.length : 0;
+    const maxGrade = grades.length > 0 ? Math.max(...grades.map(Math.abs)) : 0;
+    
     return {
-      totalGain: Math.round(totalGain),
-      totalLoss: Math.round(totalLoss),
       minElevation: Math.round(minElevation),
       maxElevation: Math.round(maxElevation),
-      averageElevation: Math.round(sumElevation / elevationProfile.length),
-      maxGrade: Math.round(maxGrade * 10) / 10,
-      averagePositiveGrade: countPositiveGrade > 0 
-        ? Math.round((sumPositiveGrade / countPositiveGrade) * 10) / 10 
-        : 0,
-      averageNegativeGrade: countNegativeGrade > 0 
-        ? Math.round((sumNegativeGrade / countNegativeGrade) * 10) / 10 
-        : 0
+      totalAscent: Math.round(totalAscent),
+      totalDescent: Math.round(totalDescent),
+      averageGrade: Math.round(averageGrade * 10) / 10,
+      maxGrade: Math.round(maxGrade * 10) / 10
     };
   }
 
   /**
-   * Lisse le profil d'élévation pour éliminer le bruit
+   * Nettoie le cache d'élévation
    */
-  smoothElevationProfile(profile, windowSize = 5) {
-    if (profile.length <= windowSize) return profile;
-
-    const smoothed = [...profile];
-    const halfWindow = Math.floor(windowSize / 2);
-
-    for (let i = halfWindow; i < profile.length - halfWindow; i++) {
-      let sumElevation = 0;
-      let count = 0;
-
-      for (let j = i - halfWindow; j <= i + halfWindow; j++) {
-        sumElevation += profile[j].elevation;
-        count++;
-      }
-
-      smoothed[i] = {
-        ...profile[i],
-        elevation: Math.round(sumElevation / count)
-      };
-    }
-
-    return smoothed;
+  clearCache() {
+    this.cache.clear();
+    this.cacheHits = 0;
+    this.cacheMisses = 0;
+    logger.info('Cache d\'élévation nettoyé');
   }
 
   /**
-   * Calcule la distance entre deux points
+   * Obtient les statistiques du cache
    */
-  calculateDistance(lat1, lon1, lat2, lon2) {
-    const R = 6371000; // Rayon de la Terre en mètres
-    const φ1 = lat1 * Math.PI / 180;
-    const φ2 = lat2 * Math.PI / 180;
-    const Δφ = (lat2 - lat1) * Math.PI / 180;
-    const Δλ = (lon2 - lon1) * Math.PI / 180;
-
-    const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) +
-            Math.cos(φ1) * Math.cos(φ2) *
-            Math.sin(Δλ/2) * Math.sin(Δλ/2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-
-    return R * c;
-  }
-
-  /**
-   * Identifie les segments de montée/descente significatifs
-   */
-  identifyClimbs(elevationProfile, minGrade = 3, minLength = 100) {
-    const climbs = [];
-    let currentClimb = null;
-
-    for (let i = 1; i < elevationProfile.length; i++) {
-      const distance = elevationProfile[i].distance - elevationProfile[i-1].distance;
-      const elevationDiff = elevationProfile[i].elevation - elevationProfile[i-1].elevation;
-      const grade = distance > 0 ? (elevationDiff / distance) * 100 : 0;
-
-      if (Math.abs(grade) >= minGrade) {
-        if (!currentClimb || (grade > 0) !== currentClimb.isAscent) {
-          // Nouvelle montée/descente
-          if (currentClimb && currentClimb.length >= minLength) {
-            climbs.push(currentClimb);
-          }
-          currentClimb = {
-            startIndex: i - 1,
-            endIndex: i,
-            startDistance: elevationProfile[i-1].distance,
-            endDistance: elevationProfile[i].distance,
-            startElevation: elevationProfile[i-1].elevation,
-            endElevation: elevationProfile[i].elevation,
-            isAscent: grade > 0,
-            length: distance,
-            totalElevationChange: elevationDiff,
-            averageGrade: grade
-          };
-        } else {
-          // Continuer la montée/descente actuelle
-          currentClimb.endIndex = i;
-          currentClimb.endDistance = elevationProfile[i].distance;
-          currentClimb.endElevation = elevationProfile[i].elevation;
-          currentClimb.length = currentClimb.endDistance - currentClimb.startDistance;
-          currentClimb.totalElevationChange = currentClimb.endElevation - currentClimb.startElevation;
-          currentClimb.averageGrade = (currentClimb.totalElevationChange / currentClimb.length) * 100;
-        }
-      } else {
-        // Fin de la montée/descente
-        if (currentClimb && currentClimb.length >= minLength) {
-          climbs.push(currentClimb);
-        }
-        currentClimb = null;
-      }
-    }
-
-    // Ajouter la dernière montée/descente si nécessaire
-    if (currentClimb && currentClimb.length >= minLength) {
-      climbs.push(currentClimb);
-    }
-
-    return climbs;
+  getCacheStats() {
+    return {
+      size: this.cache.size,
+      maxSize: 1000,
+      hitRate: this.cacheHits / (this.cacheHits + this.cacheMisses) || 0,
+      hits: this.cacheHits,
+      misses: this.cacheMisses
+    };
   }
 }
 

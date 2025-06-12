@@ -1,41 +1,33 @@
+# docker-compose.yml
 services:
-  graphhopper:
-    image: israelhikingmap/graphhopper:latest
-    container_name: runaway-graphhopper
-    ports:
-      - "8989:8989"
-    volumes:
-      - ./data:/data
-      - ./config/graphhopper-config.yml:/graphhopper/config.yml
-    environment:
-      - JAVA_OPTS=-Xmx4g -Xms2g
-    command:
-      - /graphhopper/bin/graphhopper.sh
-      - -c
-      - /graphhopper/config.yml
-      - -i
-      - /data/osm/france-latest.osm.pbf
-      - -o
-      - /data/graphhopper
-      - --import
-    restart: unless-stopped
-
   api:
     build:
-      context: ..             
+      context: ..
       dockerfile: docker/Dockerfile
     container_name: runaway-api
     ports:
       - "3001:3000"
-    depends_on:
-      - graphhopper
+    env_file:
+      - .env  # Lire le fichier .env
     environment:
       - NODE_ENV=production
-      - GRAPHHOPPER_URL=http://graphhopper:8989
       - PORT=3000
+      # Ces variables seront lues depuis .env mais on peut aussi les forcer ici
+      - GRAPHHOPPER_API_KEY=${GRAPHHOPPER_API_KEY}
+      - REDIS_URL=redis://redis:6379
+      - LOG_LEVEL=info
+      - ALLOWED_ORIGINS=http://localhost:3000,https://yourdomain.com
     volumes:
-      - ../src:/app/src
+      - ../logs:/app/logs
     restart: unless-stopped
+    depends_on:
+      - redis
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/health', (res) => process.exit(res.statusCode === 200 ? 0 : 1))"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
   redis:
     image: redis:alpine
@@ -45,6 +37,12 @@ services:
     volumes:
       - redis-data:/data
     restart: unless-stopped
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
 volumes:
   redis-data:

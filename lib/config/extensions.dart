@@ -35,3 +35,18 @@ extension OuterRadiusExt on double {
     return this + padding;
   }
 }
+
+extension SmartRadius on EdgeInsets {
+  /// Calcule le radius externe basé sur le radius interne et le padding
+  double calculateOuterRadius(double innerRadius) {
+    // Prend la valeur maximale du padding pour le calcul
+    final maxPadding = [left, top, right, bottom].reduce((a, b) => a > b ? a : b);
+    return innerRadius + maxPadding;
+  }
+  
+  /// Calcule le radius interne basé sur le radius externe et le padding
+  double calculateInnerRadius(double outerRadius) {
+    final maxPadding = [left, top, right, bottom].reduce((a, b) => a > b ? a : b);
+    return (outerRadius - maxPadding).clamp(0.0, double.infinity);
+  }
+}

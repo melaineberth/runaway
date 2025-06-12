@@ -5,6 +5,8 @@ import 'package:runaway/config/colors.dart';
 import 'package:runaway/config/extensions.dart';
 import 'package:smooth_gradient/smooth_gradient.dart';
 
+import '../../../../core/widgets/ask_registration.dart';
+
 class AccountScreen extends StatefulWidget {
   const AccountScreen({super.key});
 
@@ -13,26 +15,33 @@ class AccountScreen extends StatefulWidget {
 }
 
 class _AccountScreenState extends State<AccountScreen> {
-  late final ScrollController _scrollController;
-  bool _isCutByTop = false; // au lancement, le début est sous la modal
+  bool isAuth = false;
 
   @override
   void initState() {
+    checkAuth();
     super.initState();
-
-    _scrollController = ScrollController()
-    ..addListener(() {
-      final cut = _scrollController.offset > 0;
-      if (cut != _isCutByTop) {
-        setState(() => _isCutByTop = cut);
-      }
-    });
   }
 
-  @override
-  void dispose() {
-    _scrollController.dispose();
-    super.dispose();
+  void checkAuth() {
+    if (!isAuth) {
+      _showAuthModal();
+    }
+  }
+
+  Future<void> _showAuthModal() async { 
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      showModalBottomSheet(
+        context: context, 
+        useRootNavigator: true,
+        enableDrag: false,
+        isDismissible: false,
+        isScrollControlled: true,
+        builder: (modalCtx) {
+          return AskRegistration();
+        },
+      );
+    });
   }
 
   @override
@@ -49,7 +58,8 @@ class _AccountScreenState extends State<AccountScreen> {
           ),
         ),
       ),
-      body: BlurryPage(
+      body: isAuth 
+      ? BlurryPage(
         children: [
           _buildHeaderAccount(context),
       
@@ -136,7 +146,8 @@ class _AccountScreenState extends State<AccountScreen> {
             ),
           )
         ],
-      ),
+      )
+      : null,
     );
   }
 

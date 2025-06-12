@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:runaway/core/widgets/main_scaffold.dart';
 import 'package:runaway/features/account/presentation/screens/account_screen.dart';
+import 'package:runaway/features/activity/presentation/screens/activity_screen.dart';
+import 'package:runaway/features/historic/presentation/screens/historic_screen.dart';
 import '../features/home/presentation/screens/home_screen.dart';
 
 final GoRouter router = GoRouter(
@@ -21,11 +23,17 @@ final GoRouter router = GoRouter(
         ),
         GoRoute(
           path: '/activity',
-          pageBuilder: (context, state) => NoTransitionPage(key: state.pageKey, child: Scaffold(backgroundColor: Colors.black, body: Center(child: Text("Activity")))),
+          pageBuilder: (context, state) => NoTransitionPage(
+            key: state.pageKey,
+            child: const ActivityScreen(),
+          ),
         ),
         GoRoute(
           path: '/historic',
-          pageBuilder: (context, state) => NoTransitionPage(key: state.pageKey, child: Scaffold(backgroundColor: Colors.black, body: Center(child: Text("Historic")))),
+          pageBuilder: (context, state) => NoTransitionPage(
+            key: state.pageKey,
+            child: const HistoricScreen(),
+          ),
         ),
         GoRoute(
           path: '/account',

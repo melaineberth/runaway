@@ -1,13 +1,11 @@
-const axios = require('axios');
+// src/services/routeGeneratorService.js
 const turf = require('@turf/turf');
-const { logger } = require('../../server');
-const geoUtils = require('../utils/validators');
-const elevationService = require('./elevationService');
+const logger = require('../config/logger'); // Import direct du logger
+const graphhopperCloud = require('./graphhopperCloudService');
 
 class RouteGeneratorService {
-  constructor(graphhopperUrl) {
-    this.graphhopperUrl = graphhopperUrl || process.env.GRAPHHOPPER_URL;
-    this.cache = new Map(); // Simple cache en mémoire
+  constructor() {
+    this.cache = new Map(); // Cache en mémoire
   }
 
   /**
@@ -31,7 +29,7 @@ class RouteGeneratorService {
 
     try {
       // Sélectionner le profil GraphHopper approprié
-      const profile = this.selectProfile(activityType, terrainType, preferScenic);
+      const profile = graphhopperCloud.selectProfile(activityType, terrainType, preferScenic);
       
       if (isLoop) {
         return await this.generateLoopRoute(params, profile);
@@ -48,327 +46,266 @@ class RouteGeneratorService {
    * Génère un parcours en boucle
    */
   async generateLoopRoute(params, profile) {
-    const { startLat, startLon, distanceKm, elevationGain } = params;
+    const { startLat, startLon, distanceKm, elevationGain, avoidTraffic } = params;
     
-    // Stratégie: créer plusieurs waypoints formant une boucle
+    try {
+      // Utiliser l'algorithme round_trip de GraphHopper
+      const route = await graphhopperCloud.getRoute({
+        points: [{ lat: startLat, lon: startLon }],
+        profile,
+        algorithm: 'round_trip',
+        roundTripDistance: distanceKm * 1000, // Convertir en mètres
+        roundTripSeed: Math.floor(Math.random() * 1000000),
+        avoidTraffic
+      });
+
+      // Ajouter les données d'élévation si nécessaire
+      if (elevationGain > 0 || params.includeElevation) {
+        const elevationData = await graphhopperCloud.getElevation(route.coordinates);
+        route.elevationProfile = elevationData;
+        
+        // Calculer le dénivelé réel
+        const actualElevationGain = this.calculateElevationGain(elevationData);
+        route.metadata.elevationGain = actualElevationGain;
+      }
+      
+      // Vérifier si la distance correspond aux attentes
+      const actualDistanceKm = route.distance / 1000;
+      const distanceRatio = actualDistanceKm / distanceKm;
+      
+      if (distanceRatio < 0.8 || distanceRatio > 1.2) {
+        logger.warn(`Distance générée (${actualDistanceKm.toFixed(1)}km) diffère de la cible (${distanceKm}km)`);
+      }
+      
+      return route;
+
+    } catch (error) {
+      logger.error('Erreur génération boucle:', error);
+      // Fallback: générer une boucle manuellement
+      return await this.generateManualLoopRoute(params, profile);
+    }
+  }
+
+  /**
+   * Génère un parcours point à point
+   */
+  async generatePointToPointRoute(params, profile) {
+    const { startLat, startLon, distanceKm, avoidTraffic } = params;
+    
+    // Générer un point d'arrivée à la distance souhaitée
+    const bearing = Math.random() * 360; // Direction aléatoire
+    const endpoint = turf.destination(
+      [startLon, startLat],
+      distanceKm * 0.8, // 80% de la distance en ligne droite
+      bearing,
+      { units: 'kilometers' }
+    );
+    
+    try {
+      const route = await graphhopperCloud.getRoute({
+        points: [
+          { lat: startLat, lon: startLon },
+          { lat: endpoint.geometry.coordinates[1], lon: endpoint.geometry.coordinates[0] }
+        ],
+        profile,
+        avoidTraffic
+      });
+
+      return await this.adjustRouteDistance(route, distanceKm, profile);
+
+    } catch (error) {
+      logger.error('Erreur génération point-à-point:', error);
+      throw new Error('Impossible de générer l\'itinéraire demandé');
+    }
+  }
+
+  /**
+   * Fallback: génère une boucle manuellement avec plusieurs waypoints
+   */
+  async generateManualLoopRoute(params, profile) {
+    const { startLat, startLon, distanceKm, avoidTraffic } = params;
+    
+    logger.info('Génération manuelle de boucle...');
+    
+    // Créer plusieurs waypoints formant une boucle
     const waypoints = this.generateLoopWaypoints(startLat, startLon, distanceKm);
     
-    // Optimiser l'ordre des waypoints
-    const optimizedRoute = await this.optimizeWaypoints(waypoints, profile);
-    
-    // Construire le parcours final
-    const route = await this.buildDetailedRoute(optimizedRoute, profile);
-    
-    // Ajuster pour respecter la distance cible
-    const adjustedRoute = await this.adjustRouteDistance(route, distanceKm);
-    
-    // Valider le dénivelé si nécessaire
-    if (elevationGain > 0) {
-      const elevationData = await elevationService.addElevationData(adjustedRoute.coordinates);
-      adjustedRoute.elevationProfile = elevationData;
+    try {
+      // Optimiser l'ordre des waypoints
+      const optimizedWaypoints = await graphhopperCloud.optimizeWaypoints(waypoints, profile);
       
-      // Vérifier si le dénivelé correspond
-      const actualElevationGain = this.calculateElevationGain(elevationData);
-      adjustedRoute.metadata.elevationGain = actualElevationGain;
+      // Construire le parcours avec tous les waypoints
+      const route = await graphhopperCloud.getRoute({
+        points: optimizedWaypoints,
+        profile,
+        avoidTraffic
+      });
+
+      return await this.adjustRouteDistance(route, distanceKm, profile);
+
+    } catch (error) {
+      logger.error('Échec génération manuelle:', error);
+      throw new Error('Impossible de générer un parcours dans cette zone');
     }
-    
-    return adjustedRoute;
   }
 
   /**
    * Génère des waypoints pour former une boucle
    */
-  generateLoopWaypoints(centerLat, centerLon, distanceKm) {
-    const numWaypoints = Math.max(4, Math.floor(distanceKm / 5));
-    const radius = distanceKm / (2 * Math.PI); // Rayon approximatif en km
-    const waypoints = [];
+  generateLoopWaypoints(startLat, startLon, distanceKm) {
+    const waypoints = [{ lat: startLat, lon: startLon }];
+    const radiusKm = distanceKm / 4; // Rayon approximatif de la boucle
+    const numberOfWaypoints = Math.min(6, Math.max(3, Math.floor(distanceKm / 2)));
     
-    for (let i = 0; i < numWaypoints; i++) {
-      const angle = (2 * Math.PI * i) / numWaypoints;
-      const point = turf.destination(
-        [centerLon, centerLat],
-        radius,
-        angle * 180 / Math.PI,
+    for (let i = 0; i < numberOfWaypoints; i++) {
+      const bearing = (360 / numberOfWaypoints) * i;
+      const distance = radiusKm * (0.8 + Math.random() * 0.4); // Variation de distance
+      
+      const waypoint = turf.destination(
+        [startLon, startLat],
+        distance,
+        bearing,
         { units: 'kilometers' }
       );
+      
       waypoints.push({
-        lat: point.geometry.coordinates[1],
-        lon: point.geometry.coordinates[0]
+        lat: waypoint.geometry.coordinates[1],
+        lon: waypoint.geometry.coordinates[0]
       });
     }
     
-    // Ajouter le point de départ à la fin pour fermer la boucle
-    waypoints.push({ lat: centerLat, lon: centerLon });
+    // Retourner au point de départ
+    waypoints.push({ lat: startLat, lon: startLon });
     
     return waypoints;
   }
 
   /**
-   * Optimise l'ordre des waypoints avec GraphHopper
+   * Ajuste la distance du parcours si nécessaire
    */
-  async optimizeWaypoints(waypoints, profile) {
-    const points = waypoints.map(wp => [wp.lon, wp.lat]);
-    
-    try {
-      const response = await axios.post(`${this.graphhopperUrl}/route-optimization`, {
-        objectives: [{
-          type: "min",
-          value: "transport_time"
-        }],
-        vehicles: [{
-          vehicle_id: "runner",
-          start_address: {
-            location_id: "start",
-            lon: points[0][0],
-            lat: points[0][1]
-          },
-          return_to_depot: true
-        }],
-        services: points.slice(1, -1).map((point, idx) => ({
-          id: `waypoint_${idx}`,
-          address: {
-            location_id: `loc_${idx}`,
-            lon: point[0],
-            lat: point[1]
-          }
-        })),
-        configuration: {
-          routing: {
-            profile: profile
-          }
-        }
-      });
-
-      return response.data.solution.routes[0].activities
-        .filter(act => act.type === "service")
-        .map(act => ({
-          lat: act.address.lat,
-          lon: act.address.lon
-        }));
-    } catch (error) {
-      logger.warn('Optimisation échouée, utilisation ordre original');
-      return waypoints;
-    }
-  }
-
-  /**
-   * Construit un parcours détaillé via GraphHopper
-   */
-  async buildDetailedRoute(waypoints, profile) {
-    const points = waypoints.map(wp => [wp.lon, wp.lat]);
-    
-    const response = await axios.post(`${this.graphhopperUrl}/route`, {
-      points: points,
-      profile: profile,
-      points_encoded: false,
-      elevation: true,
-      instructions: true,
-      calc_points: true,
-      details: ["surface", "road_class", "road_environment"],
-      algorithm: "alternative_route"
-    });
-
-    const route = response.data.paths[0];
-    
-    return {
-      coordinates: route.points.coordinates,
-      distance: route.distance,
-      duration: route.time,
-      metadata: {
-        profile: profile,
-        surface_breakdown: this.analyzeSurfaces(route.details.surface),
-        road_class_breakdown: this.analyzeRoadClasses(route.details.road_class),
-        environment_breakdown: this.analyzeEnvironment(route.details.road_environment)
-      },
-      instructions: route.instructions,
-      bbox: route.bbox
-    };
-  }
-
-  /**
-   * Ajuste la distance du parcours
-   */
-  async adjustRouteDistance(route, targetDistanceKm) {
+  async adjustRouteDistance(route, targetDistanceKm, profile) {
     const currentDistanceKm = route.distance / 1000;
     const ratio = targetDistanceKm / currentDistanceKm;
     
-    if (Math.abs(ratio - 1) < 0.1) {
-      // Distance déjà proche de la cible (±10%)
+    if (Math.abs(ratio - 1) < 0.15) {
+      // Distance acceptable (±15%)
       return route;
     }
     
-    if (ratio > 1) {
+    logger.info(`Ajustement distance: ${currentDistanceKm.toFixed(1)}km -> ${targetDistanceKm}km`);
+    
+    if (ratio > 1.3) {
       // Parcours trop court, ajouter des détours
-      return await this.extendRoute(route, targetDistanceKm);
-    } else {
-      // Parcours trop long, raccourcir
-      return await this.shortenRoute(route, targetDistanceKm);
+      return await this.extendRoute(route, targetDistanceKm, profile);
+    } else if (ratio < 0.7) {
+      // Parcours trop long, essayer de raccourcir
+      return await this.shortenRoute(route, targetDistanceKm, profile);
     }
+    
+    return route; // Garder le parcours tel quel si l'écart est raisonnable
   }
 
   /**
    * Étend un parcours trop court
    */
-  async extendRoute(route, targetDistanceKm) {
-    const currentDistanceKm = route.distance / 1000;
-    const additionalDistanceKm = targetDistanceKm - currentDistanceKm;
-    
-    // Trouver le meilleur endroit pour ajouter un détour
-    const midPoint = Math.floor(route.coordinates.length / 2);
-    const detourPoint = route.coordinates[midPoint];
-    
-    // Créer un point de détour
-    const detour = turf.destination(
-      detourPoint,
-      additionalDistanceKm / 2,
-      Math.random() * 360,
-      { units: 'kilometers' }
-    );
-    
-    // Insérer le détour dans le parcours
-    const newCoordinates = [
-      ...route.coordinates.slice(0, midPoint),
-      detour.geometry.coordinates,
-      ...route.coordinates.slice(midPoint)
-    ];
-    
-    route.coordinates = newCoordinates;
-    route.distance = targetDistanceKm * 1000;
-    
-    return route;
+  async extendRoute(route, targetDistanceKm, profile) {
+    try {
+      const currentDistanceKm = route.distance / 1000;
+      const additionalDistanceKm = targetDistanceKm - currentDistanceKm;
+      
+      // Trouver le point milieu pour ajouter un détour
+      const midIndex = Math.floor(route.coordinates.length / 2);
+      const midPoint = route.coordinates[midIndex];
+      
+      // Créer un point de détour
+      const detourBearing = Math.random() * 360;
+      const detourDistance = additionalDistanceKm / 3; // Distance du détour
+      
+      const detourPoint = turf.destination(
+        midPoint,
+        detourDistance,
+        detourBearing,
+        { units: 'kilometers' }
+      );
+      
+      // Recalculer le parcours avec le détour
+      const waypoints = [
+        { lat: route.coordinates[0][1], lon: route.coordinates[0][0] },
+        { lat: detourPoint.geometry.coordinates[1], lon: detourPoint.geometry.coordinates[0] },
+        { lat: route.coordinates[route.coordinates.length - 1][1], lon: route.coordinates[route.coordinates.length - 1][0] }
+      ];
+      
+      const extendedRoute = await graphhopperCloud.getRoute({
+        points: waypoints,
+        profile
+      });
+      
+      return extendedRoute;
+
+    } catch (error) {
+      logger.warn('Impossible d\'étendre le parcours:', error.message);
+      return route; // Retourner le parcours original
+    }
   }
 
   /**
    * Raccourcit un parcours trop long
    */
-  async shortenRoute(route, targetDistanceKm) {
-    const targetDistance = targetDistanceKm * 1000;
-    let currentDistance = 0;
-    const shortenedCoordinates = [route.coordinates[0]];
-    
-    for (let i = 1; i < route.coordinates.length; i++) {
-      const segmentDistance = geoUtils.calculateDistance(
-        route.coordinates[i-1],
-        route.coordinates[i]
-      );
+  async shortenRoute(route, targetDistanceKm, profile) {
+    try {
+      // Stratégie simple: créer un itinéraire plus direct
+      const start = route.coordinates[0];
+      const end = route.coordinates[route.coordinates.length - 1];
       
-      if (currentDistance + segmentDistance > targetDistance) {
-        // Interpoler le point final
-        const ratio = (targetDistance - currentDistance) / segmentDistance;
-        const finalPoint = geoUtils.interpolatePoint(
-          route.coordinates[i-1],
-          route.coordinates[i],
-          ratio
-        );
-        shortenedCoordinates.push(finalPoint);
-        break;
+      // Si c'est une boucle, créer une boucle plus petite
+      if (this.isLoop(route.coordinates)) {
+        const centerLat = start[1];
+        const centerLon = start[0];
+        const smallerRadius = targetDistanceKm / 6;
+        
+        const smallWaypoints = [];
+        for (let i = 0; i < 4; i++) {
+          const bearing = (360 / 4) * i;
+          const waypoint = turf.destination(
+            [centerLon, centerLat],
+            smallerRadius,
+            bearing,
+            { units: 'kilometers' }
+          );
+          
+          smallWaypoints.push({
+            lat: waypoint.geometry.coordinates[1],
+            lon: waypoint.geometry.coordinates[0]
+          });
+        }
+        
+        const shortenedRoute = await graphhopperCloud.getRoute({
+          points: smallWaypoints,
+          profile
+        });
+        
+        return shortenedRoute;
       }
       
-      shortenedCoordinates.push(route.coordinates[i]);
-      currentDistance += segmentDistance;
+      return route; // Si pas de solution, garder le parcours original
+
+    } catch (error) {
+      logger.warn('Impossible de raccourcir le parcours:', error.message);
+      return route;
     }
-    
-    route.coordinates = shortenedCoordinates;
-    route.distance = targetDistance;
-    
-    return route;
   }
 
   /**
-   * Sélectionne le profil GraphHopper approprié
+   * Vérifie si le parcours est une boucle
    */
-  selectProfile(activityType, terrainType, preferScenic) {
-    const profileMap = {
-      running: {
-        scenic: 'running_scenic',
-        normal: 'running'
-      },
-      cycling: {
-        safe: 'cycling_safe',
-        normal: 'cycling'
-      },
-      walking: {
-        normal: 'walking'
-      }
-    };
-
-    const activity = profileMap[activityType] || profileMap.running;
+  isLoop(coordinates) {
+    if (coordinates.length < 2) return false;
     
-    if (preferScenic && activity.scenic) {
-      return activity.scenic;
-    } else if (terrainType === 'urban' && activity.safe) {
-      return activity.safe;
-    }
+    const start = coordinates[0];
+    const end = coordinates[coordinates.length - 1];
+    const distance = turf.distance(start, end, { units: 'meters' });
     
-    return activity.normal || 'running';
-  }
-
-  /**
-   * Analyse la répartition des surfaces
-   */
-  analyzeSurfaces(surfaceDetails) {
-    const surfaces = {};
-    let totalDistance = 0;
-    
-    surfaceDetails.forEach(detail => {
-      const distance = detail[1] - detail[0];
-      const surface = detail[2] || 'unknown';
-      surfaces[surface] = (surfaces[surface] || 0) + distance;
-      totalDistance += distance;
-    });
-    
-    const breakdown = {};
-    Object.entries(surfaces).forEach(([surface, distance]) => {
-      breakdown[surface] = Math.round((distance / totalDistance) * 100);
-    });
-    
-    return breakdown;
-  }
-
-  /**
-   * Analyse les types de routes
-   */
-  analyzeRoadClasses(roadClassDetails) {
-    const classes = {};
-    let totalDistance = 0;
-    
-    roadClassDetails.forEach(detail => {
-      const distance = detail[1] - detail[0];
-      const roadClass = detail[2] || 'unknown';
-      classes[roadClass] = (classes[roadClass] || 0) + distance;
-      totalDistance += distance;
-    });
-    
-    const breakdown = {};
-    Object.entries(classes).forEach(([roadClass, distance]) => {
-      breakdown[roadClass] = Math.round((distance / totalDistance) * 100);
-    });
-    
-    return breakdown;
-  }
-
-  /**
-   * Analyse l'environnement
-   */
-  analyzeEnvironment(environmentDetails) {
-    if (!environmentDetails) return { urban: 100 };
-    
-    const environments = {};
-    let totalDistance = 0;
-    
-    environmentDetails.forEach(detail => {
-      const distance = detail[1] - detail[0];
-      const environment = detail[2] || 'urban';
-      environments[environment] = (environments[environment] || 0) + distance;
-      totalDistance += distance;
-    });
-    
-    const breakdown = {};
-    Object.entries(environments).forEach(([env, distance]) => {
-      breakdown[env] = Math.round((distance / totalDistance) * 100);
-    });
-    
-    return breakdown;
+    return distance < 100; // Moins de 100m entre début et fin
   }
 
   /**
@@ -388,27 +325,102 @@ class RouteGeneratorService {
   }
 
   /**
-   * Génère un parcours point à point
+   * Analyse un parcours existant
    */
-  async generatePointToPointRoute(params, profile) {
-    const { startLat, startLon, distanceKm } = params;
+  async analyzeExistingRoute(coordinates) {
+    try {
+      // Calculer la distance totale
+      let totalDistance = 0;
+      for (let i = 1; i < coordinates.length; i++) {
+        totalDistance += turf.distance(coordinates[i-1], coordinates[i], { units: 'meters' });
+      }
+
+      // Récupérer les données d'élévation
+      const elevationData = await graphhopperCloud.getElevation(coordinates);
+      
+      // Calculer les métriques d'élévation
+      const elevationGain = this.calculateElevationGain(elevationData);
+      const elevationLoss = this.calculateElevationLoss(elevationData);
+      const { averageGrade, maxGrade } = this.calculateGrades(elevationData);
+      
+      // Estimer la durée (vitesse basée sur le profil)
+      const estimatedDuration = this.estimateDuration(totalDistance, elevationGain);
+
+      return {
+        distance: totalDistance,
+        elevationGain,
+        elevationLoss,
+        averageGrade,
+        maxGrade,
+        estimatedDuration,
+        elevationProfile: elevationData
+      };
+
+    } catch (error) {
+      logger.error('Erreur analyse parcours:', error);
+      throw new Error('Impossible d\'analyser le parcours');
+    }
+  }
+
+  /**
+   * Calcule la perte d'élévation
+   */
+  calculateElevationLoss(elevationProfile) {
+    let totalLoss = 0;
     
-    // Générer un point d'arrivée à la distance souhaitée
-    const bearing = Math.random() * 360; // Direction aléatoire
-    const endpoint = turf.destination(
-      [startLon, startLat],
-      distanceKm * 0.8, // 80% de la distance en ligne droite
-      bearing,
-      { units: 'kilometers' }
-    );
+    for (let i = 1; i < elevationProfile.length; i++) {
+      const diff = elevationProfile[i].elevation - elevationProfile[i-1].elevation;
+      if (diff < 0) {
+        totalLoss += Math.abs(diff);
+      }
+    }
     
-    const waypoints = [
-      { lat: startLat, lon: startLon },
-      { lat: endpoint.geometry.coordinates[1], lon: endpoint.geometry.coordinates[0] }
-    ];
+    return Math.round(totalLoss);
+  }
+
+  /**
+   * Calcule les pentes
+   */
+  calculateGrades(elevationProfile) {
+    const grades = [];
     
-    const route = await this.buildDetailedRoute(waypoints, profile);
-    return await this.adjustRouteDistance(route, distanceKm);
+    for (let i = 1; i < elevationProfile.length; i++) {
+      const elevationDiff = elevationProfile[i].elevation - elevationProfile[i-1].elevation;
+      const distance = turf.distance(
+        [elevationProfile[i-1].lon, elevationProfile[i-1].lat],
+        [elevationProfile[i].lon, elevationProfile[i].lat],
+        { units: 'meters' }
+      );
+      
+      if (distance > 0) {
+        const grade = (elevationDiff / distance) * 100;
+        grades.push(grade);
+      }
+    }
+    
+    const averageGrade = grades.length > 0 ? grades.reduce((a, b) => a + b, 0) / grades.length : 0;
+    const maxGrade = grades.length > 0 ? Math.max(...grades.map(Math.abs)) : 0;
+    
+    return {
+      averageGrade: Math.round(averageGrade * 10) / 10,
+      maxGrade: Math.round(maxGrade * 10) / 10
+    };
+  }
+
+  /**
+   * Estime la durée du parcours
+   */
+  estimateDuration(distanceMeters, elevationGain) {
+    // Vitesses moyennes en m/min selon l'activité
+    const baseSpeed = 80; // 4.8 km/h pour la marche
+    
+    // Temps de base
+    let duration = distanceMeters / baseSpeed;
+    
+    // Ajout pour le dénivelé (règle de Naismith modifiée)
+    duration += elevationGain / 10; // +1 min par 10m de dénivelé
+    
+    return Math.round(duration); // Retourner en minutes
   }
 }
 

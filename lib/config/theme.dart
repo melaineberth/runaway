@@ -32,8 +32,10 @@ ThemeData getAppTheme(Brightness brightness) {
         color: isDark ? AppColorsDark.textPrimary : AppColors.textPrimary,
       ),
       bodyLarge: TextStyle(
-        fontSize: 16,
-        fontWeight: FontWeight.normal,
+        fontSize: 35,
+        fontWeight: FontWeight.w600,
+        letterSpacing: -0.3,
+        height: 1.2,
         color: isDark ? AppColorsDark.textPrimary : AppColors.textPrimary,
       ),
       bodyMedium: TextStyle(

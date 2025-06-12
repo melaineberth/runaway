@@ -12,6 +12,7 @@ class IconBtn extends StatelessWidget {
   final String? label;
   final double? radius;
   final double? padding;
+  final BoxBorder? border;
 
   const IconBtn({
     super.key, 
@@ -24,6 +25,7 @@ class IconBtn extends StatelessWidget {
     this.label,
     this.radius,
     this.padding,
+    this.border,
   });
 
   @override
@@ -43,6 +45,7 @@ class IconBtn extends StatelessWidget {
               offset: Offset(0, 0), // changes position of shadow
             ),
           ],
+          border: border,
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,

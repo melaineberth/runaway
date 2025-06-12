@@ -1,6 +1,7 @@
-const axios = require('axios');
+// src/controllers/healthController.js
 const os = require('os');
-const { logger } = require('../../server');
+const logger = require('../config/logger'); // Import direct du logger
+const graphhopperCloud = require('../services/graphhopperCloudService');
 
 class HealthController {
   /**
@@ -22,19 +23,27 @@ class HealthController {
    */
   async getStatus(req, res) {
     try {
-      // Vérifier GraphHopper
+      // Vérifier GraphHopper Cloud API
       let graphhopperStatus = 'unknown';
-      let graphhopperVersion = 'unknown';
+      let graphhopperInfo = {};
       
       try {
-        const ghResponse = await axios.get(`${process.env.GRAPHHOPPER_URL}/info`, {
-          timeout: 5000
-        });
-        graphhopperStatus = 'healthy';
-        graphhopperVersion = ghResponse.data.version || 'unknown';
+        const ghHealth = await graphhopperCloud.healthCheck();
+        graphhopperStatus = ghHealth.status;
+        graphhopperInfo = {
+          version: ghHealth.version,
+          limits: ghHealth.limits,
+          apiUrl: 'https://graphhopper.com/api/1',
+          mode: 'cloud'
+        };
+        
+        if (ghHealth.error) {
+          graphhopperInfo.error = ghHealth.error;
+        }
       } catch (error) {
         graphhopperStatus = 'unhealthy';
-        logger.error('GraphHopper health check failed:', error.message);
+        graphhopperInfo.error = error.message;
+        logger.error('GraphHopper Cloud health check failed:', error.message);
       }
 
       // Vérifier Redis si configuré
@@ -42,6 +51,12 @@ class HealthController {
       if (process.env.REDIS_URL) {
         // TODO: Implémenter check Redis
         redisStatus = 'healthy';
+      }
+
+      // Vérification de l'API key GraphHopper
+      let apiKeyStatus = 'not_configured';
+      if (process.env.GRAPHHOPPER_API_KEY) {
+        apiKeyStatus = process.env.GRAPHHOPPER_API_KEY.length > 10 ? 'configured' : 'invalid';
       }
 
       // Informations système
@@ -74,15 +89,25 @@ class HealthController {
         }
       };
 
+      // Déterminer le statut global
+      const overallStatus = this.determineOverallStatus({
+        api: 'healthy',
+        graphhopper: graphhopperStatus,
+        apiKey: apiKeyStatus,
+        redis: redisStatus
+      });
+
       res.json({
-        status: 'operational',
+        status: overallStatus,
         timestamp: new Date().toISOString(),
         services: {
           api: 'healthy',
-          graphhopper: {
+          graphhopper_cloud: {
             status: graphhopperStatus,
-            version: graphhopperVersion,
-            url: process.env.GRAPHHOPPER_URL
+            ...graphhopperInfo
+          },
+          api_key: {
+            status: apiKeyStatus
           },
           redis: {
             status: redisStatus
@@ -93,6 +118,7 @@ class HealthController {
       });
 
     } catch (error) {
+      // CORRECTION: Utiliser le logger correctement importé
       logger.error('Error getting system status:', error);
       res.status(500).json({
         status: 'error',
@@ -108,20 +134,31 @@ class HealthController {
    */
   async checkReadiness(req, res) {
     try {
-      // Vérifier que GraphHopper est prêt
-      const ghResponse = await axios.get(`${process.env.GRAPHHOPPER_URL}/health`, {
-        timeout: 3000
-      });
+      // Vérifier que l'API key est configurée
+      if (!process.env.GRAPHHOPPER_API_KEY) {
+        return res.status(503).json({
+          ready: false,
+          reason: 'GraphHopper API key not configured',
+          timestamp: new Date().toISOString()
+        });
+      }
 
-      if (ghResponse.status === 200) {
+      // Vérifier que GraphHopper Cloud est accessible
+      const ghHealth = await graphhopperCloud.healthCheck();
+
+      if (ghHealth.status === 'healthy') {
         res.json({
           ready: true,
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
+          graphhopper: {
+            status: ghHealth.status,
+            version: ghHealth.version
+          }
         });
       } else {
         res.status(503).json({
           ready: false,
-          reason: 'GraphHopper not ready',
+          reason: `GraphHopper Cloud not ready: ${ghHealth.error || 'unknown error'}`,
           timestamp: new Date().toISOString()
         });
       }
@@ -143,6 +180,88 @@ class HealthController {
       alive: true,
       timestamp: new Date().toISOString()
     });
+  }
+
+  /**
+   * GET /api/graphhopper/limits
+   * Informations sur les limites de l'API GraphHopper
+   */
+  async getGraphHopperLimits(req, res) {
+    try {
+      const healthInfo = await graphhopperCloud.healthCheck();
+      
+      if (healthInfo.status === 'healthy' && healthInfo.limits) {
+        res.json({
+          success: true,
+          limits: healthInfo.limits,
+          timestamp: new Date().toISOString()
+        });
+      } else {
+        res.status(503).json({
+          success: false,
+          error: 'GraphHopper API not available',
+          timestamp: new Date().toISOString()
+        });
+      }
+    } catch (error) {
+      logger.error('Error getting GraphHopper limits:', error);
+      res.status(500).json({
+        success: false,
+        error: error.message,
+        timestamp: new Date().toISOString()
+      });
+    }
+  }
+
+  /**
+   * POST /api/test/route
+   * Test de génération d'un parcours simple
+   */
+  async testRoute(req, res) {
+    try {
+      const { lat = 48.8566, lon = 2.3522 } = req.body; // Paris par défaut
+
+      // Test simple avec un petit parcours
+      const testRoute = await graphhopperCloud.getRoute({
+        points: [{ lat, lon }],
+        profile: 'foot',
+        algorithm: 'round_trip',
+        roundTripDistance: 1000 // 1km de test
+      });
+
+      res.json({
+        success: true,
+        test_route: {
+          distance: testRoute.distance,
+          duration: testRoute.duration,
+          coordinates_count: testRoute.coordinates.length
+        },
+        timestamp: new Date().toISOString()
+      });
+
+    } catch (error) {
+      logger.error('Route test failed:', error);
+      res.status(500).json({
+        success: false,
+        error: error.message,
+        timestamp: new Date().toISOString()
+      });
+    }
+  }
+
+  /**
+   * Détermine le statut global du système
+   */
+  determineOverallStatus(services) {
+    // Obligatoires pour le fonctionnement
+    if (services.api !== 'healthy') return 'unhealthy';
+    if (services.graphhopper !== 'healthy') return 'degraded';
+    if (services.apiKey !== 'configured') return 'degraded';
+    
+    // Optionnels
+    if (services.redis === 'unhealthy') return 'degraded';
+    
+    return 'operational';
   }
 }
 
