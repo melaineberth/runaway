@@ -1,6 +1,6 @@
 const routeGeneratorService = require('../services/routeGeneratorService');
 const { validateRouteParams } = require('../utils/validators');
-const { logger } = require('../../server');
+const logger = require('../config/logger'); // Import direct du logger
 
 class RouteController {
   /**
@@ -19,17 +19,17 @@ class RouteController {
       }
 
       const params = {
-        startLat: req.body.startLatitude,
-        startLon: req.body.startLongitude,
-        activityType: req.body.activityType,
-        distanceKm: req.body.distanceKm,
-        terrainType: req.body.terrainType,
-        urbanDensity: req.body.urbanDensity,
-        elevationGain: req.body.elevationGain || 0,
-        isLoop: req.body.isLoop !== false,
-        avoidTraffic: req.body.avoidTraffic !== false,
-        preferScenic: req.body.preferScenic !== false,
-        searchRadius: req.body.searchRadius || req.body.distanceKm * 1000
+        startLat: validationResult.value.startLatitude,
+        startLon: validationResult.value.startLongitude,
+        activityType: validationResult.value.activityType,
+        distanceKm: validationResult.value.distanceKm,
+        terrainType: validationResult.value.terrainType,
+        urbanDensity: validationResult.value.urbanDensity,
+        elevationGain: validationResult.value.elevationGain || 0,
+        isLoop: validationResult.value.isLoop !== false,
+        avoidTraffic: validationResult.value.avoidTraffic !== false,
+        preferScenic: validationResult.value.preferScenic !== false,
+        searchRadius: validationResult.value.searchRadius || validationResult.value.distanceKm * 1000
       };
 
       logger.info('Demande de génération de parcours:', params);

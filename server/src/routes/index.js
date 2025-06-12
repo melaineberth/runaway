@@ -1,13 +1,11 @@
 // src/routes/index.js
 const express = require('express');
 const router = express.Router();
+const logger = require('../config/logger'); // Import direct du logger
 
 // Contrôleurs
 const healthController = require('../controllers/healthController');
 const routeController = require('../controllers/routeController');
-
-// Middleware de validation
-const { validateRouteParams, validateAnalysisParams } = require('../utils/validators');
 
 // ============= ROUTES DE SANTÉ =============
 
@@ -25,7 +23,6 @@ router.post('/test/route', healthController.testRoute);
 
 // Génération de parcours
 router.post('/routes/generate', 
-  validateRouteParams,
   routeController.generateRoute
 );
 
@@ -38,7 +35,6 @@ router.post('/routes/alternative',
 
 // Analyse d'un parcours existant
 router.post('/routes/analyze', 
-  validateAnalysisParams,
   routeController.analyzeRoute
 );
 
@@ -210,8 +206,6 @@ router.delete('/cache/clear', (req, res) => {
 
 // Middleware de gestion d'erreurs spécifique aux routes
 router.use((error, req, res, next) => {
-  const { logger } = require('../../server');
-  
   logger.error('Route error:', error);
   
   // Erreurs GraphHopper spécifiques

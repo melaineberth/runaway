@@ -15,6 +15,18 @@ const routeParamsSchema = Joi.object({
   searchRadius: Joi.number().min(1000).max(50000).optional()
 });
 
+const analysisParamsSchema = Joi.object({
+  coordinates: Joi.array().items(
+    Joi.array().ordered(
+      Joi.number().min(-180).max(180), // longitude
+      Joi.number().min(-90).max(90),   // latitude
+      Joi.number().optional()           // elevation
+    )
+  ).min(2).required(),
+  includeElevation: Joi.boolean().default(true),
+  sampleDistance: Joi.number().min(10).max(1000).default(100)
+});
+
 const coordinatesSchema = Joi.array().items(
   Joi.array().ordered(
     Joi.number().min(-180).max(180), // longitude
@@ -97,6 +109,40 @@ function validateRouteParams(params) {
 }
 
 /**
+ * Valide les paramètres d'analyse
+ */
+function validateAnalysisParams(params) {
+  const { error, value } = analysisParamsSchema.validate(params, { 
+    abortEarly: false,
+    stripUnknown: true 
+  });
+
+  if (error) {
+    return {
+      valid: false,
+      errors: error.details.map(detail => ({
+        field: detail.path.join('.'),
+        message: detail.message
+      }))
+    };
+  }
+
+  // Validation supplémentaire de la continuité des coordonnées
+  const coordsValidation = validateCoordinates(value.coordinates);
+  if (!coordsValidation.valid) {
+    return {
+      valid: false,
+      errors: [{ field: 'coordinates', message: coordsValidation.error }]
+    };
+  }
+
+  return {
+    valid: true,
+    value: value
+  };
+}
+
+/**
  * Valide un tableau de coordonnées
  */
 function validateCoordinates(coordinates) {
@@ -169,6 +215,7 @@ function validateExportParams(format, coordinates) {
 
 module.exports = {
   validateRouteParams,
+  validateAnalysisParams,
   validateCoordinates,
   validateExportParams,
   calculateDistance
