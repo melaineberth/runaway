@@ -10,6 +10,15 @@ enum ActivityType {
     maxDistance: 42.0,
     elevationMultiplier: 1.5,
   ),
+  walking(
+    id: 'walking',
+    title: 'Marche',
+    icon: HugeIcons.solidRoundedWorkoutRun,
+    defaultSpeed: 10.0, // km/h
+    minDistance: 1.0,
+    maxDistance: 42.0,
+    elevationMultiplier: 1.5,
+  ),
   cycling(
     id: 'cycling',
     title: 'Vélo',

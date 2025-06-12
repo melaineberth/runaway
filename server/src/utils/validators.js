@@ -54,11 +54,19 @@ function validateRouteParams(params) {
     };
   }
 
+  // 🚨 FIX: Vérifier que value existe avant d'accéder à ses propriétés
+  if (!value) {
+    return {
+      valid: false,
+      errors: [{ field: 'general', message: 'Données invalides' }]
+    };
+  }
+
   // Validations supplémentaires
   const additionalErrors = [];
 
-  // Vérifier la cohérence distance/rayon
-  if (value.searchRadius && value.searchRadius < value.distanceKm * 500) {
+  // 🔑 FIX: Vérifier que searchRadius existe avant de l'utiliser
+  if (value.searchRadius && value.distanceKm && value.searchRadius < value.distanceKm * 500) {
     additionalErrors.push({
       field: 'searchRadius',
       message: 'Le rayon de recherche doit être au moins 500m par km de distance'

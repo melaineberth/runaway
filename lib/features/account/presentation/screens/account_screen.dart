@@ -223,8 +223,9 @@ class _AccountScreenState extends State<AccountScreen> {
 
 class BlurryPage extends StatefulWidget {
   final List<Widget> children;
+  final EdgeInsetsGeometry? padding;
   
-  const BlurryPage({super.key, required this.children});
+  const BlurryPage({super.key, required this.children, this.padding});
 
   @override
   State<BlurryPage> createState() => _BlurryPageState();
@@ -276,9 +277,12 @@ class _BlurryPageState extends State<BlurryPage> {
                   start: Alignment.center,
                   end: Alignment.bottomCenter,
                 ),
-                child: ListView(
-                  controller: _scrollController,
-                  children: widget.children
+                child: Padding(
+                  padding: widget.padding ?? EdgeInsets.zero,
+                  child: ListView(
+                    controller: _scrollController,
+                    children: widget.children
+                  ),
                 ),
               ),
             

@@ -2,9 +2,9 @@ import 'dart:math' as math;
 
 import 'package:hydrated_bloc/hydrated_bloc.dart';
 import 'package:uuid/uuid.dart';
+import '../../../data/services/graphhopper_api_service.dart';
 import 'route_generation_event.dart';
 import 'route_generation_state.dart';
-import 'package:runaway/features/route_generator/data/services/overpass_poi_service.dart';
 
 /// BLoC pour gérer l'analyse de zone et la génération de parcours
 class RouteGenerationBloc extends HydratedBloc<RouteGenerationEvent, RouteGenerationState> {
@@ -18,7 +18,7 @@ class RouteGenerationBloc extends HydratedBloc<RouteGenerationEvent, RouteGenera
     on<ZoneAnalysisCleared>(_onZoneAnalysisCleared);
   }
 
-  /// Gestion de l'analyse de zone
+  /// Analyse de zone simplifiée
   Future<void> _onZoneAnalysisRequested(
     ZoneAnalysisRequested event,
     Emitter<RouteGenerationState> emit,
@@ -29,28 +29,24 @@ class RouteGenerationBloc extends HydratedBloc<RouteGenerationEvent, RouteGenera
     ));
 
     try {
-      // Récupérer les POIs via Overpass
-      final pois = await OverpassPoiService.fetchPoisInRadius(
-        latitude: event.latitude,
-        longitude: event.longitude,
-        radiusInMeters: event.radiusInMeters,
+      // Avec l'API GraphHopper, pas besoin d'analyse préalable
+      // On simule une analyse réussie pour maintenir l'UX
+      await Future.delayed(Duration(milliseconds: 500));
+
+      // Créer des statistiques basiques pour la zone (compatible avec l'API GraphHopper)
+      final stats = ZoneStatistics(
+        parksCount: 0,
+        waterPointsCount: 0,
+        viewPointsCount: 0,
+        drinkingWaterCount: 0,
+        toiletsCount: 0,
+        greenSpaceRatio: 0.3, // Ratio fictif pour maintenir l'UX
+        suitabilityLevel: 'good', // Niveau par défaut
       );
-
-      if (pois.isEmpty) {
-        emit(state.copyWith(
-          isAnalyzingZone: false,
-          pois: [],
-          errorMessage: 'Aucun point d\'intérêt trouvé dans cette zone',
-        ));
-        return;
-      }
-
-      // Calculer les statistiques
-      final stats = ZoneStatistics.fromPois(pois);
 
       emit(state.copyWith(
         isAnalyzingZone: false,
-        pois: pois,
+        pois: [_createDummyPoi(event.latitude, event.longitude)], // POI fictif pour maintenir la compatibilité
         zoneStats: stats,
         errorMessage: null,
       ));
@@ -63,31 +59,26 @@ class RouteGenerationBloc extends HydratedBloc<RouteGenerationEvent, RouteGenera
     }
   }
 
-  /// Gestion de la génération de parcours
+  /// Génération via API GraphHopper
   Future<void> _onRouteGenerationRequested(
     RouteGenerationRequested event,
     Emitter<RouteGenerationState> emit,
   ) async {
-    if (state.pois.isEmpty) {
-      emit(state.copyWith(
-        errorMessage: 'Veuillez d\'abord analyser la zone',
-      ));
-      return;
-    }
-
     emit(state.copyWith(
       isGeneratingRoute: true,
       errorMessage: null,
     ));
 
     try {
-      // Générer le parcours en utilisant les POIs et les paramètres
-      final route = await OverpassPoiService.generateRoute(
+      // REMPLACER L'ANCIEN CODE PAR L'APPEL API
+      final result = await GraphHopperApiService.generateRoute(
         parameters: event.parameters,
-        pois: state.pois,
       );
 
-      if (route.isEmpty) {
+      // Convertir le résultat pour l'UI existante
+      final routeCoordinates = result.coordinatesForUI;
+
+      if (routeCoordinates.isEmpty) {
         emit(state.copyWith(
           isGeneratingRoute: false,
           errorMessage: 'Impossible de générer un parcours avec ces paramètres',
@@ -97,12 +88,14 @@ class RouteGenerationBloc extends HydratedBloc<RouteGenerationEvent, RouteGenera
 
       emit(state.copyWith(
         isGeneratingRoute: false,
-        generatedRoute: route,
+        generatedRoute: routeCoordinates,
         usedParameters: event.parameters,
+        routeMetadata: result.metadata, // Nouveaux métadonnées
+        routeInstructions: result.instructions, // Nouvelles instructions
         errorMessage: null,
       ));
 
-      print('📍 Route générée avec ${route.length} points');
+      print('✅ Route générée via API GraphHopper: ${routeCoordinates.length} points, ${result.distanceKm.toStringAsFixed(1)}km');
 
     } catch (e) {
       emit(state.copyWith(
@@ -110,6 +103,18 @@ class RouteGenerationBloc extends HydratedBloc<RouteGenerationEvent, RouteGenera
         errorMessage: 'Erreur lors de la génération du parcours: $e',
       ));
     }
+  }
+
+  // Méthode helper pour créer un POI fictif (compatibilité)
+  Map<String, dynamic> _createDummyPoi(double lat, double lon) {
+    return {
+      'id': 'start_point',
+      'name': 'Point de départ',
+      'type': 'start',
+      'coordinates': [lon, lat],
+      'tags': {},
+      'distance': 0.0,
+    };
   }
 
   /// Gestion de la sauvegarde du parcours
@@ -207,8 +212,6 @@ class RouteGenerationBloc extends HydratedBloc<RouteGenerationEvent, RouteGenera
   @override
   RouteGenerationState? fromJson(Map<String, dynamic> json) {
     try {
-      // Pour l'instant, on ne restaure que les parcours sauvegardés
-      // Les POIs et analyses de zone ne sont pas persistés
       return const RouteGenerationState();
     } catch (e) {
       return null;
@@ -219,7 +222,6 @@ class RouteGenerationBloc extends HydratedBloc<RouteGenerationEvent, RouteGenera
   @override
   Map<String, dynamic>? toJson(RouteGenerationState state) {
     try {
-      // Pour l'instant, on ne persiste que les parcours sauvegardés
       return {
         'saved_routes': state.savedRoutes.map((r) => {
           'id': r.id,

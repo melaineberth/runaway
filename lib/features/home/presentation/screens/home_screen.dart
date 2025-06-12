@@ -16,8 +16,8 @@ import 'package:runaway/features/home/presentation/widgets/route_info_card.dart'
 import 'package:runaway/features/route_generator/domain/models/route_parameters.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:smooth_gradient/smooth_gradient.dart';
-import '../../../route_generator/data/services/ai_configuration_service.dart';
-import '../../../route_generator/data/services/integrated_route_generation_service.dart';
+import '../../../route_generator/data/services/graphhopper_api_service.dart';
+import '../../../route_generator/domain/models/graphhopper_route_result.dart';
 import '../blocs/map_style/map_style_bloc.dart';
 import '../blocs/map_style/map_style_event.dart';
 import '../blocs/map_style/map_style_state.dart';
@@ -66,19 +66,14 @@ class _HomeScreenState extends State<HomeScreen> {
   mp.PolylineAnnotation? currentRoutePolyline;
 
   // État de la route générée
-  IntegratedRouteResult? generatedRouteResult;
   List<List<double>>? generatedRouteCoordinates;
   Map<String, dynamic>? generatedRouteStats;
   File? generatedRouteFile;
-  // Configuration IA
-  bool useAIGeneration = true;
-  AIGenerationConfig? customAIConfig;
 
   @override
   void initState() {
     super.initState();
     _setupPositionTracking();
-    _checkAIAvailability();
   }
 
   @override
@@ -87,19 +82,6 @@ class _HomeScreenState extends State<HomeScreen> {
     userPositionStream?.cancel();
     _clearLocationMarkers();
     super.dispose();
-  }
-
-  // Vérifier la disponibilité de l'IA
-  void _checkAIAvailability() {
-    final status = AIConfigurationService.checkAIAvailability();
-    if (!status.isAvailable) {
-      print('⚠️ IA non disponible: ${status.reason}');
-      setState(() {
-        useAIGeneration = false;
-      });
-    } else {
-      print('✅ IA disponible: ${status.reason}');
-    }
   }
 
   Future<void> _setActiveLocation({
@@ -508,43 +490,36 @@ class _HomeScreenState extends State<HomeScreen> {
     try {
       final parameters = context.read<RouteParametersBloc>().state.parameters;
       
-      print('🚀 Génération ${useAIGeneration ? "IA" : "classique"} du parcours...');
+      print('🚀 Génération de parcours via API GraphHopper...');
       
-      // NOUVEAU: Utiliser le service intégré
-      final result = await IntegratedRouteGenerationService.generateOptimalRoute(
+      // NOUVEAU: Utiliser directement l'API GraphHopper
+      final result = await GraphHopperApiService.generateRoute(
         parameters: parameters,
-        latitude: currentLatitude ?? userLatitude ?? 0.0,
-        longitude: currentLongitude ?? userLongitude ?? 0.0,
-        forceClassicAlgorithm: !useAIGeneration,
-        customConfig: customAIConfig,
       );
 
       if (!mounted) return;
 
-      // Vérifier la qualité du résultat
-      if (!result.isSuccessful) {
-        throw Exception('Qualité de route insuffisante (score: ${result.qualityScore}/10)');
-      }
-
+      // Convertir pour l'affichage sur la carte
+      final routeCoordinates = result.coordinatesForUI;
+      
       // Afficher la route sur la carte
-      await _displayRoute(result.coordinates);
+      await _displayRoute(routeCoordinates);
       
       // Sauvegarder les résultats
-      final routeFile = await _saveRouteToGeoJson(result.coordinates, parameters);
+      final routeFile = await _saveRouteToGeoJson(routeCoordinates, parameters);
       
       setState(() {
-        generatedRouteResult = result;
-        generatedRouteCoordinates = result.coordinates;
-        generatedRouteStats = _buildUIStats(result);
+        generatedRouteCoordinates = routeCoordinates;
+        generatedRouteStats = _buildStatsFromGraphHopper(result);
         generatedRouteFile = routeFile;
         isGenerateEnabled = false;
       });
       
-      // Afficher les résultats avec informations IA
-      _showEnhancedRouteResults(result, routeFile);
+      // Afficher les résultats
+      _showGraphHopperRouteResults(result, routeFile);
 
     } catch (e) {      
-      print('❌ Erreur génération: $e');
+      print('❌ Erreur génération API: $e');
       
       if (!mounted) return;
 
@@ -556,27 +531,19 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  // Construction des stats pour l'UI
-  Map<String, dynamic> _buildUIStats(IntegratedRouteResult result) {
-    final distance = result.actualDistanceKm.toStringAsFixed(2);
-    final isLoop = result.metadata['route_type'] == 'loop';
-    final duration = result.metadata['estimated_duration_minutes'] ?? 0;
-    
+  Map<String, dynamic> _buildStatsFromGraphHopper(GraphHopperRouteResult result) {
     return {
-      'distance_km': distance,
-      'is_loop': isLoop,
+      'distance_km': result.distanceKm.toStringAsFixed(2),
+      'is_loop': result.metadata['route_type'] == 'loop',
       'points_count': result.coordinates.length,
-      'generation_method': result.generationMethod.name,
-      'ai_model': result.aiModel,
-      'quality_score': result.qualityScore,
-      'generation_time_ms': result.totalGenerationTime ?? 0,
-      'fallback_used': result.fallbackUsed,
-      'validation_passed': result.validationResult?.isValid ?? true,
+      'generation_method': 'graphhopper_api',
+      'duration_minutes': result.durationMinutes,
+      'elevation_gain': result.elevationGain,
+      'instructions_count': result.instructions.length,
     };
   }
 
-  // Dialogue de résultats amélioré avec infos IA
-  void _showEnhancedRouteResults(IntegratedRouteResult result, File routeFile) {
+  void _showGraphHopperRouteResults(GraphHopperRouteResult result, File routeFile) {
     showDialog(
       useRootNavigator: true,
       context: context,
@@ -587,18 +554,12 @@ class _HomeScreenState extends State<HomeScreen> {
             Container(
               padding: EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: result.generationMethod == RouteGenerationMethod.ai 
-                    ? Colors.purple.withAlpha(30)
-                    : Colors.green.withAlpha(30),
+                color: Colors.blue.withAlpha(30),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: HugeIcon(
-                icon: result.generationMethod == RouteGenerationMethod.ai 
-                    ? HugeIcons.strokeRoundedAiInnovation03
-                    : HugeIcons.strokeRoundedRoute03,
-                color: result.generationMethod == RouteGenerationMethod.ai 
-                    ? Colors.purple
-                    : Colors.green,
+                icon: HugeIcons.strokeRoundedRoute03,
+                color: Colors.blue,
                 size: 24,
               ),
             ),
@@ -609,7 +570,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 children: [
                   Text('Parcours généré !', style: context.titleMedium),
                   Text(
-                    '${result.actualDistanceKm.toStringAsFixed(2)} km • ${result.generationMethod == RouteGenerationMethod.ai ? "IA" : "Algorithme"} • ⭐${result.qualityScore.toStringAsFixed(1)}/10',
+                    '${result.distanceKm.toStringAsFixed(2)} km • GraphHopper API • ${result.durationMinutes}min',
                     style: context.bodySmall?.copyWith(
                       fontSize: 14,
                       color: Colors.grey.shade600,
@@ -625,87 +586,23 @@ class _HomeScreenState extends State<HomeScreen> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Informations sur la génération
-              _buildStatsCard('Méthode de génération', [
-                '🤖 ${result.generationMethod == RouteGenerationMethod.ai ? "Intelligence Artificielle" : "Algorithme classique"}',
-                if (result.aiModel != null) '🧠 Modèle: ${result.aiModel}',
-                '⏱️ Généré en ${result.totalGenerationTime ?? 0}ms',
-                if (result.fallbackUsed) '🔄 Fallback utilisé',
-                '✅ Qualité: ${result.qualityScore.toStringAsFixed(1)}/10',
-              ]),
-              
-              16.h,
-              
-              // Statistiques du parcours
+              // Informations sur la route
               _buildStatsCard('Parcours généré', [
-                '📏 ${result.actualDistanceKm.toStringAsFixed(2)} km',
+                '📏 ${result.distanceKm.toStringAsFixed(2)} km',
+                '⏱️ ~${result.durationMinutes} minutes',
+                '⛰️ ${result.elevationGain.round()}m de dénivelé',
                 '📍 ${result.coordinates.length} points GPS',
-                '${result.metadata['route_type'] == 'loop' ? "🔄" : "➡️"} ${result.metadata['route_type'] == 'loop' ? "Parcours en boucle" : "Aller simple"}',
-                '⏰ ~${result.metadata['estimated_duration_minutes'] ?? 0} minutes',
+                '🧭 ${result.instructions.length} instructions',
               ]),
               
-              // Raisonnement IA si disponible
-              if (result.aiReasoning != null) ...[
-                16.h,
-                _buildStatsCard('Raisonnement IA', [
-                  result.aiReasoning!,
+              16.h,
+              
+              // Métadonnées techniques
+              if (result.metadata.isNotEmpty)
+                _buildStatsCard('Détails techniques', [
+                  for (final entry in result.metadata.entries)
+                    '• ${entry.key}: ${entry.value}',
                 ]),
-              ],
-              
-              // Avertissements de validation
-              if (result.validationResult?.hasWarnings == true) ...[
-                16.h,
-                Container(
-                  padding: EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.orange.shade50,
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.orange.shade200),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('⚠️ Avertissements:', 
-                          style: context.bodySmall?.copyWith(fontWeight: FontWeight.w600)),
-                      4.h,
-                      ...result.validationResult!.warnings.map((w) => 
-                        Text('• $w', style: context.bodySmall?.copyWith(fontSize: 12))),
-                    ],
-                  ),
-                ),
-              ],
-              
-              16.h,
-              
-              // Rappel des paramètres
-              _buildStatsCard('Paramètres utilisés', [
-                '🏃‍♂️ ${context.read<RouteParametersBloc>().state.parameters.activityType.title}',
-                '⛰️ ${context.read<RouteParametersBloc>().state.parameters.terrainType.title}',
-                '🏙️ ${context.read<RouteParametersBloc>().state.parameters.urbanDensity.title}',
-                '📐 ${context.read<RouteParametersBloc>().state.parameters.elevationGain.toStringAsFixed(0)}m de dénivelé',
-              ]),
-              
-              16.h,
-              
-              // Fichier généré
-              Container(
-                padding: EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade50,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.grey.shade200),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('📁 Fichier généré:', 
-                        style: context.bodySmall?.copyWith(fontWeight: FontWeight.w600)),
-                    4.h,
-                    Text('• ${routeFile.path.split('/').last}', 
-                        style: context.bodySmall?.copyWith(fontSize: 12)),
-                  ],
-                ),
-              ),
             ],
           ),
         ),
@@ -714,23 +611,12 @@ class _HomeScreenState extends State<HomeScreen> {
             onPressed: () => Navigator.of(context).pop(),
             child: Text('Fermer'),
           ),
-          TextButton(
-            onPressed: () {
-              Navigator.of(context).pop();
-              _shareRouteFiles(routeFile);
-            },
-            child: Text('Partager'),
-          ),
           ElevatedButton(
             onPressed: () {
               Navigator.of(context).pop();
-              _startNavigation();
+              _shareCurrentRoute();
             },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Theme.of(context).primaryColor,
-              foregroundColor: Colors.white,
-            ),
-            child: Text('Commencer'),
+            child: Text('Partager'),
           ),
         ],
       ),
@@ -912,24 +798,6 @@ class _HomeScreenState extends State<HomeScreen> {
     
     final double c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a));
     return R * c;
-  }
-
-  void _shareRouteFiles(File routeFile) async {
-    try {
-      final shareParams = ShareParams(
-        text: 'Parcours généré par RunAway',
-        files: [
-          XFile(routeFile.path),
-        ],
-      );
-
-      await SharePlus.instance.share(shareParams);
-    } catch (e) {
-      print('Erreur partage: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erreur lors du partage: $e')),
-      );
-    }
   }
 
   double _calculateTotalDistance(List<List<double>> coords) {

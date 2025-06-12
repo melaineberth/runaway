@@ -1,10 +1,15 @@
 import 'package:equatable/equatable.dart';
 import 'package:runaway/features/route_generator/domain/models/route_parameters.dart';
 
+import '../../../domain/models/graphhopper_route_result.dart';
+
 /// État de la génération de parcours
 class RouteGenerationState extends Equatable {
   /// POIs récupérés lors de l'analyse de zone
   final List<Map<String, dynamic>> pois;
+
+  final Map<String, dynamic>? routeMetadata;
+  final List<RouteInstruction>? routeInstructions;
   
   /// Indique si une analyse est en cours
   final bool isAnalyzingZone;
@@ -36,6 +41,8 @@ class RouteGenerationState extends Equatable {
     this.errorMessage,
     this.zoneStats,
     this.savedRoutes = const [],
+    this.routeMetadata,
+    this.routeInstructions,
   });
 
   /// Vérifie si la zone a été analysée
@@ -53,6 +60,8 @@ class RouteGenerationState extends Equatable {
     String? errorMessage,
     ZoneStatistics? zoneStats,
     List<SavedRoute>? savedRoutes,
+    Map<String, dynamic>? routeMetadata,
+    List<RouteInstruction>? routeInstructions,
   }) {
     return RouteGenerationState(
       pois: pois ?? this.pois,
@@ -63,20 +72,24 @@ class RouteGenerationState extends Equatable {
       errorMessage: errorMessage,
       zoneStats: zoneStats ?? this.zoneStats,
       savedRoutes: savedRoutes ?? this.savedRoutes,
+      routeMetadata: routeMetadata ?? this.routeMetadata,
+      routeInstructions: routeInstructions ?? this.routeInstructions,
     );
   }
 
   @override
   List<Object?> get props => [
-        pois,
-        isAnalyzingZone,
-        isGeneratingRoute,
-        generatedRoute,
-        usedParameters,
-        errorMessage,
-        zoneStats,
-        savedRoutes,
-      ];
+    pois,
+    isAnalyzingZone,
+    isGeneratingRoute,
+    generatedRoute,
+    usedParameters,
+    errorMessage,
+    zoneStats,
+    savedRoutes,
+    routeMetadata,
+    routeInstructions,
+  ];
 }
 
 /// Statistiques de la zone analysée

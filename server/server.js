@@ -1,23 +1,10 @@
 require('dotenv').config();
 const express = require('express');
-const cors = require('cors');
-const helmet = require('helmet');
-const compression = require('compression');
 const rateLimit = require('express-rate-limit');
-const logger = require('./src/config/logger'); // Import direct du logger
-const app = require('./src/app');
+const logger = require('./src/config/logger');
+const app = require('./src/app'); // L'app contient déjà les middlewares
 
-// Middleware globaux
-app.use(helmet());
-app.use(compression());
-app.use(cors({
-  origin: process.env.ALLOWED_ORIGINS?.split(',') || '*',
-  credentials: true
-}));
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
-
-// Rate limiting
+// Rate limiting (garder seulement ça)
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 100, // limite par IP
@@ -25,7 +12,7 @@ const limiter = rateLimit({
 });
 app.use('/api/', limiter);
 
-// Logging des requêtes
+// Logging des requêtes (optionnel, déjà dans app.js)
 app.use((req, res, next) => {
   logger.info(`${req.method} ${req.path}`, {
     ip: req.ip,

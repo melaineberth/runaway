@@ -51,7 +51,8 @@ class _AskRegistrationState extends State<AskRegistration> {
                   "Vous n'êtes pas connecté",
                   style: context.bodyLarge?.copyWith(
                     color: Colors.white,
-                    fontSize: 30,
+                    fontSize: 25,
+                    fontWeight: FontWeight.w700,
                   ),
                   textAlign: TextAlign.center,
                 ),
@@ -61,7 +62,7 @@ class _AskRegistrationState extends State<AskRegistration> {
                   style: context.bodyMedium?.copyWith(
                     color: Colors.white,
                     fontWeight: FontWeight.w500,
-                    fontSize: 19,
+                    fontSize: 17,
                     height: 1.3,
                   ),
                   textAlign: TextAlign.center,
