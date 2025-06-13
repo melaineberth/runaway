@@ -7,7 +7,7 @@ class MapStyleState extends Equatable {
   final MapboxMap? map;
 
   const MapStyleState({
-    this.style = MapsStyles.standard,
+    this.style = MapsStyles.dark,
     this.map,
   });
 
@@ -31,7 +31,7 @@ class MapStyleState extends Equatable {
     return MapStyleState(
       style: MapsStyles.values.firstWhere(
         (s) => s.id == json['style'],
-        orElse: () => MapsStyles.standard,
+        orElse: () => MapsStyles.dark,
       ),
     );
   }

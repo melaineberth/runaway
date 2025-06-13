@@ -8,6 +8,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart' as mp;
 import 'package:hugeicons/hugeicons.dart';
 import 'package:geolocator/geolocator.dart' as gl;
+import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:runaway/config/colors.dart';
 import 'package:runaway/config/extensions.dart';
@@ -507,25 +508,17 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     // Enregistrer la carte dans le BLoC
     context.read<MapStyleBloc>().add(MapRegistered(mapboxMap));
 
-    mapboxMap.location.updateSettings(
-      mp.LocationComponentSettings(enabled: true, pulsingEnabled: true),
-    );
+    mapboxMap.location.updateSettings(mp.LocationComponentSettings(enabled: true, pulsingEnabled: true));
 
     // Créer le gestionnaire d'annotations
-    pointAnnotationManager =
-        await mapboxMap.annotations.createPointAnnotationManager();
-    circleAnnotationManager =
-        await mapboxMap.annotations.createCircleAnnotationManager();
+    pointAnnotationManager = await mapboxMap.annotations.createPointAnnotationManager();
+    circleAnnotationManager = await mapboxMap.annotations.createCircleAnnotationManager();
 
     // Masquer les éléments d'interface
     await mapboxMap.compass.updateSettings(mp.CompassSettings(enabled: false));
-    await mapboxMap.attribution.updateSettings(
-      mp.AttributionSettings(enabled: false),
-    );
+    await mapboxMap.attribution.updateSettings(mp.AttributionSettings(enabled: false));
     await mapboxMap.logo.updateSettings(mp.LogoSettings(enabled: false));
-    await mapboxMap.scaleBar.updateSettings(
-      mp.ScaleBarSettings(enabled: false),
-    );
+    await mapboxMap.scaleBar.updateSettings(mp.ScaleBarSettings(enabled: false));
 
     // Configurer le listener de zoom pour adapter le rayon
     mapboxMap.setOnMapZoomListener((context) {
@@ -1354,21 +1347,20 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     }
   }
 
-  void _shareCurrentRoute() {
+  void _shareCurrentRoute() async {
     if (generatedRouteFile == null) {
-      // FIX: Partager les informations de base si pas de fichier
       final distance = _parseDistance(generatedRouteStats?['distance_km']);
-      Share.share(
-        'Mon parcours RunAway de ${distance.toStringAsFixed(1)} km généré avec l\'application RunAway',
+      final params = ShareParams(
+        text: 'Mon parcours RunAway de ${distance.toStringAsFixed(1)} km généré avec l\'application RunAway',
+        files: [XFile('${generatedRouteFile!.path}/image.jpg')], 
       );
-      return;
-    }
 
-    Share.shareXFiles(
-      [XFile(generatedRouteFile!.path)],
-      text:
-          'Mon parcours RunAway de ${_parseDistance(generatedRouteStats?['distance_km']).toStringAsFixed(1)} km',
-    );
+      final result = await SharePlus.instance.share(params);
+
+      if (result.status == ShareResultStatus.success) {
+          print('Thank you for sharing the picture!');
+      }
+    }
   }
 
   @override
@@ -1398,7 +1390,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   child: mp.MapWidget(
                     key: ValueKey("mapWidget"),
                     onMapCreated: _onMapCreated,
-                    styleUri: mapStyleState.style.style,
+                    styleUri: MapboxStyles.DARK,
                   ),
                 ),
 
