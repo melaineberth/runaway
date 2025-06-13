@@ -1,5 +1,3 @@
-// lib/core/widgets/navigation_overlay.dart
-
 import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:runaway/config/extensions.dart';
@@ -10,6 +8,8 @@ class NavigationOverlay extends StatelessWidget {
   final NavigationUpdate? navUpdate;
   final Map<String, dynamic> routeStats;
   final VoidCallback onStop;
+  final String navigationMode; // 'to_route', 'on_route'
+  final bool isNavigatingToRoute;
 
   const NavigationOverlay({
     super.key,
@@ -17,13 +17,15 @@ class NavigationOverlay extends StatelessWidget {
     required this.navUpdate,
     required this.routeStats,
     required this.onStop,
+    this.navigationMode = 'on_route',
+    this.isNavigatingToRoute = false,
   });
 
   @override
   Widget build(BuildContext context) {
     return Column(
       children: [
-        // Instruction principale
+        // Instruction principale avec badge de mode
         Container(
           width: double.infinity,
           padding: EdgeInsets.all(20),
@@ -41,18 +43,40 @@ class NavigationOverlay extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Bouton stop et instruction
+              // Badge de mode + bouton stop
               Row(
                 children: [
-                  Expanded(
-                    child: Text(
-                      instruction,
-                      style: context.titleMedium?.copyWith(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                      ),
+                  // Badge de mode
+                  Container(
+                    padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: _getModeColor().withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        HugeIcon(
+                          icon: _getModeIcon(),
+                          color: _getModeColor(),
+                          size: 14,
+                        ),
+                        6.w,
+                        Text(
+                          _getModeText(),
+                          style: context.bodySmall?.copyWith(
+                            color: _getModeColor(),
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
+                  
+                  Spacer(),
+                  
+                  // Bouton stop
                   GestureDetector(
                     onTap: onStop,
                     child: Container(
@@ -71,6 +95,17 @@ class NavigationOverlay extends StatelessWidget {
                 ],
               ),
               
+              12.h,
+              
+              // Instruction
+              Text(
+                instruction,
+                style: context.titleMedium?.copyWith(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              
               if (navUpdate != null && !navUpdate!.isFinished) ...[
                 16.h,
                 
@@ -81,22 +116,24 @@ class NavigationOverlay extends StatelessWidget {
                     Container(
                       padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                       decoration: BoxDecoration(
-                        color: Colors.blue.withOpacity(0.2),
+                        color: _getModeColor().withOpacity(0.2),
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           HugeIcon(
-                            icon: HugeIcons.twotoneRoundedKeffiyehAfter,
-                            color: Colors.blue,
+                            icon: isNavigatingToRoute 
+                                ? HugeIcons.strokeRoundedNavigation04
+                                : HugeIcons.strokeRoundedRoute03,
+                            color: _getModeColor(),
                             size: 16,
                           ),
                           6.w,
                           Text(
                             _formatDistance(navUpdate!.distanceToTarget),
                             style: context.bodySmall?.copyWith(
-                              color: Colors.blue,
+                              color: _getModeColor(),
                               fontWeight: FontWeight.w600,
                             ),
                           ),
@@ -115,11 +152,15 @@ class NavigationOverlay extends StatelessWidget {
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
                               Text(
-                                'Point ${navUpdate!.waypointIndex + 1}/${navUpdate!.totalWaypoints}',
+                                isNavigatingToRoute 
+                                    ? 'Vers le parcours'
+                                    : 'Point ${navUpdate!.waypointIndex + 1}/${navUpdate!.totalWaypoints}',
                                 style: context.bodySmall?.copyWith(color: Colors.white70),
                               ),
                               Text(
-                                '${(((navUpdate!.waypointIndex + 1) / navUpdate!.totalWaypoints) * 100).round()}%',
+                                isNavigatingToRoute 
+                                    ? '...'
+                                    : '${(((navUpdate!.waypointIndex + 1) / navUpdate!.totalWaypoints) * 100).round()}%',
                                 style: context.bodySmall?.copyWith(
                                   color: Colors.white70,
                                   fontWeight: FontWeight.w600,
@@ -129,9 +170,11 @@ class NavigationOverlay extends StatelessWidget {
                           ),
                           6.h,
                           LinearProgressIndicator(
-                            value: (navUpdate!.waypointIndex + 1) / navUpdate!.totalWaypoints,
+                            value: isNavigatingToRoute 
+                                ? null // Indéterminé pour navigation vers le parcours
+                                : (navUpdate!.waypointIndex + 1) / navUpdate!.totalWaypoints,
                             backgroundColor: Colors.white30,
-                            valueColor: AlwaysStoppedAnimation(Colors.blue),
+                            valueColor: AlwaysStoppedAnimation(_getModeColor()),
                             minHeight: 4,
                           ),
                         ],
@@ -146,44 +189,62 @@ class NavigationOverlay extends StatelessWidget {
         
         16.h,
         
-        // Statistiques du parcours (compactes)
-        Container(
-          padding: EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: Colors.black.withOpacity(0.7),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: IntrinsicHeight(
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                _buildCompactStat(
-                  icon: HugeIcons.strokeRoundedRoute03,
-                  value: '${_parseDistance(routeStats['distance_km']).toStringAsFixed(1)} km',
-                  label: 'Total',
-                ),
-                
-                VerticalDivider(color: Colors.white30, width: 1),
-                
-                _buildCompactStat(
-                  icon: HugeIcons.strokeRoundedTime01,
-                  value: '${routeStats['duration_minutes']} min',
-                  label: 'Durée',
-                ),
-                
-                VerticalDivider(color: Colors.white30, width: 1),
-                
-                _buildCompactStat(
-                  icon: HugeIcons.strokeRoundedAbacusBefore,
-                  value: '${routeStats['points_count']}',
-                  label: 'Points',
-                ),
-              ],
+        // Statistiques du parcours (seulement si on navigue sur le parcours)
+        if (!isNavigatingToRoute) ...[
+          Container(
+            padding: EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.black.withOpacity(0.7),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: IntrinsicHeight(
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  _buildCompactStat(
+                    icon: HugeIcons.strokeRoundedRoute03,
+                    value: '${_parseDistance(routeStats['distance_km']).toStringAsFixed(1)} km',
+                    label: 'Total',
+                  ),
+                  
+                  VerticalDivider(color: Colors.white30, width: 1),
+                  
+                  _buildCompactStat(
+                    icon: HugeIcons.strokeRoundedTime01,
+                    value: '${routeStats['duration_minutes']} min',
+                    label: 'Durée',
+                  ),
+                  
+                  VerticalDivider(color: Colors.white30, width: 1),
+                  
+                  _buildCompactStat(
+                    icon: HugeIcons.strokeRoundedAbacusBefore,
+                    value: '${routeStats['points_count']}',
+                    label: 'Points',
+                  ),
+                ],
+              ),
             ),
           ),
-        ),
+        ],
       ],
     );
+  }
+
+  Color _getModeColor() {
+    return isNavigatingToRoute ? Colors.blue : Colors.green;
+  }
+
+  dynamic _getModeIcon() {
+    return isNavigatingToRoute 
+        ? HugeIcons.strokeRoundedNavigation04
+        : HugeIcons.strokeRoundedRoute03;
+  }
+
+  String _getModeText() {
+    return isNavigatingToRoute 
+        ? 'GUIDAGE'
+        : 'PARCOURS';
   }
 
   Widget _buildCompactStat({

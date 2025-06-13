@@ -14,96 +14,101 @@ class GraphHopperCloudService {
   }
 
   /**
-   * Génère un itinéraire via l'API GraphHopper
-   */
-  async getRoute(params) {
-    if (!this.apiKey) {
-      throw new Error('GRAPHHOPPER_API_KEY non configurée');
-    }
-
-    const {
-      points,
-      profile = 'foot',
-      algorithm = 'round_trip',
-      roundTripDistance = 10000,
-      roundTripSeed = Math.floor(Math.random() * 1000000),
-      avoidTraffic = false,
-      locale = 'fr'
-    } = params;
-
-    try {
-      const requestParams = {
-        key: this.apiKey,
-        profile,
-        points_encoded: false,
-        elevation: true,
-        instructions: true,
-        calc_points: true,
-        details: ['surface', 'road_class', 'road_environment', 'country', 'state'],
-        locale
-      };
-
-      // Configuration pour parcours en boucle
-      if (algorithm === 'round_trip') {
-        requestParams.algorithm = 'round_trip';
-        requestParams.round_trip = {
-          distance: roundTripDistance,
-          seed: roundTripSeed
-        };
-      }
-
-      // Éviter le trafic si demandé
-      if (avoidTraffic) {
-        requestParams.ch = false;
-        requestParams.lm = false;
-      }
-
-      // Construire l'URL avec les points
-      let url = `${this.baseUrl}/route?`;
-      
-      // Ajouter les points
-      points.forEach(point => {
-        url += `point=${point.lat},${point.lon}&`;
-      });
-
-      // Ajouter les autres paramètres
-      Object.entries(requestParams).forEach(([key, value]) => {
-        if (typeof value === 'object') {
-          Object.entries(value).forEach(([subKey, subValue]) => {
-            url += `${key}.${subKey}=${subValue}&`;
-          });
-        } else {
-          url += `${key}=${value}&`;
-        }
-      });
-
-      logger.info('Appel GraphHopper API:', { 
-        url: url.substring(0, 200) + '...',
-        points: points.length,
-        profile 
-      });
-
-      const response = await axios.get(url, {
-        timeout: 30000 // 30 secondes pour l'API externe
-      });
-
-      if (!response.data.paths || response.data.paths.length === 0) {
-        throw new Error('Aucun itinéraire trouvé par GraphHopper');
-      }
-
-      return this.formatResponse(response.data.paths[0]);
-
-    } catch (error) {
-      logger.error('Erreur GraphHopper API:', error.message);
-      
-      if (error.response) {
-        logger.error('Réponse API:', error.response.data);
-        throw new Error(`GraphHopper API error: ${error.response.data.message || error.message}`);
-      }
-      
-      throw error;
-    }
+ * Génère un itinéraire via l'API GraphHopper
+ */
+async getRoute(params) {
+  if (!this.apiKey) {
+    throw new Error('GRAPHHOPPER_API_KEY non configurée');
   }
+
+  const {
+    points,
+    profile = 'foot',
+    algorithm = 'dijkstra', // ✅ Par défaut dijkstra pour itinéraires simples
+    roundTripDistance = 10000,
+    roundTripSeed = Math.floor(Math.random() * 1000000),
+    avoidTraffic = false,
+    locale = 'fr'
+  } = params;
+
+  try {
+    const requestParams = {
+      key: this.apiKey,
+      profile,
+      points_encoded: false,
+      elevation: true,
+      instructions: true,
+      calc_points: true,
+      details: ['surface', 'road_class', 'road_environment'],
+      locale
+    };
+
+    // ✅ Configuration selon le type d'itinéraire
+    if (algorithm === 'round_trip') {
+      // Parcours en boucle
+      requestParams.algorithm = 'round_trip';
+      requestParams.round_trip = {
+        distance: roundTripDistance,
+        seed: roundTripSeed
+      };
+    } else {
+      // ✅ Itinéraire simple point-à-point
+      requestParams.algorithm = algorithm; // dijkstra, astar, etc.
+    }
+
+    // Éviter le trafic si demandé
+    if (avoidTraffic) {
+      requestParams.ch = false;
+      requestParams.lm = false;
+    }
+
+    // Construire l'URL avec les points
+    let url = `${this.baseUrl}/route?`;
+    
+    // Ajouter les points
+    points.forEach(point => {
+      url += `point=${point.lat},${point.lon}&`;
+    });
+
+    // Ajouter les autres paramètres
+    Object.entries(requestParams).forEach(([key, value]) => {
+      if (typeof value === 'object') {
+        Object.entries(value).forEach(([subKey, subValue]) => {
+          url += `${key}.${subKey}=${subValue}&`;
+        });
+      } else {
+        url += `${key}=${value}&`;
+      }
+    });
+
+    logger.info('Appel GraphHopper API:', { 
+      url: url.substring(0, 200) + '...',
+      points: points.length,
+      profile,
+      algorithm // ✅ Log de l'algorithme utilisé
+    });
+
+    const response = await axios.get(url, {
+      timeout: 30000 // 30 secondes pour l'API externe
+    });
+
+    if (!response.data.paths || response.data.paths.length === 0) {
+      throw new Error('Aucun itinéraire trouvé par GraphHopper');
+    }
+
+    return this.formatResponse(response.data.paths[0]);
+
+  } catch (error) {
+    logger.error('Erreur GraphHopper API:', error.message);
+    
+    if (error.response) {
+      logger.error('Réponse API:', error.response.data);
+      throw new Error(`GraphHopper API error: ${error.response.data.message || error.message}`);
+    }
+    
+    throw error;
+  }
+}
 
   /**
    * Optimise l'ordre des waypoints

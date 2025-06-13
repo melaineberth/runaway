@@ -24,8 +24,7 @@ import '../../../route_generator/domain/models/graphhopper_route_result.dart';
 import '../blocs/map_style/map_style_bloc.dart';
 import '../blocs/map_style/map_style_event.dart';
 import '../blocs/map_style/map_style_state.dart';
-import '../../../route_generator/presentation/screens/route_parameter.dart'
-    as gen;
+import '../../../route_generator/presentation/screens/route_parameter.dart' as gen;
 import '../../../../core/widgets/icon_btn.dart';
 import '../blocs/route_parameters/route_parameters_bloc.dart';
 import '../blocs/route_parameters/route_parameters_event.dart';
@@ -66,6 +65,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   // État du suivi en temps réel
   bool isTrackingUser = true;
 
+  // Variables pour la gestion des polylignes
+  mp.PolylineAnnotation? routeToStartPolyline; // Polyligne vers le point de départ
+  mp.PolylineAnnotation? originalRoutePolyline; // Polyligne du parcours original (sauvegardée)
   mp.PolylineAnnotationManager? polylineManager;
   mp.PolylineAnnotation? currentRoutePolyline;
 
@@ -79,6 +81,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   NavigationUpdate? currentNavUpdate;
   String currentInstruction = "";
   mp.CircleAnnotation? currentPositionMarker;
+
+  // Variables pour la navigation intelligente
+  bool isNavigatingToRoute = false; // Navigation vers le parcours
+  String navigationMode = 'none'; // 'none', 'to_route', 'on_route'
+  List<List<double>>? routeToStartPoint; // Coordonnées pour aller au point de départ
 
   @override
   void initState() {
@@ -122,103 +129,450 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     }
   }
 
-  // FIX: Nouvelle méthode _startNavigation avec choix d'options
   void _startNavigation() {
-    if (generatedRouteCoordinates == null) return;
+    if (generatedRouteCoordinates == null || userLongitude == null || userLatitude == null) {
+      _showErrorSnackBar('Position utilisateur ou parcours non disponible');
+      return;
+    }
 
-    _showNavigationDialog();
+    final startPoint = generatedRouteCoordinates!.first;
+    final distanceToStart = _calculateDistance(
+      userLatitude!,
+      userLongitude!,
+      startPoint[1], // latitude
+      startPoint[0], // longitude
+    );
+
+    print('🎯 Distance au point de départ: ${distanceToStart.round()}m');
+
+    // Si l'utilisateur est proche du parcours (moins de 100m)
+    if (distanceToStart <= 100) {
+      _showDirectNavigationDialog();
+    } else {
+      _showNavigationChoiceDialog(distanceToStart);
+    }
   }
 
-  /// Affiche le dialog de confirmation de navigation
-  void _showNavigationDialog() {
+  void _showDirectNavigationDialog() {
     showDialog(
       context: context,
-      builder:
-          (context) => AlertDialog(
-            backgroundColor: Colors.black,
-            title: Text(
-              'Démarrer la navigation',
-              style: context.titleMedium?.copyWith(color: Colors.white),
+      builder: (context) => AlertDialog(
+        backgroundColor: Colors.black,
+        title: Text(
+          'Démarrer le parcours',
+          style: context.titleMedium?.copyWith(color: Colors.white),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Vous êtes au point de départ du parcours.',
+              style: context.bodyMedium?.copyWith(color: Colors.white70),
             ),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Voulez-vous démarrer la navigation GPS pour ce parcours ?',
-                  style: context.bodyMedium?.copyWith(color: Colors.white70),
-                ),
-                16.h,
-                Container(
-                  padding: EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.blue.withAlpha(20),
-                    borderRadius: BorderRadius.circular(8),
+            16.h,
+            Container(
+              padding: EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.green.withAlpha(20),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                children: [
+                  HugeIcon(
+                    icon: HugeIcons.strokeRoundedCheckmarkCircle02,
+                    color: Colors.green,
+                    size: 16,
                   ),
-                  child: Row(
-                    children: [
-                      HugeIcon(
-                        icon: HugeIcons.strokeRoundedInformationCircle,
-                        color: Colors.blue,
-                        size: 16,
+                  8.w,
+                  Expanded(
+                    child: Text(
+                      'Prêt à commencer la navigation du parcours',
+                      style: context.bodySmall?.copyWith(
+                        color: Colors.green,
+                        fontSize: 12,
                       ),
-                      8.w,
-                      Expanded(
-                        child: Text(
-                          'Instructions vocales en français activées',
-                          style: context.bodySmall?.copyWith(
-                            color: Colors.blue,
-                            fontSize: 12,
-                          ),
-                        ),
-                      ),
-                    ],
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(),
-                child: Text('Annuler', style: TextStyle(color: Colors.white70)),
-              ),
-              ElevatedButton(
-                onPressed: () {
-                  Navigator.of(context).pop();
-                  _startIntegratedNavigation();
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  foregroundColor: Colors.black,
-                ),
-                child: Text('Démarrer'),
-              ),
-            ],
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text('Annuler', style: TextStyle(color: Colors.white70)),
           ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              _startRouteNavigation();
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              foregroundColor: Colors.black,
+            ),
+            child: Text('Commencer'),
+          ),
+        ],
+      ),
     );
   }
 
-  /// Démarre la navigation intégrée
-  void _startIntegratedNavigation() async {
+  void _showNavigationChoiceDialog(double distanceToStart) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: Colors.black,
+        title: Text(
+          'Navigation vers le parcours',
+          style: context.titleMedium?.copyWith(color: Colors.white),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Vous êtes à ${_formatDistance(distanceToStart)} du point de départ.',
+              style: context.bodyMedium?.copyWith(color: Colors.white70),
+            ),
+            16.h,
+            Text(
+              'Que souhaitez-vous faire ?',
+              style: context.bodyMedium?.copyWith(
+                color: Colors.white,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            12.h,
+            Container(
+              padding: EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.blue.withAlpha(20),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                children: [
+                  HugeIcon(
+                    icon: HugeIcons.strokeRoundedInformationCircle,
+                    color: Colors.blue,
+                    size: 16,
+                  ),
+                  8.w,
+                  Expanded(
+                    child: Text(
+                      'Navigation avec instructions vocales',
+                      style: context.bodySmall?.copyWith(
+                        color: Colors.blue,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text('Annuler', style: TextStyle(color: Colors.white70)),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              _startRouteNavigation(); // Démarrer directement le parcours
+            },
+            child: Text(
+              'Parcours direct',
+              style: TextStyle(color: Colors.orange),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              _startNavigationToRoute(distanceToStart);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              foregroundColor: Colors.black,
+            ),
+            child: Text('Me guider'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _startNavigationToRoute(double distance) async {
     try {
+      setState(() {
+        isNavigatingToRoute = true;
+        navigationMode = 'to_route';
+        currentInstruction = "Calcul de l'itinéraire vers le parcours...";
+      });
+
+      // Point de départ du parcours
+      final startPoint = generatedRouteCoordinates!.first;
+      
+      // Générer un VRAI itinéraire routier via GraphHopper
+      final routeToStart = await GraphHopperApiService.generateSimpleRoute(
+        startLat: userLatitude!,
+        startLon: userLongitude!,
+        endLat: startPoint[1], // latitude du point de départ
+        endLon: startPoint[0], // longitude du point de départ
+        profile: 'foot', // Profil piéton pour la course
+      );
+
+      if (routeToStart.length < 2) {
+        throw Exception('Impossible de calculer l\'itinéraire vers le parcours');
+      }
+
+      print('🗺️ Itinéraire calculé: ${routeToStart.length} points, ${_calculateTotalDistance(routeToStart).toStringAsFixed(1)}km');
+
+      // Sauvegarder la polyligne du parcours original et la masquer
+      await _hideOriginalRoute();
+      
+      // Afficher la route vers le point de départ
+      await _displayRouteToStart(routeToStart);
+
       bool success = await NavigationService.startCustomNavigation(
-        coordinates: generatedRouteCoordinates!,
-        onUpdate: _handleNavigationUpdate,
+        coordinates: routeToStart,
+        onUpdate: _handleNavigationToRouteUpdate,
       );
 
       if (success) {
         setState(() {
           isNavigationMode = true;
-          currentInstruction = "Navigation démarrée...";
+          currentInstruction = "Navigation vers le point de départ...";
         });
 
-        // FIX: Changer la vue de la carte pour la navigation
         await _switchToNavigationView();
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              'Navigation démarrée !',
+              'Navigation vers le parcours démarrée !',
+              style: TextStyle(color: Colors.white),
+            ),
+            backgroundColor: Colors.blue,
+          ),
+        );
+      }
+    } catch (e) {
+      print('❌ Erreur complète: $e');
+      
+      setState(() {
+        isNavigatingToRoute = false;
+        navigationMode = 'none';
+      });
+      
+      // Restaurer la polyligne originale en cas d'erreur
+      await _showOriginalRoute();
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Erreur calcul itinéraire: ${e.toString()}',
+            style: TextStyle(color: Colors.white),
+          ),
+          backgroundColor: Colors.red,
+          duration: Duration(seconds: 5),
+        ),
+      );
+    }
+  }
+
+  Future<void> _hideOriginalRoute() async {
+    if (polylineManager != null && currentRoutePolyline != null) {
+      // Sauvegarder la référence
+      originalRoutePolyline = currentRoutePolyline;
+      // Supprimer de l'affichage
+      await polylineManager!.delete(currentRoutePolyline!);
+      currentRoutePolyline = null;
+    }
+  }
+
+  Future<void> _displayRouteToStart(List<List<double>> coordinates) async {
+    if (mapboxMap == null || coordinates.isEmpty) {
+      print('⚠️ Impossible d\'afficher la route vers le départ');
+      return;
+    }
+
+    print('🗺️ Affichage itinéraire vers le départ: ${coordinates.length} points');
+
+    try {
+      // Créer un gestionnaire de polylignes si nécessaire
+      polylineManager ??= await mapboxMap!.annotations.createPolylineAnnotationManager();
+
+      // Supprimer l'ancienne route vers le départ si elle existe
+      if (routeToStartPolyline != null) {
+        await polylineManager!.delete(routeToStartPolyline!);
+      }
+
+      // Créer la nouvelle polyligne pour la route vers le départ
+      routeToStartPolyline = await polylineManager!.create(
+        mp.PolylineAnnotationOptions(
+          geometry: mp.LineString(
+            coordinates: coordinates
+                .map((coord) => mp.Position(coord[0], coord[1]))
+                .toList(),
+          ),
+          lineColor: Colors.blue.toARGB32(),
+          lineWidth: 5.0,
+          lineOpacity: 0.9,
+          lineJoin: mp.LineJoin.ROUND,
+        ),
+      );
+
+      // Ajouter des marqueurs pour le départ et l'arrivée de l'itinéraire
+      await _addRouteToStartMarkers(coordinates);
+
+      print('✅ Itinéraire vers le départ affiché');
+
+      // Centrer la vue sur cette route
+      await _centerMapOnRoute(coordinates);
+
+    } catch (e) {
+      print('❌ Erreur affichage itinéraire: $e');
+      rethrow;
+    }
+  }
+
+  Future<void> _addRouteToStartMarkers(List<List<double>> coordinates) async {
+    if (coordinates.isEmpty || markerCircleManager == null) return;
+
+    try {
+      // Marqueur de départ (bleu - position utilisateur)
+      await markerCircleManager!.create(
+        mp.CircleAnnotationOptions(
+          geometry: mp.Point(
+            coordinates: mp.Position(
+              coordinates.first[0],
+              coordinates.first[1],
+            ),
+          ),
+          circleColor: Colors.blue.toARGB32(),
+          circleRadius: 8.0,
+          circleStrokeWidth: 3.0,
+          circleStrokeColor: Colors.white.toARGB32(),
+        ),
+      );
+
+      // Marqueur d'arrivée (vert - point de départ du parcours)
+      await markerCircleManager!.create(
+        mp.CircleAnnotationOptions(
+          geometry: mp.Point(
+            coordinates: mp.Position(
+              coordinates.last[0],
+              coordinates.last[1],
+            ),
+          ),
+          circleColor: Colors.green.toARGB32(),
+          circleRadius: 10.0,
+          circleStrokeWidth: 3.0,
+          circleStrokeColor: Colors.white.toARGB32(),
+        ),
+      );
+
+      print('✅ Marqueurs itinéraire ajoutés');
+    } catch (e) {
+      print('⚠️ Erreur ajout marqueurs itinéraire: $e');
+    }
+  }
+
+  Future<void> _showOriginalRoute() async {
+    if (polylineManager == null || generatedRouteCoordinates == null) return;
+
+    try {
+      // Supprimer la route vers le départ
+      if (routeToStartPolyline != null) {
+        await polylineManager!.delete(routeToStartPolyline!);
+        routeToStartPolyline = null;
+      }
+
+      // Recréer la polyligne du parcours original
+      currentRoutePolyline = await polylineManager!.create(
+        mp.PolylineAnnotationOptions(
+          geometry: mp.LineString(
+            coordinates: generatedRouteCoordinates!
+                .map((coord) => mp.Position(coord[0], coord[1]))
+                .toList(),
+          ),
+          lineColor: Theme.of(context).primaryColor.toARGB32(),
+          lineWidth: 4.0,
+          lineOpacity: 0.9,
+          lineJoin: mp.LineJoin.ROUND,
+        ),
+      );
+
+      print('✅ Polyligne du parcours original restaurée');
+    } catch (e) {
+      print('❌ Erreur restauration parcours original: $e');
+    }
+  }
+
+  Future<void> _centerMapOnRoute(List<List<double>> coordinates) async {
+    if (mapboxMap == null || coordinates.isEmpty) return;
+
+    final bounds = _calculateBounds(coordinates);
+    final centerLon = (bounds.southwest.coordinates.lng + bounds.northeast.coordinates.lng) / 2;
+    final centerLat = (bounds.southwest.coordinates.lat + bounds.northeast.coordinates.lat) / 2;
+
+    // Calculer le zoom approprié
+    final latDiff = bounds.northeast.coordinates.lat - bounds.southwest.coordinates.lat;
+    final lonDiff = bounds.northeast.coordinates.lng - bounds.southwest.coordinates.lng;
+    final maxDiff = math.max(latDiff, lonDiff);
+
+    double zoom = 13.0;
+    if (maxDiff > 0.1) {
+      zoom = 11.0;
+    } else if (maxDiff > 0.05) {
+      zoom = 12.0;
+    } else if (maxDiff > 0.02) {
+      zoom = 13.0;
+    } else if (maxDiff > 0.01) {
+      zoom = 14.0;
+    } else {
+      zoom = 15.0;
+    }
+
+    await mapboxMap!.flyTo(
+      mp.CameraOptions(
+        center: mp.Point(coordinates: mp.Position(centerLon, centerLat)),
+        zoom: zoom,
+        pitch: 0,
+        bearing: 0,
+      ),
+      mp.MapAnimationOptions(duration: 1500),
+    );
+  }
+
+  void _startRouteNavigation() async {
+    try {
+      // Restaurer l'affichage du parcours original
+      await _showOriginalRoute();
+      
+      bool success = await NavigationService.startCustomNavigation(
+        coordinates: generatedRouteCoordinates!,
+        onUpdate: _handleRouteNavigationUpdate,
+      );
+
+      if (success) {
+        setState(() {
+          isNavigationMode = true;
+          navigationMode = 'on_route';
+          isNavigatingToRoute = false;
+          currentInstruction = "Navigation du parcours démarrée...";
+        });
+
+        await _switchToNavigationView();
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Navigation du parcours démarrée !',
               style: TextStyle(color: Colors.white),
             ),
             backgroundColor: Colors.green,
@@ -238,7 +592,116 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     }
   }
 
-  /// Bascule vers la vue navigation
+  void _handleNavigationToRouteUpdate(NavigationUpdate update) {
+    setState(() {
+      currentNavUpdate = update;
+      currentInstruction = update.instruction;
+    });
+
+    _updateNavigationPosition(update);
+
+    // Si on arrive au point de départ du parcours
+    if (update.isFinished) {
+      _onArrivedAtRouteStart();
+    }
+  }
+
+  void _handleRouteNavigationUpdate(NavigationUpdate update) {
+    setState(() {
+      currentNavUpdate = update;
+      currentInstruction = update.instruction;
+    });
+
+    _updateNavigationPosition(update);
+
+    // Si le parcours est terminé
+    if (update.isFinished) {
+      _stopNavigation();
+    }
+  }
+
+  void _onArrivedAtRouteStart() {
+    // Arrêter la navigation vers le parcours
+    NavigationService.stopNavigation();
+
+    setState(() {
+      isNavigatingToRoute = false;
+      navigationMode = 'none';
+      isNavigationMode = false;
+    });
+
+    // Proposer de démarrer le parcours
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        backgroundColor: Colors.black,
+        title: Text(
+          'Point de départ atteint !',
+          style: context.titleMedium?.copyWith(color: Colors.white),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.green.withAlpha(20),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Column(
+                children: [
+                  HugeIcon(
+                    icon: HugeIcons.strokeRoundedCheckmarkCircle02,
+                    color: Colors.green,
+                    size: 48,
+                  ),
+                  12.h,
+                  Text(
+                    'Vous êtes arrivé au point de départ du parcours !',
+                    style: context.bodyMedium?.copyWith(
+                      color: Colors.white,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              _showOriginalRoute(); // Restaurer l'affichage du parcours
+              _switchToNormalView();
+            },
+            child: Text('Plus tard', style: TextStyle(color: Colors.white70)),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              _startRouteNavigation();
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              foregroundColor: Colors.black,
+            ),
+            child: Text('Commencer le parcours'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _formatDistance(double distanceInMeters) {
+   if (distanceInMeters < 1000) {
+     return '${distanceInMeters.round()}m';
+   } else {
+     return '${(distanceInMeters / 1000).toStringAsFixed(1)}km';
+   }
+  } 
+
   Future<void> _switchToNavigationView() async {
     if (mapboxMap == null) return;
 
@@ -261,23 +724,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     );
   }
 
-  /// Gère les mises à jour de navigation
-  void _handleNavigationUpdate(NavigationUpdate update) {
-    setState(() {
-      currentNavUpdate = update;
-      currentInstruction = update.instruction;
-    });
-
-    // FIX: Mettre à jour la position sur la carte existante
-    _updateNavigationPosition(update);
-
-    // Terminer la navigation si finie
-    if (update.isFinished) {
-      _stopNavigation();
-    }
-  }
-
-  /// Met à jour la position sur la carte pendant la navigation
   void _updateNavigationPosition(NavigationUpdate update) async {
     if (mapboxMap == null || update.currentPosition.isEmpty) return;
 
@@ -303,23 +749,34 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     );
   }
 
-  /// Arrête la navigation intégrée
   void _stopNavigation() async {
     await NavigationService.stopNavigation();
 
+    // Nettoyer les polylignes temporaires et restaurer l'original si nécessaire
+    if (isNavigatingToRoute && routeToStartPolyline != null) {
+      await polylineManager?.delete(routeToStartPolyline!);
+      routeToStartPolyline = null;
+      await _showOriginalRoute(); // Restaurer le parcours original
+    }
+
     setState(() {
       isNavigationMode = false;
+      isNavigatingToRoute = false;
+      navigationMode = 'none';
       currentNavUpdate = null;
       currentInstruction = "";
     });
 
-    // FIX: Revenir à la vue normale de la carte
     await _switchToNormalView();
+
+    final message = isNavigatingToRoute 
+        ? 'Navigation vers le parcours arrêtée'
+        : 'Navigation du parcours terminée';
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
-          'Navigation terminée',
+          message,
           style: TextStyle(color: Colors.white),
         ),
         backgroundColor: Colors.orange,
@@ -327,7 +784,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     );
   }
 
-  /// Revient à la vue normale
   Future<void> _switchToNormalView() async {
     if (mapboxMap == null) return;
 
@@ -819,7 +1275,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     }
   }
 
-  // FIX: Améliorer la construction des stats
   Map<String, dynamic> _buildStatsFromGraphHopper(
     GraphHopperRouteResult result,
   ) {
@@ -1174,13 +1629,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
     double total = 0;
     for (int i = 0; i < coords.length - 1; i++) {
-      // FIX: Vérification que chaque coordonnée a au moins 2 éléments
       if (coords[i].length >= 2 && coords[i + 1].length >= 2) {
         total += _calculateDistance(
-          coords[i][1],
-          coords[i][0],
-          coords[i + 1][1],
-          coords[i + 1][0],
+          coords[i][1],     // lat1
+          coords[i][0],     // lon1
+          coords[i + 1][1], // lat2
+          coords[i + 1][0], // lon2
         );
       }
     }
@@ -1324,9 +1778,17 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       _stopNavigation();
     }
 
-    if (polylineManager != null && currentRoutePolyline != null) {
-      await polylineManager!.delete(currentRoutePolyline!);
-      currentRoutePolyline = null;
+    // Nettoyer toutes les polylignes
+    if (polylineManager != null) {
+      if (currentRoutePolyline != null) {
+        await polylineManager!.delete(currentRoutePolyline!);
+        currentRoutePolyline = null;
+      }
+      if (routeToStartPolyline != null) {
+        await polylineManager!.delete(routeToStartPolyline!);
+        routeToStartPolyline = null;
+      }
+      originalRoutePolyline = null;
     }
     
     // Nettoyer les marqueurs de début/fin
@@ -1339,6 +1801,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       generatedRouteCoordinates = null;
       generatedRouteStats = null;
       generatedRouteFile = null;
+      isNavigatingToRoute = false;
+      navigationMode = 'none';
     });
     
     // Réafficher le marqueur de position si nécessaire
@@ -1412,19 +1876,21 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                     ),
                   ),
 
-                // FIX: Interface de navigation (overlay)
+                // Interface de navigation (overlay)
                 if (isNavigationMode)
-                  Positioned(
-                    top: MediaQuery.of(context).padding.top + 10,
-                    left: 15,
-                    right: 15,
-                    child: NavigationOverlay(
-                      instruction: currentInstruction,
-                      navUpdate: currentNavUpdate,
-                      routeStats: generatedRouteStats!,
-                      onStop: _stopNavigation,
-                    ),
+                Positioned(
+                  top: MediaQuery.of(context).padding.top + 10,
+                  left: 15,
+                  right: 15,
+                  child: NavigationOverlay(
+                    instruction: currentInstruction,
+                    navUpdate: currentNavUpdate,
+                    routeStats: generatedRouteStats!,
+                    onStop: _stopNavigation,
+                    navigationMode: navigationMode, // Nouveau paramètre
+                    isNavigatingToRoute: isNavigatingToRoute, // Nouveau paramètre
                   ),
+                ),
 
                 // Interface normale (masquée en mode navigation)
                 if (!isNavigationMode)

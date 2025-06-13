@@ -82,6 +82,76 @@ class GraphHopperApiService {
   }
 }
 
+  static Future<List<List<double>>> generateSimpleRoute({
+    required double startLat,
+    required double startLon,
+    required double endLat,
+    required double endLon,
+    String profile = 'foot', // foot, driving, cycling
+  }) async {
+    print('🛣️ Génération itinéraire simple via backend...');
+    print('📍 De: $startLat, $startLon vers: $endLat, $endLon');
+
+    try {
+      final requestBody = {
+        'points': [
+          [startLon, startLat],  // Point de départ [lon, lat]
+          [endLon, endLat]       // Point d'arrivée [lon, lat]
+        ],
+        'profile': profile,
+      };
+
+      print('📤 Envoi requête itinéraire: ${jsonEncode(requestBody)}');
+
+      final response = await http.post(
+        Uri.parse('${EnvironmentConfig.apiBaseUrl}/routes/simple'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: jsonEncode(requestBody),
+      ).timeout(Duration(seconds: 15));
+
+      print('📥 Réponse itinéraire: status=${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        
+        if (data['success'] == true && data['route'] != null) {
+          final route = data['route'] as Map<String, dynamic>;
+          final coordinates = route['coordinates'] as List<dynamic>;
+          
+          final routeCoordinates = coordinates.map<List<double>>((coord) {
+            return <double>[
+              (coord[0] as num).toDouble(), // longitude
+              (coord[1] as num).toDouble(), // latitude
+            ];
+          }).toList();
+          
+          print('✅ Itinéraire généré: ${routeCoordinates.length} points');
+          print('📊 Distance: ${(route['distance'] / 1000).toStringAsFixed(1)}km');
+          print('⏱️ Durée: ${(route['duration'] / 60000).round()}min');
+          
+          return routeCoordinates;
+        } else {
+          throw Exception('Échec génération itinéraire: ${data['error'] ?? 'Erreur inconnue'}');
+        }
+      } else {
+        throw ErrorHandler.handleHttpError(response);
+      }
+      
+    } catch (e) {
+      print('❌ Erreur génération itinéraire simple: $e');
+      
+      // Fallback : retourner une ligne droite si l'API échoue
+      print('📍 Fallback: ligne droite');
+      return [
+        [startLon, startLat],
+        [endLon, endLat],
+      ];
+    }
+  }
+  
   /// Analyse une route existante (optionnel)
   static Future<Map<String, dynamic>> analyzeRoute({
     required List<List<double>> coordinates,

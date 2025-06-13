@@ -44,6 +44,11 @@ router.post('/routes/generate',
   routeController.generateRoute
 );
 
+// Génération de parcours simple
+router.post('/routes/simple', 
+  routeController.generateSimpleRoute
+);
+
 // Génération d'alternatives
 router.post('/routes/alternative', 
   routeController.generateAlternatives
