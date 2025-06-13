@@ -7,6 +7,7 @@ const { metricsService } = require("./metricsService");
 class RouteGeneratorService {
   constructor() {
     this.cache = new Map(); // Cache en mémoire
+    console.log("🔧 RouteGeneratorService construit");
   }
 
   /**
@@ -22,19 +23,20 @@ class RouteGeneratorService {
     });
 
     try {
-      // Utiliser GraphHopper directement pour un itinéraire simple
+      // ✅ Utiliser GraphHopper avec l'algorithme par défaut (pas dijkstra)
       const route = await graphhopperCloud.getRoute({
         points: [
           { lat: startLat, lon: startLon },
           { lat: endLat, lon: endLon }
         ],
         profile,
-        algorithm: 'dijkstra', // Itinéraire direct (pas round_trip)
+        algorithm: 'auto', // ✅ Laisser GraphHopper choisir le meilleur algorithme
         avoidTraffic: false
       });
 
       logger.info('Simple route generated successfully', {
         distance: `${(route.distance / 1000).toFixed(1)}km`,
+        duration: `${Math.round(route.duration / 60000)}min`,
         points: route.coordinates.length
       });
 
@@ -97,10 +99,9 @@ class RouteGeneratorService {
         profile,
       });
 
-      // Enregistrer les métriques de succès
       metricsService.recordRouteGeneration(true, route.distance / 1000);
-
       return route;
+      
     } catch (error) {
       const duration = Date.now() - startTime;
       logger.error("Route generation failed", {
@@ -110,7 +111,6 @@ class RouteGeneratorService {
         stack: process.env.NODE_ENV === "development" ? error.stack : undefined,
       });
 
-      // Enregistrer les métriques d'échec
       metricsService.recordRouteGeneration(false);
       throw error;
     }
@@ -531,4 +531,15 @@ class RouteGeneratorService {
   }
 }
 
-module.exports = new RouteGeneratorService();
+const serviceInstance = new RouteGeneratorService();
+
+console.log(
+  "🔧 RouteGeneratorService créé, méthodes disponibles:",
+  Object.getOwnPropertyNames(Object.getPrototypeOf(serviceInstance))
+);
+console.log(
+  "🔧 generateSimpleRoute existe dans le service?",
+  typeof serviceInstance.generateSimpleRoute
+);
+
+module.exports = serviceInstance;

@@ -4,13 +4,14 @@ const logger = require("../config/logger"); // Import direct du logger
 
 class RouteController {
   /**
-   * POST /api/routes/simple
-   * Génère un itinéraire simple entre deux points
-   */
+     * POST /api/routes/simple
+     * Génère un itinéraire simple entre deux points
+     */
   async generateSimpleRoute(req, res, next) {
+    console.log('🔧 generateSimpleRoute appelée dans le contrôleur');
+    console.log('🔧 Body reçu:', req.body);
+    
     try {
-      console.log('🛣️ generateSimpleRoute called with body:', req.body);
-      
       const { points, profile = 'foot' } = req.body;
       
       // Validation des paramètres
@@ -50,6 +51,8 @@ class RouteController {
 
       const [start, end] = points;
       
+      console.log('🔧 Validation réussie, génération de la route...');
+      
       logger.info('Simple route generation started', {
         start: [start[1], start[0]], // lat, lon pour les logs
         end: [end[1], end[0]],
@@ -64,6 +67,8 @@ class RouteController {
         endLon: end[0],      // end[0] = lon
         profile
       });
+
+      console.log('🔧 Route générée avec succès');
 
       // Formater la réponse pour le client Flutter
       const response = {
@@ -91,6 +96,8 @@ class RouteController {
       res.json(response);
 
     } catch (error) {
+      console.log('❌ Erreur dans generateSimpleRoute:', error);
+      
       logger.error('Simple route generation failed:', {
         error: error.message,
         stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
@@ -111,7 +118,7 @@ class RouteController {
       });
     }
   }
-  
+
   /**
    * POST /api/routes/generate
    * Génère un nouveau parcours
@@ -421,4 +428,9 @@ ${coordinates
   }
 }
 
-module.exports = new RouteController();
+const routeControllerInstance = new RouteController();
+
+console.log('🔧 RouteController créé, méthodes disponibles:', Object.getOwnPropertyNames(Object.getPrototypeOf(routeControllerInstance)));
+console.log('🔧 generateSimpleRoute existe?', typeof routeControllerInstance.generateSimpleRoute);
+
+module.exports = routeControllerInstance;

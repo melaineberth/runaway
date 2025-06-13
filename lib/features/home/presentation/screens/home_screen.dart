@@ -21,6 +21,7 @@ import 'package:share_plus/share_plus.dart';
 import 'package:smooth_gradient/smooth_gradient.dart';
 import '../../../route_generator/data/services/graphhopper_api_service.dart';
 import '../../../route_generator/domain/models/graphhopper_route_result.dart';
+import '../../domain/config/navigation_camera_config.dart';
 import '../blocs/map_style/map_style_bloc.dart';
 import '../blocs/map_style/map_style_event.dart';
 import '../blocs/map_style/map_style_state.dart';
@@ -39,6 +40,7 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
+  NavigationCameraConfig navigationConfig = const NavigationCameraConfig();
   mp.MapboxMap? mapboxMap;
   StreamSubscription? userPositionStream;
   mp.PointAnnotationManager? pointAnnotationManager;
@@ -87,6 +89,16 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   String navigationMode = 'none'; // 'none', 'to_route', 'on_route'
   List<List<double>>? routeToStartPoint; // Coordonnées pour aller au point de départ
 
+  // Variables pour la caméra de navigation
+  List<List<double>> userPositionHistory = []; // Historique des positions pour calculer la direction
+  double currentUserBearing = 0.0; // Direction actuelle de l'utilisateur
+  bool isNavigationCameraActive = false;
+  Timer? positionUpdateTimer;
+  List<List<double>>? activeNavigationRoute; // Route actuellement suivie
+  int currentRouteSegmentIndex = 0; // Index du segment actuel sur la route
+  double lookAheadDistance = 100.0; // Distance pour anticiper (en mètres)
+  List<List<double>>? routeToStartCoordinates;
+
   @override
   void initState() {
     super.initState();
@@ -99,6 +111,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   void dispose() {
     NavigationService.dispose();
     WidgetsBinding.instance.removeObserver(this);
+
+    positionUpdateTimer?.cancel();
 
     _clearRoute(); // Nettoyer la route
     userPositionStream?.cancel();
@@ -306,83 +320,89 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }
 
   void _startNavigationToRoute(double distance) async {
-    try {
+  try {
+    setState(() {
+      isNavigatingToRoute = true;
+      navigationMode = 'to_route';
+      currentInstruction = "Calcul de l'itinéraire vers le parcours...";
+    });
+
+    // Point de départ du parcours
+    final startPoint = generatedRouteCoordinates!.first;
+    
+    // ✅ FIX: Générer un VRAI itinéraire routier via GraphHopper
+    final routeToStart = await GraphHopperApiService.generateSimpleRoute(
+      startLat: userLatitude!,
+      startLon: userLongitude!,
+      endLat: startPoint[1], // latitude du point de départ
+      endLon: startPoint[0], // longitude du point de départ
+      profile: 'foot', // Profil piéton pour la course
+    );
+
+    if (routeToStart.length < 2) {
+      throw Exception('Impossible de calculer l\'itinéraire vers le parcours');
+    }
+
+    // ✅ FIX: Sauvegarder les coordonnées de l'itinéraire
+    setState(() {
+      routeToStartCoordinates = List.from(routeToStart);
+    });
+
+    print('🗺️ Itinéraire calculé: ${routeToStart.length} points, ${_calculateTotalDistance(routeToStart).toStringAsFixed(1)}km');
+
+    // Sauvegarder la polyligne du parcours original et la masquer
+    await _hideOriginalRoute();
+    
+    // Afficher la route vers le point de départ
+    await _displayRouteToStart(routeToStart);
+
+    bool success = await NavigationService.startCustomNavigation(
+      coordinates: routeToStart,
+      onUpdate: _handleNavigationToRouteUpdate,
+    );
+
+    if (success) {
       setState(() {
-        isNavigatingToRoute = true;
-        navigationMode = 'to_route';
-        currentInstruction = "Calcul de l'itinéraire vers le parcours...";
+        isNavigationMode = true;
+        currentInstruction = "Navigation vers le point de départ...";
       });
 
-      // Point de départ du parcours
-      final startPoint = generatedRouteCoordinates!.first;
-      
-      // Générer un VRAI itinéraire routier via GraphHopper
-      final routeToStart = await GraphHopperApiService.generateSimpleRoute(
-        startLat: userLatitude!,
-        startLon: userLongitude!,
-        endLat: startPoint[1], // latitude du point de départ
-        endLon: startPoint[0], // longitude du point de départ
-        profile: 'foot', // Profil piéton pour la course
-      );
+      await _switchToNavigationView();
 
-      if (routeToStart.length < 2) {
-        throw Exception('Impossible de calculer l\'itinéraire vers le parcours');
-      }
-
-      print('🗺️ Itinéraire calculé: ${routeToStart.length} points, ${_calculateTotalDistance(routeToStart).toStringAsFixed(1)}km');
-
-      // Sauvegarder la polyligne du parcours original et la masquer
-      await _hideOriginalRoute();
-      
-      // Afficher la route vers le point de départ
-      await _displayRouteToStart(routeToStart);
-
-      bool success = await NavigationService.startCustomNavigation(
-        coordinates: routeToStart,
-        onUpdate: _handleNavigationToRouteUpdate,
-      );
-
-      if (success) {
-        setState(() {
-          isNavigationMode = true;
-          currentInstruction = "Navigation vers le point de départ...";
-        });
-
-        await _switchToNavigationView();
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'Navigation vers le parcours démarrée !',
-              style: TextStyle(color: Colors.white),
-            ),
-            backgroundColor: Colors.blue,
-          ),
-        );
-      }
-    } catch (e) {
-      print('❌ Erreur complète: $e');
-      
-      setState(() {
-        isNavigatingToRoute = false;
-        navigationMode = 'none';
-      });
-      
-      // Restaurer la polyligne originale en cas d'erreur
-      await _showOriginalRoute();
-      
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            'Erreur calcul itinéraire: ${e.toString()}',
+            'Navigation vers le parcours démarrée !',
             style: TextStyle(color: Colors.white),
           ),
-          backgroundColor: Colors.red,
-          duration: Duration(seconds: 5),
+          backgroundColor: Colors.blue,
         ),
       );
     }
+  } catch (e) {
+    print('❌ Erreur complète: $e');
+    
+    setState(() {
+      isNavigatingToRoute = false;
+      navigationMode = 'none';
+      routeToStartCoordinates = null; // ✅ FIX: Nettoyer en cas d'erreur
+    });
+    
+    // Restaurer la polyligne originale en cas d'erreur
+    await _showOriginalRoute();
+    
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          'Erreur calcul itinéraire: ${e.toString()}',
+          style: TextStyle(color: Colors.white),
+        ),
+        backgroundColor: Colors.red,
+        duration: Duration(seconds: 5),
+      ),
+    );
   }
+}
 
   Future<void> _hideOriginalRoute() async {
     if (polylineManager != null && currentRoutePolyline != null) {
@@ -592,19 +612,48 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     }
   }
 
-  void _handleNavigationToRouteUpdate(NavigationUpdate update) {
-    setState(() {
-      currentNavUpdate = update;
-      currentInstruction = update.instruction;
-    });
-
-    _updateNavigationPosition(update);
-
-    // Si on arrive au point de départ du parcours
-    if (update.isFinished) {
-      _onArrivedAtRouteStart();
-    }
+  List<List<double>> _getRouteToStartCoordinates() {
+  // ✅ FIX: Retourner les vraies coordonnées d'itinéraire
+  if (routeToStartCoordinates != null && routeToStartCoordinates!.isNotEmpty) {
+    return routeToStartCoordinates!;
   }
+  
+  // Fallback: route simple si pas d'itinéraire calculé
+  if (generatedRouteCoordinates != null && 
+      userLongitude != null && 
+      userLatitude != null) {
+    final startPoint = generatedRouteCoordinates!.first;
+    return [
+      [userLongitude!, userLatitude!],
+      [startPoint[0], startPoint[1]],
+    ];
+  }
+  
+  return [];
+}
+
+  void _handleNavigationToRouteUpdate(NavigationUpdate update) {
+  setState(() {
+    currentNavUpdate = update;
+    currentInstruction = update.instruction;
+  });
+
+  // ✅ FIX: Utiliser les vraies coordonnées d'itinéraire pour le bearing
+  final routeCoords = _getRouteToStartCoordinates();
+  if (routeCoords.isNotEmpty) {
+    _setActiveNavigationRoute(routeCoords);
+  }
+
+  _updateNavigationCameraWithRoute(
+    update.currentPosition[0],
+    update.currentPosition[1],
+  );
+
+  // Si on arrive au point de départ du parcours
+  if (update.isFinished) {
+    _onArrivedAtRouteStart();
+  }
+}
 
   void _handleRouteNavigationUpdate(NavigationUpdate update) {
     setState(() {
@@ -612,7 +661,15 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       currentInstruction = update.instruction;
     });
 
-    _updateNavigationPosition(update);
+    // ✅ FIX: Définir la route active pour le calcul de bearing
+    if (generatedRouteCoordinates != null) {
+      _setActiveNavigationRoute(generatedRouteCoordinates!);
+    }
+
+    _updateNavigationCameraWithRoute(
+      update.currentPosition[0],
+      update.currentPosition[1],
+    );
 
     // Si le parcours est terminé
     if (update.isFinished) {
@@ -620,79 +677,90 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     }
   }
 
-  void _onArrivedAtRouteStart() {
-    // Arrêter la navigation vers le parcours
-    NavigationService.stopNavigation();
-
+  void _setActiveNavigationRoute(List<List<double>> route) {
     setState(() {
-      isNavigatingToRoute = false;
-      navigationMode = 'none';
-      isNavigationMode = false;
+      activeNavigationRoute = List.from(route);
+      currentRouteSegmentIndex = 0;
     });
+    
+    print('🛣️ Route active définie: ${route.length} points');
+  }
 
-    // Proposer de démarrer le parcours
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        backgroundColor: Colors.black,
-        title: Text(
-          'Point de départ atteint !',
-          style: context.titleMedium?.copyWith(color: Colors.white),
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              padding: EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.green.withAlpha(20),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Column(
-                children: [
-                  HugeIcon(
-                    icon: HugeIcons.strokeRoundedCheckmarkCircle02,
-                    color: Colors.green,
-                    size: 48,
+  void _onArrivedAtRouteStart() {
+  // Arrêter la navigation vers le parcours
+  NavigationService.stopNavigation();
+
+  setState(() {
+    isNavigatingToRoute = false;
+    navigationMode = 'none';
+    isNavigationMode = false;
+    routeToStartCoordinates = null; // ✅ FIX: Nettoyer l'itinéraire
+    activeNavigationRoute = null;
+  });
+
+  // Proposer de démarrer le parcours
+  showDialog(
+    context: context,
+    barrierDismissible: false,
+    builder: (context) => AlertDialog(
+      backgroundColor: Colors.black,
+      title: Text(
+        'Point de départ atteint !',
+        style: context.titleMedium?.copyWith(color: Colors.white),
+      ),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            padding: EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.green.withAlpha(20),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Column(
+              children: [
+                HugeIcon(
+                  icon: HugeIcons.strokeRoundedCheckmarkCircle02,
+                  color: Colors.green,
+                  size: 48,
+                ),
+                12.h,
+                Text(
+                  'Vous êtes arrivé au point de départ du parcours !',
+                  style: context.bodyMedium?.copyWith(
+                    color: Colors.white,
                   ),
-                  12.h,
-                  Text(
-                    'Vous êtes arrivé au point de départ du parcours !',
-                    style: context.bodyMedium?.copyWith(
-                      color: Colors.white,
-                    ),
                     textAlign: TextAlign.center,
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.of(context).pop();
-              _showOriginalRoute(); // Restaurer l'affichage du parcours
-              _switchToNormalView();
-            },
-            child: Text('Plus tard', style: TextStyle(color: Colors.white70)),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.of(context).pop();
-              _startRouteNavigation();
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary,
-              foregroundColor: Colors.black,
-            ),
-            child: Text('Commencer le parcours'),
           ),
         ],
       ),
-    );
-  }
+      actions: [
+        TextButton(
+          onPressed: () {
+            Navigator.of(context).pop();
+            _showOriginalRoute(); // Restaurer l'affichage du parcours
+            _switchToNormalView();
+          },
+          child: Text('Plus tard', style: TextStyle(color: Colors.white70)),
+        ),
+        ElevatedButton(
+          onPressed: () {
+            Navigator.of(context).pop();
+            _startRouteNavigation();
+          },
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppColors.primary,
+            foregroundColor: Colors.black,
+          ),
+          child: Text('Commencer le parcours'),
+        ),
+      ],
+    ),
+  );
+}
 
   String _formatDistance(double distanceInMeters) {
    if (distanceInMeters < 1000) {
@@ -705,48 +773,394 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   Future<void> _switchToNavigationView() async {
     if (mapboxMap == null) return;
 
-    // FIX: Configurer la carte pour la navigation
+    print('🎥 Activation du mode caméra navigation');
+
+    setState(() {
+      isNavigationCameraActive = true;
+    });
+
+    // FIX: Configuration initiale de la caméra pour la navigation
     await mapboxMap!.setCamera(
       mp.CameraOptions(
-        zoom: 17.0,
-        pitch: 60.0, // Vue inclinée
-        bearing: 0.0,
+        zoom: 18.0,        // Zoom rapproché pour la navigation
+        pitch: 65.0,       // Vue en perspective (derrière l'épaule)
+        bearing: 0.0,      // Sera mis à jour selon la direction
       ),
     );
 
-    // Activer le suivi de position en temps réel
+    // Activer le suivi de position en temps réel avec haute précision
     await mapboxMap!.location.updateSettings(
       mp.LocationComponentSettings(
         enabled: true,
         pulsingEnabled: true,
-        showAccuracyRing: true,
+        showAccuracyRing: false, // Masquer le cercle de précision en navigation
       ),
     );
+
+    // Démarrer le timer de mise à jour de position
+    _startNavigationPositionUpdates();
+  }
+
+  void _startNavigationPositionUpdates() {
+    positionUpdateTimer?.cancel();
+    
+    positionUpdateTimer = Timer.periodic(Duration(seconds: 1), (timer) {
+      if (!isNavigationCameraActive || !isNavigationMode) {
+        timer.cancel();
+        return;
+      }
+      
+      // Mettre à jour la position utilisateur si disponible
+      if (userLongitude != null && userLatitude != null) {
+        _updateNavigationCamera(userLongitude!, userLatitude!);
+      }
+    });
+  }
+
+  void _updateNavigationCamera(double longitude, double latitude) async {
+    if (mapboxMap == null || !isNavigationCameraActive) return;
+
+    // Ajouter la position actuelle à l'historique
+    final currentPosition = [longitude, latitude];
+    userPositionHistory.add(currentPosition);
+
+    // Garder seulement les 10 dernières positions pour calculer la direction
+    if (userPositionHistory.length > 10) {
+      userPositionHistory.removeAt(0);
+    }
+
+    // Calculer la direction de déplacement
+    double bearing = _calculateMovementBearing();
+    
+    // Lisser le changement de bearing pour éviter les mouvements brusques
+    bearing = _smoothBearing(currentUserBearing, bearing);
+    currentUserBearing = bearing;
+
+    try {
+      // FIX: Mettre à jour la caméra pour suivre l'utilisateur
+      await mapboxMap!.flyTo(
+        mp.CameraOptions(
+          center: mp.Point(
+            coordinates: mp.Position(longitude, latitude),
+          ),
+          zoom: 18.0,           // Zoom constant pour navigation
+          pitch: 65.0,          // Vue en perspective constante
+          bearing: bearing,     // Orientation selon le déplacement
+        ),
+        mp.MapAnimationOptions(
+          duration: 800,        // Animation fluide mais pas trop lente
+        ),
+      );
+
+      print('🧭 Caméra mise à jour: bearing=${bearing.toStringAsFixed(1)}°');
+
+    } catch (e) {
+      print('❌ Erreur mise à jour caméra navigation: $e');
+    }
+  }
+
+  double _calculateRouteBearing() {
+    // Si pas de route active, utiliser l'ancien système
+    if (activeNavigationRoute == null || 
+        activeNavigationRoute!.isEmpty ||
+        userLongitude == null || 
+        userLatitude == null) {
+      return _calculateMovementBearing();
+    }
+
+    try {
+      // 1. Trouver le segment de route le plus proche
+      final currentSegmentIndex = _findNearestRouteSegment();
+      
+      // 2. Calculer le bearing vers la suite de la route
+      final routeBearing = _calculateBearingToNextRouteSegment(currentSegmentIndex);
+      
+      print('🧭 Route bearing calculé: segment=$currentSegmentIndex, bearing=${routeBearing.toStringAsFixed(1)}°');
+      
+      return routeBearing;
+      
+    } catch (e) {
+      print('❌ Erreur calcul route bearing: $e');
+      return _calculateMovementBearing(); // Fallback
+    }
+  }
+
+  int _findNearestRouteSegment() {
+    if (activeNavigationRoute == null || activeNavigationRoute!.isEmpty) {
+      return 0;
+    }
+    
+    double minDistance = double.infinity;
+    int nearestIndex = 0;
+    
+    for (int i = 0; i < activeNavigationRoute!.length; i++) {
+      final routePoint = activeNavigationRoute![i];
+      final distance = _calculateDistance(
+        userLatitude!,
+        userLongitude!,
+        routePoint[1], // latitude
+        routePoint[0], // longitude
+      );
+      
+      if (distance < minDistance) {
+        minDistance = distance;
+        nearestIndex = i;
+      }
+    }
+    
+    // Sauvegarder l'index pour optimiser les prochaines recherches
+    currentRouteSegmentIndex = nearestIndex;
+    
+    print('📍 Segment le plus proche: $nearestIndex (distance: ${minDistance.toStringAsFixed(1)}m)');
+    
+    return nearestIndex;
+  }
+
+  double _calculateBearingToNextRouteSegment(int currentIndex) {
+  if (activeNavigationRoute == null || 
+      activeNavigationRoute!.isEmpty ||
+      currentIndex >= activeNavigationRoute!.length - 1) {
+    return currentUserBearing; // Garder la direction actuelle
+  }
+  
+  // Point de la route le plus proche
+  final currentRoutePoint = activeNavigationRoute![currentIndex];
+  
+  // 1. Méthode simple : bearing vers le prochain point
+  final nextPoint = activeNavigationRoute![currentIndex + 1];
+  double bearing = _calculateBearing(
+    currentRoutePoint[1], currentRoutePoint[0], // lat, lon du point actuel
+    nextPoint[1], nextPoint[0], // lat, lon du point suivant
+  );
+  
+  // 2. Méthode avancée : regarder plus loin pour anticiper les virages
+  final lookAheadPoint = _findLookAheadPoint(currentIndex);
+  if (lookAheadPoint != null) {
+    // Calculer le bearing vers le point d'anticipation
+    bearing = _calculateBearing(
+      userLatitude!, userLongitude!, // Position actuelle de l'utilisateur
+      lookAheadPoint[1], lookAheadPoint[0], // Point d'anticipation
+    );
+    
+    print('👀 Look-ahead activé vers point distant de ${_calculateDistance(
+      userLatitude!, userLongitude!,
+      lookAheadPoint[1], lookAheadPoint[0]
+    ).toStringAsFixed(1)}m');
+  }
+  
+  return bearing;
+}
+
+List<double>? _findLookAheadPoint(int currentIndex) {
+  if (activeNavigationRoute == null || 
+      currentIndex >= activeNavigationRoute!.length - 1) {
+    return null;
+  }
+  
+  double accumulatedDistance = 0.0;
+  
+  for (int i = currentIndex; i < activeNavigationRoute!.length - 1; i++) {
+    final point1 = activeNavigationRoute![i];
+    final point2 = activeNavigationRoute![i + 1];
+    
+    final segmentDistance = _calculateDistance(
+      point1[1], point1[0],
+      point2[1], point2[0],
+    );
+    
+    accumulatedDistance += segmentDistance;
+    
+    // Si on a atteint la distance d'anticipation
+    if (accumulatedDistance >= lookAheadDistance) {
+      return point2;
+    }
+  }
+  
+  // Si la route est plus courte que la distance d'anticipation, retourner le dernier point
+  return activeNavigationRoute!.last;
+}
+
+double _getAdaptiveZoom(double speedMps) {
+  // Ajuster le zoom selon la vitesse
+  if (speedMps < 1.5) return 19.0;      // Marche lente
+  if (speedMps < 3.0) return 18.0;      // Marche rapide
+  if (speedMps < 8.0) return 17.0;      // Course
+  return 16.0;                          // Vélo
+}
+
+double _getAdaptivePitch(double speedMps) {
+  // Plus on va vite, plus on regarde loin (pitch moins prononcé)
+  if (speedMps < 1.5) return 70.0;      // Vue très inclinée pour marche
+  if (speedMps < 3.0) return 65.0;      // Vue normale pour course
+  return 55.0;                          // Vue plus plate pour vélo
+}
+
+void _updateNavigationCameraWithRoute(double longitude, double latitude) async {
+  if (mapboxMap == null || !isNavigationCameraActive) return;
+
+  // Ajouter la position actuelle à l'historique
+  final currentPosition = [longitude, latitude];
+  userPositionHistory.add(currentPosition);
+
+  if (userPositionHistory.length > navigationConfig.positionHistorySize) {
+    userPositionHistory.removeAt(0);
+  }
+
+  // ✅ FIX: Utiliser le bearing basé sur la route au lieu du mouvement
+  double bearing = _calculateRouteBearing();
+  
+  // Lisser le changement de bearing
+  bearing = _smoothBearing(currentUserBearing, bearing);
+  currentUserBearing = bearing;
+
+  // Adapter selon la vitesse si disponible
+  final adaptiveZoom = _getAdaptiveZoom(0.0); // TODO: intégrer la vitesse réelle
+  final adaptivePitch = _getAdaptivePitch(0.0);
+
+  try {
+    await mapboxMap!.flyTo(
+      mp.CameraOptions(
+        center: mp.Point(coordinates: mp.Position(longitude, latitude)),
+        zoom: adaptiveZoom,
+        pitch: adaptivePitch,
+        bearing: bearing,
+      ),
+      mp.MapAnimationOptions(
+        duration: navigationConfig.updateIntervalMs,
+      ),
+    );
+
+    print('🧭 Caméra route: bearing=${bearing.toStringAsFixed(1)}° (vers route)');
+
+  } catch (e) {
+    print('❌ Erreur caméra route: $e');
+  }
+}
+
+void _adjustLookAheadDistance(double speed) {
+  // Plus on va vite, plus on regarde loin
+  if (speed < 1.5) {        // Marche lente
+    lookAheadDistance = 50.0;
+  } else if (speed < 3.0) { // Marche rapide
+    lookAheadDistance = 100.0;
+  } else if (speed < 8.0) { // Course
+    lookAheadDistance = 150.0;
+  } else {                  // Vélo
+    lookAheadDistance = 200.0;
+  }
+  
+  print('👀 Look-ahead ajusté: ${lookAheadDistance.toStringAsFixed(0)}m pour vitesse ${speed.toStringAsFixed(1)}m/s');
+}
+
+  double _calculateMovementBearing() {
+    if (userPositionHistory.length < 2) {
+      return currentUserBearing; // Garder la direction actuelle si pas assez de données
+    }
+
+    // Utiliser les 3 dernières positions pour une direction plus stable
+    final recentPositions = userPositionHistory.length >= 3 
+        ? userPositionHistory.sublist(userPositionHistory.length - 3)
+        : userPositionHistory;
+
+    if (recentPositions.length < 2) {
+      return currentUserBearing;
+    }
+
+    // Calculer la direction entre la première et dernière position récente
+    final start = recentPositions.first;
+    final end = recentPositions.last;
+
+    // Vérifier que l'utilisateur s'est effectivement déplacé
+    final distance = _calculateDistance(start[1], start[0], end[1], end[0]);
+    
+    if (distance < 5.0) {
+      // Mouvement trop petit (moins de 5m), garder la direction actuelle
+      return currentUserBearing;
+    }
+
+    // Calculer le bearing réel
+    final bearing = _calculateBearing(start[1], start[0], end[1], end[0]);
+    
+    print('📍 Mouvement détecté: ${distance.toStringAsFixed(1)}m, bearing=${bearing.toStringAsFixed(1)}°');
+    
+    return bearing;
+  }
+
+  double _calculateBearing(double lat1, double lon1, double lat2, double lon2) {
+    final double dLon = (lon2 - lon1) * math.pi / 180;
+    final double lat1Rad = lat1 * math.pi / 180;
+    final double lat2Rad = lat2 * math.pi / 180;
+    
+    final double y = math.sin(dLon) * math.cos(lat2Rad);
+    final double x = math.cos(lat1Rad) * math.sin(lat2Rad) - 
+                    math.sin(lat1Rad) * math.cos(lat2Rad) * math.cos(dLon);
+    
+    final double bearing = math.atan2(y, x) * 180 / math.pi;
+    return (bearing + 360) % 360;
+  }
+
+  double _smoothBearing(double currentBearing, double targetBearing) {
+    double diff = targetBearing - currentBearing;
+    
+    // Gérer le passage par 0° (nord)
+    if (diff > 180) {
+      diff -= 360;
+    } else if (diff < -180) {
+      diff += 360;
+    }
+
+    // ✅ FIX: Ajuster la vitesse de changement selon l'angle
+    double maxBearingChange = navigationConfig.maxBearingChange;
+    
+    // Pour les grands virages (>90°), permettre des changements plus rapides
+    if (diff.abs() > 90) {
+      maxBearingChange = 25.0; // Changements plus rapides pour les virages serrés
+    } else if (diff.abs() > 45) {
+      maxBearingChange = 20.0; // Changements modérés pour les virages moyens
+    }
+    
+    if (diff.abs() > maxBearingChange) {
+      diff = diff.sign * maxBearingChange;
+    }
+
+    double newBearing = currentBearing + diff;
+    
+    // Normaliser entre 0-360
+    if (newBearing < 0) {
+      newBearing += 360;
+    } else if (newBearing >= 360) {
+      newBearing -= 360;
+    }
+
+    return newBearing;
   }
 
   void _updateNavigationPosition(NavigationUpdate update) async {
     if (mapboxMap == null || update.currentPosition.isEmpty) return;
 
-    // Supprimer l'ancien marqueur de position custom
-    if (currentPositionMarker != null) {
-      await markerCircleManager?.delete(currentPositionMarker!);
-    }
-
-    // FIX: Centrer la carte sur la position actuelle avec animation fluide
-    await mapboxMap!.flyTo(
-      mp.CameraOptions(
-        center: mp.Point(
-          coordinates: mp.Position(
-            update.currentPosition[0],
-            update.currentPosition[1],
+    // FIX: Utiliser la caméra de navigation au lieu du flyTo basique
+    if (isNavigationCameraActive) {
+      _updateNavigationCamera(
+        update.currentPosition[0], // longitude
+        update.currentPosition[1], // latitude
+      );
+    } else {
+      // Fallback: comportement original si la caméra navigation n'est pas active
+      await mapboxMap!.flyTo(
+        mp.CameraOptions(
+          center: mp.Point(
+            coordinates: mp.Position(
+              update.currentPosition[0],
+              update.currentPosition[1],
+            ),
           ),
+          zoom: 17.0,
+          pitch: 60.0,
+          bearing: update.bearing,
         ),
-        zoom: 17.0,
-        pitch: 60.0,
-        bearing: update.bearing, // Orienter selon la direction
-      ),
-      mp.MapAnimationOptions(duration: 500), // Animation plus fluide
-    );
+        mp.MapAnimationOptions(duration: 500),
+      );
+    }
   }
 
   void _stopNavigation() async {
@@ -787,20 +1201,38 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   Future<void> _switchToNormalView() async {
     if (mapboxMap == null) return;
 
+    print('🎥 Désactivation du mode caméra navigation');
+
+    setState(() {
+      isNavigationCameraActive = false;
+      activeNavigationRoute = null; // ✅ FIX: Nettoyer la route active
+      currentRouteSegmentIndex = 0;
+    });
+
+    // Arrêter les mises à jour de position
+    positionUpdateTimer?.cancel();
+
     // Remettre la vue normale
     await mapboxMap!.setCamera(
       mp.CameraOptions(
-        pitch: 0.0, // Vue plate
-        bearing: 0.0,
-        zoom: 13.0,
+        pitch: 0.0,     // Vue plate
+        bearing: 0.0,   // Nord vers le haut
+        zoom: 13.0,     // Zoom moins rapproché
       ),
     );
 
-    // Supprimer le marqueur de position custom
-    if (currentPositionMarker != null) {
-      await markerCircleManager?.delete(currentPositionMarker!);
-      currentPositionMarker = null;
-    }
+    // Remettre les paramètres de localisation normaux
+    await mapboxMap!.location.updateSettings(
+      mp.LocationComponentSettings(
+        enabled: true,
+        pulsingEnabled: true,
+        showAccuracyRing: true, // Réafficher le cercle de précision
+      ),
+    );
+
+    // Vider l'historique des positions
+    userPositionHistory.clear();
+    currentUserBearing = 0.0;
   }
 
   Future<void> _setActiveLocation({
@@ -907,7 +1339,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
     gl.LocationSettings locationSettings = gl.LocationSettings(
       accuracy: gl.LocationAccuracy.high,
-      distanceFilter: 100,
+      distanceFilter: 2, // FIX: Réduire à 2m pour une navigation plus fluide
     );
 
     userPositionStream?.cancel();
@@ -925,14 +1357,14 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               latitude: pos.latitude,
               longitude: pos.longitude,
               userPosition: true,
-              moveCamera: true,
+              moveCamera: !isNavigationCameraActive, // FIX: Ne pas bouger la caméra si en mode navigation
               addMarker: false,
             );
           }
         });
 
-        // Si le suivi est activé et que la carte est prête
-        if (mapboxMap != null && isTrackingUser) {
+        // FIX: En mode navigation, utiliser la caméra spécialisée
+        if (mapboxMap != null && isTrackingUser && !isNavigationCameraActive) {
           mapboxMap?.setCamera(
             mp.CameraOptions(
               zoom: 13,
@@ -942,7 +1374,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             ),
           );
 
-          // Mettre à jour le cercle de rayon
           _updateRadiusCircle(pos.longitude, pos.latitude);
         }
       } else {
@@ -1773,43 +2204,48 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }
 
   Future<void> _clearRoute() async {
-    // Arrêter la navigation si active
-    if (isNavigationMode) {
-      _stopNavigation();
-    }
-
-    // Nettoyer toutes les polylignes
-    if (polylineManager != null) {
-      if (currentRoutePolyline != null) {
-        await polylineManager!.delete(currentRoutePolyline!);
-        currentRoutePolyline = null;
-      }
-      if (routeToStartPolyline != null) {
-        await polylineManager!.delete(routeToStartPolyline!);
-        routeToStartPolyline = null;
-      }
-      originalRoutePolyline = null;
-    }
-    
-    // Nettoyer les marqueurs de début/fin
-    if (markerCircleManager != null) {
-      await markerCircleManager!.deleteAll();
-      locationMarkers.clear();
-    }
-    
-    setState(() {
-      generatedRouteCoordinates = null;
-      generatedRouteStats = null;
-      generatedRouteFile = null;
-      isNavigatingToRoute = false;
-      navigationMode = 'none';
-    });
-    
-    // Réafficher le marqueur de position si nécessaire
-    if (currentLongitude != null && currentLatitude != null && !isTrackingUser) {
-      _onLocationSelected(currentLongitude!, currentLatitude!, "Position actuelle");
-    }
+  // Arrêter la navigation si active
+  if (isNavigationMode) {
+    _stopNavigation();
   }
+
+  // Nettoyer toutes les polylignes
+  if (polylineManager != null) {
+    if (currentRoutePolyline != null) {
+      await polylineManager!.delete(currentRoutePolyline!);
+      currentRoutePolyline = null;
+    }
+    if (routeToStartPolyline != null) {
+      await polylineManager!.delete(routeToStartPolyline!);
+      routeToStartPolyline = null;
+    }
+    originalRoutePolyline = null;
+  }
+  
+  // Nettoyer les marqueurs de début/fin
+  if (markerCircleManager != null) {
+    await markerCircleManager!.deleteAll();
+    locationMarkers.clear();
+  }
+  
+  setState(() {
+    generatedRouteCoordinates = null;
+    generatedRouteStats = null;
+    generatedRouteFile = null;
+    isNavigatingToRoute = false;
+    navigationMode = 'none';
+    
+    // ✅ FIX: Nettoyer les variables de navigation
+    routeToStartCoordinates = null;
+    activeNavigationRoute = null;
+    currentRouteSegmentIndex = 0;
+  });
+  
+  // Réafficher le marqueur de position si nécessaire
+  if (currentLongitude != null && currentLatitude != null && !isTrackingUser) {
+    _onLocationSelected(currentLongitude!, currentLatitude!, "Position actuelle");
+  }
+}
 
   void _shareCurrentRoute() async {
     if (generatedRouteFile == null) {

@@ -1,15 +1,24 @@
-// server/src/routes/index.js - Ajout des routes métriques
 const express = require('express');
 const router = express.Router();
 const logger = require('../config/logger');
+
+console.log('🔧 routes/index.js est en train de se charger...');
 
 // Contrôleurs
 const healthController = require('../controllers/healthController');
 const routeController = require('../controllers/routeController');
 
+console.log('🔧 Contrôleurs chargés:', {
+  healthController: !!healthController,
+  routeController: !!routeController,
+  generateSimpleRoute: typeof routeController.generateSimpleRoute
+});
+
 // Middlewares
 const { metricsMiddleware } = require('../services/metricsService');
 const RequestLogger = require('../middleware/requestLogger');
+
+console.log('🔧 Middlewares chargés');
 
 // ============= MIDDLEWARES GLOBAUX =============
 
@@ -18,6 +27,8 @@ router.use(RequestLogger.middleware());
 
 // Métriques
 router.use(metricsMiddleware);
+
+console.log('🔧 Middlewares globaux appliqués');
 
 // ============= ROUTES DE SANTÉ =============
 
@@ -31,11 +42,15 @@ router.get('/liveness', healthController.checkLiveness);
 router.get('/graphhopper/limits', healthController.getGraphHopperLimits);
 router.post('/test/route', healthController.testRoute);
 
+console.log('🔧 Routes de santé ajoutées');
+
 // ============= ROUTES DE MÉTRIQUES =============
 
 // Métriques système
 router.get('/metrics', healthController.getMetrics);
 router.post('/metrics/reset', healthController.resetMetrics);
+
+console.log('🔧 Routes de métriques ajoutées');
 
 // ============= ROUTES DE GÉNÉRATION =============
 
@@ -44,10 +59,38 @@ router.post('/routes/generate',
   routeController.generateRoute
 );
 
-// Génération de parcours simple
-router.post('/routes/simple', 
-  routeController.generateSimpleRoute
-);
+console.log('🔧 Route /routes/generate ajoutée');
+
+// ✅ ROUTE DE DEBUG SIMPLE (sans middlewares complexes)
+router.post('/routes/simple-test', (req, res) => {
+  console.log('🔧 Route de test /routes/simple-test appelée');
+  res.json({ 
+    success: true, 
+    message: 'Test route works',
+    body: req.body 
+  });
+});
+
+console.log('🔧 Route de test /routes/simple-test ajoutée');
+
+// ✅ ROUTE SIMPLE AVEC LOG DÉTAILLÉ
+router.post('/routes/simple', (req, res, next) => {
+  console.log('🔧 Route /routes/simple interceptée, body:', req.body);
+  console.log('🔧 Appel de routeController.generateSimpleRoute...');
+  
+  // Vérifier si la méthode existe
+  if (typeof routeController.generateSimpleRoute !== 'function') {
+    console.log('❌ generateSimpleRoute n\'est pas une fonction!');
+    return res.status(500).json({
+      success: false,
+      error: 'generateSimpleRoute method not found'
+    });
+  }
+  
+  routeController.generateSimpleRoute(req, res, next);
+});
+
+console.log('🔧 Route /routes/simple ajoutée avec debug');
 
 // Génération d'alternatives
 router.post('/routes/alternative', 
@@ -261,5 +304,7 @@ router.use((error, req, res, next) => {
     ...(process.env.NODE_ENV === 'development' && { stack: error.stack })
   });
 });
+
+console.log('🔧 Toutes les routes sont configurées');
 
 module.exports = router;
