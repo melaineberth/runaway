@@ -1,4 +1,5 @@
-// lib/bloc/auth_bloc.dart
+// lib/features/auth/presentation/bloc/auth_bloc.dart
+
 import 'dart:async';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:runaway/features/auth/data/repositories/auth_repository.dart';
@@ -20,19 +21,38 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
 
     // handlers internes
     on<_InternalProfileLoaded>((e, emit) => emit(Authenticated(e.profile)));
-    on<_InternalProfileIncomplete>((e, emit) => emit(ProfileIncomplete(e.user))); // ★
+    on<_InternalProfileIncomplete>((e, emit) => emit(ProfileIncomplete(e.user)));
     on<_InternalLoggedOut>((e, emit) => emit(Unauthenticated()));
 
-    // écoute des sessions Supabase
+    // FIX: Nouvelle logique pour le stream listener
     _sub = _repo.authChangesStream.listen((data) async {
       final user = data.session?.user;
       if (user == null) return add(_InternalLoggedOut());
 
-      final p = await _repo.getProfile(user.id);
-      if (p == null || p.username!.isEmpty) {
-        add(_InternalProfileIncomplete(user));
+      // FIX: Utiliser skipCleanup pour éviter le nettoyage automatique
+      final p = await _repo.getProfile(user.id, skipCleanup: true);
+      
+      if (p == null) {
+        // Pas de profil trouvé - vérifier si c'est un compte vraiment corrompu
+        final isCorrupted = await _repo.isCorruptedAccount(user.id);
+        
+        if (isCorrupted) {
+          print('🧹 Compte corrompu détecté - nettoyage');
+          await _repo.cleanupCorruptedAccount();
+          add(_InternalLoggedOut());
+        } else {
+          print('✅ Nouveau compte sans profil - OK pour onboarding');
+          add(_InternalProfileIncomplete(user));
+        }
       } else {
-        add(_InternalProfileLoaded(p));
+        // FIX: Utiliser la méthode isComplete pour vérifier
+        if (!p.isComplete) {
+          print('⚠️ Profil trouvé mais incomplet');
+          add(_InternalProfileIncomplete(user));
+        } else {
+          print('✅ Profil complet trouvé');
+          add(_InternalProfileLoaded(p));
+        }
       }
     });
   }
@@ -40,8 +60,22 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   Future<void> _onStart(AppStarted e, Emitter<AuthState> emit) async {
     final user = supabase.Supabase.instance.client.auth.currentUser;
     if (user == null) return emit(Unauthenticated());
-    final p = await _repo.getProfile(user.id);
-    emit(p == null ? Unauthenticated() : Authenticated(p));
+    
+    // FIX: Utiliser skipCleanup au démarrage aussi
+    final p = await _repo.getProfile(user.id, skipCleanup: true);
+    
+    if (p == null) {
+      // Vérifier si c'est un compte corrompu avant de nettoyer
+      final isCorrupted = await _repo.isCorruptedAccount(user.id);
+      if (isCorrupted) {
+        await _repo.cleanupCorruptedAccount();
+        emit(Unauthenticated());
+      } else {
+        emit(ProfileIncomplete(user));
+      }
+    } else {
+      emit(Authenticated(p));
+    }
   }
 
   Future<void> _onCompleteProfile(CompleteProfileRequested e, Emitter<AuthState> emit) async {
@@ -57,12 +91,14 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         userId: user.id,
         fullName: e.fullName,
         username: e.username,
-        phone: e.phone,
         avatar: e.avatar,
       );
       if (p == null) return emit(AuthError('Impossible de sauvegarder'));
+      
+      print('✅ Profil complété avec succès: ${p.username}');
       emit(Authenticated(p));
     } catch (err) {
+      print('❌ Erreur complétion profil: $err');
       emit(AuthError(err.toString()));
     }
   }
@@ -70,13 +106,15 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   Future<void> _onSignUpBasic(SignUpBasicRequested e, Emitter<AuthState> emit) async {
     emit(AuthLoading());
     try {
-      final user =
-          await _repo.signUpBasic(email: e.email, password: e.password);
+      final user = await _repo.signUpBasic(email: e.email, password: e.password);
       if (user == null) {
         return emit(AuthError('Échec de création de compte'));
       }
-      emit(ProfileIncomplete(user));               //  ← ICI
+      
+      print('✅ Inscription réussie, transition vers ProfileIncomplete');
+      emit(ProfileIncomplete(user));
     } catch (err) {
+      print('❌ Erreur inscription: $err');
       emit(AuthError(err.toString()));
     }
   }
@@ -85,8 +123,26 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     emit(AuthLoading());
     try {
       final p = await _repo.logIn(email: e.email, password: e.password);
-      emit(p == null ? Unauthenticated() : Authenticated(p));
+      
+      if (p == null) {
+        // Connexion réussie mais pas de profil - vérifier si corrompu
+        final user = supabase.Supabase.instance.client.auth.currentUser;
+        if (user != null) {
+          final isCorrupted = await _repo.isCorruptedAccount(user.id);
+          if (isCorrupted) {
+            await _repo.cleanupCorruptedAccount();
+            emit(Unauthenticated());
+          } else {
+            emit(ProfileIncomplete(user));
+          }
+        } else {
+          emit(Unauthenticated());
+        }
+      } else {
+        emit(Authenticated(p));
+      }
     } catch (err) {
+      print('❌ Erreur connexion: $err');
       emit(AuthError(err.toString()));
     }
   }
@@ -113,4 +169,5 @@ class _InternalProfileLoaded extends AuthEvent {
   final Profile profile;
   _InternalProfileLoaded(this.profile);
 }
+
 class _InternalLoggedOut extends AuthEvent {}

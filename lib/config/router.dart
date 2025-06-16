@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
-import 'package:runaway/core/widgets/ask_registration.dart';
 import 'package:runaway/core/widgets/main_scaffold.dart';
 import 'package:runaway/features/account/presentation/screens/account_screen.dart';
 import 'package:runaway/features/activity/presentation/screens/activity_screen.dart';
@@ -56,9 +55,6 @@ final GoRouter router = GoRouter(
       }
     }
     
-    // CHANGEMENT: Ne plus rediriger les pages protégées vers /home
-    // Laisser chaque page gérer elle-même l'authentification avec AskRegistration
-    
     // Pas de redirection nécessaire
     return null;
   },
@@ -93,6 +89,7 @@ final GoRouter router = GoRouter(
         return AuthWrapper(child: MainScaffold(child: child));
       },
       routes: [
+        // Route d'accueil - accessible à tous
         GoRoute(
           path: '/home',
           pageBuilder: (context, state) => NoTransitionPage(
@@ -100,6 +97,8 @@ final GoRouter router = GoRouter(
             child: const HomeScreen(),
           ),
         ),
+        
+        // Routes protégées - nécessitent une authentification
         GoRoute(
           path: '/activity',
           pageBuilder: (context, state) => NoTransitionPage(

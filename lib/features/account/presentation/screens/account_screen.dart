@@ -10,6 +10,7 @@ import 'package:runaway/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:runaway/features/auth/presentation/bloc/auth_event.dart';
 import 'package:runaway/features/auth/presentation/bloc/auth_state.dart';
 import 'package:smooth_gradient/smooth_gradient.dart';
+import 'dart:math' as math;
 
 class AccountScreen extends StatelessWidget {
   const AccountScreen({super.key});
@@ -25,23 +26,10 @@ class AccountScreen extends StatelessWidget {
       },
       child: BlocBuilder<AuthBloc, AuthState>(
         builder: (_, authState) {
-          if (authState is !Authenticated) {
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              showModalBottomSheet(
-                context: context, 
-                useRootNavigator: true,
-                enableDrag: false,
-                isDismissible: false,
-                isScrollControlled: true,
-                builder: (modalCtx) {
-                  return AskRegistration();
-                },
-              );
-            });
-          } 
-
+          // Si l'utilisateur est connecté, afficher le contenu
           if (authState is Authenticated) {
             final user = authState.profile;
+            final initialColor = math.Random().nextInt(Colors.primaries.length);
 
             return Scaffold(
               extendBodyBehindAppBar: true,
@@ -59,9 +47,11 @@ class AccountScreen extends StatelessWidget {
                 children: [
                   _buildHeaderAccount(
                     ctx: context,
-                    name: user.username != null ? "@${user.username}" : "Utilisateur",
-                    email: user.email,
+                    name: user.fullName ?? "Utilisateur",
+                    username: "@${user.username}",
                     avatarUrl: user.avatarUrl,
+                    initials: user.initials,
+                    color: Colors.primaries[initialColor],
                   ),
             
                   Padding(
@@ -218,7 +208,7 @@ class AccountScreen extends StatelessWidget {
             );
           }
 
-          return SizedBox.shrink();
+          return AskRegistration();
         }
       ),
     );
@@ -257,18 +247,20 @@ class AccountScreen extends StatelessWidget {
   Widget _buildHeaderAccount({
     required BuildContext ctx, 
     required String name, 
-    required String email,
+    required String username,
     String? avatarUrl,
+    required String initials,
+    required Color color,
   }) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 20.0),
       child: Column(
         children: [
           Container(
-            width: 100,
-            height: 100,
+            width: 150,
+            height: 150,
             decoration: BoxDecoration(
-              color: Colors.grey.shade300,
+              color: HSLColor.fromColor(color).withLightness(0.8).toColor(),
               shape: BoxShape.circle,
               image: avatarUrl != null 
                   ? DecorationImage(
@@ -282,14 +274,20 @@ class AccountScreen extends StatelessWidget {
                   : null,
             ),
             child: avatarUrl == null
-                ? Icon(
-                    HugeIcons.strokeRoundedUser,
-                    size: 50,
-                    color: Colors.grey.shade600,
+                ? Center(
+                    child: Text(
+                      initials,
+                      style: TextStyle(
+                        fontSize: 32,
+                        fontWeight: FontWeight.bold,
+                        color: color,
+                      ),
+                    ),
                   )
                 : null,
           ),
-          15.h,
+
+          20.h,
           Text(
             name,
             style: ctx.bodyMedium?.copyWith(
@@ -297,9 +295,8 @@ class AccountScreen extends StatelessWidget {
               color: Colors.white,
             ),
           ),
-          5.h,
           Text(
-            email,
+            username,
             style: ctx.bodySmall?.copyWith(
               fontWeight: FontWeight.w500,
               color: Colors.white38,
@@ -423,6 +420,7 @@ class AccountScreen extends StatelessWidget {
     );
   }
 }
+
 
 class BlurryPage extends StatefulWidget {
   final List<Widget> children;

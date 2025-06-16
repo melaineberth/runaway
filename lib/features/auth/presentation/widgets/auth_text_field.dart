@@ -12,6 +12,7 @@ class AuthTextField extends StatelessWidget {
   final TextInputType? keyboardType;
   final int? maxLength;
   final Widget? suffixIcon;
+  final TextCapitalization? textCapitalization;
   
   const AuthTextField({
     super.key,
@@ -24,6 +25,7 @@ class AuthTextField extends StatelessWidget {
     this.keyboardType,
     this.maxLength,
     this.suffixIcon,
+    this.textCapitalization,
   });
 
   @override
@@ -37,6 +39,8 @@ class AuthTextField extends StatelessWidget {
         vertical: 5.0,
       ),
       child: TextFormField(
+        textCapitalization: textCapitalization ?? TextCapitalization.none,
+        autocorrect: false,
         validator: validator,
         obscureText: obscureText,
         enabled: enabled,

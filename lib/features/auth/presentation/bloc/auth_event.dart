@@ -16,12 +16,11 @@ class SignUpBasicRequested extends AuthEvent {
 }
 
 class CompleteProfileRequested extends AuthEvent {
-  final String fullName, username, phone;
+  final String fullName, username;
   final File? avatar;
   CompleteProfileRequested({
     required this.fullName,
     required this.username,
-    required this.phone,
     this.avatar,
   });
 }

@@ -1,3 +1,5 @@
+// lib/features/auth/data/repositories/auth_repository.dart
+
 import 'dart:io';
 
 import 'package:path/path.dart' as p;
@@ -44,7 +46,6 @@ class AuthRepository {
     required String userId,
     required String fullName,
     required String username,
-    required String phone,
     File? avatar,
   }) async {
     try {
@@ -52,10 +53,12 @@ class AuthRepository {
       
       String? avatarUrl;
       
-      // Upload de l'avatar si fourni
+      // Upload de l'avatar si fourni (mais ne pas faire échouer si ça rate)
       if (avatar != null) {
         try {
-          final filePath = 'profile/$userId${p.extension(avatar.path)}';
+          // Structure : userId/profile_picture/profile_picture.extension
+          final extension = p.extension(avatar.path);
+          final filePath = '$userId/profile_picture/profile_picture$extension';
           
           print('📸 Upload avatar: $filePath');
           
@@ -71,19 +74,28 @@ class AuthRepository {
           avatarUrl = _supabase.storage.from('profile').getPublicUrl(filePath);
           print('✅ Avatar uploadé: $avatarUrl');
         } catch (e) {
-          print('⚠️ Erreur upload avatar: $e');
-          // Continuer sans avatar plutôt que d'échouer complètement
+          print('⚠️ Erreur upload avatar (continuez sans avatar): $e');
+          // FIX: Continuer SANS avatar plutôt que d'échouer
+          // L'utilisateur peut ajouter son avatar plus tard
+          avatarUrl = null;
         }
       }
 
-      // Sauvegarder le profil
+
+      // Récupérer l'email depuis l'utilisateur actuel AVANT l'upsert
+      final currentUser = _supabase.auth.currentUser;
+      if (currentUser?.email == null) {
+        throw ProfileException('Impossible de récupérer l\'email utilisateur');
+      }
+
+      // Sauvegarder le profil (FIX: inclure l'email qui est NOT NULL)
       final data = await _supabase
           .from('profiles')
           .upsert({
             'id': userId,
+            'email': currentUser!.email!, // FIX: Ajouter l'email obligatoire
             'full_name': fullName.trim(),
             'username': username.trim().toLowerCase(),
-            'phone': phone.trim(),
             'avatar_url': avatarUrl,
             'updated_at': DateTime.now().toIso8601String(),
           })
@@ -95,16 +107,8 @@ class AuthRepository {
         throw ProfileException('Impossible de sauvegarder le profil');
       }
 
-      // Récupérer l'email depuis l'utilisateur actuel
-      final currentUser = _supabase.auth.currentUser;
-      if (currentUser?.email == null) {
-        throw ProfileException('Impossible de récupérer l\'email utilisateur');
-      }
-
-      final profile = Profile.fromJson({
-        ...data,
-        'email': currentUser!.email!,
-      });
+      // FIX: L'email est déjà inclus dans les données retournées
+      final profile = Profile.fromJson(data);
 
       print('✅ Profil complété: ${profile.username}');
       return profile;
@@ -154,7 +158,8 @@ class AuthRepository {
   }
 
   // ---------- lecture profile ----------
-  Future<Profile?> getProfile(String id) async {
+  // FIX: Ne plus nettoyer automatiquement les comptes
+  Future<Profile?> getProfile(String id, {bool skipCleanup = false}) async {
     try {
       print('👤 Récupération profil: $id');
       
@@ -166,21 +171,17 @@ class AuthRepository {
       
       if (data == null) {
         print('⚠️ Aucun profil trouvé pour: $id');
-        cleanupCorruptedAccount();
+        
+        // FIX: Ne nettoyer que si explicitement demandé
+        // Cela permet aux nouveaux utilisateurs d'avoir une chance de compléter leur profil
+        if (!skipCleanup) {
+          print('ℹ️ Profil non trouvé mais pas de nettoyage automatique');
+        }
         return null;
       }
       
-      // Récupérer l'email depuis l'utilisateur actuel
-      final currentUser = _supabase.auth.currentUser;
-      if (currentUser?.email == null) {
-        print('⚠️ Impossible de récupérer l\'email utilisateur');
-        return null;
-      }
-      
-      final profile = Profile.fromJson({
-        ...data,
-        'email': currentUser!.email!,
-      });
+      // FIX: L'email est maintenant directement dans les données de la DB
+      final profile = Profile.fromJson(data);
       
       print('✅ Profil récupéré: ${profile.username}');
       return profile;
@@ -275,15 +276,8 @@ class AuthRepository {
         throw ProfileException('Impossible de mettre à jour le profil');
       }
       
-      final currentUser = _supabase.auth.currentUser;
-      if (currentUser?.email == null) {
-        throw ProfileException('Impossible de récupérer l\'email utilisateur');
-      }
-      
-      final profile = Profile.fromJson({
-        ...data,
-        'email': currentUser!.email!,
-      });
+      // FIX: L'email est maintenant directement dans les données retournées
+      final profile = Profile.fromJson(data);
       
       print('✅ Profil mis à jour: ${profile.username}');
       return profile;
@@ -321,6 +315,7 @@ class AuthRepository {
   }
 
   /// Nettoie un compte corrompu (authentifié dans Supabase mais sans profil complet)
+  /// FIX: Maintenant appelée explicitement seulement quand nécessaire
   Future<void> cleanupCorruptedAccount() async {
     try {
       final user = currentUser;
@@ -346,6 +341,34 @@ class AuthRepository {
       } catch (logoutError) {
         print('❌ Erreur déconnexion forcée: $logoutError');
       }
+    }
+  }
+
+  // ---------- Nouvelle méthode pour vérifier si un compte est vraiment corrompu ----------
+  Future<bool> isCorruptedAccount(String userId) async {
+    try {
+      final user = currentUser;
+      if (user == null) return false;
+      
+      // FIX: createdAt est déjà une DateTime, pas besoin de parser
+      final createdAtString = user.createdAt;
+      final createdAt = DateTime.parse(createdAtString);
+      final now = DateTime.now();
+      final accountAge = now.difference(createdAt);
+      
+      print('🕐 Âge du compte: ${accountAge.inHours}h');
+      
+      // Si le compte existe depuis plus de 24h sans profil, c'est probablement corrompu
+      if (accountAge.inHours > 24) {
+        final hasProfile = await hasCompleteProfile(userId);
+        print('📋 Profil complet: $hasProfile');
+        return !hasProfile;
+      }
+      
+      return false; // Compte récent sans profil = normal
+    } catch (e) {
+      print('❌ Erreur vérification corruption: $e');
+      return false;
     }
   }
 

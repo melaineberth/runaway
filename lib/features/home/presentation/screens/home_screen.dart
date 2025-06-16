@@ -113,10 +113,16 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
     positionUpdateTimer?.cancel();
 
-    // Appeler _clearRoute seulement si le widget est encore monté
-    if (mounted) {
-      _clearRoute(); // Nettoyer la route
+    // NE PAS appeler _clearRoute() car elle contient setState()
+    // Nettoyer seulement les ressources critiques
+    try {
+      if (isNavigationMode) {
+        NavigationService.stopNavigation();
+      }
+    } catch (e) {
+      print('⚠️ Erreur arrêt navigation: $e');
     }
+
     userPositionStream?.cancel();
     _clearLocationMarkers();
     super.dispose();

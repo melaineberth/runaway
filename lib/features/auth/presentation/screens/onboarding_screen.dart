@@ -1,3 +1,5 @@
+// lib/features/auth/presentation/screens/onboarding_screen.dart
+
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -24,14 +26,12 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   final _formKey = GlobalKey<FormState>();
   final TextEditingController _fullNameController = TextEditingController();
   final TextEditingController _usernameController = TextEditingController();
-  final TextEditingController _phoneController = TextEditingController();
   File? _avatar;
 
   @override
   void dispose() {
     _fullNameController.dispose();
     _usernameController.dispose();
-    _phoneController.dispose();
     super.dispose();
   }
 
@@ -84,21 +84,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     return null;
   }
 
-  String? _validatePhone(String? value) {
-    if (value == null || value.trim().isEmpty) {
-      return 'Le numéro de téléphone est requis';
-    }
-    
-    // Supprimer les espaces et caractères spéciaux pour la validation
-    final cleanPhone = value.replaceAll(RegExp(r'[^\d+]'), '');
-    
-    if (cleanPhone.length < 10) {
-      return 'Numéro de téléphone invalide';
-    }
-    
-    return null;
-  }
-
   @override
   Widget build(BuildContext context) {
     return BlocListener<AuthBloc, AuthState>(
@@ -107,12 +92,25 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           // Profil complété avec succès, aller à l'accueil
           context.go('/home');
         } else if (authState is AuthError) {
-          // Afficher l'erreur
+          // Afficher l'erreur avec plus de contexte
+          String errorMessage = authState.message;
+          
+          // Si c'est une erreur d'avatar, être plus informatif
+          if (errorMessage.contains('upload') || errorMessage.contains('avatar')) {
+            errorMessage = 'Profil créé mais l\'avatar n\'a pas pu être uploadé. Vous pourrez l\'ajouter plus tard.';
+            
+            // Même si l'avatar a échoué, on peut considérer que le profil est créé
+            // et rediriger vers l'accueil après un délai
+            Future.delayed(Duration(seconds: 2), () {
+              if (mounted) context.go('/home');
+            });
+          }
+          
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(authState.message),
-              backgroundColor: Colors.red,
-              duration: Duration(seconds: 4),
+              content: Text(errorMessage),
+              backgroundColor: errorMessage.contains('avatar') ? Colors.orange : Colors.red,
+              duration: Duration(seconds: errorMessage.contains('avatar') ? 6 : 4),
             ),
           );
         }
@@ -122,6 +120,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           final isLoading = authState is AuthLoading;
 
           return Scaffold(
+            resizeToAvoidBottomInset: false,
             appBar: AppBar(
               automaticallyImplyLeading: false,
               title: Text(
@@ -196,14 +195,15 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                         20.h,
                         // Formulaire
                         AuthTextField(
-                          hint: "Full name (John Doe)",
+                          hint: "John Doe",
+                          textCapitalization: TextCapitalization.words,
                           controller: _fullNameController,
                           validator: _validateFullName,
                           enabled: !isLoading,
                         ),
                         15.h,
                         AuthTextField(
-                          hint: "Username (@johndoe)",
+                          hint: "@johndoe",
                           controller: _usernameController,
                           validator: _validateUsername,
                           enabled: !isLoading,
@@ -216,13 +216,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                               );
                             }
                           },
-                        ),
-                        15.h,
-                        AuthTextField(
-                          hint: "Phone number (+33 6 12 34 56 78)",
-                          controller: _phoneController,
-                          validator: _validatePhone,
-                          enabled: !isLoading,
                         ),
                       ],
                     ),
@@ -268,35 +261,32 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   }
 
   Widget _buildCompleteButton(bool isLoading) {
-    return SizedBox(
-      width: double.infinity,
-      child: SquircleContainer(
-        onTap: isLoading ? null : _handleCompleteProfile,
-        height: 60,
-        color: isLoading ? AppColors.primary.withValues(alpha: 0.5) : AppColors.primary,
-        radius: 30,
-        padding: EdgeInsets.symmetric(
-          horizontal: 15.0,
-          vertical: 5.0,
-        ),
-        child: Center(
-          child: isLoading
-          ? SizedBox(
-              width: 20,
-              height: 20,
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-                valueColor: AlwaysStoppedAnimation<Color>(Colors.black),
-              ),
-            )
-          : Text(
-              "Complete",
-              style: context.bodySmall?.copyWith(
-                color: Colors.black,
-                fontWeight: FontWeight.w600,
-              ),
+    return SquircleContainer(
+      onTap: isLoading ? null : _handleCompleteProfile,
+      height: 60,
+      color: isLoading ? AppColors.primary.withValues(alpha: 0.5) : AppColors.primary,
+      radius: 30,
+      padding: EdgeInsets.symmetric(
+        horizontal: 15.0,
+        vertical: 5.0,
+      ),
+      child: Center(
+        child: isLoading
+        ? SizedBox(
+            width: 20,
+            height: 20,
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              valueColor: AlwaysStoppedAnimation<Color>(Colors.black),
             ),
-        ),
+          )
+        : Text(
+            "Complete",
+            style: context.bodySmall?.copyWith(
+              color: Colors.black,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
       ),
     );
   }
@@ -313,7 +303,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         CompleteProfileRequested(
           fullName: _fullNameController.text.trim(),
           username: username,
-          phone: _phoneController.text.trim(),
           avatar: _avatar,
         ),
       );

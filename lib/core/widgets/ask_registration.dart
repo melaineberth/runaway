@@ -32,7 +32,6 @@ class _AskRegistrationState extends State<AskRegistration> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        toolbarHeight: kToolbarHeight * 3,
         automaticallyImplyLeading: false,
         title: Text(
           "Accès restreint",
@@ -40,52 +39,50 @@ class _AskRegistrationState extends State<AskRegistration> {
             color: Colors.white,
           ),
         ),
-        leading: IconButton(
-          onPressed: () {
-            context.pop();
-
-            if (mounted) {
-            context.pushReplacement('/home');
-            }
-          }, 
-          icon: Icon(HugeIcons.solidStandardArrowLeft02),
-        ),
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(20.0),
-        child: Column(
-          children: [
-            SizedBox(
-              height: 180,
-              child: Image.asset("assets/img/lock.png"),
-            ),
-            20.h,
-            Column(
+      body: Stack(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(20.0),
+            child: Column(
               children: [
-                Text(
-                  "Vous n'êtes pas connecté",
-                  style: context.bodyLarge?.copyWith(
-                    color: Colors.white,
-                    fontSize: 25,
-                    fontWeight: FontWeight.w700,
-                  ),
-                  textAlign: TextAlign.center,
+                SizedBox(
+                  height: 180,
+                  child: Image.asset("assets/img/lock.png"),
                 ),
-                10.h,
-                Text(
-                  "Pour accéder à cette page, veuillez vous connecter ou créer un compte.",
-                  style: context.bodyMedium?.copyWith(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w500,
-                    fontSize: 17,
-                    height: 1.3,
-                  ),
-                  textAlign: TextAlign.center,
+                20.h,
+                Column(
+                  children: [
+                    Text(
+                      "Vous n'êtes pas connecté",
+                      style: context.bodyLarge?.copyWith(
+                        color: Colors.white,
+                        fontSize: 25,
+                        fontWeight: FontWeight.w700,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    10.h,
+                    Text(
+                      "Pour accéder à cette page, veuillez vous connecter ou créer un compte.",
+                      style: context.bodyMedium?.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w500,
+                        fontSize: 17,
+                        height: 1.3,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
                 ),
               ],
             ),
-            const Spacer(),
-            Column(
+          ),
+          Positioned(
+            left: 20,
+            right: 20,
+            bottom: kBottomNavigationBarHeight * 2,
+            child: Column(
               children: [
                 _buildAuthButton(
                   label: "Se connecter",
@@ -112,9 +109,8 @@ class _AskRegistrationState extends State<AskRegistration> {
                 )
               ],
             ),
-            40.h,
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
