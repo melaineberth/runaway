@@ -1,80 +1,66 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:runaway/config/extensions.dart';
+import 'package:runaway/core/widgets/ask_registration.dart';
 import 'package:runaway/features/account/presentation/screens/account_screen.dart';
-
-import '../../../../core/widgets/ask_registration.dart';
+import 'package:runaway/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:runaway/features/auth/presentation/bloc/auth_state.dart';
 import '../widgets/historic_card.dart';
 
-class HistoricScreen extends StatefulWidget {
-  const HistoricScreen({super.key});
+class HistoricScreen extends StatelessWidget {  
+  const HistoricScreen({
+    super.key,
+  });
 
-  @override
-  State<HistoricScreen> createState() => _HistoricScreenState();
-}
-
-class _HistoricScreenState extends State<HistoricScreen> {
-  bool isAuth = true;
-
-  final List<HistoricCard> data = [
-    HistoricCard(
-      imgPath: "assets/img/road.png",
-      title: "Parcours d'entraînement",
-      location: "Brulon, France",
-      timestamp: "le 10/10/25 à 12h00",
-    ),
-  ];
-
-  @override
-  void initState() {
-    checkAuth();
-    super.initState();
-  }
-
-  void checkAuth() {
-    if (!isAuth) {
-      _showAuthModal();
-    }
-  }
-
-  Future<void> _showAuthModal() async { 
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      showModalBottomSheet(
-        context: context, 
-        useRootNavigator: true,
-        enableDrag: false,
-        isDismissible: false,
-        isScrollControlled: true,
-        builder: (modalCtx) {
-          return AskRegistration();
-        },
-      );
-    });
-  }
-  
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      extendBodyBehindAppBar: true,
-      appBar: AppBar(
-        forceMaterialTransparency: true,
-        backgroundColor: Colors.transparent,
-        title: Text(
-          "Historique",
-          style: context.bodySmall?.copyWith(
-            color: Colors.white,
-          ),
-        ),
-      ),
-      body: data.length > 1 ? BlurryPage(
-        padding: EdgeInsets.all(20.0),
-        children: List.generate(
-          data.length, 
-          (index) => Padding(
-            padding: EdgeInsets.only(bottom: index >= data.length ? 0 : 15.0),
-            child: data[index],
-          ),
-        ),
-      ) : null,
+  final List<HistoricCard> data = [];
+
+    return BlocBuilder<AuthBloc, AuthState>(
+      builder: (_, authState) {
+        if (authState is Unauthenticated) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            showModalBottomSheet(
+              context: context, 
+              useRootNavigator: true,
+              enableDrag: false,
+              isDismissible: false,
+              isScrollControlled: true,
+              builder: (modalCtx) {
+                return AskRegistration();
+              },
+            );
+          });
+        } 
+        
+        if (authState is Authenticated) {
+          return Scaffold(
+            extendBodyBehindAppBar: true,
+            appBar: AppBar(
+              forceMaterialTransparency: true,
+              backgroundColor: Colors.transparent,
+              title: Text(
+                "Historique",
+                style: context.bodySmall?.copyWith(
+                  color: Colors.white,
+                ),
+              ),
+            ),
+            body: data.length > 1 ? BlurryPage(
+              padding: EdgeInsets.all(20.0),
+              children: List.generate(
+                data.length, 
+                (index) => Padding(
+                  padding: EdgeInsets.only(bottom: index >= data.length ? 0 : 15.0),
+                  child: data[index],
+                ),
+              ),
+            ) : null,
+          );
+        }
+        
+        return SizedBox.shrink();
+      }
     );
   }
 }

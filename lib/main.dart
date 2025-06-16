@@ -6,6 +6,9 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:runaway/config/router.dart';
 import 'package:runaway/config/theme.dart';
+import 'package:runaway/features/auth/data/repositories/auth_repository.dart';
+import 'package:runaway/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'core/blocs/app_bloc_observer.dart';
 import 'features/home/presentation/blocs/map_style/map_style_bloc.dart';
@@ -15,6 +18,11 @@ import 'features/route_generator/presentation/blocs/route_generation/route_gener
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  // Observer pour debug
+  Bloc.observer = AppBlocObserver();
+
+  await dotenv.load(fileName: ".env");
+
   // Initialiser HydratedBloc pour la persistance
   final directory = await getApplicationDocumentsDirectory();
 
@@ -22,10 +30,12 @@ void main() async {
     storageDirectory: HydratedStorageDirectory(directory.path),
   );
 
-  // Observer pour debug
-  Bloc.observer = AppBlocObserver();
+  // Initialiser Supabase
+  await Supabase.initialize(
+    url: dotenv.get('SUPABASE_URL'),
+    anonKey: dotenv.get('SUPABASE_ANON_KEY'),
+  );
 
-  await dotenv.load(fileName: ".env");
 
   // Pass your access token to MapboxOptions so you can load a map
   String mapBoxToken = dotenv.get('MAPBOX_TOKEN');
@@ -52,6 +62,9 @@ class RunAway extends StatelessWidget {
         ),
         BlocProvider(
           create: (_) => RouteGenerationBloc(),
+        ),
+        BlocProvider(
+          create: (ctx) => AuthBloc(AuthRepository()),
         ),
       ],
       child: MaterialApp.router(

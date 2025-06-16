@@ -16,7 +16,6 @@ class RouteParametersBloc extends HydratedBloc<RouteParametersEvent, RouteParame
             terrainType: TerrainType.mixed,
             urbanDensity: UrbanDensity.mixed,
             distanceKm: 5.0,
-            searchRadius: 5000.0,
             elevationGain: 0.0,
             startLongitude: startLongitude,
             startLatitude: startLatitude,
@@ -27,7 +26,6 @@ class RouteParametersBloc extends HydratedBloc<RouteParametersEvent, RouteParame
               terrainType: TerrainType.mixed,
               urbanDensity: UrbanDensity.mixed,
               distanceKm: 5.0,
-              searchRadius: 5000.0,
               elevationGain: 0.0,
               startLongitude: startLongitude,
               startLatitude: startLatitude,
@@ -39,7 +37,6 @@ class RouteParametersBloc extends HydratedBloc<RouteParametersEvent, RouteParame
     on<TerrainTypeChanged>(_onTerrainTypeChanged);
     on<UrbanDensityChanged>(_onUrbanDensityChanged);
     on<DistanceChanged>(_onDistanceChanged);
-    on<SearchRadiusChanged>(_onSearchRadiusChanged);
     on<ElevationGainChanged>(_onElevationGainChanged);
     on<StartLocationUpdated>(_onStartLocationUpdated);
     on<PresetApplied>(_onPresetApplied);
@@ -123,23 +120,6 @@ class RouteParametersBloc extends HydratedBloc<RouteParametersEvent, RouteParame
         distanceKm: km,
         elevationGain: newElevation,
       ),
-    );
-  }
-
-  void _onSearchRadiusChanged(
-    SearchRadiusChanged event,
-    Emitter<RouteParametersState> emit,
-  ) {
-    if (event.radiusInMeters < state.parameters.distanceKm * 500) {
-      emit(state.copyWith(
-        errorMessage: 'Le rayon de recherche est trop petit pour la distance choisie',
-      ));
-      return;
-    }
-
-    _updateParameters(
-      emit,
-      state.parameters.copyWith(searchRadius: event.radiusInMeters),
     );
   }
 
@@ -331,9 +311,6 @@ class RouteParametersBloc extends HydratedBloc<RouteParametersEvent, RouteParame
       }
       if (state.parameters.distanceKm > state.parameters.activityType.maxDistance) {
         return 'La distance maximale pour ${state.parameters.activityType.title} est ${state.parameters.activityType.maxDistance} km';
-      }
-      if (state.parameters.searchRadius < state.parameters.distanceKm * 500) {
-        return 'Le rayon de recherche est trop petit pour la distance choisie';
       }
     }
     return null;

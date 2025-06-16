@@ -67,7 +67,7 @@ class HistoricCard extends StatelessWidget {
                                 overflow: TextOverflow.ellipsis,
                                 style: context.bodyMedium?.copyWith(
                                   height: 1.3,
-                                  fontSize: 20,
+                                  fontSize: 18,
                                   fontWeight: FontWeight.w700,
                                   color: Colors.white,
                                 ),
@@ -80,7 +80,7 @@ class HistoricCard extends StatelessWidget {
                                       text: timestamp,
                                       style: context.bodySmall?.copyWith(
                                         height: 1.3,
-                                        fontSize: 15,
+                                        fontSize: 13,
                                         fontStyle: FontStyle.normal,
                                         fontWeight: FontWeight.w500,
                                         color: Colors.white38,

@@ -29,7 +29,6 @@ import '../../../route_generator/presentation/screens/route_parameter.dart' as g
 import '../../../../core/widgets/icon_btn.dart';
 import '../blocs/route_parameters/route_parameters_bloc.dart';
 import '../blocs/route_parameters/route_parameters_event.dart';
-import '../blocs/route_parameters/route_parameters_state.dart';
 import '../widgets/location_search_bar.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -61,15 +60,14 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   double? currentLongitude;
   double? currentLatitude;
 
-  // Rayon par défaut en mètres
-  double defaultRadius = 10000.0; // 10km
-
   // État du suivi en temps réel
   bool isTrackingUser = true;
 
   // Variables pour la gestion des polylignes
-  mp.PolylineAnnotation? routeToStartPolyline; // Polyligne vers le point de départ
-  mp.PolylineAnnotation? originalRoutePolyline; // Polyligne du parcours original (sauvegardée)
+  mp.PolylineAnnotation?
+  routeToStartPolyline; // Polyligne vers le point de départ
+  mp.PolylineAnnotation?
+  originalRoutePolyline; // Polyligne du parcours original (sauvegardée)
   mp.PolylineAnnotationManager? polylineManager;
   mp.PolylineAnnotation? currentRoutePolyline;
 
@@ -87,7 +85,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   // Variables pour la navigation intelligente
   bool isNavigatingToRoute = false; // Navigation vers le parcours
   String navigationMode = 'none'; // 'none', 'to_route', 'on_route'
-  List<List<double>>? routeToStartPoint; // Coordonnées pour aller au point de départ
+  List<List<double>>?
+  routeToStartPoint; // Coordonnées pour aller au point de départ
 
   // Variables pour la caméra de navigation
   List<List<double>> userPositionHistory = []; // Historique des positions pour calculer la direction
@@ -144,7 +143,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }
 
   void _startNavigation() {
-    if (generatedRouteCoordinates == null || userLongitude == null || userLatitude == null) {
+    if (generatedRouteCoordinates == null ||
+        userLongitude == null ||
+        userLatitude == null) {
       _showErrorSnackBar('Position utilisateur ou parcours non disponible');
       return;
     }
@@ -170,239 +171,245 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   void _showDirectNavigationDialog() {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: Colors.black,
-        title: Text(
-          'Démarrer le parcours',
-          style: context.titleMedium?.copyWith(color: Colors.white),
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Vous êtes au point de départ du parcours.',
-              style: context.bodyMedium?.copyWith(color: Colors.white70),
+      builder:
+          (context) => AlertDialog(
+            backgroundColor: Colors.black,
+            title: Text(
+              'Démarrer le parcours',
+              style: context.titleMedium?.copyWith(color: Colors.white),
             ),
-            16.h,
-            Container(
-              padding: EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.green.withAlpha(20),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Row(
-                children: [
-                  HugeIcon(
-                    icon: HugeIcons.strokeRoundedCheckmarkCircle02,
-                    color: Colors.green,
-                    size: 16,
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Vous êtes au point de départ du parcours.',
+                  style: context.bodyMedium?.copyWith(color: Colors.white70),
+                ),
+                16.h,
+                Container(
+                  padding: EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.green.withAlpha(20),
+                    borderRadius: BorderRadius.circular(8),
                   ),
-                  8.w,
-                  Expanded(
-                    child: Text(
-                      'Prêt à commencer la navigation du parcours',
-                      style: context.bodySmall?.copyWith(
+                  child: Row(
+                    children: [
+                      HugeIcon(
+                        icon: HugeIcons.strokeRoundedCheckmarkCircle02,
                         color: Colors.green,
-                        fontSize: 12,
+                        size: 16,
                       ),
-                    ),
+                      8.w,
+                      Expanded(
+                        child: Text(
+                          'Prêt à commencer la navigation du parcours',
+                          style: context.bodySmall?.copyWith(
+                            color: Colors.green,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                ],
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: Text('Annuler', style: TextStyle(color: Colors.white70)),
               ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: Text('Annuler', style: TextStyle(color: Colors.white70)),
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                  _startRouteNavigation();
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: Colors.black,
+                ),
+                child: Text('Commencer'),
+              ),
+            ],
           ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.of(context).pop();
-              _startRouteNavigation();
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary,
-              foregroundColor: Colors.black,
-            ),
-            child: Text('Commencer'),
-          ),
-        ],
-      ),
     );
   }
 
   void _showNavigationChoiceDialog(double distanceToStart) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: Colors.black,
-        title: Text(
-          'Navigation vers le parcours',
-          style: context.titleMedium?.copyWith(color: Colors.white),
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Vous êtes à ${_formatDistance(distanceToStart)} du point de départ.',
-              style: context.bodyMedium?.copyWith(color: Colors.white70),
+      builder:
+          (context) => AlertDialog(
+            backgroundColor: Colors.black,
+            title: Text(
+              'Navigation vers le parcours',
+              style: context.titleMedium?.copyWith(color: Colors.white),
             ),
-            16.h,
-            Text(
-              'Que souhaitez-vous faire ?',
-              style: context.bodyMedium?.copyWith(
-                color: Colors.white,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            12.h,
-            Container(
-              padding: EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.blue.withAlpha(20),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Row(
-                children: [
-                  HugeIcon(
-                    icon: HugeIcons.strokeRoundedInformationCircle,
-                    color: Colors.blue,
-                    size: 16,
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Vous êtes à ${_formatDistance(distanceToStart)} du point de départ.',
+                  style: context.bodyMedium?.copyWith(color: Colors.white70),
+                ),
+                16.h,
+                Text(
+                  'Que souhaitez-vous faire ?',
+                  style: context.bodyMedium?.copyWith(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w600,
                   ),
-                  8.w,
-                  Expanded(
-                    child: Text(
-                      'Navigation avec instructions vocales',
-                      style: context.bodySmall?.copyWith(
+                ),
+                12.h,
+                Container(
+                  padding: EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.blue.withAlpha(20),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    children: [
+                      HugeIcon(
+                        icon: HugeIcons.strokeRoundedInformationCircle,
                         color: Colors.blue,
-                        fontSize: 12,
+                        size: 16,
                       ),
-                    ),
+                      8.w,
+                      Expanded(
+                        child: Text(
+                          'Navigation avec instructions vocales',
+                          style: context.bodySmall?.copyWith(
+                            color: Colors.blue,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                ],
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: Text('Annuler', style: TextStyle(color: Colors.white70)),
               ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: Text('Annuler', style: TextStyle(color: Colors.white70)),
+              TextButton(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                  _startRouteNavigation(); // Démarrer directement le parcours
+                },
+                child: Text(
+                  'Parcours direct',
+                  style: TextStyle(color: Colors.orange),
+                ),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                  _startNavigationToRoute(distanceToStart);
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: Colors.black,
+                ),
+                child: Text('Me guider'),
+              ),
+            ],
           ),
-          TextButton(
-            onPressed: () {
-              Navigator.of(context).pop();
-              _startRouteNavigation(); // Démarrer directement le parcours
-            },
-            child: Text(
-              'Parcours direct',
-              style: TextStyle(color: Colors.orange),
-            ),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.of(context).pop();
-              _startNavigationToRoute(distanceToStart);
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary,
-              foregroundColor: Colors.black,
-            ),
-            child: Text('Me guider'),
-          ),
-        ],
-      ),
     );
   }
 
   void _startNavigationToRoute(double distance) async {
-  try {
-    setState(() {
-      isNavigatingToRoute = true;
-      navigationMode = 'to_route';
-      currentInstruction = "Calcul de l'itinéraire vers le parcours...";
-    });
-
-    // Point de départ du parcours
-    final startPoint = generatedRouteCoordinates!.first;
-    
-    // ✅ FIX: Générer un VRAI itinéraire routier via GraphHopper
-    final routeToStart = await GraphHopperApiService.generateSimpleRoute(
-      startLat: userLatitude!,
-      startLon: userLongitude!,
-      endLat: startPoint[1], // latitude du point de départ
-      endLon: startPoint[0], // longitude du point de départ
-      profile: 'foot', // Profil piéton pour la course
-    );
-
-    if (routeToStart.length < 2) {
-      throw Exception('Impossible de calculer l\'itinéraire vers le parcours');
-    }
-
-    // ✅ FIX: Sauvegarder les coordonnées de l'itinéraire
-    setState(() {
-      routeToStartCoordinates = List.from(routeToStart);
-    });
-
-    print('🗺️ Itinéraire calculé: ${routeToStart.length} points, ${_calculateTotalDistance(routeToStart).toStringAsFixed(1)}km');
-
-    // Sauvegarder la polyligne du parcours original et la masquer
-    await _hideOriginalRoute();
-    
-    // Afficher la route vers le point de départ
-    await _displayRouteToStart(routeToStart);
-
-    bool success = await NavigationService.startCustomNavigation(
-      coordinates: routeToStart,
-      onUpdate: _handleNavigationToRouteUpdate,
-    );
-
-    if (success) {
+    try {
       setState(() {
-        isNavigationMode = true;
-        currentInstruction = "Navigation vers le point de départ...";
+        isNavigatingToRoute = true;
+        navigationMode = 'to_route';
+        currentInstruction = "Calcul de l'itinéraire vers le parcours...";
       });
 
-      await _switchToNavigationView();
+      // Point de départ du parcours
+      final startPoint = generatedRouteCoordinates!.first;
+
+      // ✅ FIX: Générer un VRAI itinéraire routier via GraphHopper
+      final routeToStart = await GraphHopperApiService.generateSimpleRoute(
+        startLat: userLatitude!,
+        startLon: userLongitude!,
+        endLat: startPoint[1], // latitude du point de départ
+        endLon: startPoint[0], // longitude du point de départ
+        profile: 'foot', // Profil piéton pour la course
+      );
+
+      if (routeToStart.length < 2) {
+        throw Exception(
+          'Impossible de calculer l\'itinéraire vers le parcours',
+        );
+      }
+
+      // ✅ FIX: Sauvegarder les coordonnées de l'itinéraire
+      setState(() {
+        routeToStartCoordinates = List.from(routeToStart);
+      });
+
+      print(
+        '🗺️ Itinéraire calculé: ${routeToStart.length} points, ${_calculateTotalDistance(routeToStart).toStringAsFixed(1)}km',
+      );
+
+      // Sauvegarder la polyligne du parcours original et la masquer
+      await _hideOriginalRoute();
+
+      // Afficher la route vers le point de départ
+      await _displayRouteToStart(routeToStart);
+
+      bool success = await NavigationService.startCustomNavigation(
+        coordinates: routeToStart,
+        onUpdate: _handleNavigationToRouteUpdate,
+      );
+
+      if (success) {
+        setState(() {
+          isNavigationMode = true;
+          currentInstruction = "Navigation vers le point de départ...";
+        });
+
+        await _switchToNavigationView();
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Navigation vers le parcours démarrée !',
+              style: TextStyle(color: Colors.white),
+            ),
+            backgroundColor: Colors.blue,
+          ),
+        );
+      }
+    } catch (e) {
+      print('❌ Erreur complète: $e');
+
+      setState(() {
+        isNavigatingToRoute = false;
+        navigationMode = 'none';
+        routeToStartCoordinates = null; // ✅ FIX: Nettoyer en cas d'erreur
+      });
+
+      // Restaurer la polyligne originale en cas d'erreur
+      await _showOriginalRoute();
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            'Navigation vers le parcours démarrée !',
+            'Erreur calcul itinéraire: ${e.toString()}',
             style: TextStyle(color: Colors.white),
           ),
-          backgroundColor: Colors.blue,
+          backgroundColor: Colors.red,
+          duration: Duration(seconds: 5),
         ),
       );
     }
-  } catch (e) {
-    print('❌ Erreur complète: $e');
-    
-    setState(() {
-      isNavigatingToRoute = false;
-      navigationMode = 'none';
-      routeToStartCoordinates = null; // ✅ FIX: Nettoyer en cas d'erreur
-    });
-    
-    // Restaurer la polyligne originale en cas d'erreur
-    await _showOriginalRoute();
-    
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          'Erreur calcul itinéraire: ${e.toString()}',
-          style: TextStyle(color: Colors.white),
-        ),
-        backgroundColor: Colors.red,
-        duration: Duration(seconds: 5),
-      ),
-    );
   }
-}
 
   Future<void> _hideOriginalRoute() async {
     if (polylineManager != null && currentRoutePolyline != null) {
@@ -420,11 +427,14 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       return;
     }
 
-    print('🗺️ Affichage itinéraire vers le départ: ${coordinates.length} points');
+    print(
+      '🗺️ Affichage itinéraire vers le départ: ${coordinates.length} points',
+    );
 
     try {
       // Créer un gestionnaire de polylignes si nécessaire
-      polylineManager ??= await mapboxMap!.annotations.createPolylineAnnotationManager();
+      polylineManager ??=
+          await mapboxMap!.annotations.createPolylineAnnotationManager();
 
       // Supprimer l'ancienne route vers le départ si elle existe
       if (routeToStartPolyline != null) {
@@ -435,9 +445,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       routeToStartPolyline = await polylineManager!.create(
         mp.PolylineAnnotationOptions(
           geometry: mp.LineString(
-            coordinates: coordinates
-                .map((coord) => mp.Position(coord[0], coord[1]))
-                .toList(),
+            coordinates:
+                coordinates
+                    .map((coord) => mp.Position(coord[0], coord[1]))
+                    .toList(),
           ),
           lineColor: Colors.blue.toARGB32(),
           lineWidth: 5.0,
@@ -453,7 +464,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
       // Centrer la vue sur cette route
       await _centerMapOnRoute(coordinates);
-
     } catch (e) {
       print('❌ Erreur affichage itinéraire: $e');
       rethrow;
@@ -484,10 +494,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       await markerCircleManager!.create(
         mp.CircleAnnotationOptions(
           geometry: mp.Point(
-            coordinates: mp.Position(
-              coordinates.last[0],
-              coordinates.last[1],
-            ),
+            coordinates: mp.Position(coordinates.last[0], coordinates.last[1]),
           ),
           circleColor: Colors.green.toARGB32(),
           circleRadius: 10.0,
@@ -516,9 +523,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       currentRoutePolyline = await polylineManager!.create(
         mp.PolylineAnnotationOptions(
           geometry: mp.LineString(
-            coordinates: generatedRouteCoordinates!
-                .map((coord) => mp.Position(coord[0], coord[1]))
-                .toList(),
+            coordinates:
+                generatedRouteCoordinates!
+                    .map((coord) => mp.Position(coord[0], coord[1]))
+                    .toList(),
           ),
           lineColor: Theme.of(context).primaryColor.toARGB32(),
           lineWidth: 4.0,
@@ -537,12 +545,18 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     if (mapboxMap == null || coordinates.isEmpty) return;
 
     final bounds = _calculateBounds(coordinates);
-    final centerLon = (bounds.southwest.coordinates.lng + bounds.northeast.coordinates.lng) / 2;
-    final centerLat = (bounds.southwest.coordinates.lat + bounds.northeast.coordinates.lat) / 2;
+    final centerLon =
+        (bounds.southwest.coordinates.lng + bounds.northeast.coordinates.lng) /
+        2;
+    final centerLat =
+        (bounds.southwest.coordinates.lat + bounds.northeast.coordinates.lat) /
+        2;
 
     // Calculer le zoom approprié
-    final latDiff = bounds.northeast.coordinates.lat - bounds.southwest.coordinates.lat;
-    final lonDiff = bounds.northeast.coordinates.lng - bounds.southwest.coordinates.lng;
+    final latDiff =
+        bounds.northeast.coordinates.lat - bounds.southwest.coordinates.lat;
+    final lonDiff =
+        bounds.northeast.coordinates.lng - bounds.southwest.coordinates.lng;
     final maxDiff = math.max(latDiff, lonDiff);
 
     double zoom = 13.0;
@@ -573,7 +587,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     try {
       // Restaurer l'affichage du parcours original
       await _showOriginalRoute();
-      
+
       bool success = await NavigationService.startCustomNavigation(
         coordinates: generatedRouteCoordinates!,
         onUpdate: _handleRouteNavigationUpdate,
@@ -613,47 +627,48 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }
 
   List<List<double>> _getRouteToStartCoordinates() {
-  // ✅ FIX: Retourner les vraies coordonnées d'itinéraire
-  if (routeToStartCoordinates != null && routeToStartCoordinates!.isNotEmpty) {
-    return routeToStartCoordinates!;
+    // ✅ FIX: Retourner les vraies coordonnées d'itinéraire
+    if (routeToStartCoordinates != null &&
+        routeToStartCoordinates!.isNotEmpty) {
+      return routeToStartCoordinates!;
+    }
+
+    // Fallback: route simple si pas d'itinéraire calculé
+    if (generatedRouteCoordinates != null &&
+        userLongitude != null &&
+        userLatitude != null) {
+      final startPoint = generatedRouteCoordinates!.first;
+      return [
+        [userLongitude!, userLatitude!],
+        [startPoint[0], startPoint[1]],
+      ];
+    }
+
+    return [];
   }
-  
-  // Fallback: route simple si pas d'itinéraire calculé
-  if (generatedRouteCoordinates != null && 
-      userLongitude != null && 
-      userLatitude != null) {
-    final startPoint = generatedRouteCoordinates!.first;
-    return [
-      [userLongitude!, userLatitude!],
-      [startPoint[0], startPoint[1]],
-    ];
-  }
-  
-  return [];
-}
 
   void _handleNavigationToRouteUpdate(NavigationUpdate update) {
-  setState(() {
-    currentNavUpdate = update;
-    currentInstruction = update.instruction;
-  });
+    setState(() {
+      currentNavUpdate = update;
+      currentInstruction = update.instruction;
+    });
 
-  // ✅ FIX: Utiliser les vraies coordonnées d'itinéraire pour le bearing
-  final routeCoords = _getRouteToStartCoordinates();
-  if (routeCoords.isNotEmpty) {
-    _setActiveNavigationRoute(routeCoords);
+    // ✅ FIX: Utiliser les vraies coordonnées d'itinéraire pour le bearing
+    final routeCoords = _getRouteToStartCoordinates();
+    if (routeCoords.isNotEmpty) {
+      _setActiveNavigationRoute(routeCoords);
+    }
+
+    _updateNavigationCameraWithRoute(
+      update.currentPosition[0],
+      update.currentPosition[1],
+    );
+
+    // Si on arrive au point de départ du parcours
+    if (update.isFinished) {
+      _onArrivedAtRouteStart();
+    }
   }
-
-  _updateNavigationCameraWithRoute(
-    update.currentPosition[0],
-    update.currentPosition[1],
-  );
-
-  // Si on arrive au point de départ du parcours
-  if (update.isFinished) {
-    _onArrivedAtRouteStart();
-  }
-}
 
   void _handleRouteNavigationUpdate(NavigationUpdate update) {
     setState(() {
@@ -682,93 +697,97 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       activeNavigationRoute = List.from(route);
       currentRouteSegmentIndex = 0;
     });
-    
+
     print('🛣️ Route active définie: ${route.length} points');
   }
 
   void _onArrivedAtRouteStart() {
-  // Arrêter la navigation vers le parcours
-  NavigationService.stopNavigation();
+    // Arrêter la navigation vers le parcours
+    NavigationService.stopNavigation();
 
-  setState(() {
-    isNavigatingToRoute = false;
-    navigationMode = 'none';
-    isNavigationMode = false;
-    routeToStartCoordinates = null; // ✅ FIX: Nettoyer l'itinéraire
-    activeNavigationRoute = null;
-  });
+    setState(() {
+      isNavigatingToRoute = false;
+      navigationMode = 'none';
+      isNavigationMode = false;
+      routeToStartCoordinates = null; // ✅ FIX: Nettoyer l'itinéraire
+      activeNavigationRoute = null;
+    });
 
-  // Proposer de démarrer le parcours
-  showDialog(
-    context: context,
-    barrierDismissible: false,
-    builder: (context) => AlertDialog(
-      backgroundColor: Colors.black,
-      title: Text(
-        'Point de départ atteint !',
-        style: context.titleMedium?.copyWith(color: Colors.white),
-      ),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            padding: EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.green.withAlpha(20),
-              borderRadius: BorderRadius.circular(12),
+    // Proposer de démarrer le parcours
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder:
+          (context) => AlertDialog(
+            backgroundColor: Colors.black,
+            title: Text(
+              'Point de départ atteint !',
+              style: context.titleMedium?.copyWith(color: Colors.white),
             ),
-            child: Column(
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
               children: [
-                HugeIcon(
-                  icon: HugeIcons.strokeRoundedCheckmarkCircle02,
-                  color: Colors.green,
-                  size: 48,
-                ),
-                12.h,
-                Text(
-                  'Vous êtes arrivé au point de départ du parcours !',
-                  style: context.bodyMedium?.copyWith(
-                    color: Colors.white,
+                Container(
+                  padding: EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.green.withAlpha(20),
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                    textAlign: TextAlign.center,
+                  child: Column(
+                    children: [
+                      HugeIcon(
+                        icon: HugeIcons.strokeRoundedCheckmarkCircle02,
+                        color: Colors.green,
+                        size: 48,
+                      ),
+                      12.h,
+                      Text(
+                        'Vous êtes arrivé au point de départ du parcours !',
+                        style: context.bodyMedium?.copyWith(
+                          color: Colors.white,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                  _showOriginalRoute(); // Restaurer l'affichage du parcours
+                  _switchToNormalView();
+                },
+                child: Text(
+                  'Plus tard',
+                  style: TextStyle(color: Colors.white70),
+                ),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                  _startRouteNavigation();
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: Colors.black,
+                ),
+                child: Text('Commencer le parcours'),
+              ),
+            ],
           ),
-        ],
-      ),
-      actions: [
-        TextButton(
-          onPressed: () {
-            Navigator.of(context).pop();
-            _showOriginalRoute(); // Restaurer l'affichage du parcours
-            _switchToNormalView();
-          },
-          child: Text('Plus tard', style: TextStyle(color: Colors.white70)),
-        ),
-        ElevatedButton(
-          onPressed: () {
-            Navigator.of(context).pop();
-            _startRouteNavigation();
-          },
-          style: ElevatedButton.styleFrom(
-            backgroundColor: AppColors.primary,
-            foregroundColor: Colors.black,
-          ),
-          child: Text('Commencer le parcours'),
-        ),
-      ],
-    ),
-  );
-}
+    );
+  }
 
   String _formatDistance(double distanceInMeters) {
-   if (distanceInMeters < 1000) {
-     return '${distanceInMeters.round()}m';
-   } else {
-     return '${(distanceInMeters / 1000).toStringAsFixed(1)}km';
-   }
-  } 
+    if (distanceInMeters < 1000) {
+      return '${distanceInMeters.round()}m';
+    } else {
+      return '${(distanceInMeters / 1000).toStringAsFixed(1)}km';
+    }
+  }
 
   Future<void> _switchToNavigationView() async {
     if (mapboxMap == null) return;
@@ -782,9 +801,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     // FIX: Configuration initiale de la caméra pour la navigation
     await mapboxMap!.setCamera(
       mp.CameraOptions(
-        zoom: 18.0,        // Zoom rapproché pour la navigation
-        pitch: 65.0,       // Vue en perspective (derrière l'épaule)
-        bearing: 0.0,      // Sera mis à jour selon la direction
+        zoom: 18.0, // Zoom rapproché pour la navigation
+        pitch: 65.0, // Vue en perspective (derrière l'épaule)
+        bearing: 0.0, // Sera mis à jour selon la direction
       ),
     );
 
@@ -803,13 +822,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   void _startNavigationPositionUpdates() {
     positionUpdateTimer?.cancel();
-    
+
     positionUpdateTimer = Timer.periodic(Duration(seconds: 1), (timer) {
       if (!isNavigationCameraActive || !isNavigationMode) {
         timer.cancel();
         return;
       }
-      
+
       // Mettre à jour la position utilisateur si disponible
       if (userLongitude != null && userLatitude != null) {
         _updateNavigationCamera(userLongitude!, userLatitude!);
@@ -831,7 +850,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
     // Calculer la direction de déplacement
     double bearing = _calculateMovementBearing();
-    
+
     // Lisser le changement de bearing pour éviter les mouvements brusques
     bearing = _smoothBearing(currentUserBearing, bearing);
     currentUserBearing = bearing;
@@ -840,20 +859,17 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       // FIX: Mettre à jour la caméra pour suivre l'utilisateur
       await mapboxMap!.flyTo(
         mp.CameraOptions(
-          center: mp.Point(
-            coordinates: mp.Position(longitude, latitude),
-          ),
-          zoom: 18.0,           // Zoom constant pour navigation
-          pitch: 65.0,          // Vue en perspective constante
-          bearing: bearing,     // Orientation selon le déplacement
+          center: mp.Point(coordinates: mp.Position(longitude, latitude)),
+          zoom: 18.0, // Zoom constant pour navigation
+          pitch: 65.0, // Vue en perspective constante
+          bearing: bearing, // Orientation selon le déplacement
         ),
         mp.MapAnimationOptions(
-          duration: 800,        // Animation fluide mais pas trop lente
+          duration: 800, // Animation fluide mais pas trop lente
         ),
       );
 
       print('🧭 Caméra mise à jour: bearing=${bearing.toStringAsFixed(1)}°');
-
     } catch (e) {
       print('❌ Erreur mise à jour caméra navigation: $e');
     }
@@ -861,9 +877,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   double _calculateRouteBearing() {
     // Si pas de route active, utiliser l'ancien système
-    if (activeNavigationRoute == null || 
+    if (activeNavigationRoute == null ||
         activeNavigationRoute!.isEmpty ||
-        userLongitude == null || 
+        userLongitude == null ||
         userLatitude == null) {
       return _calculateMovementBearing();
     }
@@ -871,14 +887,17 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     try {
       // 1. Trouver le segment de route le plus proche
       final currentSegmentIndex = _findNearestRouteSegment();
-      
+
       // 2. Calculer le bearing vers la suite de la route
-      final routeBearing = _calculateBearingToNextRouteSegment(currentSegmentIndex);
-      
-      print('🧭 Route bearing calculé: segment=$currentSegmentIndex, bearing=${routeBearing.toStringAsFixed(1)}°');
-      
+      final routeBearing = _calculateBearingToNextRouteSegment(
+        currentSegmentIndex,
+      );
+
+      print(
+        '🧭 Route bearing calculé: segment=$currentSegmentIndex, bearing=${routeBearing.toStringAsFixed(1)}°',
+      );
+
       return routeBearing;
-      
     } catch (e) {
       print('❌ Erreur calcul route bearing: $e');
       return _calculateMovementBearing(); // Fallback
@@ -889,10 +908,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     if (activeNavigationRoute == null || activeNavigationRoute!.isEmpty) {
       return 0;
     }
-    
+
     double minDistance = double.infinity;
     int nearestIndex = 0;
-    
+
     for (int i = 0; i < activeNavigationRoute!.length; i++) {
       final routePoint = activeNavigationRoute![i];
       final distance = _calculateDistance(
@@ -901,156 +920,152 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         routePoint[1], // latitude
         routePoint[0], // longitude
       );
-      
+
       if (distance < minDistance) {
         minDistance = distance;
         nearestIndex = i;
       }
     }
-    
+
     // Sauvegarder l'index pour optimiser les prochaines recherches
     currentRouteSegmentIndex = nearestIndex;
-    
-    print('📍 Segment le plus proche: $nearestIndex (distance: ${minDistance.toStringAsFixed(1)}m)');
-    
+
+    print(
+      '📍 Segment le plus proche: $nearestIndex (distance: ${minDistance.toStringAsFixed(1)}m)',
+    );
+
     return nearestIndex;
   }
 
   double _calculateBearingToNextRouteSegment(int currentIndex) {
-  if (activeNavigationRoute == null || 
-      activeNavigationRoute!.isEmpty ||
-      currentIndex >= activeNavigationRoute!.length - 1) {
-    return currentUserBearing; // Garder la direction actuelle
-  }
-  
-  // Point de la route le plus proche
-  final currentRoutePoint = activeNavigationRoute![currentIndex];
-  
-  // 1. Méthode simple : bearing vers le prochain point
-  final nextPoint = activeNavigationRoute![currentIndex + 1];
-  double bearing = _calculateBearing(
-    currentRoutePoint[1], currentRoutePoint[0], // lat, lon du point actuel
-    nextPoint[1], nextPoint[0], // lat, lon du point suivant
-  );
-  
-  // 2. Méthode avancée : regarder plus loin pour anticiper les virages
-  final lookAheadPoint = _findLookAheadPoint(currentIndex);
-  if (lookAheadPoint != null) {
-    // Calculer le bearing vers le point d'anticipation
-    bearing = _calculateBearing(
-      userLatitude!, userLongitude!, // Position actuelle de l'utilisateur
-      lookAheadPoint[1], lookAheadPoint[0], // Point d'anticipation
-    );
-    
-    print('👀 Look-ahead activé vers point distant de ${_calculateDistance(
-      userLatitude!, userLongitude!,
-      lookAheadPoint[1], lookAheadPoint[0]
-    ).toStringAsFixed(1)}m');
-  }
-  
-  return bearing;
-}
+    if (activeNavigationRoute == null ||
+        activeNavigationRoute!.isEmpty ||
+        currentIndex >= activeNavigationRoute!.length - 1) {
+      return currentUserBearing; // Garder la direction actuelle
+    }
 
-List<double>? _findLookAheadPoint(int currentIndex) {
-  if (activeNavigationRoute == null || 
-      currentIndex >= activeNavigationRoute!.length - 1) {
-    return null;
-  }
-  
-  double accumulatedDistance = 0.0;
-  
-  for (int i = currentIndex; i < activeNavigationRoute!.length - 1; i++) {
-    final point1 = activeNavigationRoute![i];
-    final point2 = activeNavigationRoute![i + 1];
-    
-    final segmentDistance = _calculateDistance(
-      point1[1], point1[0],
-      point2[1], point2[0],
+    // Point de la route le plus proche
+    final currentRoutePoint = activeNavigationRoute![currentIndex];
+
+    // 1. Méthode simple : bearing vers le prochain point
+    final nextPoint = activeNavigationRoute![currentIndex + 1];
+    double bearing = _calculateBearing(
+      currentRoutePoint[1],
+      currentRoutePoint[0], // lat, lon du point actuel
+      nextPoint[1],
+      nextPoint[0], // lat, lon du point suivant
     );
-    
-    accumulatedDistance += segmentDistance;
-    
-    // Si on a atteint la distance d'anticipation
-    if (accumulatedDistance >= lookAheadDistance) {
-      return point2;
+
+    // 2. Méthode avancée : regarder plus loin pour anticiper les virages
+    final lookAheadPoint = _findLookAheadPoint(currentIndex);
+    if (lookAheadPoint != null) {
+      // Calculer le bearing vers le point d'anticipation
+      bearing = _calculateBearing(
+        userLatitude!,
+        userLongitude!, // Position actuelle de l'utilisateur
+        lookAheadPoint[1],
+        lookAheadPoint[0], // Point d'anticipation
+      );
+
+      print(
+        '👀 Look-ahead activé vers point distant de ${_calculateDistance(userLatitude!, userLongitude!, lookAheadPoint[1], lookAheadPoint[0]).toStringAsFixed(1)}m',
+      );
+    }
+
+    return bearing;
+  }
+
+  List<double>? _findLookAheadPoint(int currentIndex) {
+    if (activeNavigationRoute == null ||
+        currentIndex >= activeNavigationRoute!.length - 1) {
+      return null;
+    }
+
+    double accumulatedDistance = 0.0;
+
+    for (int i = currentIndex; i < activeNavigationRoute!.length - 1; i++) {
+      final point1 = activeNavigationRoute![i];
+      final point2 = activeNavigationRoute![i + 1];
+
+      final segmentDistance = _calculateDistance(
+        point1[1],
+        point1[0],
+        point2[1],
+        point2[0],
+      );
+
+      accumulatedDistance += segmentDistance;
+
+      // Si on a atteint la distance d'anticipation
+      if (accumulatedDistance >= lookAheadDistance) {
+        return point2;
+      }
+    }
+
+    // Si la route est plus courte que la distance d'anticipation, retourner le dernier point
+    return activeNavigationRoute!.last;
+  }
+
+  double _getAdaptiveZoom(double speedMps) {
+    // Ajuster le zoom selon la vitesse
+    if (speedMps < 1.5) return 19.0; // Marche lente
+    if (speedMps < 3.0) return 18.0; // Marche rapide
+    if (speedMps < 8.0) return 17.0; // Course
+    return 16.0; // Vélo
+  }
+
+  double _getAdaptivePitch(double speedMps) {
+    // Plus on va vite, plus on regarde loin (pitch moins prononcé)
+    if (speedMps < 1.5) return 70.0; // Vue très inclinée pour marche
+    if (speedMps < 3.0) return 65.0; // Vue normale pour course
+    return 55.0; // Vue plus plate pour vélo
+  }
+
+  void _updateNavigationCameraWithRoute(
+    double longitude,
+    double latitude,
+  ) async {
+    if (mapboxMap == null || !isNavigationCameraActive) return;
+
+    // Ajouter la position actuelle à l'historique
+    final currentPosition = [longitude, latitude];
+    userPositionHistory.add(currentPosition);
+
+    if (userPositionHistory.length > navigationConfig.positionHistorySize) {
+      userPositionHistory.removeAt(0);
+    }
+
+    // ✅ FIX: Utiliser le bearing basé sur la route au lieu du mouvement
+    double bearing = _calculateRouteBearing();
+
+    // Lisser le changement de bearing
+    bearing = _smoothBearing(currentUserBearing, bearing);
+    currentUserBearing = bearing;
+
+    // Adapter selon la vitesse si disponible
+    final adaptiveZoom = _getAdaptiveZoom(
+      0.0,
+    ); // TODO: intégrer la vitesse réelle
+    final adaptivePitch = _getAdaptivePitch(0.0);
+
+    try {
+      await mapboxMap!.flyTo(
+        mp.CameraOptions(
+          center: mp.Point(coordinates: mp.Position(longitude, latitude)),
+          zoom: adaptiveZoom,
+          pitch: adaptivePitch,
+          bearing: bearing,
+        ),
+        mp.MapAnimationOptions(duration: navigationConfig.updateIntervalMs),
+      );
+
+      print(
+        '🧭 Caméra route: bearing=${bearing.toStringAsFixed(1)}° (vers route)',
+      );
+    } catch (e) {
+      print('❌ Erreur caméra route: $e');
     }
   }
-  
-  // Si la route est plus courte que la distance d'anticipation, retourner le dernier point
-  return activeNavigationRoute!.last;
-}
-
-double _getAdaptiveZoom(double speedMps) {
-  // Ajuster le zoom selon la vitesse
-  if (speedMps < 1.5) return 19.0;      // Marche lente
-  if (speedMps < 3.0) return 18.0;      // Marche rapide
-  if (speedMps < 8.0) return 17.0;      // Course
-  return 16.0;                          // Vélo
-}
-
-double _getAdaptivePitch(double speedMps) {
-  // Plus on va vite, plus on regarde loin (pitch moins prononcé)
-  if (speedMps < 1.5) return 70.0;      // Vue très inclinée pour marche
-  if (speedMps < 3.0) return 65.0;      // Vue normale pour course
-  return 55.0;                          // Vue plus plate pour vélo
-}
-
-void _updateNavigationCameraWithRoute(double longitude, double latitude) async {
-  if (mapboxMap == null || !isNavigationCameraActive) return;
-
-  // Ajouter la position actuelle à l'historique
-  final currentPosition = [longitude, latitude];
-  userPositionHistory.add(currentPosition);
-
-  if (userPositionHistory.length > navigationConfig.positionHistorySize) {
-    userPositionHistory.removeAt(0);
-  }
-
-  // ✅ FIX: Utiliser le bearing basé sur la route au lieu du mouvement
-  double bearing = _calculateRouteBearing();
-  
-  // Lisser le changement de bearing
-  bearing = _smoothBearing(currentUserBearing, bearing);
-  currentUserBearing = bearing;
-
-  // Adapter selon la vitesse si disponible
-  final adaptiveZoom = _getAdaptiveZoom(0.0); // TODO: intégrer la vitesse réelle
-  final adaptivePitch = _getAdaptivePitch(0.0);
-
-  try {
-    await mapboxMap!.flyTo(
-      mp.CameraOptions(
-        center: mp.Point(coordinates: mp.Position(longitude, latitude)),
-        zoom: adaptiveZoom,
-        pitch: adaptivePitch,
-        bearing: bearing,
-      ),
-      mp.MapAnimationOptions(
-        duration: navigationConfig.updateIntervalMs,
-      ),
-    );
-
-    print('🧭 Caméra route: bearing=${bearing.toStringAsFixed(1)}° (vers route)');
-
-  } catch (e) {
-    print('❌ Erreur caméra route: $e');
-  }
-}
-
-void _adjustLookAheadDistance(double speed) {
-  // Plus on va vite, plus on regarde loin
-  if (speed < 1.5) {        // Marche lente
-    lookAheadDistance = 50.0;
-  } else if (speed < 3.0) { // Marche rapide
-    lookAheadDistance = 100.0;
-  } else if (speed < 8.0) { // Course
-    lookAheadDistance = 150.0;
-  } else {                  // Vélo
-    lookAheadDistance = 200.0;
-  }
-  
-  print('👀 Look-ahead ajusté: ${lookAheadDistance.toStringAsFixed(0)}m pour vitesse ${speed.toStringAsFixed(1)}m/s');
-}
 
   double _calculateMovementBearing() {
     if (userPositionHistory.length < 2) {
@@ -1058,9 +1073,10 @@ void _adjustLookAheadDistance(double speed) {
     }
 
     // Utiliser les 3 dernières positions pour une direction plus stable
-    final recentPositions = userPositionHistory.length >= 3 
-        ? userPositionHistory.sublist(userPositionHistory.length - 3)
-        : userPositionHistory;
+    final recentPositions =
+        userPositionHistory.length >= 3
+            ? userPositionHistory.sublist(userPositionHistory.length - 3)
+            : userPositionHistory;
 
     if (recentPositions.length < 2) {
       return currentUserBearing;
@@ -1072,7 +1088,7 @@ void _adjustLookAheadDistance(double speed) {
 
     // Vérifier que l'utilisateur s'est effectivement déplacé
     final distance = _calculateDistance(start[1], start[0], end[1], end[0]);
-    
+
     if (distance < 5.0) {
       // Mouvement trop petit (moins de 5m), garder la direction actuelle
       return currentUserBearing;
@@ -1080,9 +1096,11 @@ void _adjustLookAheadDistance(double speed) {
 
     // Calculer le bearing réel
     final bearing = _calculateBearing(start[1], start[0], end[1], end[0]);
-    
-    print('📍 Mouvement détecté: ${distance.toStringAsFixed(1)}m, bearing=${bearing.toStringAsFixed(1)}°');
-    
+
+    print(
+      '📍 Mouvement détecté: ${distance.toStringAsFixed(1)}m, bearing=${bearing.toStringAsFixed(1)}°',
+    );
+
     return bearing;
   }
 
@@ -1090,18 +1108,19 @@ void _adjustLookAheadDistance(double speed) {
     final double dLon = (lon2 - lon1) * math.pi / 180;
     final double lat1Rad = lat1 * math.pi / 180;
     final double lat2Rad = lat2 * math.pi / 180;
-    
+
     final double y = math.sin(dLon) * math.cos(lat2Rad);
-    final double x = math.cos(lat1Rad) * math.sin(lat2Rad) - 
-                    math.sin(lat1Rad) * math.cos(lat2Rad) * math.cos(dLon);
-    
+    final double x =
+        math.cos(lat1Rad) * math.sin(lat2Rad) -
+        math.sin(lat1Rad) * math.cos(lat2Rad) * math.cos(dLon);
+
     final double bearing = math.atan2(y, x) * 180 / math.pi;
     return (bearing + 360) % 360;
   }
 
   double _smoothBearing(double currentBearing, double targetBearing) {
     double diff = targetBearing - currentBearing;
-    
+
     // Gérer le passage par 0° (nord)
     if (diff > 180) {
       diff -= 360;
@@ -1111,20 +1130,21 @@ void _adjustLookAheadDistance(double speed) {
 
     // ✅ FIX: Ajuster la vitesse de changement selon l'angle
     double maxBearingChange = navigationConfig.maxBearingChange;
-    
+
     // Pour les grands virages (>90°), permettre des changements plus rapides
     if (diff.abs() > 90) {
-      maxBearingChange = 25.0; // Changements plus rapides pour les virages serrés
+      maxBearingChange =
+          25.0; // Changements plus rapides pour les virages serrés
     } else if (diff.abs() > 45) {
       maxBearingChange = 20.0; // Changements modérés pour les virages moyens
     }
-    
+
     if (diff.abs() > maxBearingChange) {
       diff = diff.sign * maxBearingChange;
     }
 
     double newBearing = currentBearing + diff;
-    
+
     // Normaliser entre 0-360
     if (newBearing < 0) {
       newBearing += 360;
@@ -1133,34 +1153,6 @@ void _adjustLookAheadDistance(double speed) {
     }
 
     return newBearing;
-  }
-
-  void _updateNavigationPosition(NavigationUpdate update) async {
-    if (mapboxMap == null || update.currentPosition.isEmpty) return;
-
-    // FIX: Utiliser la caméra de navigation au lieu du flyTo basique
-    if (isNavigationCameraActive) {
-      _updateNavigationCamera(
-        update.currentPosition[0], // longitude
-        update.currentPosition[1], // latitude
-      );
-    } else {
-      // Fallback: comportement original si la caméra navigation n'est pas active
-      await mapboxMap!.flyTo(
-        mp.CameraOptions(
-          center: mp.Point(
-            coordinates: mp.Position(
-              update.currentPosition[0],
-              update.currentPosition[1],
-            ),
-          ),
-          zoom: 17.0,
-          pitch: 60.0,
-          bearing: update.bearing,
-        ),
-        mp.MapAnimationOptions(duration: 500),
-      );
-    }
   }
 
   void _stopNavigation() async {
@@ -1183,16 +1175,14 @@ void _adjustLookAheadDistance(double speed) {
 
     await _switchToNormalView();
 
-    final message = isNavigatingToRoute 
-        ? 'Navigation vers le parcours arrêtée'
-        : 'Navigation du parcours terminée';
+    final message =
+        isNavigatingToRoute
+            ? 'Navigation vers le parcours arrêtée'
+            : 'Navigation du parcours terminée';
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(
-          message,
-          style: TextStyle(color: Colors.white),
-        ),
+        content: Text(message, style: TextStyle(color: Colors.white)),
         backgroundColor: Colors.orange,
       ),
     );
@@ -1215,9 +1205,9 @@ void _adjustLookAheadDistance(double speed) {
     // Remettre la vue normale
     await mapboxMap!.setCamera(
       mp.CameraOptions(
-        pitch: 0.0,     // Vue plate
-        bearing: 0.0,   // Nord vers le haut
-        zoom: 13.0,     // Zoom moins rapproché
+        pitch: 0.0, // Vue plate
+        bearing: 0.0, // Nord vers le haut
+        zoom: 13.0, // Zoom moins rapproché
       ),
     );
 
@@ -1273,19 +1263,6 @@ void _adjustLookAheadDistance(double speed) {
         mp.MapAnimationOptions(duration: 1000),
       );
     }
-
-    // 4) Dessin du halo
-    final camState = await mapboxMap!.getCameraState();
-    final zoom = camState.zoom;
-    final radiusPx = _calculateCircleRadiusForZoom(zoom);
-    await circleAnnotationManager!.create(
-      mp.CircleAnnotationOptions(
-        geometry: mp.Point(coordinates: mp.Position(longitude, latitude)),
-        circleRadius: radiusPx,
-        circleColor: AppColors.primary.withAlpha(50).toARGB32(),
-        circleOpacity: 0.3,
-      ),
-    );
 
     // 5) Marqueur rouge (facultatif)
     if (addMarker) {
@@ -1357,7 +1334,8 @@ void _adjustLookAheadDistance(double speed) {
               latitude: pos.latitude,
               longitude: pos.longitude,
               userPosition: true,
-              moveCamera: !isNavigationCameraActive, // FIX: Ne pas bouger la caméra si en mode navigation
+              moveCamera:
+                  !isNavigationCameraActive, // FIX: Ne pas bouger la caméra si en mode navigation
               addMarker: false,
             );
           }
@@ -1373,8 +1351,6 @@ void _adjustLookAheadDistance(double speed) {
               ),
             ),
           );
-
-          _updateRadiusCircle(pos.longitude, pos.latitude);
         }
       } else {
         mapboxMap?.setCamera(
@@ -1395,24 +1371,25 @@ void _adjustLookAheadDistance(double speed) {
     // Enregistrer la carte dans le BLoC
     context.read<MapStyleBloc>().add(MapRegistered(mapboxMap));
 
-    mapboxMap.location.updateSettings(mp.LocationComponentSettings(enabled: true, pulsingEnabled: true));
+    mapboxMap.location.updateSettings(
+      mp.LocationComponentSettings(enabled: true, pulsingEnabled: true),
+    );
 
     // Créer le gestionnaire d'annotations
-    pointAnnotationManager = await mapboxMap.annotations.createPointAnnotationManager();
-    circleAnnotationManager = await mapboxMap.annotations.createCircleAnnotationManager();
+    pointAnnotationManager =
+        await mapboxMap.annotations.createPointAnnotationManager();
+    circleAnnotationManager =
+        await mapboxMap.annotations.createCircleAnnotationManager();
 
     // Masquer les éléments d'interface
     await mapboxMap.compass.updateSettings(mp.CompassSettings(enabled: false));
-    await mapboxMap.attribution.updateSettings(mp.AttributionSettings(enabled: false));
+    await mapboxMap.attribution.updateSettings(
+      mp.AttributionSettings(enabled: false),
+    );
     await mapboxMap.logo.updateSettings(mp.LogoSettings(enabled: false));
-    await mapboxMap.scaleBar.updateSettings(mp.ScaleBarSettings(enabled: false));
-
-    // Configurer le listener de zoom pour adapter le rayon
-    mapboxMap.setOnMapZoomListener((context) {
-      if (currentLongitude != null && currentLatitude != null) {
-        _updateRadiusCircle(currentLongitude!, currentLatitude!);
-      }
-    });
+    await mapboxMap.scaleBar.updateSettings(
+      mp.ScaleBarSettings(enabled: false),
+    );
 
     // Configurer le listener de scroll pour désactiver le suivi
     mapboxMap.setOnMapMoveListener((context) {
@@ -1422,49 +1399,6 @@ void _adjustLookAheadDistance(double speed) {
           isTrackingUser = false;
         });
       }
-    });
-
-    // Si on a déjà une position, afficher le cercle
-    if (currentLongitude != null && currentLatitude != null) {
-      _updateRadiusCircle(currentLongitude!, currentLatitude!);
-    }
-  }
-
-  double _calculateCircleRadiusForZoom(double zoom) {
-    // Le rayon en pixels doit augmenter avec le zoom pour représenter toujours la distance en km
-    final parameters = context.read<RouteParametersBloc>().state.parameters;
-    double baseRadius = parameters.searchRadius;
-    double metersPerPixel =
-        156543.03392 *
-        math.cos((currentLatitude ?? 0) * math.pi / 180) /
-        math.pow(2, zoom);
-    return baseRadius / metersPerPixel;
-  }
-
-  Future<void> _updateRadiusCircle(double longitude, double latitude) async {
-    if (circleAnnotationManager == null || mapboxMap == null) return;
-
-    // 1) supprimer **tous** les anciens cercles
-    await circleAnnotationManager!.deleteAll();
-
-    // 2) recalc du zoom / pixel → radius
-    final cameraState = await mapboxMap!.getCameraState();
-    final currentZoom = cameraState.zoom;
-    double radiusInPixels = _calculateCircleRadiusForZoom(currentZoom);
-
-    // 3) recréer le cercle UNIQUE
-    radiusCircle = await circleAnnotationManager!.create(
-      mp.CircleAnnotationOptions(
-        geometry: mp.Point(coordinates: mp.Position(longitude, latitude)),
-        circleRadius: radiusInPixels,
-        circleColor: AppColors.primary.withAlpha(100).toARGB32(),
-        circleOpacity: 0.3,
-      ),
-    );
-
-    setState(() {
-      currentLongitude = longitude;
-      currentLatitude = latitude;
     });
   }
 
@@ -1499,9 +1433,6 @@ void _adjustLookAheadDistance(double speed) {
       ),
       mp.MapAnimationOptions(duration: 1500),
     );
-
-    // Mettre à jour le cercle de rayon
-    await _updateRadiusCircle(longitude, latitude);
 
     // Créer un CircleAnnotationManager si pas déjà fait
     markerCircleManager ??=
@@ -1548,31 +1479,10 @@ void _adjustLookAheadDistance(double speed) {
           startLongitude: currentLongitude ?? userLongitude ?? 0.0,
           startLatitude: currentLatitude ?? userLatitude ?? 0.0,
           generateRoute: _handleRouteGeneration,
-          onRadiusChanged: (newRadius) async {
-            setState(() {
-              defaultRadius = newRadius;
-            });
-            // Mettre à jour le cercle
-            if (currentLongitude != null && currentLatitude != null) {
-              await _updateRadiusCircle(currentLongitude!, currentLatitude!);
-            }
-          },
         );
       },
     );
   }
-
-  // void openMapsStyles() {
-  //   showModalBottomSheet(
-  //     isScrollControlled: true,
-  //     isDismissible: true,
-  //     enableDrag: true,
-  //     context: context,
-  //     builder: (modalCtx) {
-  //       return MapsStylesScreen();
-  //     }
-  //   );
-  // }
 
   void _onSearchCleared() async {
     // Supprimer les marqueurs de localisation
@@ -1584,9 +1494,6 @@ void _adjustLookAheadDistance(double speed) {
         currentLongitude = userLongitude;
         currentLatitude = userLatitude;
       });
-
-      // Mettre à jour le cercle autour de la position utilisateur
-      await _updateRadiusCircle(userLongitude!, userLatitude!);
 
       // Mettre à jour la position dans le BLoC
       context.read<RouteParametersBloc>().add(
@@ -1622,9 +1529,6 @@ void _adjustLookAheadDistance(double speed) {
       await Future.delayed(Duration(milliseconds: 1100));
 
       _onSearchCleared();
-
-      // Forcer la mise à jour du cercle après l'animation
-      await _updateRadiusCircle(userLongitude!, userLatitude!);
     } else {
       // Si la position n'est pas disponible, essayer de l'obtenir
       _setupPositionTracking();
@@ -1882,14 +1786,15 @@ void _adjustLookAheadDistance(double speed) {
       double zoom = 13.0;
       if (maxDiff > 0.1) {
         zoom = 11.0;
-      } else if (maxDiff > 0.05)
-        {zoom = 12.0;}
-      else if (maxDiff > 0.02)
-        {zoom = 13.0;}
-      else if (maxDiff > 0.01)
-        {zoom = 14.0;}
-      else
-        {zoom = 15.0;}
+      } else if (maxDiff > 0.05) {
+        zoom = 12.0;
+      } else if (maxDiff > 0.02) {
+        zoom = 13.0;
+      } else if (maxDiff > 0.01) {
+        zoom = 14.0;
+      } else {
+        zoom = 15.0;
+      }
 
       await mapboxMap!.flyTo(
         mp.CameraOptions(
@@ -2062,8 +1967,8 @@ void _adjustLookAheadDistance(double speed) {
     for (int i = 0; i < coords.length - 1; i++) {
       if (coords[i].length >= 2 && coords[i + 1].length >= 2) {
         total += _calculateDistance(
-          coords[i][1],     // lat1
-          coords[i][0],     // lon1
+          coords[i][1], // lat1
+          coords[i][0], // lon1
           coords[i + 1][1], // lat2
           coords[i + 1][0], // lon2
         );
@@ -2145,18 +2050,6 @@ void _adjustLookAheadDistance(double speed) {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         margin: EdgeInsets.all(16),
         duration: Duration(seconds: 4),
-        action: SnackBarAction(
-          label: 'Réduire zone',
-          textColor: Colors.white,
-          onPressed: () {
-            setState(() {
-              defaultRadius = defaultRadius * 0.7; // Réduire de 30%
-            });
-            if (currentLongitude != null && currentLatitude != null) {
-              _updateRadiusCircle(currentLongitude!, currentLatitude!);
-            }
-          },
-        ),
       ),
     );
   }
@@ -2177,9 +2070,6 @@ void _adjustLookAheadDistance(double speed) {
 
     // Supprimer les marqueurs précédents s'ils existent
     await _clearLocationMarkers();
-
-    // redessiner le cercle
-    await _updateRadiusCircle(lon, lat);
 
     // Créer un CircleAnnotationManager si pas déjà fait
     markerCircleManager ??=
@@ -2204,61 +2094,67 @@ void _adjustLookAheadDistance(double speed) {
   }
 
   Future<void> _clearRoute() async {
-  // Arrêter la navigation si active
-  if (isNavigationMode) {
-    _stopNavigation();
-  }
+    // Arrêter la navigation si active
+    if (isNavigationMode) {
+      _stopNavigation();
+    }
 
-  // Nettoyer toutes les polylignes
-  if (polylineManager != null) {
-    if (currentRoutePolyline != null) {
-      await polylineManager!.delete(currentRoutePolyline!);
-      currentRoutePolyline = null;
+    // Nettoyer toutes les polylignes
+    if (polylineManager != null) {
+      if (currentRoutePolyline != null) {
+        await polylineManager!.delete(currentRoutePolyline!);
+        currentRoutePolyline = null;
+      }
+      if (routeToStartPolyline != null) {
+        await polylineManager!.delete(routeToStartPolyline!);
+        routeToStartPolyline = null;
+      }
+      originalRoutePolyline = null;
     }
-    if (routeToStartPolyline != null) {
-      await polylineManager!.delete(routeToStartPolyline!);
-      routeToStartPolyline = null;
+
+    // Nettoyer les marqueurs de début/fin
+    if (markerCircleManager != null) {
+      await markerCircleManager!.deleteAll();
+      locationMarkers.clear();
     }
-    originalRoutePolyline = null;
+
+    setState(() {
+      generatedRouteCoordinates = null;
+      generatedRouteStats = null;
+      generatedRouteFile = null;
+      isNavigatingToRoute = false;
+      navigationMode = 'none';
+
+      // Nettoyer les variables de navigation
+      routeToStartCoordinates = null;
+      activeNavigationRoute = null;
+      currentRouteSegmentIndex = 0;
+    });
+
+    // Réafficher le marqueur de position si nécessaire
+    if (currentLongitude != null &&
+        currentLatitude != null &&
+        !isTrackingUser) {
+      _onLocationSelected(
+        currentLongitude!,
+        currentLatitude!,
+        "Position actuelle",
+      );
+    }
   }
-  
-  // Nettoyer les marqueurs de début/fin
-  if (markerCircleManager != null) {
-    await markerCircleManager!.deleteAll();
-    locationMarkers.clear();
-  }
-  
-  setState(() {
-    generatedRouteCoordinates = null;
-    generatedRouteStats = null;
-    generatedRouteFile = null;
-    isNavigatingToRoute = false;
-    navigationMode = 'none';
-    
-    // ✅ FIX: Nettoyer les variables de navigation
-    routeToStartCoordinates = null;
-    activeNavigationRoute = null;
-    currentRouteSegmentIndex = 0;
-  });
-  
-  // Réafficher le marqueur de position si nécessaire
-  if (currentLongitude != null && currentLatitude != null && !isTrackingUser) {
-    _onLocationSelected(currentLongitude!, currentLatitude!, "Position actuelle");
-  }
-}
 
   void _shareCurrentRoute() async {
     if (generatedRouteFile == null) {
       final distance = _parseDistance(generatedRouteStats?['distance_km']);
       final params = ShareParams(
         text: 'Mon parcours RunAway de ${distance.toStringAsFixed(1)} km généré avec l\'application RunAway',
-        files: [XFile('${generatedRouteFile!.path}/image.jpg')], 
+        files: [XFile('${generatedRouteFile!.path}/image.jpg')],
       );
 
       final result = await SharePlus.instance.share(params);
 
       if (result.status == ShareResultStatus.success) {
-          print('Thank you for sharing the picture!');
+        print('Thank you for sharing the picture!');
       }
     }
   }
@@ -2267,53 +2163,43 @@ void _adjustLookAheadDistance(double speed) {
   Widget build(BuildContext context) {
     return BlocBuilder<MapStyleBloc, MapStyleState>(
       builder: (context, mapStyleState) {
-        return BlocListener<RouteParametersBloc, RouteParametersState>(
-          listenWhen:
-              (previous, current) =>
-                  previous.parameters.searchRadius !=
-                  current.parameters.searchRadius,
-          listener: (context, state) {
-            if (currentLongitude != null && currentLatitude != null) {
-              _updateRadiusCircle(currentLongitude!, currentLatitude!);
-            }
-          },
-          child: Scaffold(
-            extendBody: true,
-            resizeToAvoidBottomInset: false,
-            body: Stack(
-              alignment: Alignment.bottomCenter,
-              children: [
-                // Carte
-                SizedBox(
-                  width: MediaQuery.of(context).size.width,
-                  height: MediaQuery.of(context).size.height,
-                  child: mp.MapWidget(
-                    key: ValueKey("mapWidget"),
-                    onMapCreated: _onMapCreated,
-                    styleUri: MapboxStyles.DARK,
-                  ),
+        return Scaffold(
+          extendBody: true,
+          resizeToAvoidBottomInset: false,
+          body: Stack(
+            alignment: Alignment.bottomCenter,
+            children: [
+              // Carte
+              SizedBox(
+                width: MediaQuery.of(context).size.width,
+                height: MediaQuery.of(context).size.height,
+                child: mp.MapWidget(
+                  key: ValueKey("mapWidget"),
+                  onMapCreated: _onMapCreated,
+                  styleUri: MapboxStyles.DARK,
                 ),
-
-                if (!isNavigationMode) // FIX: Masquer en mode navigation
-                  IgnorePointer(
-                    ignoring: true,
-                    child: Container(
-                      height: MediaQuery.of(context).size.height / 3,
-                      decoration: BoxDecoration(
-                        gradient: SmoothGradient(
-                          from: Colors.black.withValues(alpha: 0),
-                          to: Colors.black,
-                          curve: Curves.linear,
-                          steps: 25,
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                        ),
+              ),
+        
+              if (!isNavigationMode) // Masquer en mode navigation
+                IgnorePointer(
+                  ignoring: true,
+                  child: Container(
+                    height: MediaQuery.of(context).size.height / 3,
+                    decoration: BoxDecoration(
+                      gradient: SmoothGradient(
+                        from: Colors.black.withValues(alpha: 0),
+                        to: Colors.black,
+                        curve: Curves.linear,
+                        steps: 25,
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
                       ),
                     ),
                   ),
-
-                // Interface de navigation (overlay)
-                if (isNavigationMode)
+                ),
+        
+              // Interface de navigation (overlay)
+              if (isNavigationMode)
                 Positioned(
                   top: MediaQuery.of(context).padding.top + 10,
                   left: 15,
@@ -2327,183 +2213,111 @@ void _adjustLookAheadDistance(double speed) {
                     isNavigatingToRoute: isNavigatingToRoute, // Nouveau paramètre
                   ),
                 ),
-
-                // Interface normale (masquée en mode navigation)
-                if (!isNavigationMode)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 30.0),
-                    child: SizedBox(
-                      width: MediaQuery.of(context).size.width,
-                      height: MediaQuery.of(context).size.height,
-                      child: SafeArea(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Padding(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 15.0,
-                              ),
-                              child: LocationSearchBar(
-                                onLocationSelected: _onLocationSelected,
-                                userLongitude: userLongitude,
-                                userLatitude: userLatitude,
+        
+              // Interface normale (masquée en mode navigation)
+              if (!isNavigationMode)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 30.0),
+                  child: SizedBox(
+                    width: MediaQuery.of(context).size.width,
+                    height: MediaQuery.of(context).size.height,
+                    child: SafeArea(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 15.0,
+                            ),
+                            child: LocationSearchBar(
+                              onLocationSelected: _onLocationSelected,
+                              userLongitude: userLongitude,
+                              userLatitude: userLatitude,
+                            ),
+                          ),
+        
+                          Expanded(
+                            child: Padding(
+                              padding: const EdgeInsets.only(right: 15.0),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.end,
+                                crossAxisAlignment: CrossAxisAlignment.end,
+                                children: [
+                                  Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      IconBtn(
+                                        padding: 10.0,
+                                        icon: HugeIcons.strokeRoundedGpsOff02,
+                                        onPressed: !isTrackingUser
+                                          ? () async => await _lockPositionOnScreenCenter()
+                                          : null,
+                                        iconColor: isTrackingUser
+                                          ? Colors.white38
+                                          : Colors.white,
+                                      ),
+                                      15.h,
+                                      IconBtn(
+                                        padding: 10.0,
+                                        icon: isTrackingUser
+                                          ? HugeIcons.solidRoundedLocationShare02
+                                          : HugeIcons.strokeRoundedLocationShare02,
+                                        onPressed: _goToUserLocation,
+                                        iconColor: isTrackingUser
+                                          ? AppColors.primary
+                                          : Colors.white,
+                                      ),
+                                      15.h,
+                                      IconBtn(
+                                        padding: 10.0,
+                                        icon: HugeIcons.strokeRoundedAiMagic,
+                                        onPressed: openGenerator,
+                                      ),
+                                    ],
+                                  ),
+                                ],
                               ),
                             ),
-
-                            Expanded(
-                              child: Padding(
-                                padding: const EdgeInsets.only(right: 15.0),
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.end,
-                                  crossAxisAlignment: CrossAxisAlignment.end,
-                                  children: [
-                                    Column(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        IconBtn(
-                                          padding: 10.0,
-                                          icon: HugeIcons.strokeRoundedGpsOff02,
-                                          onPressed:
-                                              !isTrackingUser
-                                                  ? () async =>
-                                                      await _lockPositionOnScreenCenter()
-                                                  : null,
-                                          iconColor:
-                                              isTrackingUser
-                                                  ? Colors.white38
-                                                  : Colors.white,
-                                        ),
-                                        15.h,
-                                        IconBtn(
-                                          padding: 10.0,
-                                          icon:
-                                              isTrackingUser
-                                                  ? HugeIcons
-                                                      .solidRoundedLocationShare02
-                                                  : HugeIcons
-                                                      .strokeRoundedLocationShare02,
-                                          onPressed: _goToUserLocation,
-                                          iconColor:
-                                              isTrackingUser
-                                                  ? AppColors.primary
-                                                  : Colors.white,
-                                        ),
-                                        15.h,
-                                        IconBtn(
-                                          padding: 10.0,
-                                          icon: HugeIcons.strokeRoundedAiMagic,
-                                          onPressed: openGenerator,
-                                        ),
-                                      ],
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                            // 20.h,
-                            // IconBtn(
-                            //   icon: HugeIcons.strokeRoundedAppleIntelligence,
-                            //   label: isGenerateEnabled
-                            //       ? "Génération en cours..."
-                            //       : generatedRouteCoordinates != null
-                            //           ? "Effacer d'abord la route"
-                            //           : "Créer un parcours",
-                            //   onPressed: generatedRouteCoordinates != null
-                            //       ? null
-                            //       : () => _handleRouteGeneration(),
-                            // ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-
-                if (isGenerateEnabled) LoadingOverlay(),
-
-                // // FIX: Indicateur de navigation active
-                //                 if (NavigationService.isNavigating)
-                //                 Positioned(
-                //                   top: MediaQuery.of(context).padding.top + 60,
-                //                   left: 15,
-                //                   right: 15,
-                //                   child: Container(
-                //                     padding: EdgeInsets.all(12),
-                //                     decoration: BoxDecoration(
-                //                       color: Colors.green,
-                //                       borderRadius: BorderRadius.circular(12),
-                //                       boxShadow: [
-                //                         BoxShadow(
-                //                           color: Colors.black.withOpacity(0.2),
-                //                           blurRadius: 10,
-                //                           offset: Offset(0, 2),
-                //                         ),
-                //                       ],
-                //                     ),
-                //                     child: Row(
-                //                       children: [
-                //                         Icon(Icons.navigation, color: Colors.white, size: 20),
-                //                         8.w,
-                //                         Expanded(
-                //                           child: Text(
-                //                             'Navigation en cours',
-                //                             style: context.bodySmall?.copyWith(
-                //                               color: Colors.white,
-                //                               fontWeight: FontWeight.w600,
-                //                             ),
-                //                           ),
-                //                         ),
-                //                         GestureDetector(
-                //                           onTap: _stopNavigation,
-                //                           child: Container(
-                //                             padding: EdgeInsets.all(4),
-                //                             child: Icon(
-                //                               Icons.close,
-                //                               color: Colors.white,
-                //                               size: 18,
-                //                             ),
-                //                           ),
-                //                         ),
-                //                       ],
-                //                     ),
-                //                   ),
-                //                 ),
-
-                // RouteInfoCard (masqué en mode navigation)
-                if (generatedRouteCoordinates != null &&
-                    generatedRouteStats != null &&
-                    !isNavigationMode) // FIX: Masquer pendant la navigation
-                  Positioned(
-                    bottom: MediaQuery.of(context).padding.bottom + 20,
-                    left: 15,
-                    right: 15,
-                    child: Container(
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(20),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.3),
-                            spreadRadius: 3,
-                            blurRadius: 15,
-                            offset: Offset(0, 5),
                           ),
                         ],
                       ),
-                      child: RouteInfoCard(
-                        distance: _parseDistance(
-                          generatedRouteStats!['distance_km'],
-                        ),
-                        isLoop:
-                            generatedRouteStats!['is_loop'] as bool? ?? true,
-                        waypointCount:
-                            generatedRouteStats!['points_count'] as int? ?? 0,
-                        onClear: _clearRoute,
-                        onNavigate: _startNavigation,
-                        onShare: _shareCurrentRoute,
-                      ),
                     ),
                   ),
-              ],
-            ),
+                ),
+        
+              if (isGenerateEnabled) LoadingOverlay(),
+        
+              // RouteInfoCard (masqué en mode navigation)
+              if (generatedRouteCoordinates != null && generatedRouteStats != null && !isNavigationMode) // Masquer pendant la navigation
+                Positioned(
+                  bottom: MediaQuery.of(context).padding.bottom + 20,
+                  left: 15,
+                  right: 15,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(20),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.3),
+                          spreadRadius: 3,
+                          blurRadius: 15,
+                          offset: Offset(0, 5),
+                        ),
+                      ],
+                    ),
+                    child: RouteInfoCard(
+                      distance: _parseDistance(
+                        generatedRouteStats!['distance_km'],
+                      ),
+                      isLoop: generatedRouteStats!['is_loop'] as bool? ?? true,
+                      waypointCount: generatedRouteStats!['points_count'] as int? ?? 0,
+                      onClear: _clearRoute,
+                      onNavigate: _startNavigation,
+                      onShare: _shareCurrentRoute,
+                    ),
+                  ),
+                ),
+            ],
           ),
         );
       },

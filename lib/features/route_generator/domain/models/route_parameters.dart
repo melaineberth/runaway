@@ -7,7 +7,6 @@ class RouteParameters {
   final TerrainType terrainType;
   final UrbanDensity urbanDensity;
   final double distanceKm;
-  final double searchRadius;
   final double elevationGain;
   final double startLongitude;
   final double startLatitude;
@@ -21,7 +20,6 @@ class RouteParameters {
     required this.terrainType,
     required this.urbanDensity,
     required this.distanceKm,
-    required this.searchRadius,
     required this.elevationGain,
     required this.startLongitude,
     required this.startLatitude,
@@ -36,7 +34,6 @@ class RouteParameters {
     TerrainType? terrainType,
     UrbanDensity? urbanDensity,
     double? distanceKm,
-    double? searchRadius,
     double? elevationGain,
     double? startLongitude,
     double? startLatitude,
@@ -50,7 +47,6 @@ class RouteParameters {
       terrainType: terrainType ?? this.terrainType,
       urbanDensity: urbanDensity ?? this.urbanDensity,
       distanceKm: distanceKm ?? this.distanceKm,
-      searchRadius: searchRadius ?? this.searchRadius,
       elevationGain: elevationGain ?? this.elevationGain,
       startLongitude: startLongitude ?? this.startLongitude,
       startLatitude: startLatitude ?? this.startLatitude,
@@ -66,7 +62,6 @@ class RouteParameters {
     'terrain_type': terrainType.id,
     'urban_density': urbanDensity.id,
     'distance_km': distanceKm,
-    'search_radius': searchRadius,
     'elevation_gain': elevationGain,
     'start_longitude': startLongitude,
     'start_latitude': startLatitude,
@@ -87,7 +82,6 @@ class RouteParameters {
   bool get isValid {
     return distanceKm >= activityType.minDistance &&
            distanceKm <= activityType.maxDistance &&
-           searchRadius >= distanceKm / 2 &&
            elevationGain >= 0;
   }
 
@@ -101,7 +95,6 @@ class RouteParameters {
       terrainType: TerrainType.flat,
       urbanDensity: UrbanDensity.urban,
       distanceKm: 5.0,
-      searchRadius: 5000.0,
       elevationGain: 0.0,
       startLongitude: startLongitude,
       startLatitude: startLatitude,
@@ -117,7 +110,6 @@ class RouteParameters {
       terrainType: TerrainType.mixed,
       urbanDensity: UrbanDensity.mixed,
       distanceKm: 10.0,
-      searchRadius: 10000.0,
       elevationGain: 100.0,
       startLongitude: startLongitude,
       startLatitude: startLatitude,
@@ -133,7 +125,6 @@ class RouteParameters {
       terrainType: TerrainType.hilly,
       urbanDensity: UrbanDensity.nature,
       distanceKm: 21.0,
-      searchRadius: 15000.0,
       elevationGain: 300.0,
       startLongitude: startLongitude,
       startLatitude: startLatitude,

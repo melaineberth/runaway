@@ -8,6 +8,7 @@ class SquircleContainer extends StatelessWidget {
   final List<BoxShadow>? boxShadow;
   final double? width;
   final double? height;
+  final Function()? onTap;
 
   const SquircleContainer({
     super.key,
@@ -18,6 +19,7 @@ class SquircleContainer extends StatelessWidget {
     this.boxShadow, 
     this.width, 
     this.height,
+    this.onTap,
   });
 
   @override
@@ -28,15 +30,18 @@ class SquircleContainer extends StatelessWidget {
           borderRadius: BorderRadius.all(Radius.circular(radius ?? 60)),
         ),
       ),
-      child: Container(
-        width: width,
-        height: height,
-        padding: padding ?? EdgeInsets.zero,
-        decoration: BoxDecoration(
-          color: color,
-          boxShadow: boxShadow,
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          width: width,
+          height: height,
+          padding: padding ?? EdgeInsets.zero,
+          decoration: BoxDecoration(
+            color: color,
+            boxShadow: boxShadow,
+          ),
+          child: child,
         ),
-        child: child,
       ),
     );
   }

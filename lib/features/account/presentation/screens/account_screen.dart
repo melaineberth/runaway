@@ -1,153 +1,185 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:progressive_blur/progressive_blur.dart';
 import 'package:runaway/config/colors.dart';
 import 'package:runaway/config/extensions.dart';
+import 'package:runaway/core/widgets/ask_registration.dart';
+import 'package:runaway/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:runaway/features/auth/presentation/bloc/auth_state.dart';
 import 'package:smooth_gradient/smooth_gradient.dart';
 
-import '../../../../core/widgets/ask_registration.dart';
-
-class AccountScreen extends StatefulWidget {
+class AccountScreen extends StatelessWidget {
   const AccountScreen({super.key});
 
   @override
-  State<AccountScreen> createState() => _AccountScreenState();
-}
-
-class _AccountScreenState extends State<AccountScreen> {
-  bool isAuth = false;
-
-  @override
-  void initState() {
-    checkAuth();
-    super.initState();
-  }
-
-  void checkAuth() {
-    if (!isAuth) {
-      _showAuthModal();
-    }
-  }
-
-  Future<void> _showAuthModal() async { 
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      showModalBottomSheet(
-        context: context, 
-        useRootNavigator: true,
-        enableDrag: false,
-        isDismissible: false,
-        isScrollControlled: true,
-        builder: (modalCtx) {
-          return AskRegistration();
-        },
-      );
-    });
-  }
-
-  @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      extendBodyBehindAppBar: true,
-      appBar: AppBar(
-        forceMaterialTransparency: true,
-        backgroundColor: Colors.transparent,
-        title: Text(
-          "Account",
-          style: context.bodySmall?.copyWith(
-            color: Colors.white,
-          ),
-        ),
-      ),
-      body: isAuth 
-      ? BlurryPage(
-        children: [
-          _buildHeaderAccount(context),
-      
-          Padding(
-            padding: const EdgeInsets.all(20.0),
-            child: Column(
-              children: [
-                _buildSettingCategory(
-                  context,
-                  title: "Dashboard",
-                  children: [
-                    _buildSettingTile(
-                      context,
-                      label: "Insurance",
-                      icon: HugeIcons.strokeRoundedAirdrop,
-                      child: IconButton(
-                        padding: EdgeInsets.zero,
-                        onPressed: () {}, 
-                        icon: Icon(
-                          HugeIcons.strokeStandardArrowRight01, 
-                          color: Colors.white38,
-                        ),
-                      ),
-                    ),
-                    20.h,
-                    _buildSettingTile(
-                      context,
-                      label: "Cryptocurency",
-                      icon: HugeIcons.strokeRoundedAirdrop,
-                      child: IconButton(
-                        padding: EdgeInsets.zero,
-                        onPressed: () {}, 
-                        icon: Icon(
-                          HugeIcons.strokeStandardArrowRight01, 
-                          color: Colors.white38,
-                        ),
-                      ),
-                    ),
-                    20.h,
-                    _buildSettingTile(
-                      context,
-                      label: "Trading",
-                      icon: HugeIcons.strokeRoundedAirdrop,
-                      child: IconButton(
-                        onPressed: () {}, 
-                        padding: EdgeInsets.zero,
-                        icon: Icon(
-                          HugeIcons.strokeStandardArrowRight01, 
-                          color: Colors.white38,
-                        ),
-                      ),
-                    ),
-                  ]
-                ),
-      
-                50.h,
-      
-                _buildSettingCategory(
-                  context,
-                  title: "Notifications",
-                  children: [
-                    _buildSettingTile(
-                      context,
-                      label: "Push notifications",
-                      icon: HugeIcons.strokeRoundedNotificationSquare,
-                      child: Switch(value: true, onChanged: (value) {})
-                    ),
-                    20.h,
-                    _buildSettingTile(
-                      context,
-                      label: "Email notifications",
-                      icon: HugeIcons.strokeRoundedMail01,
-                      child: Switch(
-                        value: true,
-                        padding: EdgeInsets.zero, 
-                        onChanged: (value) {},
-                      )
-                    ),
-                  ]
-                ),
+    return BlocBuilder<AuthBloc, AuthState>(
+      builder: (_, authState) {
+        if (authState is !Authenticated) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            showModalBottomSheet(
+              context: context, 
+              useRootNavigator: true,
+              enableDrag: false,
+              isDismissible: false,
+              isScrollControlled: true,
+              builder: (modalCtx) {
+                return AskRegistration();
+              },
+            );
+          });
+        } 
 
-                80.h,
-              ],
+        if (authState is Authenticated) {
+          final user = authState.profile;
+
+          return Scaffold(
+            extendBodyBehindAppBar: true,
+            appBar: AppBar(
+              forceMaterialTransparency: true,
+              backgroundColor: Colors.transparent,
+              title: Text(
+                "Account",
+                style: context.bodySmall?.copyWith(
+                  color: Colors.white,
+                ),
+              ),
             ),
-          )
-        ],
-      )
-      : null,
+            body: BlurryPage(
+              children: [
+                _buildHeaderAccount(
+                  ctx: context,
+                  name: "Richard",
+                  username: "@${user.username}"
+                ),
+            
+                Padding(
+                  padding: const EdgeInsets.all(20.0),
+                  child: Column(
+                    children: [
+                      _buildSettingCategory(
+                        context,
+                        title: "Dashboard",
+                        children: [
+                          _buildSettingTile(
+                            context,
+                            label: "Insurance",
+                            icon: HugeIcons.strokeRoundedAirdrop,
+                            child: IconButton(
+                              padding: EdgeInsets.zero,
+                              onPressed: () {}, 
+                              icon: Icon(
+                                HugeIcons.strokeStandardArrowRight01, 
+                                color: Colors.white38,
+                              ),
+                            ),
+                          ),
+                          20.h,
+                          _buildSettingTile(
+                            context,
+                            label: "Cryptocurency",
+                            icon: HugeIcons.strokeRoundedAirdrop,
+                            child: IconButton(
+                              padding: EdgeInsets.zero,
+                              onPressed: () {}, 
+                              icon: Icon(
+                                HugeIcons.strokeStandardArrowRight01, 
+                                color: Colors.white38,
+                              ),
+                            ),
+                          ),
+                          20.h,
+                          _buildSettingTile(
+                            context,
+                            label: "Trading",
+                            icon: HugeIcons.strokeRoundedAirdrop,
+                            child: IconButton(
+                              onPressed: () {}, 
+                              padding: EdgeInsets.zero,
+                              icon: Icon(
+                                HugeIcons.strokeStandardArrowRight01, 
+                                color: Colors.white38,
+                              ),
+                            ),
+                          ),
+                        ]
+                      ),
+            
+                      50.h,
+            
+                      _buildSettingCategory(
+                        context,
+                        title: "Notifications",
+                        children: [
+                          _buildSettingTile(
+                            context,
+                            label: "Push notifications",
+                            icon: HugeIcons.strokeRoundedNotificationSquare,
+                            child: Switch(value: true, onChanged: (value) {})
+                          ),
+                          20.h,
+                          _buildSettingTile(
+                            context,
+                            label: "Email notifications",
+                            icon: HugeIcons.strokeRoundedMail01,
+                            child: Switch(
+                              value: true,
+                              padding: EdgeInsets.zero, 
+                              onChanged: (value) {},
+                            )
+                          ),
+                        ]
+                      ),
+
+                      50.h,
+            
+                      _buildSettingCategory(
+                        context,
+                        title: "Account",
+                        children: [
+                          _buildSettingTile(
+                            context,
+                            label: "Disconnect",
+                            icon: HugeIcons.strokeRoundedLogoutSquare02,
+                            child: IconButton(
+                              onPressed: () {}, 
+                              padding: EdgeInsets.zero,
+                              icon: Icon(
+                                HugeIcons.strokeStandardArrowRight01, 
+                                color: Colors.white38,
+                              ),
+                            ),
+                          ),
+                          _buildSettingTile(
+                            context,
+                            label: "Delete",
+                            icon: HugeIcons.strokeRoundedDelete02,
+                            iconColor: Colors.red,
+                            labelColor: Colors.red,
+                            child: IconButton(
+                              onPressed: () {}, 
+                              padding: EdgeInsets.zero,
+                              icon: Icon(
+                                HugeIcons.strokeStandardArrowRight01, 
+                                color: Colors.white38,
+                              ),
+                            ),
+                          ),
+                        ]
+                      ),
+          
+                      80.h,
+                    ],
+                  ),
+                )
+              ],
+            )
+          );
+        }
+
+        return SizedBox.shrink();
+      }
     );
   }
 
@@ -165,15 +197,15 @@ class _AccountScreenState extends State<AccountScreen> {
     );
   }
 
-  Widget _buildSettingTile(BuildContext context, {required String label, required IconData icon, required Widget child}) {
+  Widget _buildSettingTile(BuildContext context, {required String label, Color labelColor = Colors.white, required IconData icon, Color iconColor = Colors.white, required Widget child}) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Row(
           children: [
-            Icon(icon, color: Colors.white),
+            Icon(icon, color: iconColor),
             15.w,
-            Text(label, style: context.bodySmall?.copyWith(color: Colors.white)),
+            Text(label, style: context.bodySmall?.copyWith(color: labelColor)),
           ],
         ),
         child,
@@ -181,7 +213,7 @@ class _AccountScreenState extends State<AccountScreen> {
     );
   }
 
-  Widget _buildHeaderAccount(BuildContext context) {
+  Widget _buildHeaderAccount({required BuildContext ctx, required String name, required String username}) {
     return Padding(
       padding: const EdgeInsets.symmetric(
         vertical: 20.0,
@@ -202,15 +234,15 @@ class _AccountScreenState extends State<AccountScreen> {
           ),
           15.h,
           Text(
-            "Richard Jeromy",
-            style: context.bodyMedium?.copyWith(
+            name,
+            style: ctx.bodyMedium?.copyWith(
               fontWeight: FontWeight.w700,
               color: Colors.white,
             ),
           ),
           Text(
-            "@richajex01",
-            style: context.bodySmall?.copyWith(
+            username,
+            style: ctx.bodySmall?.copyWith(
               fontWeight: FontWeight.w500,
               color: Colors.white38,
             ),

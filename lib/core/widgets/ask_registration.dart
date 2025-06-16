@@ -4,6 +4,8 @@ import 'package:hugeicons/hugeicons.dart';
 import 'package:runaway/config/colors.dart';
 import 'package:runaway/config/extensions.dart';
 import 'package:runaway/core/widgets/icon_btn.dart';
+import 'package:runaway/features/auth/presentation/screens/login_screen.dart';
+import 'package:runaway/features/auth/presentation/screens/signup_screen.dart';
 
 class AskRegistration extends StatefulWidget {
   const AskRegistration({super.key});
@@ -13,6 +15,19 @@ class AskRegistration extends StatefulWidget {
 }
 
 class _AskRegistrationState extends State<AskRegistration> {
+  void _showAuthModal({required Widget child}) {
+    showModalBottomSheet(
+      context: context, 
+      useRootNavigator: true,
+      enableDrag: false,
+      isDismissible: false,
+      isScrollControlled: true,
+      builder: (modalCtx) {
+        return child;
+      },
+    );    
+  }
+  
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -74,13 +89,13 @@ class _AskRegistrationState extends State<AskRegistration> {
               children: [
                 _buildAuthButton(
                   label: "Se connecter",
-                  onPressed: () {},
+                  onPressed: () => _showAuthModal(child: LoginScreen()),
                 ),
                 12.h,
                 _buildAuthButton(
                   isBorder: true,
                   label: "Créer un compte",
-                  onPressed: () {},
+                  onPressed: () => _showAuthModal(child: SignupScreen()),
                 ),
                 20.h,
                 GestureDetector(

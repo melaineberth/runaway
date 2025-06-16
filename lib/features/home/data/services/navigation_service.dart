@@ -2,11 +2,13 @@ import 'dart:async';
 
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:runaway/features/home/data/services/gps_filter_service.dart';
+import 'package:runaway/features/home/domain/models/filtered_position.dart';
 import 'dart:math' as math;
 
 class NavigationService {
   static FlutterTts? _tts;
-  static StreamSubscription<Position>? _positionStream;
+  static StreamSubscription<FilteredPosition>? _filteredPositionStream;
   static List<List<double>> _routeCoordinates = [];
   static int _currentWaypointIndex = 0;
   static bool _isNavigating = false;
@@ -14,10 +16,18 @@ class NavigationService {
   
   static const double _waypointThreshold = 15.0; // 15 mètres pour considérer un waypoint atteint
 
+  // Nouveau : Service de filtrage GPS
+  static final GPSFilterService _gpsFilter = GPSFilterService.instance;
+
   /// Initialise le service de navigation
   static Future<void> initialize() async {
     _tts = FlutterTts();
     await _setupTTS();
+    
+    // Initialiser le service de filtrage GPS
+    _gpsFilter.initialize();
+    
+    print('🧭 Navigation Service initialisé avec filtrage GPS avancé');
   }
 
   /// Configure le TTS (Text-To-Speech)
@@ -30,10 +40,42 @@ class NavigationService {
     await _tts!.setPitch(1.0);
   }
 
-  /// Démarre la navigation custom
+  /// Configure le filtrage GPS selon le type d'activité
+  static void configureGPSFiltering({
+    required String activityType,
+    GPSFilterConfig? customConfig,
+  }) {
+    GPSFilterConfig config;
+    
+    if (customConfig != null) {
+      config = customConfig;
+    } else {
+      switch (activityType.toLowerCase()) {
+        case 'running':
+          config = GPSFilterConfig.forRunning();
+          break;
+        case 'cycling':
+          config = GPSFilterConfig.forCycling();
+          break;
+        case 'walking':
+          config = GPSFilterConfig.forWalking();
+          break;
+        default:
+          config = GPSFilterConfig.defaultConfig();
+      }
+    }
+    
+    _gpsFilter.updateConfig(config);
+    
+    print('⚙️ Filtrage GPS configuré pour: $activityType');
+    print('📋 Config: $config');
+  }
+
+  /// Démarre la navigation custom avec filtrage GPS avancé
   static Future<bool> startCustomNavigation({
     required List<List<double>> coordinates,
     required Function(NavigationUpdate) onUpdate,
+    String activityType = 'running',
   }) async {
     try {
       // Vérifier les permissions
@@ -42,41 +84,52 @@ class NavigationService {
         throw Exception('Permission de localisation requise');
       }
 
+      // Configurer le filtrage selon l'activité
+      configureGPSFiltering(activityType: activityType);
+
       _routeCoordinates = List.from(coordinates);
       _currentWaypointIndex = 0;
       _isNavigating = true;
       _onNavigationUpdate = onUpdate;
 
-      await _speak("Navigation démarrée. Suivez les instructions.");
+      await _speak("Navigation démarrée avec GPS haute précision. Suivez les instructions.");
 
-      // Démarrer le suivi de position
-      _startPositionTracking();
+      // Démarrer le suivi de position avec filtrage
+      _startFilteredPositionTracking();
 
       return true;
     } catch (e) {
-      print('❌ Erreur démarrage navigation custom: $e');
+      print('❌ Erreur démarrage navigation: $e');
       return false;
     }
   }
 
-  /// Démarre le suivi de position
-  static void _startPositionTracking() {
+  /// Démarre le suivi de position avec filtrage GPS
+  static void _startFilteredPositionTracking() {
     const LocationSettings locationSettings = LocationSettings(
       accuracy: LocationAccuracy.high,
-      distanceFilter: 5, // Mise à jour tous les 5 mètres
+      distanceFilter: 1, // Très sensible pour le filtrage
     );
 
-    _positionStream = Geolocator.getPositionStream(
+    // Stream des positions brutes
+    final rawPositionStream = Geolocator.getPositionStream(
       locationSettings: locationSettings,
-    ).listen((Position position) {
+    );
+
+    // Traiter le stream avec le filtre GPS
+    _filteredPositionStream = _gpsFilter
+        .processPositionStream(rawPositionStream)
+        .listen((FilteredPosition filteredPosition) {
       if (_isNavigating) {
-        _handlePositionUpdate(position);
+        _handleFilteredPositionUpdate(filteredPosition);
       }
     });
+
+    print('📡 Suivi GPS filtré démarré');
   }
 
-  /// Gère les mises à jour de position
-  static void _handlePositionUpdate(Position position) {
+  /// Gère les mises à jour de position filtrées
+  static void _handleFilteredPositionUpdate(FilteredPosition filteredPosition) {
     if (_routeCoordinates.isEmpty || _currentWaypointIndex >= _routeCoordinates.length) {
       _finishNavigation();
       return;
@@ -84,16 +137,16 @@ class NavigationService {
 
     final currentTarget = _routeCoordinates[_currentWaypointIndex];
     final distanceToTarget = _calculateDistance(
-      position.latitude,
-      position.longitude,
+      filteredPosition.latitude,
+      filteredPosition.longitude,
       currentTarget[1], // latitude
       currentTarget[0], // longitude
     );
 
-    // Calculer la direction
+    // Calculer la direction avec les données lissées
     final bearing = _calculateBearing(
-      position.latitude,
-      position.longitude,
+      filteredPosition.latitude,
+      filteredPosition.longitude,
       currentTarget[1],
       currentTarget[0],
     );
@@ -102,12 +155,13 @@ class NavigationService {
       distanceToTarget,
       bearing,
       _currentWaypointIndex,
+      filteredPosition,
     );
 
-    // Envoyer une mise à jour
+    // Envoyer une mise à jour enrichie
     if (_onNavigationUpdate != null) {
       _onNavigationUpdate!(NavigationUpdate(
-        currentPosition: [position.longitude, position.latitude],
+        currentPosition: [filteredPosition.longitude, filteredPosition.latitude],
         targetPosition: currentTarget,
         distanceToTarget: distanceToTarget,
         bearing: bearing,
@@ -115,11 +169,18 @@ class NavigationService {
         waypointIndex: _currentWaypointIndex,
         totalWaypoints: _routeCoordinates.length,
         isFinished: false,
+        // Nouvelles données de filtrage
+        gpsQuality: filteredPosition.quality,
+        confidence: filteredPosition.confidence,
+        smoothedSpeed: filteredPosition.smoothedSpeed,
+        smoothedHeading: filteredPosition.smoothedHeading,
+        isFiltered: filteredPosition.isFiltered,
       ));
     }
 
-    // Vérifier si on a atteint le waypoint
-    if (distanceToTarget <= _waypointThreshold) {
+    // Vérifier si on a atteint le waypoint (avec tolérance adaptative)
+    final adaptiveThreshold = _calculateAdaptiveThreshold(filteredPosition);
+    if (distanceToTarget <= adaptiveThreshold) {
       _currentWaypointIndex++;
       
       if (_currentWaypointIndex >= _routeCoordinates.length) {
@@ -127,18 +188,59 @@ class NavigationService {
       } else {
         _speak("Point intermédiaire atteint. Continuez.");
       }
-    } else if (distanceToTarget > 200) {
-      // Instruction de direction si on est loin
+    } else if (distanceToTarget > 200 && filteredPosition.confidence > 0.7) {
+      // Instruction de direction seulement si confiance élevée
       final directionInstruction = _getDirectionInstruction(bearing);
       if (directionInstruction.isNotEmpty) {
         _speak(directionInstruction);
       }
     }
+
+    // Log qualité GPS périodiquement
+    if (_currentWaypointIndex % 10 == 0) {
+      final stats = _gpsFilter.statistics;
+      print('📊 $stats');
+    }
   }
 
-  /// Génère une instruction de navigation
-  static String _generateInstruction(double distance, double bearing, int waypointIndex) {
-    if (distance <= _waypointThreshold) {
+  /// Calcule un seuil adaptatif basé sur la qualité GPS
+  static double _calculateAdaptiveThreshold(FilteredPosition position) {
+    // Seuil de base
+    double threshold = _waypointThreshold;
+    
+    // Ajuster selon la qualité GPS
+    switch (position.quality) {
+      case GPSQuality.excellent:
+        threshold *= 0.8; // Plus strict avec excellent signal
+        break;
+      case GPSQuality.good:
+        threshold *= 1.0; // Seuil normal
+        break;
+      case GPSQuality.fair:
+        threshold *= 1.2; // Plus tolérant
+        break;
+      case GPSQuality.poor:
+        threshold *= 1.5; // Très tolérant
+        break;
+      case GPSQuality.unreliable:
+        threshold *= 2.0; // Extrêmement tolérant
+        break;
+    }
+    
+    // Ajuster selon la confiance
+    threshold *= (2.0 - position.confidence); // Plus confiant = seuil plus strict
+    
+    return threshold.clamp(5.0, 50.0); // Entre 5m et 50m
+  }
+
+  /// Génère une instruction de navigation enrichie
+  static String _generateInstruction(
+    double distance,
+    double bearing,
+    int waypointIndex,
+    FilteredPosition position,
+  ) {
+    if (distance <= _calculateAdaptiveThreshold(position)) {
       return waypointIndex == _routeCoordinates.length - 1 
           ? "Vous êtes arrivé à destination !"
           : "Point intermédiaire atteint";
@@ -150,7 +252,13 @@ class NavigationService {
 
     final direction = _getDirectionText(bearing);
     
-    return "Continuez $direction sur $distanceText";
+    // Ajouter info de qualité si GPS faible
+    String qualityInfo = "";
+    if (position.quality == GPSQuality.poor || position.quality == GPSQuality.unreliable) {
+      qualityInfo = " (Signal GPS faible)";
+    }
+    
+    return "Continuez $direction sur $distanceText$qualityInfo";
   }
 
   /// Convertit un bearing en instruction de direction
@@ -178,7 +286,7 @@ class NavigationService {
   /// Termine la navigation
   static void _finishNavigation() {
     _isNavigating = false;
-    _positionStream?.cancel();
+    _filteredPositionStream?.cancel();
     
     if (_onNavigationUpdate != null) {
       _onNavigationUpdate!(NavigationUpdate(
@@ -190,17 +298,26 @@ class NavigationService {
         waypointIndex: _routeCoordinates.length,
         totalWaypoints: _routeCoordinates.length,
         isFinished: true,
+        gpsQuality: GPSQuality.good,
+        confidence: 1.0,
+        smoothedSpeed: 0.0,
+        smoothedHeading: 0.0,
+        isFiltered: false,
       ));
     }
     
     _speak("Félicitations ! Vous êtes arrivé à destination.");
+    
+    // Afficher statistiques finales
+    final stats = _gpsFilter.statistics;
+    print('📈 Navigation terminée - $stats');
   }
 
   /// Arrête la navigation manuellement
   static Future<void> stopNavigation() async {
     if (_isNavigating) {
       _isNavigating = false;
-      _positionStream?.cancel();
+      _filteredPositionStream?.cancel();
       await _speak("Navigation arrêtée");
       
       if (_onNavigationUpdate != null) {
@@ -213,8 +330,17 @@ class NavigationService {
           waypointIndex: 0,
           totalWaypoints: 0,
           isFinished: true,
+          gpsQuality: GPSQuality.good,
+          confidence: 1.0,
+          smoothedSpeed: 0.0,
+          smoothedHeading: 0.0,
+          isFiltered: false,
         ));
       }
+      
+      // Afficher statistiques
+      final stats = _gpsFilter.statistics;
+      print('🛑 Navigation arrêtée - $stats');
     }
   }
 
@@ -281,16 +407,28 @@ class NavigationService {
   static bool get isNavigating => _isNavigating;
   static int get currentWaypointIndex => _currentWaypointIndex;
   static int get totalWaypoints => _routeCoordinates.length;
+  
+  // Nouveaux getters pour le filtrage GPS
+  static GPSFilterState get gpsState => _gpsFilter.state;
+  static GPSFilterStatistics get gpsStatistics => _gpsFilter.statistics;
+  static FilteredPosition? get lastFilteredPosition => _gpsFilter.lastPosition;
+
+  /// Recalibre le filtre GPS
+  static void recalibrateGPS() {
+    _gpsFilter.recalibrateKalman();
+    print('🎯 GPS recalibré');
+  }
 
   /// Dispose les ressources
   static Future<void> dispose() async {
     await stopNavigation();
     await _tts?.stop();
     _tts = null;
+    _gpsFilter.dispose();
   }
 }
 
-/// Classe pour les mises à jour de navigation
+/// Classe pour les mises à jour de navigation enrichie
 class NavigationUpdate {
   final List<double> currentPosition;
   final List<double> targetPosition;
@@ -300,6 +438,13 @@ class NavigationUpdate {
   final int waypointIndex;
   final int totalWaypoints;
   final bool isFinished;
+  
+  // Nouvelles propriétés GPS
+  final GPSQuality gpsQuality;
+  final double confidence;
+  final double smoothedSpeed;
+  final double smoothedHeading;
+  final bool isFiltered;
 
   NavigationUpdate({
     required this.currentPosition,
@@ -310,5 +455,31 @@ class NavigationUpdate {
     required this.waypointIndex,
     required this.totalWaypoints,
     required this.isFinished,
+    required this.gpsQuality,
+    required this.confidence,
+    required this.smoothedSpeed,
+    required this.smoothedHeading,
+    required this.isFiltered,
   });
+
+  /// Indique si la position GPS est fiable
+  bool get isGPSReliable => 
+      gpsQuality != GPSQuality.unreliable && 
+      confidence > 0.5;
+
+  /// Obtient un indicateur de qualité coloré
+  String get qualityIndicator {
+    switch (gpsQuality) {
+      case GPSQuality.excellent:
+        return '🟢'; // Vert
+      case GPSQuality.good:
+        return '🟡'; // Jaune
+      case GPSQuality.fair:
+        return '🟠'; // Orange
+      case GPSQuality.poor:
+        return '🔴'; // Rouge
+      case GPSQuality.unreliable:
+        return '⚫'; // Noir
+    }
+  }
 }

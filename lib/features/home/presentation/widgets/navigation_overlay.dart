@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:runaway/config/extensions.dart';
+import 'package:runaway/core/widgets/squircle_container.dart';
 import 'package:runaway/features/home/data/services/navigation_service.dart';
 
 class NavigationOverlay extends StatelessWidget {
@@ -26,20 +27,10 @@ class NavigationOverlay extends StatelessWidget {
     return Column(
       children: [
         // Instruction principale avec badge de mode
-        Container(
+        SquircleContainer(
           width: double.infinity,
           padding: EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: Colors.black.withOpacity(0.9),
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.3),
-                blurRadius: 10,
-                offset: Offset(0, 2),
-              ),
-            ],
-          ),
+          color: Colors.black.withValues(alpha: 0.9),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -47,12 +38,10 @@ class NavigationOverlay extends StatelessWidget {
               Row(
                 children: [
                   // Badge de mode
-                  Container(
-                    padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: _getModeColor().withOpacity(0.2),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
+                  SquircleContainer(
+                    radius: 20,
+                    padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    color: _getModeColor().withValues(alpha: 0.2),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
@@ -82,7 +71,7 @@ class NavigationOverlay extends StatelessWidget {
                     child: Container(
                       padding: EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: Colors.red.withOpacity(0.2),
+                        color: Colors.red.withValues(alpha: 0.2),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: HugeIcon(
@@ -116,7 +105,7 @@ class NavigationOverlay extends StatelessWidget {
                     Container(
                       padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                       decoration: BoxDecoration(
-                        color: _getModeColor().withOpacity(0.2),
+                        color: _getModeColor().withValues(alpha: 0.2),
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: Row(
@@ -194,7 +183,7 @@ class NavigationOverlay extends StatelessWidget {
           Container(
             padding: EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Colors.black.withOpacity(0.7),
+              color: Colors.black.withValues(alpha: 0.7),
               borderRadius: BorderRadius.circular(12),
             ),
             child: IntrinsicHeight(

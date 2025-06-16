@@ -1,46 +1,53 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:runaway/config/extensions.dart';
+import 'package:runaway/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:runaway/features/auth/presentation/bloc/auth_state.dart';
 
 import '../../../../core/widgets/ask_registration.dart';
 
-class ActivityScreen extends StatefulWidget {
-  const ActivityScreen({super.key});
+class ActivityScreen extends StatelessWidget {  
+  const ActivityScreen({
+    super.key,
+  });
 
   @override
-  State<ActivityScreen> createState() => _ActivityScreenState();
-}
+  Widget build(BuildContext context) {    
+    return BlocBuilder<AuthBloc, AuthState>(
+      builder: (_, authState) {
+        if (authState is Unauthenticated) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            showModalBottomSheet(
+              context: context, 
+              useRootNavigator: true,
+              enableDrag: false,
+              isDismissible: false,
+              isScrollControlled: true,
+              builder: (modalCtx) {
+                return AskRegistration();
+              },
+            );
+          });
+        } 
+        
+        if (authState is Authenticated) {
+          return Scaffold(
+            extendBodyBehindAppBar: true,
+            appBar: AppBar(
+              forceMaterialTransparency: true,
+              backgroundColor: Colors.transparent,
+              title: Text(
+                "Activité",
+                style: context.bodySmall?.copyWith(
+                  color: Colors.white,
+                ),
+              ),
+            ),
+          );
+        }
 
-class _ActivityScreenState extends State<ActivityScreen> {
-  bool isAuth = false;
-
-  @override
-  void initState() {
-    checkAuth();
-    super.initState();
-  }
-
-  void checkAuth() {
-    if (!isAuth) {
-      _showAuthModal();
-    }
-  }
-
-  Future<void> _showAuthModal() async { 
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      showModalBottomSheet(
-        context: context, 
-        useRootNavigator: true,
-        enableDrag: false,
-        isDismissible: false,
-        isScrollControlled: true,
-        builder: (modalCtx) {
-          return AskRegistration();
-        },
-      );
-    });
-  }
-  
-  @override
-  Widget build(BuildContext context) {
-    return const Placeholder();
+        return SizedBox.shrink();
+      }
+    );
   }
 }

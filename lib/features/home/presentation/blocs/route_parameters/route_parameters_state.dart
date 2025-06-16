@@ -77,7 +77,6 @@ class RouteParametersState extends Equatable {
         orElse: () => UrbanDensity.mixed,
       ),
       distanceKm: json['distance_km'] ?? 5.0,
-      searchRadius: json['search_radius'] ?? 5000.0,
       elevationGain: json['elevation_gain'] ?? 0.0,
       startLongitude: json['start_longitude'] ?? 0.0,
       startLatitude: json['start_latitude'] ?? 0.0,

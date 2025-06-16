@@ -67,7 +67,7 @@ class _RouteParameterScreenState extends State<RouteParameterScreen> with Single
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: MediaQuery.of(context).size.height * 0.6,
+      height: MediaQuery.of(context).size.height * 0.7,
       child: Stack(
         children: [
           ProgressiveBlurWidget(
@@ -101,23 +101,6 @@ class _RouteParameterScreenState extends State<RouteParameterScreen> with Single
                     end:   Alignment.topCenter,
                     steps: 25,
                   ),
-                ),
-              ),
-            ),
-          ),
-
-          IgnorePointer(
-            ignoring: true,
-            child: Container(
-              height: MediaQuery.of(context).size.height / 4,
-              decoration: BoxDecoration(
-                gradient: SmoothGradient(
-                  from: Colors.black.withValues(alpha: 0),
-                  to: Colors.black.withValues(),
-                  curve: Curves.linear,
-                  steps: 25,
-                  begin: Alignment.center,
-                  end: Alignment.topCenter,
                 ),
               ),
             ),
@@ -239,21 +222,7 @@ class _RouteParameterScreenState extends State<RouteParameterScreen> with Single
                 },
               ),
               30.h,
-      
-              // Rayon de recherche
-              ParameterSlider(
-                title: "Zone de recherche",
-                value: state.parameters.searchRadius / 1000, // Convertir en km
-                min: state.parameters.distanceKm / 2,
-                max: 50.0,
-                unit: "km",
-                icon: HugeIcons.strokeRoundedLocationShare01,
-                onChanged: (value) {
-                  context.read<RouteParametersBloc>().add(SearchRadiusChanged(value * 1000));
-                },
-              ),
-              30.h,
-      
+            
               // Dénivelé
               ParameterSlider(
                 title: "Dénivelé positif",

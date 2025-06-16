@@ -50,3 +50,7 @@ extension SmartRadius on EdgeInsets {
     return (outerRadius - maxPadding).clamp(0.0, double.infinity);
   }
 }
+
+String? emailValidator(String? v) => v != null && v.contains('@') ? null : 'Adresse e-mail invalide';
+
+String? passwordValidator(String? v) => (v?.length ?? 0) >= 6 ? null : 'Au moins 6 caractères';

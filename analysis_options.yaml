@@ -12,6 +12,7 @@ analyzer:
     avoid_print: ignore
     constant_identifier_names: ignore
     constant_pattern_never_matches_value_type: ignore
+    non_constant_identifier_names: ignore
 include: package:flutter_lints/flutter.yaml
 
 linter:
