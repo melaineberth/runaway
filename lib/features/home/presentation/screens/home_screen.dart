@@ -113,7 +113,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
     positionUpdateTimer?.cancel();
 
-    _clearRoute(); // Nettoyer la route
+    // Appeler _clearRoute seulement si le widget est encore monté
+    if (mounted) {
+      _clearRoute(); // Nettoyer la route
+    }
     userPositionStream?.cancel();
     _clearLocationMarkers();
     super.dispose();
@@ -2118,28 +2121,31 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       locationMarkers.clear();
     }
 
-    setState(() {
-      generatedRouteCoordinates = null;
-      generatedRouteStats = null;
-      generatedRouteFile = null;
-      isNavigatingToRoute = false;
-      navigationMode = 'none';
+    // FIX: Seulement faire setState si le widget est encore monté
+    if (mounted) {
+      setState(() {
+        generatedRouteCoordinates = null;
+        generatedRouteStats = null;
+        generatedRouteFile = null;
+        isNavigatingToRoute = false;
+        navigationMode = 'none';
 
-      // Nettoyer les variables de navigation
-      routeToStartCoordinates = null;
-      activeNavigationRoute = null;
-      currentRouteSegmentIndex = 0;
-    });
+        // Nettoyer les variables de navigation
+        routeToStartCoordinates = null;
+        activeNavigationRoute = null;
+        currentRouteSegmentIndex = 0;
+      });
 
-    // Réafficher le marqueur de position si nécessaire
-    if (currentLongitude != null &&
-        currentLatitude != null &&
-        !isTrackingUser) {
-      _onLocationSelected(
-        currentLongitude!,
-        currentLatitude!,
-        "Position actuelle",
-      );
+      // Réafficher le marqueur de position si nécessaire
+      if (currentLongitude != null &&
+          currentLatitude != null &&
+          !isTrackingUser) {
+        _onLocationSelected(
+          currentLongitude!,
+          currentLatitude!,
+          "Position actuelle",
+        );
+      }
     }
   }
 

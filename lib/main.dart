@@ -4,10 +4,12 @@ import 'package:hydrated_bloc/hydrated_bloc.dart';
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:runaway/config/environment_config.dart';
 import 'package:runaway/config/router.dart';
 import 'package:runaway/config/theme.dart';
 import 'package:runaway/features/auth/data/repositories/auth_repository.dart';
 import 'package:runaway/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:runaway/features/auth/presentation/bloc/auth_event.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'core/blocs/app_bloc_observer.dart';
@@ -21,25 +23,48 @@ void main() async {
   // Observer pour debug
   Bloc.observer = AppBlocObserver();
 
+  // Charger les variables d'environnement
   await dotenv.load(fileName: ".env");
 
-  // Initialiser HydratedBloc pour la persistance
-  final directory = await getApplicationDocumentsDirectory();
+  // Valider la configuration d'environnement
+  try {
+    EnvironmentConfig.validate();
+  } catch (e) {
+    print('❌ Erreur de configuration: $e');
+    // En mode debug, continuer malgré les erreurs de config
+    // En production, vous pourriez vouloir arrêter l'app
+  }
 
-  HydratedBloc.storage = await HydratedStorage.build(
-    storageDirectory: HydratedStorageDirectory(directory.path),
-  );
+  // Initialiser HydratedBloc pour la persistance
+  try {
+    final directory = await getApplicationDocumentsDirectory();
+    HydratedBloc.storage = await HydratedStorage.build(
+      storageDirectory: HydratedStorageDirectory(directory.path),
+    );
+    print('✅ HydratedBloc storage initialisé');
+  } catch (e) {
+    print('❌ Erreur HydratedBloc storage: $e');
+  }
 
   // Initialiser Supabase
-  await Supabase.initialize(
-    url: dotenv.get('SUPABASE_URL'),
-    anonKey: dotenv.get('SUPABASE_ANON_KEY'),
-  );
+  try {
+    await Supabase.initialize(
+      url: dotenv.get('SUPABASE_URL'),
+      anonKey: dotenv.get('SUPABASE_ANON_KEY'),
+    );
+    print('✅ Supabase initialisé');
+  } catch (e) {
+    print('❌ Erreur Supabase: $e');
+  }
 
-
-  // Pass your access token to MapboxOptions so you can load a map
-  String mapBoxToken = dotenv.get('MAPBOX_TOKEN');
-  MapboxOptions.setAccessToken(mapBoxToken);
+  // Configurer Mapbox
+  try {
+    String mapBoxToken = dotenv.get('MAPBOX_TOKEN');
+    MapboxOptions.setAccessToken(mapBoxToken);
+    print('✅ Mapbox configuré');
+  } catch (e) {
+    print('❌ Erreur Mapbox: $e');
+  }
 
   runApp(const RunAway());
 }
@@ -51,6 +76,17 @@ class RunAway extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiBlocProvider(
       providers: [
+        // AuthBloc - IMPORTANT: doit être en premier pour les dépendances
+        BlocProvider(
+          create: (context) {
+            final authBloc = AuthBloc(AuthRepository());
+            // Déclencher l'initialisation de l'authentification
+            authBloc.add(AppStarted());
+            return authBloc;
+          },
+        ),
+        
+        // Autres BLoCs
         BlocProvider(
           create: (_) => MapStyleBloc(),
         ),
@@ -63,17 +99,23 @@ class RunAway extends StatelessWidget {
         BlocProvider(
           create: (_) => RouteGenerationBloc(),
         ),
-        BlocProvider(
-          create: (ctx) => AuthBloc(AuthRepository()),
-        ),
       ],
       child: MaterialApp.router(
-        title: 'Générateur de Parcours',
+        title: 'RunAway - Générateur de Parcours',
         debugShowCheckedModeBanner: false,
-        routerConfig: router, // <- Intégration ici
+        routerConfig: router,
         theme: getAppTheme(Brightness.light),
         darkTheme: getAppTheme(Brightness.dark),
-        themeMode: ThemeMode.system, // ou ThemeMode.dark pour forcer
+        themeMode: ThemeMode.dark, // Force le thème sombre pour votre design
+        
+        // Configuration globale
+        builder: (context, child) {
+          return MediaQuery(
+            // Empêcher le scaling des polices système
+            data: MediaQuery.of(context).copyWith(textScaleFactor: 1.0),
+            child: child ?? Container(),
+          );
+        },
       ),
     );
   }

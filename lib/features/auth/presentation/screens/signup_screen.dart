@@ -218,7 +218,7 @@ class _SignupScreenState extends State<SignupScreen> {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(HugeIcons.solidSharpApple),
+                    Icon(HugeIcons.solidSharpApple, color: Colors.black),
                     5.w,
                     Text(
                       "Apple",
@@ -245,7 +245,7 @@ class _SignupScreenState extends State<SignupScreen> {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(HugeIcons.solidSharpGoogle),
+                    Icon(HugeIcons.solidSharpGoogle, color: Colors.black),
                     5.w,
                     Text(
                       "Google",

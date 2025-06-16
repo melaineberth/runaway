@@ -36,3 +36,4 @@ class ServerException extends AppException {
 class RouteGenerationException extends AppException {
   RouteGenerationException(super.message, {super.code, super.originalError});
 }
+

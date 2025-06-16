@@ -1,11 +1,16 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:runaway/config/colors.dart';
 import 'package:runaway/config/extensions.dart';
 import 'package:runaway/core/widgets/squircle_container.dart';
+import 'package:runaway/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:runaway/features/auth/presentation/bloc/auth_event.dart';
+import 'package:runaway/features/auth/presentation/bloc/auth_state.dart';
 import 'package:runaway/features/auth/presentation/widgets/auth_text_field.dart';
 
 class OnboardingScreen extends StatefulWidget {
@@ -16,142 +21,302 @@ class OnboardingScreen extends StatefulWidget {
 }
 
 class _OnboardingScreenState extends State<OnboardingScreen> {
+  final _formKey = GlobalKey<FormState>();
   final TextEditingController _fullNameController = TextEditingController();
   final TextEditingController _usernameController = TextEditingController();
   final TextEditingController _phoneController = TextEditingController();
   File? _avatar;
 
-  Future<void> _pickAvatar() async {
-    final picked = await ImagePicker().pickImage(source: ImageSource.gallery);
-    if (picked != null) setState(() => _avatar = File(picked.path));
+  @override
+  void dispose() {
+    _fullNameController.dispose();
+    _usernameController.dispose();
+    _phoneController.dispose();
+    super.dispose();
   }
 
+  Future<void> _pickAvatar() async {
+    try {
+      final picked = await ImagePicker().pickImage(source: ImageSource.gallery);
+      if (picked != null) {
+        setState(() => _avatar = File(picked.path));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erreur lors de la sélection de l\'image: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  String? _validateFullName(String? value) {
+    if (value == null || value.trim().isEmpty) {
+      return 'Le nom complet est requis';
+    }
+    if (value.trim().length < 2) {
+      return 'Le nom doit contenir au moins 2 caractères';
+    }
+    return null;
+  }
+
+  String? _validateUsername(String? value) {
+    if (value == null || value.trim().isEmpty) {
+      return 'Le nom d\'utilisateur est requis';
+    }
+    
+    // Supprimer le @ au début si présent
+    final username = value.startsWith('@') ? value.substring(1) : value;
+    
+    if (username.length < 3) {
+      return 'Le nom d\'utilisateur doit contenir au moins 3 caractères';
+    }
+    
+    // Vérifier que le nom d'utilisateur ne contient que des caractères valides
+    final RegExp usernameRegex = RegExp(r'^[a-zA-Z0-9_]+$');
+    if (!usernameRegex.hasMatch(username)) {
+      return 'Seules les lettres, chiffres et _ sont autorisés';
+    }
+    
+    return null;
+  }
+
+  String? _validatePhone(String? value) {
+    if (value == null || value.trim().isEmpty) {
+      return 'Le numéro de téléphone est requis';
+    }
+    
+    // Supprimer les espaces et caractères spéciaux pour la validation
+    final cleanPhone = value.replaceAll(RegExp(r'[^\d+]'), '');
+    
+    if (cleanPhone.length < 10) {
+      return 'Numéro de téléphone invalide';
+    }
+    
+    return null;
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        automaticallyImplyLeading: false,
-        title: Text(
-          "Set up your account",
-          style: context.bodySmall?.copyWith(
-            color: Colors.white,
-          ),
-        ),
-        // leading: IconButton(
-        //   onPressed: () {}, 
-        //   icon: Icon(HugeIcons.solidStandardArrowLeft02),
-        // ),
-      ),
-      body: Padding(
-        padding: const EdgeInsets.symmetric(
-          horizontal: 15.0,
-        ),
-        child: Form(
-          child: Stack(
-            children: [
-              Column(
-                children: [
-                  GestureDetector(
-                    onTap: _pickAvatar,
-                    child: Stack(
-                      clipBehavior: Clip.none,
+    return BlocListener<AuthBloc, AuthState>(
+      listener: (context, authState) {
+        if (authState is Authenticated) {
+          // Profil complété avec succès, aller à l'accueil
+          context.go('/home');
+        } else if (authState is AuthError) {
+          // Afficher l'erreur
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(authState.message),
+              backgroundColor: Colors.red,
+              duration: Duration(seconds: 4),
+            ),
+          );
+        }
+      },
+      child: BlocBuilder<AuthBloc, AuthState>(
+        builder: (context, authState) {
+          final isLoading = authState is AuthLoading;
+
+          return Scaffold(
+            appBar: AppBar(
+              automaticallyImplyLeading: false,
+              title: Text(
+                "Set up your account",
+                style: context.bodySmall?.copyWith(
+                  color: Colors.white,
+                ),
+              ),
+            ),
+            body: Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 15.0,
+              ),
+              child: Form(
+                key: _formKey,
+                child: Stack(
+                  children: [
+                    Column(
                       children: [
-                        Container(
-                          width: 200,
-                          height: 200,
-                          decoration: BoxDecoration(
-                            color: Colors.white12,
-                            shape: BoxShape.circle,
-                          ),
-                          child: _avatar == null 
-                          ? Icon(
-                            HugeIcons.solidRoundedCenterFocus,
-                            color: Colors.white38,
-                            size: 80,
-                          ) 
-                          : Image.file(
-                            _avatar!, 
-                            fit: BoxFit.cover,
+                        GestureDetector(
+                          onTap: isLoading ? null : _pickAvatar,
+                          child: Stack(
+                            clipBehavior: Clip.none,
+                            children: [
+                              Container(
+                                width: 200,
+                                height: 200,
+                                decoration: BoxDecoration(
+                                  color: Colors.white12,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: _avatar == null 
+                                ? Icon(
+                                  HugeIcons.solidRoundedCenterFocus,
+                                  color: Colors.white38,
+                                  size: 80,
+                                ) 
+                                : ClipRRect(
+                                  borderRadius: BorderRadius.circular(100),
+                                  child: Image.file(
+                                    _avatar!, 
+                                    fit: BoxFit.cover,
+                                  ),
+                                ),
+                              ),
+                              Positioned(
+                                bottom: 10,
+                                right: 10,
+                                child: Container(
+                                  padding: EdgeInsets.all(10.0),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.primary,
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: Icon(HugeIcons.solidRoundedCamera01),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                        Positioned(
-                          bottom: 10,
-                          right: 10,
-                          child: Container(
-                            padding: EdgeInsets.all(10.0),
-                            decoration: BoxDecoration(
-                              color: AppColors.primary,
-                              shape: BoxShape.circle,
-                            ),
-                            child: Icon(HugeIcons.solidRoundedCamera01),
+                        40.h,
+                        Text(
+                          "Please complete all the information presented below to create your account.",
+                          style: context.bodySmall?.copyWith(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w500,
+                            fontSize: 15,
+                            height: 1.3,
                           ),
+                          textAlign: TextAlign.start,
+                        ),
+                        20.h,
+                        // Formulaire
+                        AuthTextField(
+                          hint: "Full name (John Doe)",
+                          controller: _fullNameController,
+                          validator: _validateFullName,
+                          enabled: !isLoading,
+                        ),
+                        15.h,
+                        AuthTextField(
+                          hint: "Username (@johndoe)",
+                          controller: _usernameController,
+                          validator: _validateUsername,
+                          enabled: !isLoading,
+                          onChanged: (value) {
+                            // Ajouter automatiquement @ au début si pas présent
+                            if (value.isNotEmpty && !value.startsWith('@')) {
+                              _usernameController.value = TextEditingValue(
+                                text: '@$value',
+                                selection: TextSelection.collapsed(offset: value.length + 1),
+                              );
+                            }
+                          },
+                        ),
+                        15.h,
+                        AuthTextField(
+                          hint: "Phone number (+33 6 12 34 56 78)",
+                          controller: _phoneController,
+                          validator: _validatePhone,
+                          enabled: !isLoading,
                         ),
                       ],
                     ),
-                  ),
-                  40.h,
-                  Text(
-                    "Please complete all the information presented below to create your account.",
-                    style: context.bodySmall?.copyWith(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w500,
-                      fontSize: 15,
-                      height: 1.3,
+
+                    // Bouton en bas
+                    Positioned(
+                      left: 15,
+                      right: 15,
+                      bottom: 40,
+                      child: _buildCompleteButton(isLoading),
+                    ),                
+
+                    // Overlay de chargement
+                    if (isLoading)
+                    Container(
+                      color: Colors.black.withValues(alpha: 0.5),
+                      child: Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            CircularProgressIndicator(
+                              valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
+                            ),
+                            20.h,
+                            Text(
+                              'Création de votre profil...',
+                              style: context.bodyMedium?.copyWith(
+                                color: Colors.white,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
-                    textAlign: TextAlign.start,
-                  ),
-                  20.h,
-                  AuthTextField(
-                    hint: "John doe",
-                    controller: _fullNameController,
-                  ),
-                  15.h,
-                  AuthTextField(
-                    hint: "@johndoe",
-                    controller: _usernameController,
-                  ),
-                  15.h,
-                  AuthTextField(
-                    hint: "+00 0 00 00 00",
-                    controller: _phoneController,
-                  ),
-                ],
+                  ],
+                ),
               ),
-              _buildSignUpButton(onTap: () => {}),
-            ],
-          ),
+            ),
+          );
+        }
+      ),
+    );
+  }
+
+  Widget _buildCompleteButton(bool isLoading) {
+    return SizedBox(
+      width: double.infinity,
+      child: SquircleContainer(
+        onTap: isLoading ? null : _handleCompleteProfile,
+        height: 60,
+        color: isLoading ? AppColors.primary.withValues(alpha: 0.5) : AppColors.primary,
+        radius: 30,
+        padding: EdgeInsets.symmetric(
+          horizontal: 15.0,
+          vertical: 5.0,
+        ),
+        child: Center(
+          child: isLoading
+          ? SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                valueColor: AlwaysStoppedAnimation<Color>(Colors.black),
+              ),
+            )
+          : Text(
+              "Complete",
+              style: context.bodySmall?.copyWith(
+                color: Colors.black,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
         ),
       ),
     );
   }
 
-  Widget _buildSignUpButton({required Function()? onTap}) {
-    return Positioned(
-      left: 15,
-      right: 15,
-      bottom: 40,
-      child: SizedBox(
-        width: double.infinity,
-        child: SquircleContainer(
-          onTap: onTap,
-          height: 60,
-          color: AppColors.primary,
-          radius: 30,
-          padding: EdgeInsets.symmetric(
-            horizontal: 15.0,
-            vertical: 5.0,
-          ),
-          child: Center(
-            child: Text(
-              "Completed",
-              style: context.bodySmall?.copyWith(
-                color: Colors.black,
-              ),
-            ),
-          ),
+  void _handleCompleteProfile() {
+    if (_formKey.currentState!.validate()) {
+      // Nettoyer le nom d'utilisateur (supprimer @ au début)
+      String username = _usernameController.text.trim();
+      if (username.startsWith('@')) {
+        username = username.substring(1);
+      }
+
+      context.read<AuthBloc>().add(
+        CompleteProfileRequested(
+          fullName: _fullNameController.text.trim(),
+          username: username,
+          phone: _phoneController.text.trim(),
+          avatar: _avatar,
         ),
-      ),
-    );
+      );
+    }
   }
 }

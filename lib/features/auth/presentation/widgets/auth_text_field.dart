@@ -8,6 +8,10 @@ class AuthTextField extends StatelessWidget {
   final bool obscureText;
   final Function(String)? onChanged;
   final String? Function(String?)? validator;
+  final bool enabled;
+  final TextInputType? keyboardType;
+  final int? maxLength;
+  final Widget? suffixIcon;
   
   const AuthTextField({
     super.key,
@@ -16,6 +20,10 @@ class AuthTextField extends StatelessWidget {
     this.onChanged,
     this.obscureText = false,
     this.validator,
+    this.enabled = true,
+    this.keyboardType,
+    this.maxLength,
+    this.suffixIcon,
   });
 
   @override
@@ -31,19 +39,28 @@ class AuthTextField extends StatelessWidget {
       child: TextFormField(
         validator: validator,
         obscureText: obscureText,
+        enabled: enabled,
+        keyboardType: keyboardType,
+        maxLength: maxLength,
         onTapOutside: (event) {
           FocusManager.instance.primaryFocus?.unfocus();
         },
         controller: controller,
         style: context.bodySmall?.copyWith(
-          color: Colors.white,
+          color: enabled ? Colors.white : Colors.white38,
         ),
         onChanged: onChanged,
         decoration: InputDecoration(
           hintText: hint,
           border: InputBorder.none,
+          counterText: "", // Cache le compteur de caractères si maxLength est défini
+          suffixIcon: suffixIcon,
           hintStyle: context.bodySmall?.copyWith(
-            color: Colors.white30,
+            color: enabled ? Colors.white30 : Colors.white12,
+          ),
+          errorStyle: context.bodySmall?.copyWith(
+            color: Colors.red.shade300,
+            fontSize: 12,
           ),
         ),
       ),

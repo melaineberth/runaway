@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:progressive_blur/progressive_blur.dart';
 import 'package:runaway/config/colors.dart';
 import 'package:runaway/config/extensions.dart';
 import 'package:runaway/core/widgets/ask_registration.dart';
 import 'package:runaway/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:runaway/features/auth/presentation/bloc/auth_event.dart';
 import 'package:runaway/features/auth/presentation/bloc/auth_state.dart';
 import 'package:smooth_gradient/smooth_gradient.dart';
 
@@ -14,172 +16,211 @@ class AccountScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<AuthBloc, AuthState>(
-      builder: (_, authState) {
-        if (authState is !Authenticated) {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            showModalBottomSheet(
-              context: context, 
-              useRootNavigator: true,
-              enableDrag: false,
-              isDismissible: false,
-              isScrollControlled: true,
-              builder: (modalCtx) {
-                return AskRegistration();
-              },
-            );
-          });
-        } 
+    return BlocListener<AuthBloc, AuthState>(
+      listener: (context, authState) {
+        if (authState is Unauthenticated) {
+          // L'utilisateur s'est déconnecté, rediriger vers l'accueil
+          context.go('/home');
+        }
+      },
+      child: BlocBuilder<AuthBloc, AuthState>(
+        builder: (_, authState) {
+          if (authState is !Authenticated) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              showModalBottomSheet(
+                context: context, 
+                useRootNavigator: true,
+                enableDrag: false,
+                isDismissible: false,
+                isScrollControlled: true,
+                builder: (modalCtx) {
+                  return AskRegistration();
+                },
+              );
+            });
+          } 
 
-        if (authState is Authenticated) {
-          final user = authState.profile;
+          if (authState is Authenticated) {
+            final user = authState.profile;
 
-          return Scaffold(
-            extendBodyBehindAppBar: true,
-            appBar: AppBar(
-              forceMaterialTransparency: true,
-              backgroundColor: Colors.transparent,
-              title: Text(
-                "Account",
-                style: context.bodySmall?.copyWith(
-                  color: Colors.white,
+            return Scaffold(
+              extendBodyBehindAppBar: true,
+              appBar: AppBar(
+                forceMaterialTransparency: true,
+                backgroundColor: Colors.transparent,
+                title: Text(
+                  "Account",
+                  style: context.bodySmall?.copyWith(
+                    color: Colors.white,
+                  ),
                 ),
               ),
-            ),
-            body: BlurryPage(
-              children: [
-                _buildHeaderAccount(
-                  ctx: context,
-                  name: "Richard",
-                  username: "@${user.username}"
-                ),
-            
-                Padding(
-                  padding: const EdgeInsets.all(20.0),
-                  child: Column(
-                    children: [
-                      _buildSettingCategory(
-                        context,
-                        title: "Dashboard",
-                        children: [
-                          _buildSettingTile(
-                            context,
-                            label: "Insurance",
-                            icon: HugeIcons.strokeRoundedAirdrop,
-                            child: IconButton(
-                              padding: EdgeInsets.zero,
-                              onPressed: () {}, 
-                              icon: Icon(
-                                HugeIcons.strokeStandardArrowRight01, 
-                                color: Colors.white38,
-                              ),
-                            ),
-                          ),
-                          20.h,
-                          _buildSettingTile(
-                            context,
-                            label: "Cryptocurency",
-                            icon: HugeIcons.strokeRoundedAirdrop,
-                            child: IconButton(
-                              padding: EdgeInsets.zero,
-                              onPressed: () {}, 
-                              icon: Icon(
-                                HugeIcons.strokeStandardArrowRight01, 
-                                color: Colors.white38,
-                              ),
-                            ),
-                          ),
-                          20.h,
-                          _buildSettingTile(
-                            context,
-                            label: "Trading",
-                            icon: HugeIcons.strokeRoundedAirdrop,
-                            child: IconButton(
-                              onPressed: () {}, 
-                              padding: EdgeInsets.zero,
-                              icon: Icon(
-                                HugeIcons.strokeStandardArrowRight01, 
-                                color: Colors.white38,
-                              ),
-                            ),
-                          ),
-                        ]
-                      ),
-            
-                      50.h,
-            
-                      _buildSettingCategory(
-                        context,
-                        title: "Notifications",
-                        children: [
-                          _buildSettingTile(
-                            context,
-                            label: "Push notifications",
-                            icon: HugeIcons.strokeRoundedNotificationSquare,
-                            child: Switch(value: true, onChanged: (value) {})
-                          ),
-                          20.h,
-                          _buildSettingTile(
-                            context,
-                            label: "Email notifications",
-                            icon: HugeIcons.strokeRoundedMail01,
-                            child: Switch(
-                              value: true,
-                              padding: EdgeInsets.zero, 
-                              onChanged: (value) {},
-                            )
-                          ),
-                        ]
-                      ),
-
-                      50.h,
-            
-                      _buildSettingCategory(
-                        context,
-                        title: "Account",
-                        children: [
-                          _buildSettingTile(
-                            context,
-                            label: "Disconnect",
-                            icon: HugeIcons.strokeRoundedLogoutSquare02,
-                            child: IconButton(
-                              onPressed: () {}, 
-                              padding: EdgeInsets.zero,
-                              icon: Icon(
-                                HugeIcons.strokeStandardArrowRight01, 
-                                color: Colors.white38,
-                              ),
-                            ),
-                          ),
-                          _buildSettingTile(
-                            context,
-                            label: "Delete",
-                            icon: HugeIcons.strokeRoundedDelete02,
-                            iconColor: Colors.red,
-                            labelColor: Colors.red,
-                            child: IconButton(
-                              onPressed: () {}, 
-                              padding: EdgeInsets.zero,
-                              icon: Icon(
-                                HugeIcons.strokeStandardArrowRight01, 
-                                color: Colors.white38,
-                              ),
-                            ),
-                          ),
-                        ]
-                      ),
-          
-                      80.h,
-                    ],
+              body: BlurryPage(
+                children: [
+                  _buildHeaderAccount(
+                    ctx: context,
+                    name: user.username != null ? "@${user.username}" : "Utilisateur",
+                    email: user.email,
+                    avatarUrl: user.avatarUrl,
                   ),
-                )
-              ],
-            )
-          );
-        }
+            
+                  Padding(
+                    padding: const EdgeInsets.all(20.0),
+                    child: Column(
+                      children: [
+                        _buildSettingCategory(
+                          context,
+                          title: "Dashboard",
+                          children: [
+                            _buildSettingTile(
+                              context,
+                              label: "Insurance",
+                              icon: HugeIcons.strokeRoundedAirdrop,
+                              child: IconButton(
+                                padding: EdgeInsets.zero,
+                                onPressed: () {}, 
+                                icon: Icon(
+                                  HugeIcons.strokeStandardArrowRight01, 
+                                  color: Colors.white38,
+                                ),
+                              ),
+                            ),
+                            20.h,
+                            _buildSettingTile(
+                              context,
+                              label: "Cryptocurency",
+                              icon: HugeIcons.strokeRoundedAirdrop,
+                              child: IconButton(
+                                padding: EdgeInsets.zero,
+                                onPressed: () {}, 
+                                icon: Icon(
+                                  HugeIcons.strokeStandardArrowRight01, 
+                                  color: Colors.white38,
+                                ),
+                              ),
+                            ),
+                            20.h,
+                            _buildSettingTile(
+                              context,
+                              label: "Trading",
+                              icon: HugeIcons.strokeRoundedAirdrop,
+                              child: IconButton(
+                                onPressed: () {}, 
+                                padding: EdgeInsets.zero,
+                                icon: Icon(
+                                  HugeIcons.strokeStandardArrowRight01, 
+                                  color: Colors.white38,
+                                ),
+                              ),
+                            ),
+                          ]
+                        ),
+            
+                        50.h,
+            
+                        _buildSettingCategory(
+                          context,
+                          title: "Notifications",
+                          children: [
+                            _buildSettingTile(
+                              context,
+                              label: "Push notifications",
+                              icon: HugeIcons.strokeRoundedNotificationSquare,
+                              child: Switch(
+                                value: true, 
+                                onChanged: (value) {
+                                  // TODO: Implémenter la gestion des notifications push
+                                },
+                              )
+                            ),
+                            20.h,
+                            _buildSettingTile(
+                              context,
+                              label: "Email notifications",
+                              icon: HugeIcons.strokeRoundedMail01,
+                              child: Switch(
+                                value: true,
+                                padding: EdgeInsets.zero, 
+                                onChanged: (value) {
+                                  // TODO: Implémenter la gestion des notifications email
+                                },
+                              )
+                            ),
+                          ]
+                        ),
 
-        return SizedBox.shrink();
-      }
+                        50.h,
+            
+                        _buildSettingCategory(
+                          context,
+                          title: "Account",
+                          children: [
+                            _buildSettingTile(
+                              context,
+                              label: "Edit Profile",
+                              icon: HugeIcons.strokeRoundedUserEdit01,
+                              child: IconButton(
+                                onPressed: () {
+                                  // TODO: Naviguer vers l'écran d'édition de profil
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text('Édition du profil - À implémenter'),
+                                      backgroundColor: Colors.orange,
+                                    ),
+                                  );
+                                }, 
+                                padding: EdgeInsets.zero,
+                                icon: Icon(
+                                  HugeIcons.strokeStandardArrowRight01, 
+                                  color: Colors.white38,
+                                ),
+                              ),
+                            ),
+                            20.h,
+                            _buildSettingTile(
+                              context,
+                              label: "Disconnect",
+                              icon: HugeIcons.strokeRoundedLogoutSquare02,
+                              child: IconButton(
+                                onPressed: () => _showLogoutDialog(context), 
+                                padding: EdgeInsets.zero,
+                                icon: Icon(
+                                  HugeIcons.strokeStandardArrowRight01, 
+                                  color: Colors.white38,
+                                ),
+                              ),
+                            ),
+                            20.h,
+                            _buildSettingTile(
+                              context,
+                              label: "Delete Account",
+                              icon: HugeIcons.strokeRoundedDelete02,
+                              iconColor: Colors.red,
+                              labelColor: Colors.red,
+                              child: IconButton(
+                                onPressed: () => _showDeleteAccountDialog(context), 
+                                padding: EdgeInsets.zero,
+                                icon: Icon(
+                                  HugeIcons.strokeStandardArrowRight01, 
+                                  color: Colors.white38,
+                                ),
+                              ),
+                            ),
+                          ]
+                        ),
+          
+                        80.h,
+                      ],
+                    ),
+                  )
+                ],
+              )
+            );
+          }
+
+          return SizedBox.shrink();
+        }
+      ),
     );
   }
 
@@ -213,24 +254,40 @@ class AccountScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildHeaderAccount({required BuildContext ctx, required String name, required String username}) {
+  Widget _buildHeaderAccount({
+    required BuildContext ctx, 
+    required String name, 
+    required String email,
+    String? avatarUrl,
+  }) {
     return Padding(
-      padding: const EdgeInsets.symmetric(
-        vertical: 20.0,
-      ),
+      padding: const EdgeInsets.symmetric(vertical: 20.0),
       child: Column(
         children: [
           Container(
             width: 100,
             height: 100,
             decoration: BoxDecoration(
-              color: Colors.red,
+              color: Colors.grey.shade300,
               shape: BoxShape.circle,
-              image: DecorationImage(
-                image: NetworkImage("https://picsum.photos/200"),
-                fit: BoxFit.cover,
-              ),
+              image: avatarUrl != null 
+                  ? DecorationImage(
+                      image: NetworkImage(avatarUrl),
+                      fit: BoxFit.cover,
+                      onError: (error, stackTrace) {
+                        // En cas d'erreur de chargement de l'image
+                        print('Erreur chargement avatar: $error');
+                      },
+                    )
+                  : null,
             ),
+            child: avatarUrl == null
+                ? Icon(
+                    HugeIcons.strokeRoundedUser,
+                    size: 50,
+                    color: Colors.grey.shade600,
+                  )
+                : null,
           ),
           15.h,
           Text(
@@ -240,12 +297,126 @@ class AccountScreen extends StatelessWidget {
               color: Colors.white,
             ),
           ),
+          5.h,
           Text(
-            username,
+            email,
             style: ctx.bodySmall?.copyWith(
               fontWeight: FontWeight.w500,
               color: Colors.white38,
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showLogoutDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: Colors.black,
+        title: Text(
+          'Déconnexion',
+          style: context.titleMedium?.copyWith(color: Colors.white),
+        ),
+        content: Text(
+          'Êtes-vous sûr de vouloir vous déconnecter ?',
+          style: context.bodyMedium?.copyWith(color: Colors.white70),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: Text(
+              'Annuler', 
+              style: TextStyle(color: Colors.white70),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.of(dialogContext).pop();
+              context.read<AuthBloc>().add(LogOutRequested());
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              foregroundColor: Colors.black,
+            ),
+            child: Text('Déconnexion'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showDeleteAccountDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: Colors.black,
+        title: Text(
+          'Supprimer le compte',
+          style: context.titleMedium?.copyWith(color: Colors.red),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Cette action est irréversible. Toutes vos données seront définitivement supprimées.',
+              style: context.bodyMedium?.copyWith(color: Colors.white70),
+            ),
+            16.h,
+            Container(
+              padding: EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.red.withAlpha(20),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                children: [
+                  HugeIcon(
+                    icon: HugeIcons.strokeRoundedAlert02,
+                    color: Colors.red,
+                    size: 16,
+                  ),
+                  8.w,
+                  Expanded(
+                    child: Text(
+                      'Cette action ne peut pas être annulée',
+                      style: context.bodySmall?.copyWith(
+                        color: Colors.red,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: Text(
+              'Annuler', 
+              style: TextStyle(color: Colors.white70),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.of(dialogContext).pop();
+              // TODO: Implémenter la suppression du compte
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Suppression du compte - À implémenter'),
+                  backgroundColor: Colors.red,
+                ),
+              );
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
+            child: Text('Supprimer'),
           ),
         ],
       ),

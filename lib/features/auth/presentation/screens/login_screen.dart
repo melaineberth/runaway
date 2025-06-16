@@ -1,11 +1,15 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:runaway/config/colors.dart';
 import 'package:runaway/config/extensions.dart';
 import 'package:runaway/core/widgets/label_divider.dart';
 import 'package:runaway/core/widgets/squircle_container.dart';
+import 'package:runaway/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:runaway/features/auth/presentation/bloc/auth_event.dart';
+import 'package:runaway/features/auth/presentation/bloc/auth_state.dart';
 import 'package:runaway/features/auth/presentation/widgets/auth_text_field.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -16,107 +20,159 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
+  final _formKey = GlobalKey<FormState>();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
   
   @override
   Widget build(BuildContext context) {
-    return Stack(
-      children: [
-        Scaffold(
-          resizeToAvoidBottomInset: false,
-          body: Padding(
-            padding: const EdgeInsets.all(20.0),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                const Spacer(),
-                _buildSignUpInfo(),
-                40.h,
-                _buildSocialButton(),
-                20.h,
-                LabelDivider(),
-                20.h,
-                AuthTextField(
-                  hint: "Email adress",
-                  validator: emailValidator,
-                  controller: _emailController,
-                ),
-                15.h,
-                AuthTextField(
-                  hint: "Password",
-                  obscureText: true,
-                  validator: passwordValidator,
-                  controller: _passwordController,
-                ),
-                15.h,
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: Text(
-                    "Forgot Password?",
-                    style: context.bodySmall?.copyWith(
-                      fontSize: 14,
-                      color: Colors.white,
-                      fontWeight: FontWeight.w600,
+    return BlocListener<AuthBloc, AuthState>(
+      listener: (context, authState) {
+        if (authState is Authenticated) {
+          // Connexion réussie, fermer la modal et revenir à l'accueil
+          context.pop();
+        } else if (authState is ProfileIncomplete) {
+          // Profil incomplet, aller vers l'onboarding
+          context.go('/onboarding');
+        } else if (authState is AuthError) {
+          // Afficher l'erreur
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(authState.message),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      },
+      child: BlocBuilder<AuthBloc, AuthState>(
+        builder: (context, authState) {
+          final isLoading = authState is AuthLoading;
+          
+          return Stack(
+            children: [
+              Scaffold(
+                resizeToAvoidBottomInset: false,
+                body: Padding(
+                  padding: const EdgeInsets.all(20.0),
+                  child: Form(
+                    key: _formKey,
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        const Spacer(),
+                        _buildSignUpInfo(),
+                        40.h,
+                        _buildSocialButton(),
+                        20.h,
+                        LabelDivider(),
+                        20.h,
+                        AuthTextField(
+                          hint: "Email adress",
+                          validator: emailValidator,
+                          controller: _emailController,
+                        ),
+                        15.h,
+                        AuthTextField(
+                          hint: "Password",
+                          obscureText: true,
+                          validator: passwordValidator,
+                          controller: _passwordController,
+                        ),
+                        15.h,
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: Text(
+                            "Forgot Password?",
+                            style: context.bodySmall?.copyWith(
+                              fontSize: 14,
+                              color: Colors.white,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                        15.h,
+                        _buildSignInButton(isLoading),
+                        25.h,
+                        Text.rich(
+                          TextSpan(
+                            children: [
+                              TextSpan(
+                                text: 'Create an account?',
+                                style: context.bodySmall?.copyWith(
+                                  fontSize: 15,
+                                  color: Colors.white54,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                              TextSpan(
+                                text: ' Sign up',
+                                style: context.bodySmall?.copyWith(
+                                  fontSize: 15,
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                                recognizer: TapGestureRecognizer()..onTap = () => context.pushReplacement("/signup"),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const Spacer(),
+                        Text(
+                          "Terms of Service | Privacy Policy", 
+                          style: context.bodySmall?.copyWith(
+                            fontSize: 15,
+                            color: Colors.white24,
+                          ),
+                        ),
+                        15.h,
+                      ],
                     ),
                   ),
                 ),
-                15.h,
-                _buildSignUpButton(),
-                25.h,
-                Text.rich(
-                  TextSpan(
-                    children: [
-                      TextSpan(
-                        text: 'Create an account?',
-                        style: context.bodySmall?.copyWith(
-                          fontSize: 15,
-                          color: Colors.white54,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                      TextSpan(
-                        text: ' Sign up',
-                        style: context.bodySmall?.copyWith(
-                          fontSize: 15,
-                          color: Colors.white,
-                          fontWeight: FontWeight.w700,
-                        ),
-                        recognizer: TapGestureRecognizer()..onTap = () => context.pushReplacement("/signup"),
-                      ),
-                    ],
-                  ),
-                ),
-                const Spacer(),
-                Text(
-                  "Terms of Service | Privacy Policy", 
-                  style: context.bodySmall?.copyWith(
-                    fontSize: 15,
-                    color: Colors.white24,
-                  ),
-                ),
-                15.h,
-              ],
-            ),
-          ),
-        ),
-        Positioned(
-          top: kToolbarHeight,
-          right: 5,
-          child: Padding(
-            padding: const EdgeInsets.all(15.0),
-            child: GestureDetector(
-              onTap: () => context.pop(),
-              child: Icon(
-                HugeIcons.solidRoundedCancelCircle,
-                color: Colors.white,
-                size: 25,
               ),
-            ),
-          ),
-        ),
-      ],
+
+              Positioned(
+                top: kToolbarHeight,
+                right: 5,
+                child: Padding(
+                  padding: const EdgeInsets.all(15.0),
+                  child: GestureDetector(
+                    onTap: () {
+                      if (!isLoading) {
+                        context.pop();
+                      }
+                    },
+                    child: Icon(
+                      HugeIcons.solidRoundedCancelCircle,
+                      color: Colors.white,
+                      size: 25,
+                    ),
+                  ),
+                ),
+              ),
+
+              // Overlay de chargement
+              if (isLoading)
+              Container(
+                color: Colors.black.withValues(alpha: 0.5),
+                child: Center(
+                  child: CircularProgressIndicator(
+                    valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
+                  ),
+                ),
+              ),
+            ],
+          );
+        }
+      ),
     );
   }
 
@@ -147,25 +203,36 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  Widget _buildSignUpButton() {
+  Widget _buildSignInButton(bool isLoading) {
     return SizedBox(
       width: double.infinity,
       child: Expanded(
         child: SquircleContainer(
+          onTap: isLoading ? null : _handleSignIn,
           height: 60,
-          color: AppColors.primary,
+          color: isLoading ? AppColors.primary.withValues(alpha: 0.5) : AppColors.primary,
           radius: 30,
           padding: EdgeInsets.symmetric(
             horizontal: 15.0,
             vertical: 5.0,
           ),
           child: Center(
-            child: Text(
-              "Continue",
-              style: context.bodySmall?.copyWith(
-                color: Colors.black,
-              ),
-            ),
+            child: isLoading
+              ? SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    valueColor: AlwaysStoppedAnimation<Color>(Colors.black),
+                  ),
+                )
+              : Text(
+                  "Continue",
+                  style: context.bodySmall?.copyWith(
+                    color: Colors.black,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
           ),
         ),
       ),
@@ -173,65 +240,106 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Widget _buildSocialButton() {
-    return SizedBox(
-      width: double.infinity,
-      child: Row(
-        children: [
-          Expanded(
-            child: SquircleContainer(
-              height: 60,
-              color: AppColors.primary,
-              radius: 30,
-              padding: EdgeInsets.symmetric(
-                horizontal: 15.0,
-                vertical: 5.0,
-              ),
-              child: Center(
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(HugeIcons.solidSharpApple),
-                    5.w,
-                    Text(
-                      "Apple",
-                      style: context.bodySmall?.copyWith(
-                        color: Colors.black,
+    return BlocBuilder<AuthBloc, AuthState>(
+      builder: (context, authState) {
+        final isLoading = authState is AuthLoading;
+        
+        return SizedBox(
+          width: double.infinity,
+          child: Row(
+            children: [
+              Expanded(
+                child: SquircleContainer(
+                  onTap: isLoading ? null : () {
+                    // TODO: Implémenter la connexion Apple
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Connexion Apple - À implémenter'),
+                        backgroundColor: Colors.orange,
                       ),
+                    );
+                  },
+                  height: 60,
+                  color: isLoading ? AppColors.primary.withValues(alpha: 0.5) : AppColors.primary,
+                  radius: 30,
+                  padding: EdgeInsets.symmetric(
+                    horizontal: 15.0,
+                    vertical: 5.0,
+                  ),
+                  child: Center(
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          HugeIcons.solidSharpApple,
+                          color: isLoading ? Colors.black38 : Colors.black,
+                        ),
+                        5.w,
+                        Text(
+                          "Apple",
+                          style: context.bodySmall?.copyWith(
+                            color: isLoading ? Colors.black38 : Colors.black,
+                          ),
+                        ),
+                      ],
                     ),
-                  ],
+                  ),
                 ),
               ),
-            ),
-          ),
-          10.w,
-          Expanded(
-            child: SquircleContainer(
-              height: 60,
-              color: AppColors.primary,
-              radius: 30,
-              padding: EdgeInsets.symmetric(
-                horizontal: 15.0,
-                vertical: 5.0,
-              ),
-              child: Center(
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(HugeIcons.solidSharpGoogle),
-                    5.w,
-                    Text(
-                      "Google",
-                      style: context.bodySmall?.copyWith(
-                        color: Colors.black,
+              10.w,
+              Expanded(
+                child: SquircleContainer(
+                  onTap: isLoading ? null : () {
+                    // TODO: Implémenter la connexion Google
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Connexion Google - À implémenter'),
+                        backgroundColor: Colors.orange,
                       ),
+                    );
+                  },
+                  height: 60,
+                  color: isLoading ? AppColors.primary.withValues(alpha: 0.5) : AppColors.primary,
+                  radius: 30,
+                  padding: EdgeInsets.symmetric(
+                    horizontal: 15.0,
+                    vertical: 5.0,
+                  ),
+                  child: Center(
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          HugeIcons.solidSharpGoogle,
+                          color: isLoading ? Colors.black38 : Colors.black,
+                        ),
+                        5.w,
+                        Text(
+                          "Google",
+                          style: context.bodySmall?.copyWith(
+                            color: isLoading ? Colors.black38 : Colors.black,
+                          ),
+                        ),
+                      ],
                     ),
-                  ],
+                  ),
                 ),
               ),
-            ),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     );
+  }
+
+  void _handleSignIn() {
+    if (_formKey.currentState!.validate()) {
+      context.read<AuthBloc>().add(
+        LogInRequested(
+          email: _emailController.text.trim(),
+          password: _passwordController.text,
+        ),
+      );
+    }
   }
 }
