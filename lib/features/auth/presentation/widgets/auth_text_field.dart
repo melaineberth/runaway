@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:hugeicons/hugeicons.dart';
 import 'package:runaway/config/extensions.dart';
 import 'package:runaway/core/widgets/squircle_container.dart';
 
-class AuthTextField extends StatelessWidget {
+class AuthTextField extends StatefulWidget {
   final TextEditingController controller;
   final String hint;
   final bool obscureText;
@@ -29,6 +30,13 @@ class AuthTextField extends StatelessWidget {
   });
 
   @override
+  State<AuthTextField> createState() => _AuthTextFieldState();
+}
+
+class _AuthTextFieldState extends State<AuthTextField> {
+  bool hidePassword = true;
+
+  @override
   Widget build(BuildContext context) {
     return SquircleContainer(
       height: 60,
@@ -38,35 +46,56 @@ class AuthTextField extends StatelessWidget {
         horizontal: 15.0,
         vertical: 5.0,
       ),
-      child: TextFormField(
-        textCapitalization: textCapitalization ?? TextCapitalization.none,
-        autocorrect: false,
-        validator: validator,
-        obscureText: obscureText,
-        enabled: enabled,
-        keyboardType: keyboardType,
-        maxLength: maxLength,
-        onTapOutside: (event) {
-          FocusManager.instance.primaryFocus?.unfocus();
-        },
-        controller: controller,
-        style: context.bodySmall?.copyWith(
-          color: enabled ? Colors.white : Colors.white38,
-        ),
-        onChanged: onChanged,
-        decoration: InputDecoration(
-          hintText: hint,
-          border: InputBorder.none,
-          counterText: "", // Cache le compteur de caractères si maxLength est défini
-          suffixIcon: suffixIcon,
-          hintStyle: context.bodySmall?.copyWith(
-            color: enabled ? Colors.white30 : Colors.white12,
+      child: Row(
+        children: [
+          Expanded(
+            child: TextFormField(
+              textCapitalization: widget.textCapitalization ?? TextCapitalization.none,
+              autocorrect: false,
+              validator: widget.validator,
+              obscureText: widget.obscureText ? hidePassword : false,
+              enabled: widget.enabled,
+              keyboardType: widget.keyboardType,
+              maxLength: widget.maxLength,
+              onTapOutside: (event) {
+                FocusManager.instance.primaryFocus?.unfocus();
+              },
+              controller: widget.controller,
+              style: context.bodySmall?.copyWith(
+                color: widget.enabled ? Colors.white : Colors.white38,
+              ),
+              onChanged: widget.onChanged,
+              decoration: InputDecoration(
+                hintText: widget.hint,
+                border: InputBorder.none,
+                suffixIcon: widget.suffixIcon,
+                hintStyle: context.bodySmall?.copyWith(
+                  color: widget.enabled ? Colors.white30 : Colors.white12,
+                ),
+                errorStyle: context.bodySmall?.copyWith(
+                  color: Colors.red.shade300,
+                  fontSize: 12,
+                ),
+              ),
+            ),
           ),
-          errorStyle: context.bodySmall?.copyWith(
-            color: Colors.red.shade300,
-            fontSize: 12,
-          ),
-        ),
+          if (widget.obscureText)
+            hidePassword 
+              ? IconButton(onPressed: () {
+                    setState(() {
+                      hidePassword = !hidePassword;
+                    });
+                  },
+                  icon: Icon(HugeIcons.solidRoundedView),
+                )
+              : IconButton(onPressed: () {
+                    setState(() {
+                      hidePassword = !hidePassword;
+                    });
+                  },
+                  icon: Icon(HugeIcons.solidRoundedViewOff),
+                )
+        ],
       ),
     );
   }

@@ -1,3 +1,6 @@
+import 'package:flutter/material.dart';
+import 'package:runaway/config/extensions.dart';
+
 enum UrbanDensity {
   urban(
     id: 'urban',
@@ -34,4 +37,34 @@ enum UrbanDensity {
     required this.greenSpaceRatio,
     required this.poiDensity,
   });
+}
+
+extension ActivityL10n on UrbanDensity {
+  /// Renvoie la chaîne localisée pour *cette* valeur de enum.
+  String label(BuildContext context) {
+    final l10n = context.l10n;     // ou `content.l10n` dans ton widget
+    switch (this) {
+      case UrbanDensity.nature:
+        return l10n.nature;   // clé ARB : "statusPending"
+      case UrbanDensity.mixed:
+        return l10n.mixedUrbanization;
+      case UrbanDensity.urban:
+        return l10n.urban;
+    }
+  }
+}
+
+extension ActivityDescL10n on UrbanDensity {
+  /// Renvoie la chaîne localisée pour *cette* valeur de enum.
+  String desc(BuildContext context) {
+    final l10n = context.l10n;     // ou `content.l10n` dans ton widget
+    switch (this) {
+      case UrbanDensity.nature:
+        return l10n.natureDesc;   // clé ARB : "statusPending"
+      case UrbanDensity.mixed:
+        return l10n.mixedUrbanizationDesc;
+      case UrbanDensity.urban:
+        return l10n.urbanDesc;
+    }
+  }
 }

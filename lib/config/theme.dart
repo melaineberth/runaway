@@ -9,7 +9,7 @@ ThemeData getAppTheme(Brightness brightness) {
     scaffoldBackgroundColor: AppColorsDark.background,
     colorScheme: ColorScheme(
       brightness: brightness,
-      primary: isDark ? AppColorsDark.primary : AppColors.primary,
+      primary: AppColors.primary,
       secondary: isDark ? AppColorsDark.secondary : AppColors.secondary,
       surface: isDark ? AppColorsDark.surface : AppColors.surface,
       error: AppColors.danger,

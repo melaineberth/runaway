@@ -52,7 +52,7 @@ class NavigationOverlay extends StatelessWidget {
                         ),
                         6.w,
                         Text(
-                          _getModeText(),
+                          _getModeText(context),
                           style: context.bodySmall?.copyWith(
                             color: _getModeColor(),
                             fontSize: 12,
@@ -142,8 +142,8 @@ class NavigationOverlay extends StatelessWidget {
                             children: [
                               Text(
                                 isNavigatingToRoute 
-                                    ? 'Vers le parcours'
-                                    : 'Point ${navUpdate!.waypointIndex + 1}/${navUpdate!.totalWaypoints}',
+                                    ? context.l10n.toTheRun
+                                    : '${context.l10n.pathPoint} ${navUpdate!.waypointIndex + 1}/${navUpdate!.totalWaypoints}',
                                 style: context.bodySmall?.copyWith(color: Colors.white70),
                               ),
                               Text(
@@ -193,7 +193,7 @@ class NavigationOverlay extends StatelessWidget {
                   _buildCompactStat(
                     icon: HugeIcons.strokeRoundedRoute03,
                     value: '${_parseDistance(routeStats['distance_km']).toStringAsFixed(1)} km',
-                    label: 'Total',
+                    label: context.l10n.pathTotal,
                   ),
                   
                   VerticalDivider(color: Colors.white30, width: 1),
@@ -201,7 +201,7 @@ class NavigationOverlay extends StatelessWidget {
                   _buildCompactStat(
                     icon: HugeIcons.strokeRoundedTime01,
                     value: '${routeStats['duration_minutes']} min',
-                    label: 'Durée',
+                    label: context.l10n.pathTime,
                   ),
                   
                   VerticalDivider(color: Colors.white30, width: 1),
@@ -209,7 +209,7 @@ class NavigationOverlay extends StatelessWidget {
                   _buildCompactStat(
                     icon: HugeIcons.strokeRoundedAbacusBefore,
                     value: '${routeStats['points_count']}',
-                    label: 'Points',
+                    label: context.l10n.pointsCount,
                   ),
                 ],
               ),
@@ -230,10 +230,10 @@ class NavigationOverlay extends StatelessWidget {
         : HugeIcons.strokeRoundedRoute03;
   }
 
-  String _getModeText() {
+  String _getModeText(BuildContext context) {
     return isNavigatingToRoute 
-        ? 'GUIDAGE'
-        : 'PARCOURS';
+        ? context.l10n.guide
+        : context.l10n.course;
   }
 
   Widget _buildCompactStat({

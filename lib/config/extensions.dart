@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:runaway/l10n/app_localizations.dart';
 
 extension SpacingExtension on num {
   SizedBox get h => SizedBox(height: toDouble());
@@ -51,6 +52,8 @@ extension SmartRadius on EdgeInsets {
   }
 }
 
-String? emailValidator(String? v) => v != null && v.contains('@') ? null : 'Adresse e-mail invalide';
-
-String? passwordValidator(String? v) => (v?.length ?? 0) >= 6 ? null : 'Au moins 6 caractères';
+/// Accès rapide aux chaînes localisées :
+extension L10nExtension on BuildContext {
+  /// Utilisation : `context.l10n.helloWorld`
+  AppLocalizations get l10n => AppLocalizations.of(this)!;
+}

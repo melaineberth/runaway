@@ -425,8 +425,10 @@ class AccountScreen extends StatelessWidget {
 class BlurryPage extends StatefulWidget {
   final List<Widget> children;
   final EdgeInsetsGeometry? padding;
+  final EdgeInsetsGeometry? contentPadding;
+  final Color? color;
   
-  const BlurryPage({super.key, required this.children, this.padding});
+  const BlurryPage({super.key, required this.children, this.padding, this.contentPadding, this.color});
 
   @override
   State<BlurryPage> createState() => _BlurryPageState();
@@ -481,6 +483,7 @@ class _BlurryPageState extends State<BlurryPage> {
                 child: Padding(
                   padding: widget.padding ?? EdgeInsets.zero,
                   child: ListView(
+                    padding: widget.contentPadding,
                     controller: _scrollController,
                     children: widget.children
                   ),
@@ -493,8 +496,8 @@ class _BlurryPageState extends State<BlurryPage> {
                   height: MediaQuery.of(context).size.height / 3,
                   decoration: BoxDecoration(
                     gradient: SmoothGradient(
-                      from: AppColorsDark.background.withValues(alpha: 0),
-                      to: AppColorsDark.background,
+                      from: widget.color?.withValues(alpha: 0) ?? AppColorsDark.background.withValues(alpha: 0),
+                      to: widget.color ?? AppColorsDark.background,
                       curve: Curves.linear,
                       begin: Alignment.center,
                       end: Alignment.bottomCenter,
@@ -515,8 +518,8 @@ class _BlurryPageState extends State<BlurryPage> {
                 height: MediaQuery.of(context).size.height / 3,
                 decoration: BoxDecoration(
                   gradient: SmoothGradient(
-                    from: AppColorsDark.background,
-                    to: AppColorsDark.background.withValues(alpha: 0),
+                    from: widget.color ?? AppColorsDark.background,
+                    to: widget.color?.withValues(alpha: 0) ?? AppColorsDark.background.withValues(alpha: 0),
                     curve: Curves.linear,
                     begin: Alignment.topCenter,
                     end: Alignment.center,

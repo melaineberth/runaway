@@ -1,18 +1,20 @@
+import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
+import 'package:runaway/config/extensions.dart';
 
 enum ActivityType {
-  running(
-    id: 'running',
-    title: 'Course',
-    icon: HugeIcons.solidRoundedWorkoutRun,
+  walking(
+    id: 'walking',
+    title: 'Marche',
+    icon: HugeIcons.solidRoundedRunningShoes,
     defaultSpeed: 10.0, // km/h
     minDistance: 1.0,
     maxDistance: 42.0,
     elevationMultiplier: 1.5,
   ),
-  walking(
-    id: 'walking',
-    title: 'Marche',
+  running(
+    id: 'running',
+    title: 'Course',
     icon: HugeIcons.solidRoundedWorkoutRun,
     defaultSpeed: 10.0, // km/h
     minDistance: 1.0,
@@ -46,4 +48,19 @@ enum ActivityType {
     required this.maxDistance,
     required this.elevationMultiplier,
   });
+}
+
+extension ActivityL10n on ActivityType {
+  /// Renvoie la chaîne localisée pour *cette* valeur de enum.
+  String label(BuildContext context) {
+    final l10n = context.l10n;     // ou `content.l10n` dans ton widget
+    switch (this) {
+      case ActivityType.walking:
+        return l10n.walking;   // clé ARB : "statusPending"
+      case ActivityType.running:
+        return l10n.running;
+      case ActivityType.cycling:
+        return l10n.cycling;
+    }
+  }
 }

@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
-import 'package:hugeicons/hugeicons.dart';
 import 'package:runaway/config/colors.dart';
 import 'package:runaway/config/extensions.dart';
 import 'package:runaway/core/widgets/icon_btn.dart';
@@ -34,7 +32,7 @@ class _AskRegistrationState extends State<AskRegistration> {
       appBar: AppBar(
         automaticallyImplyLeading: false,
         title: Text(
-          "Accès restreint",
+          context.l10n.restrictedAccessTitle,
           style: context.bodySmall?.copyWith(
             color: Colors.white,
           ),
@@ -54,7 +52,7 @@ class _AskRegistrationState extends State<AskRegistration> {
                 Column(
                   children: [
                     Text(
-                      "Vous n'êtes pas connecté",
+                      context.l10n.notLoggedIn,
                       style: context.bodyLarge?.copyWith(
                         color: Colors.white,
                         fontSize: 25,
@@ -64,7 +62,7 @@ class _AskRegistrationState extends State<AskRegistration> {
                     ),
                     10.h,
                     Text(
-                      "Pour accéder à cette page, veuillez vous connecter ou créer un compte.",
+                      context.l10n.loginOrCreateAccountHint,
                       style: context.bodyMedium?.copyWith(
                         color: Colors.white,
                         fontWeight: FontWeight.w500,
@@ -85,20 +83,20 @@ class _AskRegistrationState extends State<AskRegistration> {
             child: Column(
               children: [
                 _buildAuthButton(
-                  label: "Se connecter",
+                  label: context.l10n.logIn,
                   onPressed: () => _showAuthModal(child: LoginScreen()),
                 ),
                 12.h,
                 _buildAuthButton(
                   isBorder: true,
-                  label: "Créer un compte",
+                  label: context.l10n.createAccount,
                   onPressed: () => _showAuthModal(child: SignupScreen()),
                 ),
                 20.h,
                 GestureDetector(
                   onTap: () {},
                   child: Text(
-                    "Besoin d'aide ? Contactez-nous.",
+                    context.l10n.needHelpContactUs,
                     style: context.bodySmall?.copyWith(
                       color: Colors.white,
                       fontSize: 14,
@@ -118,17 +116,15 @@ class _AskRegistrationState extends State<AskRegistration> {
   Widget _buildAuthButton({required String label, required Function() onPressed, bool isBorder = false}) {
     return SizedBox(
       width: double.infinity,
-      child: Expanded(
-        child: IconBtn(
-          label: label,
-          backgroundColor: isBorder ? Colors.transparent : AppColors.primary,
-          labelColor: isBorder ? AppColors.primary : Colors.black,
-          onPressed: onPressed,
-          border: isBorder ? Border.all(
-            color: AppColors.primary,
-            width: 2.5,
-          ) : null,
-        ),
+      child: IconBtn(
+        label: label,
+        backgroundColor: isBorder ? Colors.transparent : AppColors.primary,
+        labelColor: isBorder ? AppColors.primary : Colors.black,
+        onPressed: onPressed,
+        border: isBorder ? Border.all(
+          color: AppColors.primary,
+          width: 2.5,
+        ) : null,
       ),
     );
   }

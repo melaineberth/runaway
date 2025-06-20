@@ -30,6 +30,10 @@ class _LoginScreenState extends State<LoginScreen> {
     _passwordController.dispose();
     super.dispose();
   }
+
+  String? emailValidator(String? v) => v != null && v.contains('@') ? null : context.l10n.emailInvalid;
+
+  String? passwordValidator(String? v) => (v?.length ?? 0) >= 6 ? null : context.l10n.passwordMinLength;
   
   @override
   Widget build(BuildContext context) {
@@ -75,13 +79,13 @@ class _LoginScreenState extends State<LoginScreen> {
                         LabelDivider(),
                         20.h,
                         AuthTextField(
-                          hint: "Email adress",
+                          hint: context.l10n.emailHint,
                           validator: emailValidator,
                           controller: _emailController,
                         ),
                         15.h,
                         AuthTextField(
-                          hint: "Password",
+                          hint: context.l10n.passwordHint,
                           obscureText: true,
                           validator: passwordValidator,
                           controller: _passwordController,
@@ -90,7 +94,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         Align(
                           alignment: Alignment.centerRight,
                           child: Text(
-                            "Forgot Password?",
+                            context.l10n.forgotPassword,
                             style: context.bodySmall?.copyWith(
                               fontSize: 14,
                               color: Colors.white,
@@ -105,7 +109,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           TextSpan(
                             children: [
                               TextSpan(
-                                text: 'Create an account?',
+                                text: context.l10n.createAccountQuestion,
                                 style: context.bodySmall?.copyWith(
                                   fontSize: 15,
                                   color: Colors.white54,
@@ -113,7 +117,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                 ),
                               ),
                               TextSpan(
-                                text: ' Sign up',
+                                text: ' ${context.l10n.signUp}',
                                 style: context.bodySmall?.copyWith(
                                   fontSize: 15,
                                   color: Colors.white,
@@ -126,7 +130,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                         const Spacer(),
                         Text(
-                          "Terms of Service | Privacy Policy", 
+                          context.l10n.termsAndPrivacy, 
                           style: context.bodySmall?.copyWith(
                             fontSize: 15,
                             color: Colors.white24,
@@ -180,7 +184,7 @@ class _LoginScreenState extends State<LoginScreen> {
     return Column(
       children: [
         Text(
-          "Hi there !",
+          context.l10n.loginGreetingTitle,
           style: context.bodyLarge?.copyWith(
             color: Colors.white,
             fontSize: 25,
@@ -190,7 +194,7 @@ class _LoginScreenState extends State<LoginScreen> {
         ),
         10.h,
         Text(
-          "Please enter required details.",
+          context.l10n.loginGreetingSubtitle,
           style: context.bodyMedium?.copyWith(
             color: Colors.white,
             fontWeight: FontWeight.w500,
@@ -206,34 +210,32 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget _buildSignInButton(bool isLoading) {
     return SizedBox(
       width: double.infinity,
-      child: Expanded(
-        child: SquircleContainer(
-          onTap: isLoading ? null : _handleSignIn,
-          height: 60,
-          color: isLoading ? AppColors.primary.withValues(alpha: 0.5) : AppColors.primary,
-          radius: 30,
-          padding: EdgeInsets.symmetric(
-            horizontal: 15.0,
-            vertical: 5.0,
-          ),
-          child: Center(
-            child: isLoading
-              ? SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    valueColor: AlwaysStoppedAnimation<Color>(Colors.black),
-                  ),
-                )
-              : Text(
-                  "Continue",
-                  style: context.bodySmall?.copyWith(
-                    color: Colors.black,
-                    fontWeight: FontWeight.w600,
-                  ),
+      child: SquircleContainer(
+        onTap: isLoading ? null : _handleSignIn,
+        height: 60,
+        color: isLoading ? AppColors.primary.withValues(alpha: 0.5) : AppColors.primary,
+        radius: 30,
+        padding: EdgeInsets.symmetric(
+          horizontal: 15.0,
+          vertical: 5.0,
+        ),
+        child: Center(
+          child: isLoading
+            ? SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.black),
                 ),
-          ),
+              )
+            : Text(
+                context.l10n.continueForms,
+                style: context.bodySmall?.copyWith(
+                  color: Colors.black,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
         ),
       ),
     );
@@ -254,7 +256,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     // TODO: Implémenter la connexion Apple
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
-                        content: Text('Connexion Apple - À implémenter'),
+                        content: Text(context.l10n.appleLoginTodo),
                         backgroundColor: Colors.orange,
                       ),
                     );
@@ -276,7 +278,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                         5.w,
                         Text(
-                          "Apple",
+                          context.l10n.apple,
                           style: context.bodySmall?.copyWith(
                             color: isLoading ? Colors.black38 : Colors.black,
                           ),
@@ -293,7 +295,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     // TODO: Implémenter la connexion Google
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
-                        content: Text('Connexion Google - À implémenter'),
+                        content: Text(context.l10n.googleLoginTodo),
                         backgroundColor: Colors.orange,
                       ),
                     );
@@ -315,7 +317,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                         5.w,
                         Text(
-                          "Google",
+                          context.l10n.google,
                           style: context.bodySmall?.copyWith(
                             color: isLoading ? Colors.black38 : Colors.black,
                           ),

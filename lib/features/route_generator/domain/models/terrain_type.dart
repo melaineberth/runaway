@@ -1,3 +1,6 @@
+import 'package:flutter/material.dart';
+import 'package:runaway/config/extensions.dart';
+
 enum TerrainType {
   flat(
     id: 'flat',
@@ -34,4 +37,34 @@ enum TerrainType {
     required this.elevationGain,
     required this.maxElevationGain,
   });
+}
+
+extension ActivityTitleL10n on TerrainType {
+  /// Renvoie la chaîne localisée pour *cette* valeur de enum.
+  String label(BuildContext context) {
+    final l10n = context.l10n;     // ou `content.l10n` dans ton widget
+    switch (this) {
+      case TerrainType.flat:
+        return l10n.flat;   // clé ARB : "statusPending"
+      case TerrainType.mixed:
+        return l10n.mixedTerrain;
+      case TerrainType.hilly:
+        return l10n.hilly;
+    }
+  }
+}
+
+extension ActivityDescL10n on TerrainType {
+  /// Renvoie la chaîne localisée pour *cette* valeur de enum.
+  String desc(BuildContext context) {
+    final l10n = context.l10n;     // ou `content.l10n` dans ton widget
+    switch (this) {
+      case TerrainType.flat:
+        return l10n.flatDesc;   // clé ARB : "statusPending"
+      case TerrainType.mixed:
+        return l10n.mixedTerrainDesc;
+      case TerrainType.hilly:
+        return l10n.hillyDesc;
+    }
+  }
 }

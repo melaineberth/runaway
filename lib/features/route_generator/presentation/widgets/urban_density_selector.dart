@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:runaway/config/colors.dart';
 import 'package:runaway/config/extensions.dart';
 import '../../domain/models/urban_density.dart';
 
@@ -18,14 +19,14 @@ class UrbanDensitySelector extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Niveau d\'urbanisation',
+          context.l10n.urbanization,
           style: context.bodySmall?.copyWith(
             color: Colors.white,
           ),
         ),
         3.h,
         Text(
-          selectedDensity.description,
+          selectedDensity.desc(context),
           style: context.bodySmall?.copyWith(
             color: Colors.grey.shade500,
             fontSize: 15,
@@ -40,10 +41,10 @@ class UrbanDensitySelector extends StatelessWidget {
               padding: const EdgeInsets.only(right: 8.0),
               child: ChoiceChip(
                 showCheckmark: false,
-                label: Text(density.title),
+                label: Text(density.label(context)),
                 selected: isSelected,
                 onSelected: (_) => onDensitySelected(density),
-                selectedColor: Theme.of(context).primaryColor,
+                selectedColor: AppColors.primary,
                 backgroundColor: const Color.fromARGB(255, 38, 38, 38),
                 labelStyle: TextStyle(
                   color: isSelected ? Colors.black : Colors.white24,

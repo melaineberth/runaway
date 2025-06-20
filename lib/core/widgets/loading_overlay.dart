@@ -37,7 +37,7 @@ class _LoadingOverlayState extends State<LoadingOverlay> {
                 ),
                 16.h,
                 Text(
-                  'Génération en cours..',
+                  context.l10n.currentGeneration,
                   style: TextStyle(
                     fontSize: 16,
                     color: Colors.white,

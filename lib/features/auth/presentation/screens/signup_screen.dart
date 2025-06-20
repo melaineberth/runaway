@@ -24,6 +24,10 @@ class _SignupScreenState extends State<SignupScreen> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _confirmPasswordController = TextEditingController();
+
+  String? emailValidator(String? v) => v != null && v.contains('@') ? null : context.l10n.emailInvalid;
+
+  String? passwordValidator(String? v) => (v?.length ?? 0) >= 6 ? null : context.l10n.passwordMinLength;
   
   @override
   Widget build(BuildContext context) {
@@ -55,25 +59,27 @@ class _SignupScreenState extends State<SignupScreen> {
                     40.h,
                     _buildSocialButton(),
                     20.h,
-                    LabelDivider(),
+                    LabelDivider(
+                      label: context.l10n.orDivider,
+                    ),
                     20.h,
                     AuthTextField(
-                      hint: "Email adress",
+                      hint: context.l10n.emailHint,
                       validator: emailValidator,
                       controller: _emailController,
                     ),
                     15.h,
                     AuthTextField(
-                      hint: "Password",
+                      hint: context.l10n.passwordHint,
                       obscureText: true,
                       validator: passwordValidator,
                       controller: _passwordController,
                     ),
                     15.h,
                     AuthTextField(
-                      hint: "Confirm password",
+                      hint: context.l10n.confirmPasswordHint,
                       obscureText: true,
-                      validator: (v) =>v == _passwordController.text ? null : 'Les mots de passe ne correspondent pas',
+                      validator: (v) =>v == _passwordController.text ? null : context.l10n.passwordsDontMatchError,
                       controller: _confirmPasswordController,
                     ),
                     15.h,
@@ -94,7 +100,7 @@ class _SignupScreenState extends State<SignupScreen> {
                       TextSpan(
                         children: [
                           TextSpan(
-                            text: 'Have an account?',
+                            text: context.l10n.haveAccount,
                             style: context.bodySmall?.copyWith(
                               fontSize: 15,
                               color: Colors.white54,
@@ -102,7 +108,7 @@ class _SignupScreenState extends State<SignupScreen> {
                             ),
                           ),
                           TextSpan(
-                            text: ' Log in',
+                            text: ' ${context.l10n.logIn}',
                             style: context.bodySmall?.copyWith(
                               fontSize: 15,
                               color: Colors.white,
@@ -115,7 +121,7 @@ class _SignupScreenState extends State<SignupScreen> {
                     ),
                     const Spacer(),
                     Text(
-                      "Terms of Service | Privacy Policy", 
+                      context.l10n.termsAndPrivacy, 
                       style: context.bodySmall?.copyWith(
                         fontSize: 15,
                         color: Colors.white24,
@@ -151,7 +157,7 @@ class _SignupScreenState extends State<SignupScreen> {
     return Column(
       children: [
         Text(
-          "Create an account",
+          context.l10n.createAccount,
           style: context.bodyLarge?.copyWith(
             color: Colors.white,
             fontSize: 25,
@@ -161,7 +167,7 @@ class _SignupScreenState extends State<SignupScreen> {
         ),
         10.h,
         Text(
-          "To create an account provide details verify email and set a password.",
+          context.l10n.createAccountSubtitle,
           style: context.bodyMedium?.copyWith(
             color: Colors.white,
             fontWeight: FontWeight.w500,
@@ -177,22 +183,20 @@ class _SignupScreenState extends State<SignupScreen> {
   Widget _buildSignUpButton({required Function()? onTap}) {
     return SizedBox(
       width: double.infinity,
-      child: Expanded(
-        child: SquircleContainer(
-          onTap: onTap,
-          height: 60,
-          color: AppColors.primary,
-          radius: 30,
-          padding: EdgeInsets.symmetric(
-            horizontal: 15.0,
-            vertical: 5.0,
-          ),
-          child: Center(
-            child: Text(
-              "Continue",
-              style: context.bodySmall?.copyWith(
-                color: Colors.black,
-              ),
+      child: SquircleContainer(
+        onTap: onTap,
+        height: 60,
+        color: AppColors.primary,
+        radius: 30,
+        padding: EdgeInsets.symmetric(
+          horizontal: 15.0,
+          vertical: 5.0,
+        ),
+        child: Center(
+          child: Text(
+            context.l10n.continueForms,
+            style: context.bodySmall?.copyWith(
+              color: Colors.black,
             ),
           ),
         ),
@@ -201,65 +205,95 @@ class _SignupScreenState extends State<SignupScreen> {
   }
 
   Widget _buildSocialButton() {
-    return SizedBox(
-      width: double.infinity,
-      child: Row(
-        children: [
-          Expanded(
-            child: SquircleContainer(
-              height: 60,
-              color: AppColors.primary,
-              radius: 30,
-              padding: EdgeInsets.symmetric(
-                horizontal: 15.0,
-                vertical: 5.0,
-              ),
-              child: Center(
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(HugeIcons.solidSharpApple, color: Colors.black),
-                    5.w,
-                    Text(
-                      "Apple",
-                      style: context.bodySmall?.copyWith(
-                        color: Colors.black,
+    return BlocBuilder<AuthBloc, AuthState>(
+      builder: (context, authState) {
+        final isLoading = authState is AuthLoading;
+        
+        return SizedBox(
+          width: double.infinity,
+          child: Row(
+            children: [
+              Expanded(
+                child: SquircleContainer(
+                  onTap: isLoading ? null : () {
+                    // TODO: Implémenter la connexion Apple
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(context.l10n.appleLoginTodo),
+                        backgroundColor: Colors.orange,
                       ),
+                    );
+                  },
+                  height: 60,
+                  color: isLoading ? AppColors.primary.withValues(alpha: 0.5) : AppColors.primary,
+                  radius: 30,
+                  padding: EdgeInsets.symmetric(
+                    horizontal: 15.0,
+                    vertical: 5.0,
+                  ),
+                  child: Center(
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          HugeIcons.solidSharpApple,
+                          color: isLoading ? Colors.black38 : Colors.black,
+                        ),
+                        5.w,
+                        Text(
+                          context.l10n.apple,
+                          style: context.bodySmall?.copyWith(
+                            color: isLoading ? Colors.black38 : Colors.black,
+                          ),
+                        ),
+                      ],
                     ),
-                  ],
+                  ),
                 ),
               ),
-            ),
-          ),
-          10.w,
-          Expanded(
-            child: SquircleContainer(
-              height: 60,
-              color: AppColors.primary,
-              radius: 30,
-              padding: EdgeInsets.symmetric(
-                horizontal: 15.0,
-                vertical: 5.0,
-              ),
-              child: Center(
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(HugeIcons.solidSharpGoogle, color: Colors.black),
-                    5.w,
-                    Text(
-                      "Google",
-                      style: context.bodySmall?.copyWith(
-                        color: Colors.black,
+              10.w,
+              Expanded(
+                child: SquircleContainer(
+                  onTap: isLoading ? null : () {
+                    // TODO: Implémenter la connexion Google
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(context.l10n.googleLoginTodo),
+                        backgroundColor: Colors.orange,
                       ),
+                    );
+                  },
+                  height: 60,
+                  color: isLoading ? AppColors.primary.withValues(alpha: 0.5) : AppColors.primary,
+                  radius: 30,
+                  padding: EdgeInsets.symmetric(
+                    horizontal: 15.0,
+                    vertical: 5.0,
+                  ),
+                  child: Center(
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          HugeIcons.solidSharpGoogle,
+                          color: isLoading ? Colors.black38 : Colors.black,
+                        ),
+                        5.w,
+                        Text(
+                          context.l10n.google,
+                          style: context.bodySmall?.copyWith(
+                            color: isLoading ? Colors.black38 : Colors.black,
+                          ),
+                        ),
+                      ],
                     ),
-                  ],
+                  ),
                 ),
               ),
-            ),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 }

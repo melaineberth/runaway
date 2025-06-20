@@ -102,27 +102,38 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     _setupPositionTracking();
-    NavigationService.initialize();
+    
+    // FIX: Initialisation sécurisée du NavigationService
+    try {
+      NavigationService.initialize();
+      print('✅ NavigationService initialisé avec succès');
+    } catch (e) {
+      print('⚠️ Erreur initialisation NavigationService: $e');
+      // Essayer de réinitialiser
+      NavigationService.reinitialize();
+    }
+    
     WidgetsBinding.instance.addObserver(this);
   }
 
   @override
   void dispose() {
-    NavigationService.dispose();
     WidgetsBinding.instance.removeObserver(this);
 
     positionUpdateTimer?.cancel();
 
-    // NE PAS appeler _clearRoute() car elle contient setState()
-    // Nettoyer seulement les ressources critiques
+    // FIX: Disposal sécurisé du NavigationService
     try {
-      if (isNavigationMode) {
-        NavigationService.stopNavigation();
-      }
+      NavigationService.dispose();
+      print('✅ NavigationService disposé avec succès');
     } catch (e) {
-      print('⚠️ Erreur arrêt navigation: $e');
+      print('⚠️ Erreur disposal NavigationService: $e');
     }
 
+    // Appeler _clearRoute seulement si le widget est encore monté
+    if (mounted) {
+      _clearRoute(); // Nettoyer la route
+    }
     userPositionStream?.cancel();
     _clearLocationMarkers();
     super.dispose();
@@ -155,7 +166,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     if (generatedRouteCoordinates == null ||
         userLongitude == null ||
         userLatitude == null) {
-      _showErrorSnackBar('Position utilisateur ou parcours non disponible');
+      _showErrorSnackBar(context.l10n.notAvailablePosition);
       return;
     }
 
@@ -184,15 +195,15 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           (context) => AlertDialog(
             backgroundColor: Colors.black,
             title: Text(
-              'Démarrer le parcours',
+              context.l10n.startCourse,
               style: context.titleMedium?.copyWith(color: Colors.white),
             ),
             content: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
+              children: [ 
                 Text(
-                  'Vous êtes au point de départ du parcours.',
+                  context.l10n.userAreStartingPoint,
                   style: context.bodyMedium?.copyWith(color: Colors.white70),
                 ),
                 16.h,
@@ -212,7 +223,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                       8.w,
                       Expanded(
                         child: Text(
-                          'Prêt à commencer la navigation du parcours',
+                          context.l10n.readyToStart,
                           style: context.bodySmall?.copyWith(
                             color: Colors.green,
                             fontSize: 12,
@@ -227,7 +238,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             actions: [
               TextButton(
                 onPressed: () => Navigator.of(context).pop(),
-                child: Text('Annuler', style: TextStyle(color: Colors.white70)),
+                child: Text(context.l10n.cancel, style: TextStyle(color: Colors.white70)),
               ),
               ElevatedButton(
                 onPressed: () {
@@ -238,7 +249,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   backgroundColor: AppColors.primary,
                   foregroundColor: Colors.black,
                 ),
-                child: Text('Commencer'),
+                child: Text(context.l10n.start),
               ),
             ],
           ),
@@ -252,7 +263,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           (context) => AlertDialog(
             backgroundColor: Colors.black,
             title: Text(
-              'Navigation vers le parcours',
+              context.l10n.navigationToCourse,
               style: context.titleMedium?.copyWith(color: Colors.white),
             ),
             content: Column(
@@ -260,12 +271,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Vous êtes à ${_formatDistance(distanceToStart)} du point de départ.',
+                  context.l10n.userToStartingPoint(_formatDistance(distanceToStart)),
                   style: context.bodyMedium?.copyWith(color: Colors.white70),
                 ),
                 16.h,
                 Text(
-                  'Que souhaitez-vous faire ?',
+                  context.l10n.askUserChooseRoute,
                   style: context.bodyMedium?.copyWith(
                     color: Colors.white,
                     fontWeight: FontWeight.w600,
@@ -288,7 +299,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                       8.w,
                       Expanded(
                         child: Text(
-                          'Navigation avec instructions vocales',
+                          context.l10n.voiceInstructions,
                           style: context.bodySmall?.copyWith(
                             color: Colors.blue,
                             fontSize: 12,
@@ -303,7 +314,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             actions: [
               TextButton(
                 onPressed: () => Navigator.of(context).pop(),
-                child: Text('Annuler', style: TextStyle(color: Colors.white70)),
+                child: Text(context.l10n.cancel, style: TextStyle(color: Colors.white70)),
               ),
               TextButton(
                 onPressed: () {
@@ -311,7 +322,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   _startRouteNavigation(); // Démarrer directement le parcours
                 },
                 child: Text(
-                  'Parcours direct',
+                  context.l10n.directPath,
                   style: TextStyle(color: Colors.orange),
                 ),
               ),
@@ -324,7 +335,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   backgroundColor: AppColors.primary,
                   foregroundColor: Colors.black,
                 ),
-                child: Text('Me guider'),
+                child: Text(context.l10n.guideMe),
               ),
             ],
           ),
@@ -336,7 +347,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       setState(() {
         isNavigatingToRoute = true;
         navigationMode = 'to_route';
-        currentInstruction = "Calcul de l'itinéraire vers le parcours...";
+        currentInstruction = context.l10n.routeCalculation;
       });
 
       // Point de départ du parcours
@@ -353,7 +364,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
       if (routeToStart.length < 2) {
         throw Exception(
-          'Impossible de calculer l\'itinéraire vers le parcours',
+          context.l10n.unableCalculateRoute,
         );
       }
 
@@ -372,15 +383,39 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       // Afficher la route vers le point de départ
       await _displayRouteToStart(routeToStart);
 
-      bool success = await NavigationService.startCustomNavigation(
-        coordinates: routeToStart,
-        onUpdate: _handleNavigationToRouteUpdate,
-      );
+      // FIX: Démarrage sécurisé de la navigation avec gestion d'erreur
+      bool success = false;
+      try {
+        success = await NavigationService.startCustomNavigation(
+          context: context,
+          coordinates: routeToStart,
+          onUpdate: _handleNavigationToRouteUpdate,
+        );
+      } catch (navError) {
+        print('❌ Erreur spécifique NavigationService: $navError');
+        
+        // FIX: Essayer de réinitialiser et recommencer
+        try {
+          print('🔄 Tentative de réinitialisation NavigationService');
+          NavigationService.reinitialize();
+          await Future.delayed(Duration(milliseconds: 500)); // Petit délai
+          
+          success = await NavigationService.startCustomNavigation(
+            context: context,
+            coordinates: routeToStart,
+            onUpdate: _handleNavigationToRouteUpdate,
+          );
+          print('✅ Navigation redémarrée après réinitialisation');
+        } catch (retryError) {
+          print('❌ Échec même après réinitialisation: $retryError');
+          throw Exception(context.l10n.unableStartNavigation(retryError));
+        }
+      }
 
       if (success) {
         setState(() {
           isNavigationMode = true;
-          currentInstruction = "Navigation vers le point de départ...";
+          currentInstruction = context.l10n.startingPointNavigation;
         });
 
         await _switchToNavigationView();
@@ -388,15 +423,17 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              'Navigation vers le parcours démarrée !',
+              context.l10n.courseStarted,
               style: TextStyle(color: Colors.white),
             ),
             backgroundColor: Colors.blue,
           ),
         );
+      } else {
+        throw Exception(context.l10n.navigationServiceError);
       }
     } catch (e) {
-      print('❌ Erreur complète: $e');
+      print('❌ Erreur complète navigation: $e');
 
       setState(() {
         isNavigatingToRoute = false;
@@ -407,14 +444,29 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       // Restaurer la polyligne originale en cas d'erreur
       await _showOriginalRoute();
 
+      // FIX: Message d'erreur plus informatif
+      String errorMessage = context.l10n.calculationError;
+      if (e.toString().contains('LateInitializationError')) {
+        errorMessage = context.l10n.navigationInitializedError;
+      } else if (e.toString().contains('NavigationService')) {
+        errorMessage = context.l10n.navigationError;
+      } else {
+        errorMessage = context.l10n.calculationRouteError(e.toString());
+      }
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            'Erreur calcul itinéraire: ${e.toString()}',
+            errorMessage,
             style: TextStyle(color: Colors.white),
           ),
           backgroundColor: Colors.red,
           duration: Duration(seconds: 5),
+          action: SnackBarAction(
+            label: context.l10n.retry,
+            textColor: Colors.white,
+            onPressed: () => _startNavigationToRoute(distance),
+          ),
         ),
       );
     }
@@ -537,7 +589,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                     .map((coord) => mp.Position(coord[0], coord[1]))
                     .toList(),
           ),
-          lineColor: Theme.of(context).primaryColor.toARGB32(),
+          lineColor: AppColors.primary.toARGB32(),
           lineWidth: 4.0,
           lineOpacity: 0.9,
           lineJoin: mp.LineJoin.ROUND,
@@ -598,6 +650,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       await _showOriginalRoute();
 
       bool success = await NavigationService.startCustomNavigation(
+        context: context,
         coordinates: generatedRouteCoordinates!,
         onUpdate: _handleRouteNavigationUpdate,
       );
@@ -607,7 +660,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           isNavigationMode = true;
           navigationMode = 'on_route';
           isNavigatingToRoute = false;
-          currentInstruction = "Navigation du parcours démarrée...";
+          currentInstruction = context.l10n.courseStarted;
         });
 
         await _switchToNavigationView();
@@ -615,7 +668,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              'Navigation du parcours démarrée !',
+              context.l10n.courseStarted,
               style: TextStyle(color: Colors.white),
             ),
             backgroundColor: Colors.green,
@@ -626,7 +679,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            'Erreur: ${e.toString()}',
+            '${context.l10n.error}: ${e.toString()}',
             style: TextStyle(color: Colors.white),
           ),
           backgroundColor: Colors.red,
@@ -730,7 +783,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           (context) => AlertDialog(
             backgroundColor: Colors.black,
             title: Text(
-              'Point de départ atteint !',
+              context.l10n.startingPoint,
               style: context.titleMedium?.copyWith(color: Colors.white),
             ),
             content: Column(
@@ -751,7 +804,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                       ),
                       12.h,
                       Text(
-                        'Vous êtes arrivé au point de départ du parcours !',
+                        context.l10n.arrivedToStartingPoint,
                         style: context.bodyMedium?.copyWith(
                           color: Colors.white,
                         ),
@@ -770,7 +823,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   _switchToNormalView();
                 },
                 child: Text(
-                  'Plus tard',
+                  context.l10n.later,
                   style: TextStyle(color: Colors.white70),
                 ),
               ),
@@ -783,7 +836,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   backgroundColor: AppColors.primary,
                   foregroundColor: Colors.black,
                 ),
-                child: Text('Commencer le parcours'),
+                child: Text(context.l10n.startCourse),
               ),
             ],
           ),
@@ -1165,7 +1218,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }
 
   void _stopNavigation() async {
-    await NavigationService.stopNavigation();
+    NavigationService.stopNavigation();
 
     // Nettoyer les polylignes temporaires et restaurer l'original si nécessaire
     if (isNavigatingToRoute && routeToStartPolyline != null) {
@@ -1186,8 +1239,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
     final message =
         isNavigatingToRoute
-            ? 'Navigation vers le parcours arrêtée'
-            : 'Navigation du parcours terminée';
+            ? context.l10n.toTheRouteNavigation
+            : context.l10n.completedCourseNavigation;
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -1306,20 +1359,20 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     serviceEnabled = await gl.Geolocator.isLocationServiceEnabled();
 
     if (!serviceEnabled) {
-      return Future.error('Location services are disabled.');
+      return Future.error(context.l10n.disabledLocation);
     }
 
     permission = await gl.Geolocator.checkPermission();
     if (permission == gl.LocationPermission.denied) {
       permission = await gl.Geolocator.requestPermission();
       if (permission == gl.LocationPermission.denied) {
-        return Future.error('Location permissions are denied.');
+        return Future.error(context.l10n.deniedPermission);
       }
     }
 
     if (permission == gl.LocationPermission.deniedForever) {
       return Future.error(
-        'Location permissions are permanently denied, we cannot request permission.',
+        context.l10n.disabledAndDenied,
       );
     }
 
@@ -1385,10 +1438,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     );
 
     // Créer le gestionnaire d'annotations
-    pointAnnotationManager =
-        await mapboxMap.annotations.createPointAnnotationManager();
-    circleAnnotationManager =
-        await mapboxMap.annotations.createCircleAnnotationManager();
+    pointAnnotationManager = await mapboxMap.annotations.createPointAnnotationManager();
+    circleAnnotationManager = await mapboxMap.annotations.createCircleAnnotationManager();
 
     // Masquer les éléments d'interface
     await mapboxMap.compass.updateSettings(mp.CompassSettings(enabled: false));
@@ -1565,7 +1616,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
       // FIX: Vérification plus robuste
       if (routeCoordinates.isEmpty) {
-        throw Exception('Aucune coordonnée reçue du serveur');
+        throw Exception(context.l10n.noCoordinateServer);
       }
 
       print('✅ Coordonnées reçues: ${routeCoordinates.length}');
@@ -1598,11 +1649,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         print('⚠️ Erreur affichage route: $e');
         // Continuer même si l'affichage échoue
       }
-
-      // FIX: Dialog sécurisé
-      if (routeFile != null) {
-        _showGraphHopperRouteResults(result, routeFile);
-      }
     } catch (e) {
       print('❌ Erreur génération API: $e');
 
@@ -1615,7 +1661,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         generatedRouteFile = null;
       });
 
-      _showErrorSnackBar('Erreur lors de la génération: ${e.toString()}');
+      _showErrorSnackBar('${context.l10n.generationError}: ${e.toString()}');
     }
   }
 
@@ -1634,92 +1680,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
     print('🔍 Building stats: $stats');
     return stats;
-  }
-
-  void _showGraphHopperRouteResults(
-    GraphHopperRouteResult result,
-    File routeFile,
-  ) {
-    showDialog(
-      useRootNavigator: true,
-      context: context,
-      builder:
-          (context) => AlertDialog(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-            ),
-            title: Row(
-              children: [
-                Container(
-                  padding: EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: Colors.blue.withAlpha(30),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: HugeIcon(
-                    icon: HugeIcons.strokeRoundedRoute03,
-                    color: Colors.blue,
-                    size: 24,
-                  ),
-                ),
-                12.w,
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Parcours généré !', style: context.titleMedium),
-                      Text(
-                        '${result.distanceKm.toStringAsFixed(2)} km • GraphHopper API • ${result.durationMinutes}min',
-                        style: context.bodySmall?.copyWith(
-                          fontSize: 14,
-                          color: Colors.grey.shade600,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            content: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Informations sur la route
-                  _buildStatsCard('Parcours généré', [
-                    '📏 ${result.distanceKm.toStringAsFixed(2)} km',
-                    '⏱️ ~${result.durationMinutes} minutes',
-                    '⛰️ ${result.elevationGain.round()}m de dénivelé',
-                    '📍 ${result.coordinates.length} points GPS',
-                    '🧭 ${result.instructions.length} instructions',
-                  ]),
-
-                  16.h,
-
-                  // Métadonnées techniques
-                  if (result.metadata.isNotEmpty)
-                    _buildStatsCard('Détails techniques', [
-                      for (final entry in result.metadata.entries)
-                        '• ${entry.key}: ${entry.value}',
-                    ]),
-                ],
-              ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(),
-                child: Text('Fermer'),
-              ),
-              ElevatedButton(
-                onPressed: () {
-                  Navigator.of(context).pop();
-                  _shareCurrentRoute();
-                },
-                child: Text('Partager'),
-              ),
-            ],
-          ),
-    );
   }
 
   Future<void> _displayRoute(List<List<double>> coordinates) async {
@@ -1765,7 +1725,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                     .map((coord) => mp.Position(coord[0], coord[1]))
                     .toList(),
           ),
-          lineColor: Theme.of(context).primaryColor.toARGB32(),
+          lineColor: AppColors.primary.toARGB32(),
           lineWidth: 4.0,
           lineOpacity: 0.9,
           lineJoin: mp.LineJoin.ROUND,
@@ -1986,39 +1946,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     return total / 1000; // Convertir en km
   }
 
-  Widget _buildStatsCard(String title, List<String> stats) {
-    return Container(
-      padding: EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.blue.shade50,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.blue.shade100),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            title,
-            style: context.bodySmall?.copyWith(
-              fontWeight: FontWeight.w600,
-              color: Colors.blue.shade700,
-            ),
-          ),
-          8.h,
-          ...stats.map(
-            (stat) => Padding(
-              padding: EdgeInsets.only(bottom: 2),
-              child: Text(
-                stat,
-                style: context.bodySmall?.copyWith(fontSize: 14),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   void _showErrorSnackBar(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -2043,7 +1970,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                     ),
                   ),
                   Text(
-                    'Réessayez avec un rayon plus petit',
+                    context.l10n.retrySmallRay,
                     style: TextStyle(
                       color: Colors.white.withAlpha(220),
                       fontSize: 14,
@@ -2128,7 +2055,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     }
 
     // FIX: Seulement faire setState si le widget est encore monté
-    if (mounted) {
+    if (context.mounted) {
       setState(() {
         generatedRouteCoordinates = null;
         generatedRouteStats = null;
@@ -2149,26 +2076,20 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         _onLocationSelected(
           currentLongitude!,
           currentLatitude!,
-          "Position actuelle",
+          context.l10n.currentPosition,
         );
       }
     }
   }
 
   void _shareCurrentRoute() async {
-    if (generatedRouteFile == null) {
-      final distance = _parseDistance(generatedRouteStats?['distance_km']);
-      final params = ShareParams(
-        text: 'Mon parcours RunAway de ${distance.toStringAsFixed(1)} km généré avec l\'application RunAway',
-        files: [XFile('${generatedRouteFile!.path}/image.jpg')],
-      );
+    final distance = _parseDistance(generatedRouteStats?['distance_km']);
+    final params = ShareParams(
+      text: context.l10n.shareMsg(distance.toStringAsFixed(1)),
+      files: [XFile('${generatedRouteFile!.path}/image.jpg')],
+    );
 
-      final result = await SharePlus.instance.share(params);
-
-      if (result.status == ShareResultStatus.success) {
-        print('Thank you for sharing the picture!');
-      }
-    }
+    await SharePlus.instance.share(params);
   }
 
   @override

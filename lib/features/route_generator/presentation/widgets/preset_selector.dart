@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
+import 'package:runaway/config/colors.dart';
 import 'package:runaway/config/extensions.dart';
 import '../../domain/models/route_parameters.dart';
 
@@ -219,12 +220,12 @@ class _FavoriteCard extends StatelessWidget {
               Container(
                 padding: EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: Theme.of(context).primaryColor.withAlpha(30),
+                  color: AppColors.primary.withAlpha(30),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: HugeIcon(
                   icon: parameters.activityType.icon,
-                  color: Theme.of(context).primaryColor,
+                  color: AppColors.primary,
                   size: 24,
                 ),
               ),

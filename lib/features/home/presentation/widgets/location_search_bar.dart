@@ -257,7 +257,7 @@ class _LocationSearchBarState extends State<LocationSearchBar> {
               // },
               textCapitalization: TextCapitalization.sentences,
               decoration: InputDecoration(
-                hintText: "Entrer une destination",
+                hintText: context.l10n.enterDestination,
                 hintStyle: context.bodySmall?.copyWith(
                   color: Colors.white38,
                   fontWeight: FontWeight.w500,

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
+import 'package:runaway/config/colors.dart';
 import 'package:runaway/config/extensions.dart';
 import '../../domain/models/activity_type.dart';
 
@@ -19,7 +20,7 @@ class ActivitySelector extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Type d\'activité',
+          context.l10n.activity,
           style: context.bodySmall?.copyWith(
             color: Colors.white,
           ),
@@ -71,11 +72,11 @@ class _ActivityCard extends StatelessWidget {
           height: 120,
           decoration: BoxDecoration(
             color: isSelected 
-                ? Theme.of(context).primaryColor 
+                ? AppColors.primary 
                 : Colors.white12,
             boxShadow: isSelected ? [
               BoxShadow(
-                color: Theme.of(context).primaryColor.withAlpha(40),
+                color: AppColors.primary.withAlpha(40),
                 blurRadius: 12,
                 offset: Offset(0, 4),
               ),
@@ -91,7 +92,7 @@ class _ActivityCard extends StatelessWidget {
               ),
               5.h,
               Text(
-                activity.title,
+                activity.label(context),
                 style: context.bodySmall?.copyWith(
                   color: isSelected ? Colors.black : Colors.white24,
                   fontWeight: FontWeight.w600,

@@ -75,8 +75,6 @@ class AuthRepository {
           print('✅ Avatar uploadé: $avatarUrl');
         } catch (e) {
           print('⚠️ Erreur upload avatar (continuez sans avatar): $e');
-          // FIX: Continuer SANS avatar plutôt que d'échouer
-          // L'utilisateur peut ajouter son avatar plus tard
           avatarUrl = null;
         }
       }

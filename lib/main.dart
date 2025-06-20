@@ -10,8 +10,9 @@ import 'package:runaway/config/theme.dart';
 import 'package:runaway/features/auth/data/repositories/auth_repository.dart';
 import 'package:runaway/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:runaway/features/auth/presentation/bloc/auth_event.dart';
+import 'package:runaway/l10n/app_localizations.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'core/blocs/app_bloc_observer.dart';
 import 'features/home/presentation/blocs/map_style/map_style_bloc.dart';
 import 'features/home/presentation/blocs/route_parameters/route_parameters_bloc.dart';
@@ -90,12 +91,14 @@ class RunAway extends StatelessWidget {
         BlocProvider(
           create: (_) => MapStyleBloc(),
         ),
+
         BlocProvider(
           create: (_) => RouteParametersBloc(
             startLongitude: 0.0, // Sera mis à jour avec la position réelle
             startLatitude: 0.0,
           ),
         ),
+        
         BlocProvider(
           create: (_) => RouteGenerationBloc(),
         ),
@@ -107,12 +110,20 @@ class RunAway extends StatelessWidget {
         theme: getAppTheme(Brightness.light),
         darkTheme: getAppTheme(Brightness.dark),
         themeMode: ThemeMode.dark, // Force le thème sombre pour votre design
-        
+        localizationsDelegates: const [
+          AppLocalizations.delegate,
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        supportedLocales: const [
+          Locale('en'),
+        ],
         // Configuration globale
         builder: (context, child) {
           return MediaQuery(
             // Empêcher le scaling des polices système
-            data: MediaQuery.of(context).copyWith(textScaleFactor: 1.0),
+            data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(1.0)),
             child: child ?? Container(),
           );
         },

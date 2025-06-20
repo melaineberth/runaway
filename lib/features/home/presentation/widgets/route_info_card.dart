@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
+import 'package:runaway/config/colors.dart';
 import 'package:runaway/config/extensions.dart';
 import 'package:runaway/core/widgets/icon_btn.dart';
 import 'package:runaway/core/widgets/squircle_container.dart';
@@ -49,10 +50,10 @@ class RouteInfoCard extends StatelessWidget {
             children: [
               IconBtn(
                 icon: HugeIcons.solidRoundedRouteBlock,
-                iconColor: Theme.of(context).primaryColor,
+                iconColor: AppColors.primary,
                 iconSize: 30,
                 radius: 12,
-                backgroundColor: Theme.of(context).primaryColor.withAlpha(30),
+                backgroundColor: AppColors.primary.withAlpha(30),
               ),
               12.w,
               Expanded(
@@ -60,8 +61,10 @@ class RouteInfoCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Parcours généré',
-                      style: context.bodySmall,
+                      context.l10n.pathGenerated,
+                      style: context.bodySmall?.copyWith(
+                        color: Colors.black,
+                      ),
                     ),
                     4.h,
                     Row(
@@ -75,7 +78,7 @@ class RouteInfoCard extends StatelessWidget {
                           icon: isLoop 
                               ? HugeIcons.solidRoundedArrowReloadHorizontal 
                               : HugeIcons.strokeRoundedArrowRight01,
-                          label: isLoop ? 'Boucle' : 'Aller',
+                          label: isLoop ? context.l10n.pathLoop : context.l10n.pathSimple,
                         ),
                       ],
                     ),
@@ -103,7 +106,7 @@ class RouteInfoCard extends StatelessWidget {
                 child: _ActionButton(
                   radius: _innerRadius,
                   icon: HugeIcons.solidRoundedNavigation03,
-                  label: 'Commencer',
+                  label: context.l10n.start,
                   onTap: onNavigate,
                   isPrimary: true,
                 ),
@@ -112,7 +115,7 @@ class RouteInfoCard extends StatelessWidget {
               _ActionButton(
                 radius: _innerRadius,
                 icon: HugeIcons.strokeRoundedShare08,
-                label: 'Partager',
+                label: context.l10n.share,
                 onTap: onShare,
                 isPrimary: false,
               ),
@@ -140,7 +143,7 @@ class _InfoChip extends StatelessWidget {
       padding: EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
         border: Border.all(
-          color: Theme.of(context).primaryColor,
+          color: Colors.black38,
           width: 1.5,
         ),
         borderRadius: BorderRadius.circular(20),
@@ -151,14 +154,14 @@ class _InfoChip extends StatelessWidget {
           HugeIcon(
             icon: icon,
             size: 16,
-            color: Theme.of(context).primaryColor,
+            color: Colors.black38,
           ),
           6.w,
           Text(
             label,
             style: context.bodySmall?.copyWith(
               fontSize: 14,
-              color: Theme.of(context).primaryColor,
+              color: Colors.black38,
             ),
           ),
         ],
@@ -191,7 +194,7 @@ class _ActionButton extends StatelessWidget {
         padding: EdgeInsets.symmetric(vertical: 12.0, horizontal: 15.0),
         radius: radius,
         color: isPrimary 
-            ? Theme.of(context).primaryColor 
+            ? AppColors.primary 
             : Colors.grey.shade100,
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,

@@ -1,6 +1,7 @@
 // lib/features/auth/presentation/screens/onboarding_screen.dart
 
 import 'dart:io';
+import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -45,7 +46,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Erreur lors de la sélection de l\'image: $e'),
+            content: Text(context.l10n.imagePickError(e.toString())),
             backgroundColor: Colors.red,
           ),
         );
@@ -55,30 +56,30 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   String? _validateFullName(String? value) {
     if (value == null || value.trim().isEmpty) {
-      return 'Le nom complet est requis';
+      return context.l10n.fullNameRequired;
     }
     if (value.trim().length < 2) {
-      return 'Le nom doit contenir au moins 2 caractères';
+      return context.l10n.fullNameMinLength;
     }
     return null;
   }
 
   String? _validateUsername(String? value) {
     if (value == null || value.trim().isEmpty) {
-      return 'Le nom d\'utilisateur est requis';
+      return context.l10n.usernameRequired;
     }
     
     // Supprimer le @ au début si présent
     final username = value.startsWith('@') ? value.substring(1) : value;
     
     if (username.length < 3) {
-      return 'Le nom d\'utilisateur doit contenir au moins 3 caractères';
+      return context.l10n.usernameMinLength;
     }
     
     // Vérifier que le nom d'utilisateur ne contient que des caractères valides
     final RegExp usernameRegex = RegExp(r'^[a-zA-Z0-9_]+$');
     if (!usernameRegex.hasMatch(username)) {
-      return 'Seules les lettres, chiffres et _ sont autorisés';
+      return context.l10n.usernameInvalidChars;
     }
     
     return null;
@@ -97,7 +98,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           
           // Si c'est une erreur d'avatar, être plus informatif
           if (errorMessage.contains('upload') || errorMessage.contains('avatar')) {
-            errorMessage = 'Profil créé mais l\'avatar n\'a pas pu être uploadé. Vous pourrez l\'ajouter plus tard.';
+            errorMessage = context.l10n.avatarUploadWarning;
             
             // Même si l'avatar a échoué, on peut considérer que le profil est créé
             // et rediriger vers l'accueil après un délai
@@ -119,141 +120,148 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         builder: (context, authState) {
           final isLoading = authState is AuthLoading;
 
-          return Scaffold(
-            resizeToAvoidBottomInset: false,
-            appBar: AppBar(
-              automaticallyImplyLeading: false,
-              title: Text(
-                "Set up your account",
-                style: context.bodySmall?.copyWith(
-                  color: Colors.white,
-                ),
-              ),
-            ),
-            body: Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 15.0,
-              ),
-              child: Form(
-                key: _formKey,
-                child: Stack(
-                  children: [
-                    Column(
-                      children: [
-                        GestureDetector(
-                          onTap: isLoading ? null : _pickAvatar,
-                          child: Stack(
-                            clipBehavior: Clip.none,
-                            children: [
-                              Container(
-                                width: 200,
-                                height: 200,
-                                decoration: BoxDecoration(
-                                  color: Colors.white12,
-                                  shape: BoxShape.circle,
-                                ),
-                                child: _avatar == null 
-                                ? Icon(
-                                  HugeIcons.solidRoundedCenterFocus,
-                                  color: Colors.white38,
-                                  size: 80,
-                                ) 
-                                : ClipRRect(
-                                  borderRadius: BorderRadius.circular(100),
-                                  child: Image.file(
-                                    _avatar!, 
-                                    fit: BoxFit.cover,
-                                  ),
-                                ),
-                              ),
-                              Positioned(
-                                bottom: 10,
-                                right: 10,
-                                child: Container(
-                                  padding: EdgeInsets.all(10.0),
-                                  decoration: BoxDecoration(
-                                    color: AppColors.primary,
-                                    shape: BoxShape.circle,
-                                  ),
-                                  child: Icon(HugeIcons.solidRoundedCamera01),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        40.h,
-                        Text(
-                          "Please complete all the information presented below to create your account.",
-                          style: context.bodySmall?.copyWith(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w500,
-                            fontSize: 15,
-                            height: 1.3,
-                          ),
-                          textAlign: TextAlign.start,
-                        ),
-                        20.h,
-                        // Formulaire
-                        AuthTextField(
-                          hint: "John Doe",
-                          textCapitalization: TextCapitalization.words,
-                          controller: _fullNameController,
-                          validator: _validateFullName,
-                          enabled: !isLoading,
-                        ),
-                        15.h,
-                        AuthTextField(
-                          hint: "@johndoe",
-                          controller: _usernameController,
-                          validator: _validateUsername,
-                          enabled: !isLoading,
-                          onChanged: (value) {
-                            // Ajouter automatiquement @ au début si pas présent
-                            if (value.isNotEmpty && !value.startsWith('@')) {
-                              _usernameController.value = TextEditingValue(
-                                text: '@$value',
-                                selection: TextSelection.collapsed(offset: value.length + 1),
-                              );
-                            }
-                          },
-                        ),
-                      ],
+          return Stack(
+            children: [
+              Scaffold(
+                resizeToAvoidBottomInset: false,
+                appBar: AppBar(
+                  automaticallyImplyLeading: false,
+                  title: Text(
+                    context.l10n.setupAccountTitle,
+                    style: context.bodySmall?.copyWith(
+                      color: Colors.white,
                     ),
-
-                    // Bouton en bas
-                    Positioned(
-                      left: 15,
-                      right: 15,
-                      bottom: 40,
-                      child: _buildCompleteButton(isLoading),
-                    ),                
-
-                    // Overlay de chargement
-                    if (isLoading)
-                    Container(
-                      color: Colors.black.withValues(alpha: 0.5),
-                      child: Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
+                  ),
+                ),
+                body: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 15.0,
+                  ),
+                  child: Form(
+                    key: _formKey,
+                    child: Stack(
+                      children: [
+                        Column(
                           children: [
-                            CircularProgressIndicator(
-                              valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
+                            GestureDetector(
+                              onTap: isLoading ? null : _pickAvatar,
+                              child: Stack(
+                                clipBehavior: Clip.none,
+                                children: [
+                                  Container(
+                                    width: 200,
+                                    height: 200,
+                                    decoration: BoxDecoration(
+                                      color: Colors.white12,
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: _avatar == null 
+                                    ? Icon(
+                                      HugeIcons.solidRoundedCenterFocus,
+                                      color: Colors.white38,
+                                      size: 80,
+                                    ) 
+                                    : ClipRRect(
+                                      borderRadius: BorderRadius.circular(100),
+                                      child: Image.file(
+                                        _avatar!, 
+                                        fit: BoxFit.cover,
+                                      ),
+                                    ),
+                                  ),
+                                  Positioned(
+                                    bottom: 10,
+                                    right: 10,
+                                    child: Container(
+                                      padding: EdgeInsets.all(10.0),
+                                      decoration: BoxDecoration(
+                                        color: AppColors.primary,
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: Icon(HugeIcons.solidRoundedCamera01),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            40.h,
+                            Text(
+                              context.l10n.onboardingInstruction,
+                              style: context.bodySmall?.copyWith(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w500,
+                                fontSize: 15,
+                                height: 1.3,
+                              ),
+                              textAlign: TextAlign.start,
                             ),
                             20.h,
-                            Text(
-                              'Création de votre profil...',
-                              style: context.bodyMedium?.copyWith(
-                                color: Colors.white,
-                              ),
+                            // Formulaire
+                            AuthTextField(
+                              hint: context.l10n.fullNameHint,
+                              textCapitalization: TextCapitalization.words,
+                              controller: _fullNameController,
+                              validator: _validateFullName,
+                              enabled: !isLoading,
+                            ),
+                            15.h,
+                            AuthTextField(
+                              hint: context.l10n.usernameHint,
+                              controller: _usernameController,
+                              validator: _validateUsername,
+                              enabled: !isLoading,
+                              onChanged: (value) {
+                                // Ajouter automatiquement @ au début si pas présent
+                                if (value.isNotEmpty && !value.startsWith('@')) {
+                                  _usernameController.value = TextEditingValue(
+                                    text: '@$value',
+                                    selection: TextSelection.collapsed(offset: value.length + 1),
+                                  );
+                                }
+                              },
                             ),
                           ],
                         ),
-                      ),
+              
+                        // Bouton en bas
+                        Positioned(
+                          left: 15,
+                          right: 15,
+                          bottom: 40,
+                          child: _buildCompleteButton(isLoading),
+                        ),                
+                      ],
                     ),
-                  ],
+                  ),
                 ),
               ),
-            ),
+                                  // Overlay de chargement
+              if (isLoading)
+              BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
+                child: Container(
+                  color: Colors.black.withValues(alpha: 0.8),
+                  child: Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        CircularProgressIndicator(
+                          valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
+                        ),
+                        20.h,
+                        Text(
+                          context.l10n.creatingProfile,
+                          style: context.bodyMedium?.copyWith(
+                            color: Colors.white,
+                            fontSize: 17
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
           );
         }
       ),
@@ -281,7 +289,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             ),
           )
         : Text(
-            "Complete",
+            context.l10n.complete,
             style: context.bodySmall?.copyWith(
               color: Colors.black,
               fontWeight: FontWeight.w600,

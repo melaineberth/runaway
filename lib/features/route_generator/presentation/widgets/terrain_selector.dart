@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:runaway/config/colors.dart';
 import 'package:runaway/config/extensions.dart';
 import '../../domain/models/terrain_type.dart';
 
@@ -18,14 +19,14 @@ class TerrainSelector extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Type de terrain',
+          context.l10n.terrain,
           style: context.bodySmall?.copyWith(
             color: Colors.white,
           ),
         ),
         3.h,
         Text(
-          selectedTerrain.description,
+          selectedTerrain.desc(context),
           style: context.bodySmall?.copyWith(
             color: Colors.grey.shade500,
             fontSize: 15,
@@ -40,10 +41,10 @@ class TerrainSelector extends StatelessWidget {
               padding: const EdgeInsets.only(right: 8.0),
               child: ChoiceChip(
                 showCheckmark: false,
-                label: Text(terrain.title),
+                label: Text(terrain.label(context)),
                 selected: isSelected,
                 onSelected: (_) => onTerrainSelected(terrain),
-                selectedColor: Theme.of(context).primaryColor,
+                selectedColor: AppColors.primary,
                 backgroundColor: const Color.fromARGB(255, 38, 38, 38),
                 labelStyle: TextStyle(
                   color: isSelected ? Colors.black : Colors.white24,

@@ -1,0 +1,378 @@
+{
+  "@@locale": "en",
+  "pathGenerated": "Path generated",
+  "@pathGenerated": {
+    "description": "Headline or toast shown once a route has been successfully generated."
+  },
+
+  "pathLoop": "Loop",
+  "@pathLoop": {
+    "description": "Toggle / chip label for selecting a circular (loop) route."
+  },
+
+  "pathSimple": "Simple",
+  "@pathSimple": {
+    "description": "Toggle / chip label for selecting a simple (out-and-back or point-to-point) route."
+  },
+
+  "start": "Start",
+  "@start": {
+    "description": "Label for the primary action button that begins the workout or navigation."
+  },
+
+  "share": "Share",
+  "@share": {
+    "description": "Button text for sharing the generated route with others."
+  },
+
+  "toTheRun": "To the run",
+  "@toTheRun": {
+    "description": "Navigation button that takes the user to the live run screen."
+  },
+
+  "pathPoint": "Point",
+  "@pathPoint": {
+    "description": "Metric label indicating a single waypoint or checkpoint in the route details."
+  },
+
+  "pathTotal": "Total",
+  "@pathTotal": {
+    "description": "Metric label denoting the aggregate distance of the route."
+  },
+
+  "pathTime": "Duration",
+  "@pathTime": {
+    "description": "Metric label showing the estimated time required to complete the route."
+  },
+
+  "pointsCount": "Points",
+  "@pointsCount": {
+    "description": "Metric label for the total number of waypoints/checkpoints in the generated route."
+  },
+
+  "guide": "GUIDE",
+  "@guide": {
+    "description": "Section header for guidance or instructional content within the UI."
+  },
+
+  "course": "COURSE",
+  "@course": {
+    "description": "Section header for the route/course overview."
+  },
+
+  "enterDestination": "Enter a destination",
+  "@enterDestination": {
+    "description": "Placeholder text in a search field prompting the user to type the destination address or landmark."
+  },
+
+  "shareMsg": "My {distance} km RunAway route generated with the RunAway app",
+  "@shareMsg": {
+    "placeholders": {
+      "distance": {
+        "type": "String"
+      }
+    }
+  },
+  "currentPosition": "Current position",
+  "retrySmallRay": "Try again with a smaller ray",
+  "noCoordinateServer": "No coordinate received from the server",
+  "generationError": "Error during the generation",
+  "disabledLocation": "Location services are disabled.",
+  "deniedPermission": "Location permissions are denied.",
+  "disabledAndDenied": "Location permissions are permanently denied, we cannot request permission.",
+  "toTheRouteNavigation": "Navigation to the stopped route",
+  "completedCourseNavigation": "Navigation of the completed course",
+  "startingPoint": "Starting point reached!",
+  "startingPointNavigation": "Navigation to the starting point...",
+  "arrivedToStartingPoint": "You have arrived at the starting point of the course!",
+  "later": "Later",
+  "startCourse": "Start the course",
+  "courseStarted": "Navigation of the course started...",
+  "userAreStartingPoint": "You are at the starting point of the course.",
+  "error": "Error",
+  "routeCalculation": "Calculation of the route to the course...",
+  "unableCalculateRoute": "Unable to calculate the route to the course",
+  "unableStartNavigation": "Unable to start navigation: {error}",
+  "@unableStartNavigation": {
+    "placeholders": {
+      "error": {
+        "type": "Object"
+      }
+    }
+  },
+  "navigationServiceError": "The navigation service returned false",
+  "calculationError": "Error calculation route",
+  "calculationRouteError": "Error calculation route: {error}",
+  "@calculationRouteError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "navigationInitializedError": "Navigation error (service not initialized)",
+  "navigationError": "Error of the navigation service",
+  "retry": "Try again",
+  "navigationToCourse": "Navigation to the course",
+  "userToStartingPoint": "You are {distance} from the starting point.",
+  "@userToStartingPoint": {
+    "placeholders": {
+      "distance": {
+        "type": "String"
+      }
+    }
+  },
+  "askUserChooseRoute": "What do you want to do?",
+  "voiceInstructions": "Navigation with voice instructions",
+  "cancel": "Cancel",
+  "directPath": "Direct path",
+  "guideMe": "Guide me",
+  "readyToStart": "Ready to start the navigation of the course",
+  "notAvailablePosition": "User position or route not available",
+  "urbanization": "Level of urbanization",
+  "terrain": "Type of terrain",
+  "activity": "Type of activity",
+  "distance": "Distance",
+  "elevation": "Elevation gain",
+  "generate": "Generate",
+  "advancedOptions": "Advanced options",
+  "loopCourse": "Loop course",
+  "returnStartingPoint": "Return to the starting point",
+  "avoidTraffic": "Avoid traffic",
+  "quietStreets": "Prioritize quiet streets",
+  "scenicRoute": "Scenic route",
+  "prioritizeLandscapes": "Prioritize beautiful landscapes",
+  "walking": "Walk",
+  "running": "Run",
+  "cycling": "Cycle",
+  "nature": "Nature",
+  "mixedUrbanization": "Mixed",
+  "urban": "Urban",
+  "flat": "Flat",
+  "mixedTerrain": "Mixed",
+  "hilly": "Hilly",
+  "flatDesc": "Flat land with little elevation gain",
+  "mixedTerrainDesc": "Varied terrain with moderate elevation gain",
+  "hillyDesc": "Land with a steep slope",
+  "natureDesc": "Mainly in nature",
+  "mixedUrbanizationDesc": "Mix city and nature",
+  "urbanDesc": "Mainly in the city",
+  "arriveAtDestination": "You arrive at your destination",
+  "continueOn": "Continue straight on {distance}m",
+  "@continueOn": {
+    "placeholders": {
+      "distance": {
+        "type": "int"
+      }
+    }
+  },
+  "followPath": "Follow the path for {distance}km",
+  "@followPath": {
+    "placeholders": {
+      "distance": {
+        "type": "String"
+      }
+    }
+  },
+  "restrictedAccessTitle": "Restricted access",
+  "@restrictedAccessTitle": {
+    "description": "App-bar title shown when the user tries to open a protected page while unauthenticated."
+  },
+
+  "notLoggedIn": "You are not logged in",
+  "@notLoggedIn": {
+    "description": "Headline informing the user that they must authenticate first."
+  },
+
+  "loginOrCreateAccountHint": "To access this page, please log in or create an account.",
+  "@loginOrCreateAccountHint": {
+    "description": "Explanation shown under the headline telling the user why authentication is required."
+  },
+
+  "logIn": "Log in",
+  "@logIn": {
+    "description": "Label of the button that opens the login form."
+  },
+
+  "createAccount": "Create an account",
+  "@createAccount": {
+    "description": "Label of the button that opens the sign-up form."
+  },
+
+  "needHelpContactUs": "Need help? Contact us.",
+  "@needHelpContactUs": {
+    "description": "Link prompting the user to contact support."
+  },
+
+  "createAccountSubtitle": "To create an account provide details, verify email and set a password.",
+  "@createAccountSubtitle": {
+    "description": "Subtitle explaining the sign-up steps"
+  },
+
+  "emailHint": "Email address",
+  "@emailHint": {
+    "description": "Placeholder of the e-mail text field"
+  },
+
+  "passwordHint": "Password",
+  "@passwordHint": {
+    "description": "Placeholder of the password text field"
+  },
+
+  "confirmPasswordHint": "Confirm password",
+  "@confirmPasswordHint": {
+    "description": "Placeholder of the confirm-password text field"
+  },
+
+  "passwordsDontMatchError": "Passwords do not match",
+  "@passwordsDontMatchError": {
+    "description": "Validation error shown when the two password fields differ"
+  },
+
+  "haveAccount": "Have an account?",
+  "@haveAccount": {
+    "description": "Text preceding the Log in link"
+  },
+
+  "termsAndPrivacy": "Terms of Service | Privacy Policy",
+  "@termsAndPrivacy": {
+    "description": "Footer link to legal documents"
+  },
+
+  "continueForms": "Continue",
+  "@continueForms": {
+    "description": "Label on the primary sign-up button"
+  },
+
+  "apple": "Apple",
+  "@apple": {
+    "description": "Label on the Apple social-login button"
+  },
+
+  "google": "Google",
+  "@google": {
+    "description": "Label on the Google social-login button"
+  },
+
+  "orDivider": "OR",
+  "@orDivider": {
+    "description": ""
+  },
+
+  "loginGreetingTitle": "Hi there!",
+  "@loginGreetingTitle": {
+    "description": "Main greeting title on the log-in screen"
+  },
+
+  "loginGreetingSubtitle": "Please enter required details.",
+  "@loginGreetingSubtitle": {
+    "description": "Subtitle asking the user to fill in the form"
+  },
+
+  "forgotPassword": "Forgot Password?",
+  "@forgotPassword": {
+    "description": "Link or label that will lead to password-reset flow"
+  },
+
+  "createAccountQuestion": "Create an account?",
+  "@createAccountQuestion": {
+    "description": "Text preceding the Sign-up link"
+  },
+
+  "signUp": "Sign up",
+  "@signUp": {
+    "description": "Link that navigates to the sign-up screen"
+  },
+
+  "appleLoginTodo": "Apple login – To be implemented",
+  "@appleLoginTodo": {
+    "description": "Temporary snackbar message shown when Apple login is not yet implemented"
+  },
+
+  "googleLoginTodo": "Google login – To be implemented",
+  "@googleLoginTodo": {
+    "description": "Temporary snackbar message shown when Google login is not yet implemented"
+  },
+
+  "setupAccountTitle": "Set up your account",
+  "@setupAccountTitle": {
+    "description": "Title displayed in the app-bar of the onboarding screen"
+  },
+
+  "onboardingInstruction": "Please complete all the information presented below to create your account.",
+  "@onboardingInstruction": {
+    "description": "Introductory sentence inviting the user to fill in all fields"
+  },
+
+  "fullNameHint": "John Doe",
+  "@fullNameHint": {
+    "description": "Placeholder text for the full-name field"
+  },
+
+  "usernameHint": "@johndoe",
+  "@usernameHint": {
+    "description": "Placeholder text for the username field"
+  },
+
+  "complete": "Complete",
+  "@complete": {
+    "description": "Label of the button that finishes profile creation"
+  },
+
+  "creatingProfile": "Creating your profile...",
+  "@creatingProfile": {
+    "description": "Message shown in the loading overlay while the profile is being created"
+  },
+
+  "fullNameRequired": "Full name is required",
+  "@fullNameRequired": {
+    "description": "Validation error when the full-name field is empty"
+  },
+
+  "fullNameMinLength": "Name must be at least 2 characters",
+  "@fullNameMinLength": {
+    "description": "Validation error when the full-name is too short"
+  },
+
+  "usernameRequired": "Username is required",
+  "@usernameRequired": {
+    "description": "Validation error when the username field is empty"
+  },
+
+  "usernameMinLength": "Username must be at least 3 characters",
+  "@usernameMinLength": {
+    "description": "Validation error when the username is too short"
+  },
+
+  "usernameInvalidChars": "Only letters, numbers and _ are allowed",
+  "@usernameInvalidChars": {
+    "description": "Validation error when the username contains forbidden characters"
+  },
+
+  "imagePickError": "Error selecting image: {error}",
+  "@imagePickError": {
+    "description": "Snackbar message when the image picker fails",
+    "placeholders": {
+      "error": {
+        "example": "Storage permission denied"
+      }
+    }
+  },
+
+  "avatarUploadWarning": "Profile created but avatar could not be uploaded. You can add it later.",
+  "@avatarUploadWarning": {
+    "description": "Warning shown when the profile is saved but the avatar upload failed"
+  },
+
+  "emailInvalid": "Invalid email address",
+  "@emailInvalid": {
+    "description": "Validation error shown when the e-mail format is invalid"
+  },
+
+  "passwordMinLength": "At least 6 characters",
+  "@passwordMinLength": {
+    "description": "Validation error when the password is shorter than 6 characters"
+  },
+
+  "currentGeneration": "Current generation..."
+}
