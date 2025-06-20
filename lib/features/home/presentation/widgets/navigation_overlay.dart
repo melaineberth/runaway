@@ -3,14 +3,17 @@ import 'package:hugeicons/hugeicons.dart';
 import 'package:runaway/config/extensions.dart';
 import 'package:runaway/core/widgets/squircle_container.dart';
 import 'package:runaway/features/home/data/services/navigation_service.dart';
+import 'package:runaway/features/home/domain/models/navigation_tracking_data.dart';
 
 class NavigationOverlay extends StatelessWidget {
   final String instruction;
   final NavigationUpdate? navUpdate;
   final Map<String, dynamic> routeStats;
   final VoidCallback onStop;
+  final VoidCallback onPause;
   final String navigationMode; // 'to_route', 'on_route'
   final bool isNavigatingToRoute;
+  final NavigationTrackingData? trackingData;
 
   const NavigationOverlay({
     super.key,
@@ -18,8 +21,10 @@ class NavigationOverlay extends StatelessWidget {
     required this.navUpdate,
     required this.routeStats,
     required this.onStop,
+    required this.onPause,
     this.navigationMode = 'on_route',
     this.isNavigatingToRoute = false,
+    this.trackingData,
   });
 
   @override
@@ -29,7 +34,7 @@ class NavigationOverlay extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          // Instruction principale avec badge de mode
+          // Instruction principale avec badge de mode et contrôles
           SquircleContainer(
             width: double.infinity,
             padding: EdgeInsets.all(20),
@@ -37,7 +42,7 @@ class NavigationOverlay extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Badge de mode + bouton stop
+                // Badge de mode + contrôles
                 Row(
                   children: [
                     // Badge de mode
@@ -68,6 +73,28 @@ class NavigationOverlay extends StatelessWidget {
                     
                     Spacer(),
                     
+                    // Bouton pause (seulement en mode parcours)
+                    if (!isNavigatingToRoute && trackingData != null) ...[
+                      GestureDetector(
+                        onTap: onPause,
+                        child: Container(
+                          padding: EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Colors.orange.withValues(alpha: 0.2),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: HugeIcon(
+                            icon: trackingData!.isPaused 
+                                ? HugeIcons.strokeRoundedPlay
+                                : HugeIcons.strokeRoundedPause,
+                            color: Colors.orange,
+                            size: 20,
+                          ),
+                        ),
+                      ),
+                      8.w,
+                    ],
+                    
                     // Bouton stop
                     GestureDetector(
                       onTap: onStop,
@@ -91,7 +118,9 @@ class NavigationOverlay extends StatelessWidget {
                 
                 // Instruction
                 Text(
-                  instruction,
+                  trackingData?.isPaused == true 
+                      ? context.l10n.navigationPaused 
+                      : instruction,
                   style: context.titleMedium?.copyWith(
                     color: Colors.white,
                     fontWeight: FontWeight.bold,
@@ -123,7 +152,9 @@ class NavigationOverlay extends StatelessWidget {
                             ),
                             6.w,
                             Text(
-                              _formatDistance(navUpdate!.distanceToTarget),
+                              isNavigatingToRoute 
+                                  ? _formatDistance(navUpdate!.distanceToTarget)
+                                  : '${trackingData?.remainingDistance.toStringAsFixed(1) ?? '0.0'} km',
                               style: context.bodySmall?.copyWith(
                                 color: _getModeColor(),
                                 fontWeight: FontWeight.w600,
@@ -146,25 +177,24 @@ class NavigationOverlay extends StatelessWidget {
                                 Text(
                                   isNavigatingToRoute 
                                       ? context.l10n.toTheRun
-                                      : '${context.l10n.pathPoint} ${navUpdate!.waypointIndex + 1}/${navUpdate!.totalWaypoints}',
+                                      : '${context.l10n.progress}: ${trackingData?.progressPercentage.toStringAsFixed(0) ?? '0'}%',
                                   style: context.bodySmall?.copyWith(color: Colors.white70),
                                 ),
-                                Text(
-                                  isNavigatingToRoute 
-                                      ? '...'
-                                      : '${(((navUpdate!.waypointIndex + 1) / navUpdate!.totalWaypoints) * 100).round()}%',
-                                  style: context.bodySmall?.copyWith(
-                                    color: Colors.white70,
-                                    fontWeight: FontWeight.w600,
+                                if (!isNavigatingToRoute && trackingData != null)
+                                  Text(
+                                    '${trackingData!.distanceTraveled.toStringAsFixed(1)}/${trackingData!.totalRouteDistance.toStringAsFixed(1)} km',
+                                    style: context.bodySmall?.copyWith(
+                                      color: Colors.white70,
+                                      fontWeight: FontWeight.w600,
+                                    ),
                                   ),
-                                ),
                               ],
                             ),
                             6.h,
                             LinearProgressIndicator(
                               value: isNavigatingToRoute 
                                   ? null // Indéterminé pour navigation vers le parcours
-                                  : (navUpdate!.waypointIndex + 1) / navUpdate!.totalWaypoints,
+                                  : (trackingData?.progressPercentage ?? 0) / 100,
                               backgroundColor: Colors.white30,
                               valueColor: AlwaysStoppedAnimation(_getModeColor()),
                               minHeight: 4,
@@ -179,42 +209,38 @@ class NavigationOverlay extends StatelessWidget {
             ),
           ),
           
-          
-          // Statistiques du parcours (seulement si on navigue sur le parcours)
-          if (!isNavigatingToRoute) ...[
+          // Métriques de tracking en temps réel (seulement si on suit le parcours)
+          if (!isNavigatingToRoute && trackingData != null) ...[
+            // Grandes métriques principales
+            _buildMainMetrics(context),
+            
+            12.h,
+            
+            // Métriques secondaires
+            _buildSecondaryMetrics(context),
+          ] else if (isNavigatingToRoute) ...[
+            // Informations simplifiées pour navigation vers le parcours
             Container(
               padding: EdgeInsets.all(16),
               decoration: BoxDecoration(
                 color: Colors.black.withValues(alpha: 0.7),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: IntrinsicHeight(
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    _buildCompactStat(
-                      icon: HugeIcons.strokeRoundedRoute03,
-                      value: '${_parseDistance(routeStats['distance_km']).toStringAsFixed(1)} km',
-                      label: context.l10n.pathTotal,
-                    ),
-                    
-                    VerticalDivider(color: Colors.white30, width: 1),
-                    
-                    _buildCompactStat(
-                      icon: HugeIcons.strokeRoundedTime01,
-                      value: '${routeStats['duration_minutes']} min',
-                      label: context.l10n.pathTime,
-                    ),
-                    
-                    VerticalDivider(color: Colors.white30, width: 1),
-                    
-                    _buildCompactStat(
-                      icon: HugeIcons.strokeRoundedAbacusBefore,
-                      value: '${routeStats['points_count']}',
-                      label: context.l10n.pointsCount,
-                    ),
-                  ],
-                ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  _buildCompactStat(
+                    icon: HugeIcons.strokeRoundedRoute03,
+                    value: '${_parseDistance(routeStats['distance_km']).toStringAsFixed(1)} km',
+                    label: context.l10n.pathTotal,
+                  ),
+                  VerticalDivider(color: Colors.white30, width: 1),
+                  _buildCompactStat(
+                    icon: HugeIcons.strokeRoundedTime01,
+                    value: '${routeStats['duration_minutes']} min',
+                    label: context.l10n.estimatedTime,
+                  ),
+                ],
               ),
             ),
           ],
@@ -223,20 +249,138 @@ class NavigationOverlay extends StatelessWidget {
     );
   }
 
-  Color _getModeColor() {
-    return isNavigatingToRoute ? Colors.blue : Colors.green;
+  Widget _buildMainMetrics(BuildContext context) {
+    return Container(
+      padding: EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.8),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        children: [
+          // Ligne 1: Temps et Distance
+          Row(
+            children: [
+              Expanded(
+                child: _buildLargeMetric(
+                  icon: HugeIcons.strokeRoundedTime01,
+                  value: _formatDuration(trackingData!.activeTime),
+                  label: context.l10n.time,
+                  isPaused: trackingData!.isPaused,
+                ),
+              ),
+              16.w,
+              Expanded(
+                child: _buildLargeMetric(
+                  icon: HugeIcons.strokeRoundedRoute03,
+                  value: '${trackingData!.distanceTraveled.toStringAsFixed(2)} km',
+                  label: context.l10n.distance,
+                ),
+              ),
+            ],
+          ),
+          
+          20.h,
+          
+          // Ligne 2: Rythme et Vitesse
+          Row(
+            children: [
+              Expanded(
+                child: _buildLargeMetric(
+                  icon: HugeIcons.strokeRoundedActivity02,
+                  value: trackingData!.averagePaceMinutesPerKm > 0 
+                      ? '${trackingData!.averagePaceMinutesPerKm.toStringAsFixed(1)}\'/km'
+                      : '--',
+                  label: context.l10n.pace,
+                ),
+              ),
+              16.w,
+              Expanded(
+                child: _buildLargeMetric(
+                  icon: HugeIcons.strokeRoundedDashboardSpeed02,
+                  value: '${trackingData!.currentSpeed.toStringAsFixed(1)} km/h',
+                  label: context.l10n.speed,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
   }
 
-  dynamic _getModeIcon() {
-    return isNavigatingToRoute 
-        ? HugeIcons.strokeRoundedNavigation04
-        : HugeIcons.strokeRoundedRoute03;
+  Widget _buildSecondaryMetrics(BuildContext context) {
+    return Container(
+      padding: EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.7),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: IntrinsicHeight(
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          children: [
+            _buildCompactStat(
+              icon: HugeIcons.strokeRoundedMountain,
+              value: '${trackingData!.currentElevation.toStringAsFixed(0)}m',
+              label: context.l10n.elevation,
+            ),
+            
+            VerticalDivider(color: Colors.white30, width: 1),
+            
+            _buildCompactStat(
+              icon: HugeIcons.strokeRoundedMountain,
+              value: '+${trackingData!.elevationGain.toStringAsFixed(0)}m',
+              label: context.l10n.elevationGain,
+            ),
+            
+            VerticalDivider(color: Colors.white30, width: 1),
+            
+            _buildCompactStat(
+              icon: HugeIcons.strokeRoundedTime02,
+              value: trackingData!.estimatedTimeRemaining != Duration.zero
+                  ? _formatDuration(trackingData!.estimatedTimeRemaining)
+                  : '--',
+              label: context.l10n.remaining,
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
-  String _getModeText(BuildContext context) {
-    return isNavigatingToRoute 
-        ? context.l10n.guide
-        : context.l10n.course;
+  Widget _buildLargeMetric({
+    required dynamic icon,
+    required String value,
+    required String label,
+    bool isPaused = false,
+  }) {
+    return Column(
+      children: [
+        HugeIcon(
+          icon: icon,
+          color: isPaused ? Colors.orange : Colors.white70,
+          size: 24,
+        ),
+        8.h,
+        Text(
+          value,
+          style: TextStyle(
+            color: isPaused ? Colors.orange : Colors.white,
+            fontWeight: FontWeight.bold,
+            fontSize: 24,
+          ),
+        ),
+        4.h,
+        Text(
+          label,
+          style: TextStyle(
+            color: Colors.white70,
+            fontSize: 12,
+          ),
+        ),
+      ],
+    );
   }
 
   Widget _buildCompactStat({
@@ -271,11 +415,39 @@ class NavigationOverlay extends StatelessWidget {
     );
   }
 
+  Color _getModeColor() {
+    return isNavigatingToRoute ? Colors.blue : Colors.green;
+  }
+
+  dynamic _getModeIcon() {
+    return isNavigatingToRoute 
+        ? HugeIcons.strokeRoundedNavigation04
+        : HugeIcons.strokeRoundedRoute03;
+  }
+
+  String _getModeText(BuildContext context) {
+    return isNavigatingToRoute 
+        ? context.l10n.guide
+        : context.l10n.course;
+  }
+
   String _formatDistance(double distanceInMeters) {
     if (distanceInMeters < 1000) {
       return '${distanceInMeters.round()}m';
     } else {
       return '${(distanceInMeters / 1000).toStringAsFixed(1)}km';
+    }
+  }
+
+  String _formatDuration(Duration duration) {
+    final hours = duration.inHours;
+    final minutes = duration.inMinutes.remainder(60);
+    final seconds = duration.inSeconds.remainder(60);
+    
+    if (hours > 0) {
+      return '${hours}:${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
+    } else {
+      return '${minutes}:${seconds.toString().padLeft(2, '0')}';
     }
   }
 

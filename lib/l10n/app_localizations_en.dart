@@ -176,7 +176,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get distance => 'Distance';
 
   @override
-  String get elevation => 'Elevation gain';
+  String get elevation => 'Elevation';
 
   @override
   String get generate => 'Generate';
@@ -381,4 +381,31 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get currentGeneration => 'Current generation...';
+
+  @override
+  String get navigationPaused => 'Navigation paused';
+
+  @override
+  String get navigationResumed => 'Navigation resumed';
+
+  @override
+  String get time => 'Time';
+
+  @override
+  String get pace => 'Pace';
+
+  @override
+  String get speed => 'Speed';
+
+  @override
+  String get elevationGain => 'Gain';
+
+  @override
+  String get remaining => 'Remaining';
+
+  @override
+  String get progress => 'Progress';
+
+  @override
+  String get estimatedTime => 'Est. Time';
 }

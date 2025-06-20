@@ -14,6 +14,8 @@ import 'package:runaway/config/colors.dart';
 import 'package:runaway/config/extensions.dart';
 import 'package:runaway/core/widgets/loading_overlay.dart';
 import 'package:runaway/features/home/data/services/navigation_service.dart';
+import 'package:runaway/features/home/data/services/navigation_tracking_service.dart';
+import 'package:runaway/features/home/domain/models/navigation_tracking_data.dart';
 import 'package:runaway/features/home/presentation/widgets/navigation_overlay.dart';
 import 'package:runaway/features/home/presentation/widgets/route_info_card.dart';
 import 'package:runaway/features/route_generator/domain/models/route_parameters.dart';
@@ -90,8 +92,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   routeToStartPoint; // Coordonnées pour aller au point de départ
 
   // Variables pour la caméra de navigation
-  List<List<double>> userPositionHistory =
-      []; // Historique des positions pour calculer la direction
+  List<List<double>> userPositionHistory = []; // Historique des positions pour calculer la direction
   double currentUserBearing = 0.0; // Direction actuelle de l'utilisateur
   bool isNavigationCameraActive = false;
   Timer? positionUpdateTimer;
@@ -99,6 +100,18 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   int currentRouteSegmentIndex = 0; // Index du segment actuel sur la route
   double lookAheadDistance = 100.0; // Distance pour anticiper (en mètres)
   List<List<double>>? routeToStartCoordinates;
+
+  // NOUVELLES VARIABLES POUR LE TRACKING
+  NavigationTrackingData? currentTrackingData;
+  StreamSubscription<NavigationTrackingData>? trackingSubscription;
+  mp.PolylineAnnotation? userTrackPolyline; // Polyligne du trajet utilisateur
+  mp.PolylineAnnotationManager? trackingPolylineManager;
+
+  // NOUVELLES VARIABLES pour stabilisation
+  DateTime? lastCameraUpdate;
+  double lastStableBearing = 0.0;
+  static const Duration cameraUpdateCooldown = Duration(milliseconds: 1500); // Cooldown entre mises à jour
+  static const double bearingTolerance = 10.0; // Tolérance avant changement de direction
 
   @override
   void initState() {
@@ -114,6 +127,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       // Essayer de réinitialiser
       NavigationService.reinitialize();
     }
+
+    // NOUVEAU: Écouter les mises à jour de tracking
+    _setupTrackingListener();
 
     WidgetsBinding.instance.addObserver(this);
   }
@@ -138,7 +154,66 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     }
     userPositionStream?.cancel();
     _clearLocationMarkers();
+
+    // NOUVEAU: Nettoyer le tracking
+    trackingSubscription?.cancel();
+    NavigationTrackingService.instance.dispose();
+
     super.dispose();
+  }
+
+  // Configuration du listener de tracking
+  void _setupTrackingListener() {
+    trackingSubscription = NavigationTrackingService.instance.trackingStream.listen(
+      (trackingData) {
+        if (mounted) {
+          setState(() {
+            currentTrackingData = trackingData;
+          });
+          
+          // Mettre à jour la polyligne du trajet utilisateur
+          _updateUserTrackPolyline(trackingData.trackedCoordinates);
+        }
+      },
+      onError: (error) {
+        print('❌ Erreur tracking: $error');
+      },
+    );
+  }
+
+  // Mise à jour de la polyligne de tracking utilisateur
+  Future<void> _updateUserTrackPolyline(List<List<double>> coordinates) async {
+    if (mapboxMap == null || coordinates.length < 2) return;
+
+    try {
+      // Créer le manager si nécessaire
+      trackingPolylineManager ??= 
+          await mapboxMap!.annotations.createPolylineAnnotationManager();
+
+      // Supprimer l'ancienne polyligne
+      if (userTrackPolyline != null) {
+        await trackingPolylineManager!.delete(userTrackPolyline!);
+      }
+
+      // Créer la nouvelle polyligne du trajet utilisateur
+      userTrackPolyline = await trackingPolylineManager!.create(
+        mp.PolylineAnnotationOptions(
+          geometry: mp.LineString(
+            coordinates: coordinates
+                .map((coord) => mp.Position(coord[0], coord[1]))
+                .toList(),
+          ),
+          lineColor: Colors.blue.toARGB32(), // Bleu pour le trajet utilisateur
+          lineWidth: 3.0,
+          lineOpacity: 0.8,
+          lineJoin: mp.LineJoin.ROUND,
+        ),
+      );
+
+      print('🗺️ Polyligne utilisateur mise à jour: ${coordinates.length} points');
+    } catch (e) {
+      print('❌ Erreur mise à jour polyligne tracking: $e');
+    }
   }
 
   @override
@@ -654,6 +729,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       // Restaurer l'affichage du parcours original
       await _showOriginalRoute();
 
+      // NOUVEAU: Démarrer le tracking
+      final routeDistance = _calculateTotalDistance(generatedRouteCoordinates!);
+      NavigationTrackingService.instance.startTracking(
+        totalRouteDistance: routeDistance,
+      );
+
       bool success = await NavigationService.startCustomNavigation(
         context: context,
         coordinates: generatedRouteCoordinates!,
@@ -679,8 +760,14 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             backgroundColor: Colors.green,
           ),
         );
+      } else {
+        // Arrêter le tracking si échec
+        NavigationTrackingService.instance.stopTracking();
       }
     } catch (e) {
+      // Arrêter le tracking si erreur
+      NavigationTrackingService.instance.stopTracking();
+      
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
@@ -691,6 +778,23 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         ),
       );
     }
+  }
+
+  void _toggleNavigationPause() {
+    NavigationTrackingService.instance.togglePause();
+    
+    final isPaused = NavigationTrackingService.instance.currentData?.isPaused ?? false;
+    
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          isPaused ? context.l10n.navigationPaused : context.l10n.navigationResumed,
+          style: TextStyle(color: Colors.white),
+        ),
+        backgroundColor: isPaused ? Colors.orange : Colors.green,
+        duration: Duration(seconds: 2),
+      ),
+    );
   }
 
   List<List<double>> _getRouteToStartCoordinates() {
@@ -726,11 +830,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       _setActiveNavigationRoute(routeCoords);
     }
 
-    _updateNavigationCameraWithRoute(
-      update.currentPosition[0],
-      update.currentPosition[1],
-    );
-
     // Si on arrive au point de départ du parcours
     if (update.isFinished) {
       _onArrivedAtRouteStart();
@@ -747,11 +846,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     if (generatedRouteCoordinates != null) {
       _setActiveNavigationRoute(generatedRouteCoordinates!);
     }
-
-    _updateNavigationCameraWithRoute(
-      update.currentPosition[0],
-      update.currentPosition[1],
-    );
 
     // Si le parcours est terminé
     if (update.isFinished) {
@@ -863,312 +957,27 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
     setState(() {
       isNavigationCameraActive = true;
+      lastStableBearing = 0.0; // Reset du bearing
+      userPositionHistory.clear(); // Reset de l'historique
     });
 
-    // FIX: Configuration initiale de la caméra pour la navigation
+    // Configuration initiale de la caméra
     await mapboxMap!.setCamera(
       mp.CameraOptions(
-        zoom: 18.0, // Zoom rapproché pour la navigation
-        pitch: 65.0, // Vue en perspective (derrière l'épaule)
-        bearing: 0.0, // Sera mis à jour selon la direction
+        zoom: 18.0,
+        pitch: 65.0,
+        bearing: 0.0,
       ),
     );
 
-    // Activer le suivi de position en temps réel avec haute précision
+    // Activer le suivi de position
     await mapboxMap!.location.updateSettings(
       mp.LocationComponentSettings(
         enabled: true,
         pulsingEnabled: true,
-        showAccuracyRing: false, // Masquer le cercle de précision en navigation
+        showAccuracyRing: false,
       ),
     );
-
-    // Démarrer le timer de mise à jour de position
-    _startNavigationPositionUpdates();
-  }
-
-  void _startNavigationPositionUpdates() {
-    positionUpdateTimer?.cancel();
-
-    positionUpdateTimer = Timer.periodic(Duration(seconds: 1), (timer) {
-      if (!isNavigationCameraActive || !isNavigationMode) {
-        timer.cancel();
-        return;
-      }
-
-      // Mettre à jour la position utilisateur si disponible
-      if (userLongitude != null && userLatitude != null) {
-        _updateNavigationCamera(userLongitude!, userLatitude!);
-      }
-    });
-  }
-
-  void _updateNavigationCamera(double longitude, double latitude) async {
-    if (mapboxMap == null || !isNavigationCameraActive) return;
-
-    // Ajouter la position actuelle à l'historique
-    final currentPosition = [longitude, latitude];
-    userPositionHistory.add(currentPosition);
-
-    // Garder seulement les 10 dernières positions pour calculer la direction
-    if (userPositionHistory.length > 10) {
-      userPositionHistory.removeAt(0);
-    }
-
-    // Calculer la direction de déplacement
-    double bearing = _calculateMovementBearing();
-
-    // Lisser le changement de bearing pour éviter les mouvements brusques
-    bearing = _smoothBearing(currentUserBearing, bearing);
-    currentUserBearing = bearing;
-
-    try {
-      // FIX: Mettre à jour la caméra pour suivre l'utilisateur
-      await mapboxMap!.flyTo(
-        mp.CameraOptions(
-          center: mp.Point(coordinates: mp.Position(longitude, latitude)),
-          zoom: 18.0, // Zoom constant pour navigation
-          pitch: 65.0, // Vue en perspective constante
-          bearing: bearing, // Orientation selon le déplacement
-        ),
-        mp.MapAnimationOptions(
-          duration: 800, // Animation fluide mais pas trop lente
-        ),
-      );
-
-      print('🧭 Caméra mise à jour: bearing=${bearing.toStringAsFixed(1)}°');
-    } catch (e) {
-      print('❌ Erreur mise à jour caméra navigation: $e');
-    }
-  }
-
-  double _calculateRouteBearing() {
-    // Si pas de route active, utiliser l'ancien système
-    if (activeNavigationRoute == null ||
-        activeNavigationRoute!.isEmpty ||
-        userLongitude == null ||
-        userLatitude == null) {
-      return _calculateMovementBearing();
-    }
-
-    try {
-      // 1. Trouver le segment de route le plus proche
-      final currentSegmentIndex = _findNearestRouteSegment();
-
-      // 2. Calculer le bearing vers la suite de la route
-      final routeBearing = _calculateBearingToNextRouteSegment(
-        currentSegmentIndex,
-      );
-
-      print(
-        '🧭 Route bearing calculé: segment=$currentSegmentIndex, bearing=${routeBearing.toStringAsFixed(1)}°',
-      );
-
-      return routeBearing;
-    } catch (e) {
-      print('❌ Erreur calcul route bearing: $e');
-      return _calculateMovementBearing(); // Fallback
-    }
-  }
-
-  int _findNearestRouteSegment() {
-    if (activeNavigationRoute == null || activeNavigationRoute!.isEmpty) {
-      return 0;
-    }
-
-    double minDistance = double.infinity;
-    int nearestIndex = 0;
-
-    for (int i = 0; i < activeNavigationRoute!.length; i++) {
-      final routePoint = activeNavigationRoute![i];
-      final distance = _calculateDistance(
-        userLatitude!,
-        userLongitude!,
-        routePoint[1], // latitude
-        routePoint[0], // longitude
-      );
-
-      if (distance < minDistance) {
-        minDistance = distance;
-        nearestIndex = i;
-      }
-    }
-
-    // Sauvegarder l'index pour optimiser les prochaines recherches
-    currentRouteSegmentIndex = nearestIndex;
-
-    print(
-      '📍 Segment le plus proche: $nearestIndex (distance: ${minDistance.toStringAsFixed(1)}m)',
-    );
-
-    return nearestIndex;
-  }
-
-  double _calculateBearingToNextRouteSegment(int currentIndex) {
-    if (activeNavigationRoute == null ||
-        activeNavigationRoute!.isEmpty ||
-        currentIndex >= activeNavigationRoute!.length - 1) {
-      return currentUserBearing; // Garder la direction actuelle
-    }
-
-    // Point de la route le plus proche
-    final currentRoutePoint = activeNavigationRoute![currentIndex];
-
-    // 1. Méthode simple : bearing vers le prochain point
-    final nextPoint = activeNavigationRoute![currentIndex + 1];
-    double bearing = _calculateBearing(
-      currentRoutePoint[1],
-      currentRoutePoint[0], // lat, lon du point actuel
-      nextPoint[1],
-      nextPoint[0], // lat, lon du point suivant
-    );
-
-    // 2. Méthode avancée : regarder plus loin pour anticiper les virages
-    final lookAheadPoint = _findLookAheadPoint(currentIndex);
-    if (lookAheadPoint != null) {
-      // Calculer le bearing vers le point d'anticipation
-      bearing = _calculateBearing(
-        userLatitude!,
-        userLongitude!, // Position actuelle de l'utilisateur
-        lookAheadPoint[1],
-        lookAheadPoint[0], // Point d'anticipation
-      );
-
-      print(
-        '👀 Look-ahead activé vers point distant de ${_calculateDistance(userLatitude!, userLongitude!, lookAheadPoint[1], lookAheadPoint[0]).toStringAsFixed(1)}m',
-      );
-    }
-
-    return bearing;
-  }
-
-  List<double>? _findLookAheadPoint(int currentIndex) {
-    if (activeNavigationRoute == null ||
-        currentIndex >= activeNavigationRoute!.length - 1) {
-      return null;
-    }
-
-    double accumulatedDistance = 0.0;
-
-    for (int i = currentIndex; i < activeNavigationRoute!.length - 1; i++) {
-      final point1 = activeNavigationRoute![i];
-      final point2 = activeNavigationRoute![i + 1];
-
-      final segmentDistance = _calculateDistance(
-        point1[1],
-        point1[0],
-        point2[1],
-        point2[0],
-      );
-
-      accumulatedDistance += segmentDistance;
-
-      // Si on a atteint la distance d'anticipation
-      if (accumulatedDistance >= lookAheadDistance) {
-        return point2;
-      }
-    }
-
-    // Si la route est plus courte que la distance d'anticipation, retourner le dernier point
-    return activeNavigationRoute!.last;
-  }
-
-  double _getAdaptiveZoom(double speedMps) {
-    // Ajuster le zoom selon la vitesse
-    if (speedMps < 1.5) return 19.0; // Marche lente
-    if (speedMps < 3.0) return 18.0; // Marche rapide
-    if (speedMps < 8.0) return 17.0; // Course
-    return 16.0; // Vélo
-  }
-
-  double _getAdaptivePitch(double speedMps) {
-    // Plus on va vite, plus on regarde loin (pitch moins prononcé)
-    if (speedMps < 1.5) return 70.0; // Vue très inclinée pour marche
-    if (speedMps < 3.0) return 65.0; // Vue normale pour course
-    return 55.0; // Vue plus plate pour vélo
-  }
-
-  void _updateNavigationCameraWithRoute(
-    double longitude,
-    double latitude,
-  ) async {
-    if (mapboxMap == null || !isNavigationCameraActive) return;
-
-    // Ajouter la position actuelle à l'historique
-    final currentPosition = [longitude, latitude];
-    userPositionHistory.add(currentPosition);
-
-    if (userPositionHistory.length > navigationConfig.positionHistorySize) {
-      userPositionHistory.removeAt(0);
-    }
-
-    // ✅ FIX: Utiliser le bearing basé sur la route au lieu du mouvement
-    double bearing = _calculateRouteBearing();
-
-    // Lisser le changement de bearing
-    bearing = _smoothBearing(currentUserBearing, bearing);
-    currentUserBearing = bearing;
-
-    // Adapter selon la vitesse si disponible
-    final adaptiveZoom = _getAdaptiveZoom(
-      0.0,
-    ); // TODO: intégrer la vitesse réelle
-    final adaptivePitch = _getAdaptivePitch(0.0);
-
-    try {
-      await mapboxMap!.flyTo(
-        mp.CameraOptions(
-          center: mp.Point(coordinates: mp.Position(longitude, latitude)),
-          zoom: adaptiveZoom,
-          pitch: adaptivePitch,
-          bearing: bearing,
-        ),
-        mp.MapAnimationOptions(duration: navigationConfig.updateIntervalMs),
-      );
-
-      print(
-        '🧭 Caméra route: bearing=${bearing.toStringAsFixed(1)}° (vers route)',
-      );
-    } catch (e) {
-      print('❌ Erreur caméra route: $e');
-    }
-  }
-
-  double _calculateMovementBearing() {
-    if (userPositionHistory.length < 2) {
-      return currentUserBearing; // Garder la direction actuelle si pas assez de données
-    }
-
-    // Utiliser les 3 dernières positions pour une direction plus stable
-    final recentPositions =
-        userPositionHistory.length >= 3
-            ? userPositionHistory.sublist(userPositionHistory.length - 3)
-            : userPositionHistory;
-
-    if (recentPositions.length < 2) {
-      return currentUserBearing;
-    }
-
-    // Calculer la direction entre la première et dernière position récente
-    final start = recentPositions.first;
-    final end = recentPositions.last;
-
-    // Vérifier que l'utilisateur s'est effectivement déplacé
-    final distance = _calculateDistance(start[1], start[0], end[1], end[0]);
-
-    if (distance < 5.0) {
-      // Mouvement trop petit (moins de 5m), garder la direction actuelle
-      return currentUserBearing;
-    }
-
-    // Calculer le bearing réel
-    final bearing = _calculateBearing(start[1], start[0], end[1], end[0]);
-
-    print(
-      '📍 Mouvement détecté: ${distance.toStringAsFixed(1)}m, bearing=${bearing.toStringAsFixed(1)}°',
-    );
-
-    return bearing;
   }
 
   double _calculateBearing(double lat1, double lon1, double lat2, double lon2) {
@@ -1225,11 +1034,20 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   void _stopNavigation() async {
     NavigationService.stopNavigation();
 
+    // NOUVEAU: Arrêter le tracking
+    NavigationTrackingService.instance.stopTracking();
+
     // Nettoyer les polylignes temporaires et restaurer l'original si nécessaire
     if (isNavigatingToRoute && routeToStartPolyline != null) {
       await polylineManager?.delete(routeToStartPolyline!);
       routeToStartPolyline = null;
-      await _showOriginalRoute(); // Restaurer le parcours original
+      await _showOriginalRoute();
+    }
+
+    // NOUVEAU: Nettoyer la polyligne de tracking utilisateur
+    if (userTrackPolyline != null && trackingPolylineManager != null) {
+      await trackingPolylineManager!.delete(userTrackPolyline!);
+      userTrackPolyline = null;
     }
 
     setState(() {
@@ -1238,14 +1056,14 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       navigationMode = 'none';
       currentNavUpdate = null;
       currentInstruction = "";
+      currentTrackingData = null; // NOUVEAU
     });
 
     await _switchToNormalView();
 
-    final message =
-        isNavigatingToRoute
-            ? context.l10n.toTheRouteNavigation
-            : context.l10n.completedCourseNavigation;
+    final message = isNavigatingToRoute
+        ? context.l10n.toTheRouteNavigation
+        : context.l10n.completedCourseNavigation;
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -1262,19 +1080,20 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
     setState(() {
       isNavigationCameraActive = false;
-      activeNavigationRoute = null; // ✅ FIX: Nettoyer la route active
+      activeNavigationRoute = null;
       currentRouteSegmentIndex = 0;
     });
 
-    // Arrêter les mises à jour de position
+    // FIX: Arrêter le timer s'il existe toujours
     positionUpdateTimer?.cancel();
+    positionUpdateTimer = null;
 
     // Remettre la vue normale
     await mapboxMap!.setCamera(
       mp.CameraOptions(
-        pitch: 0.0, // Vue plate
-        bearing: 0.0, // Nord vers le haut
-        zoom: 13.0, // Zoom moins rapproché
+        pitch: 0.0,
+        bearing: 0.0,
+        zoom: 13.0,
       ),
     );
 
@@ -1283,13 +1102,14 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       mp.LocationComponentSettings(
         enabled: true,
         pulsingEnabled: true,
-        showAccuracyRing: true, // Réafficher le cercle de précision
+        showAccuracyRing: true,
       ),
     );
 
     // Vider l'historique des positions
     userPositionHistory.clear();
-    currentUserBearing = 0.0;
+    lastStableBearing = 0.0;
+    lastCameraUpdate = null;
   }
 
   Future<void> _setActiveLocation({
@@ -1362,7 +1182,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     gl.LocationPermission permission;
 
     serviceEnabled = await gl.Geolocator.isLocationServiceEnabled();
-
     if (!serviceEnabled) {
       return Future.error(context.l10n.disabledLocation);
     }
@@ -1381,7 +1200,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
     gl.LocationSettings locationSettings = gl.LocationSettings(
       accuracy: gl.LocationAccuracy.high,
-      distanceFilter: 2, // FIX: Réduire à 2m pour une navigation plus fluide
+      distanceFilter: 2,
     );
 
     userPositionStream?.cancel();
@@ -1393,21 +1212,32 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           userLongitude = pos.longitude;
           userLatitude = pos.latitude;
 
-          // Si aucune position de recherche n'est définie, utiliser la position utilisateur
           if (currentLongitude == null || currentLatitude == null) {
             _setActiveLocation(
               latitude: pos.latitude,
               longitude: pos.longitude,
               userPosition: true,
-              moveCamera:
-                  !isNavigationCameraActive, // FIX: Ne pas bouger la caméra si en mode navigation
+              moveCamera: !isNavigationCameraActive, // FIX: Important !
               addMarker: false,
             );
           }
         });
 
-        // FIX: En mode navigation, utiliser la caméra spécialisée
-        if (mapboxMap != null && isTrackingUser && !isNavigationCameraActive) {
+        // NOUVEAU: Mettre à jour le tracking si actif
+        if (NavigationTrackingService.instance.isTracking) {
+          NavigationTrackingService.instance.updatePosition(pos);
+        }
+
+        // FIX: SUPPRIMER cette section qui causait les conflits
+        // if (mapboxMap != null && isTrackingUser && !isNavigationCameraActive) {
+        //   mapboxMap?.setCamera(...); // CETTE LIGNE CAUSAIT LE PROBLÈME
+        // }
+
+        // FIX: Utiliser le système de navigation unifié
+        if (isNavigationCameraActive && mapboxMap != null) {
+          _updateNavigationCameraStable(pos.longitude, pos.latitude);
+        } else if (mapboxMap != null && isTrackingUser && !isNavigationCameraActive) {
+          // Mise à jour normale seulement si pas en navigation
           mapboxMap?.setCamera(
             mp.CameraOptions(
               zoom: 13,
@@ -1418,16 +1248,185 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           );
         }
       } else {
-        mapboxMap?.setCamera(
-          mp.CameraOptions(
-            center: mp.Point(coordinates: mp.Position(-98.0, 39.5)),
-            zoom: 2,
-            bearing: 0,
-            pitch: 0,
-          ),
-        );
+        if (mapboxMap != null) {
+          mapboxMap?.setCamera(
+            mp.CameraOptions(
+              center: mp.Point(coordinates: mp.Position(-98.0, 39.5)),
+              zoom: 2,
+              bearing: 0,
+              pitch: 0,
+            ),
+          );
+        }
       }
     });
+  }
+
+  void _updateNavigationCameraStable(double longitude, double latitude) async {
+    if (mapboxMap == null || !isNavigationCameraActive) return;
+
+    final now = DateTime.now();
+    
+    // FIX: Cooldown pour éviter les mises à jour trop fréquentes
+    if (lastCameraUpdate != null && 
+        now.difference(lastCameraUpdate!).inMilliseconds < cameraUpdateCooldown.inMilliseconds) {
+      return;
+    }
+
+    // Ajouter la position actuelle à l'historique
+    final currentPosition = [longitude, latitude];
+    userPositionHistory.add(currentPosition);
+
+    if (userPositionHistory.length > 5) { // Réduire l'historique pour plus de stabilité
+      userPositionHistory.removeAt(0);
+    }
+
+    // Calculer le bearing avec stabilisation
+    double targetBearing = _calculateStableBearing();
+
+    // FIX: Seulement mettre à jour si le changement est significatif
+    final bearingDifference = (targetBearing - lastStableBearing).abs();
+    final normalizedDifference = bearingDifference > 180 ? 360 - bearingDifference : bearingDifference;
+
+    if (normalizedDifference < bearingTolerance) {
+      // Changement trop petit, garder le bearing actuel
+      targetBearing = lastStableBearing;
+    } else {
+      // Lisser le changement de bearing
+      targetBearing = _smoothBearing(lastStableBearing, targetBearing);
+      lastStableBearing = targetBearing;
+    }
+
+    try {
+      await mapboxMap!.flyTo(
+        mp.CameraOptions(
+          center: mp.Point(coordinates: mp.Position(longitude, latitude)),
+          zoom: 18.0,
+          pitch: 65.0,
+          bearing: targetBearing,
+        ),
+        mp.MapAnimationOptions(
+          duration: 1200, // Plus lent pour plus de fluidité
+        ),
+      );
+
+      lastCameraUpdate = now;
+      print('🧭 Caméra stable: bearing=${targetBearing.toStringAsFixed(1)}°');
+    } catch (e) {
+      print('❌ Erreur caméra stable: $e');
+    }
+  }
+
+  // Méthode de calcul de bearing stable
+  double _calculateStableBearing() {
+    // Si on a une route active, privilégier la direction de la route
+    if (activeNavigationRoute != null && activeNavigationRoute!.isNotEmpty) {
+      return _calculateRouteBearingStable();
+    }
+    
+    // Sinon, utiliser la direction de mouvement
+    return _calculateMovementBearingStable();
+  }
+
+  // BEARING de route stabilisé
+  double _calculateRouteBearingStable() {
+    if (activeNavigationRoute == null || 
+        activeNavigationRoute!.isEmpty ||
+        userLongitude == null || 
+        userLatitude == null) {
+      return lastStableBearing;
+    }
+
+    try {
+      // Trouver le segment de route le plus proche
+      final currentSegmentIndex = _findNearestRouteSegmentStable();
+      
+      // Regarder plus loin sur la route pour une direction stable
+      final lookAheadIndex = math.min(
+        currentSegmentIndex + 3, // Regarder 3 segments plus loin
+        activeNavigationRoute!.length - 1,
+      );
+
+      if (lookAheadIndex <= currentSegmentIndex) {
+        return lastStableBearing;
+      }
+
+      final currentPoint = activeNavigationRoute![currentSegmentIndex];
+      final targetPoint = activeNavigationRoute![lookAheadIndex];
+
+      final bearing = _calculateBearing(
+        currentPoint[1], currentPoint[0],
+        targetPoint[1], targetPoint[0],
+      );
+
+      print('🧭 Bearing route stable: segment=$currentSegmentIndex→$lookAheadIndex, bearing=${bearing.toStringAsFixed(1)}°');
+      return bearing;
+
+    } catch (e) {
+      print('❌ Erreur bearing route stable: $e');
+      return lastStableBearing;
+    }
+  }
+
+  double _calculateMovementBearingStable() {
+    if (userPositionHistory.length < 3) {
+      return lastStableBearing;
+    }
+
+    // Utiliser toutes les positions disponibles pour une direction plus stable
+    final start = userPositionHistory.first;
+    final end = userPositionHistory.last;
+
+    // Vérifier que l'utilisateur s'est effectivement déplacé significativement
+    final distance = _calculateDistance(start[1], start[0], end[1], end[0]);
+
+    if (distance < 10.0) { // Augmenter le seuil à 10m
+      return lastStableBearing;
+    }
+
+    final bearing = _calculateBearing(start[1], start[0], end[1], end[0]);
+    print('📍 Mouvement stable: ${distance.toStringAsFixed(1)}m, bearing=${bearing.toStringAsFixed(1)}°');
+    
+    return bearing;
+  }
+
+  // RECHERCHE de segment stabilisée
+  int _findNearestRouteSegmentStable() {
+    if (activeNavigationRoute == null || 
+        activeNavigationRoute!.isEmpty ||
+        userLongitude == null || 
+        userLatitude == null) {
+      return 0;
+    }
+
+    double minDistance = double.infinity;
+    int nearestIndex = currentRouteSegmentIndex; // Commencer par l'index actuel
+
+    // Chercher dans une fenêtre autour de la position actuelle
+    final searchStart = math.max(0, currentRouteSegmentIndex - 2);
+    final searchEnd = math.min(activeNavigationRoute!.length - 1, currentRouteSegmentIndex + 10);
+
+    for (int i = searchStart; i <= searchEnd; i++) {
+      final routePoint = activeNavigationRoute![i];
+      final distance = _calculateDistance(
+        userLatitude!,
+        userLongitude!,
+        routePoint[1],
+        routePoint[0],
+      );
+
+      if (distance < minDistance) {
+        minDistance = distance;
+        nearestIndex = i;
+      }
+    }
+
+    // Seulement mettre à jour si on a progressé ou si on est très proche
+    if (nearestIndex >= currentRouteSegmentIndex || minDistance < 5.0) {
+      currentRouteSegmentIndex = nearestIndex;
+    }
+
+    return currentRouteSegmentIndex;
   }
 
   _onMapCreated(mp.MapboxMap mapboxMap) async {
@@ -2148,8 +2147,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                     routeStats: generatedRouteStats!,
                     onStop: _stopNavigation,
                     navigationMode: navigationMode, // Nouveau paramètre
-                    isNavigatingToRoute:
-                        isNavigatingToRoute, // Nouveau paramètre
+                    isNavigatingToRoute: isNavigatingToRoute, 
+                    onPause: _toggleNavigationPause, // NOUVEAU
+                    trackingData: currentTrackingData, // NOUVEAU
                   ),
                 ),
 

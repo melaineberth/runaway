@@ -414,7 +414,7 @@ abstract class AppLocalizations {
   /// No description provided for @elevation.
   ///
   /// In en, this message translates to:
-  /// **'Elevation gain'**
+  /// **'Elevation'**
   String get elevation;
 
   /// No description provided for @generate.
@@ -812,6 +812,60 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Current generation...'**
   String get currentGeneration;
+
+  /// No description provided for @navigationPaused.
+  ///
+  /// In en, this message translates to:
+  /// **'Navigation paused'**
+  String get navigationPaused;
+
+  /// No description provided for @navigationResumed.
+  ///
+  /// In en, this message translates to:
+  /// **'Navigation resumed'**
+  String get navigationResumed;
+
+  /// No description provided for @time.
+  ///
+  /// In en, this message translates to:
+  /// **'Time'**
+  String get time;
+
+  /// No description provided for @pace.
+  ///
+  /// In en, this message translates to:
+  /// **'Pace'**
+  String get pace;
+
+  /// No description provided for @speed.
+  ///
+  /// In en, this message translates to:
+  /// **'Speed'**
+  String get speed;
+
+  /// No description provided for @elevationGain.
+  ///
+  /// In en, this message translates to:
+  /// **'Gain'**
+  String get elevationGain;
+
+  /// No description provided for @remaining.
+  ///
+  /// In en, this message translates to:
+  /// **'Remaining'**
+  String get remaining;
+
+  /// No description provided for @progress.
+  ///
+  /// In en, this message translates to:
+  /// **'Progress'**
+  String get progress;
+
+  /// No description provided for @estimatedTime.
+  ///
+  /// In en, this message translates to:
+  /// **'Est. Time'**
+  String get estimatedTime;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

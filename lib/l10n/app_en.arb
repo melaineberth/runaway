@@ -174,6 +174,7 @@
       }
     }
   },
+  
   "restrictedAccessTitle": "Restricted access",
   "@restrictedAccessTitle": {
     "description": "App-bar title shown when the user tries to open a protected page while unauthenticated."
@@ -374,5 +375,17 @@
     "description": "Validation error when the password is shorter than 6 characters"
   },
 
-  "currentGeneration": "Current generation..."
+  "currentGeneration": "Current generation...",
+
+  "navigationPaused": "Navigation paused",
+  "navigationResumed": "Navigation resumed",
+  "time": "Time",
+  "distance": "Distance",
+  "pace": "Pace",
+  "speed": "Speed",
+  "elevation": "Elevation",
+  "elevationGain": "Gain",
+  "remaining": "Remaining",
+  "progress": "Progress",
+  "estimatedTime": "Est. Time"
 }
