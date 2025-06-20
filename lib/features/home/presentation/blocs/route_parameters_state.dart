@@ -1,9 +1,9 @@
 import 'package:equatable/equatable.dart';
 import 'package:runaway/features/route_generator/domain/models/route_parameters.dart';
 
-import '../../../../route_generator/domain/models/activity_type.dart';
-import '../../../../route_generator/domain/models/terrain_type.dart';
-import '../../../../route_generator/domain/models/urban_density.dart';
+import '../../../route_generator/domain/models/activity_type.dart';
+import '../../../route_generator/domain/models/terrain_type.dart';
+import '../../../route_generator/domain/models/urban_density.dart';
 
 class RouteParametersState extends Equatable {
   final RouteParameters parameters;

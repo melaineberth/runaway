@@ -14,8 +14,7 @@ import 'package:runaway/l10n/app_localizations.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'core/blocs/app_bloc_observer.dart';
-import 'features/home/presentation/blocs/map_style/map_style_bloc.dart';
-import 'features/home/presentation/blocs/route_parameters/route_parameters_bloc.dart';
+import 'features/home/presentation/blocs/route_parameters_bloc.dart';
 import 'features/route_generator/presentation/blocs/route_generation/route_generation_bloc.dart';
 
 void main() async {
@@ -87,11 +86,6 @@ class RunAway extends StatelessWidget {
           },
         ),
         
-        // Autres BLoCs
-        BlocProvider(
-          create: (_) => MapStyleBloc(),
-        ),
-
         BlocProvider(
           create: (_) => RouteParametersBloc(
             startLongitude: 0.0, // Sera mis à jour avec la position réelle

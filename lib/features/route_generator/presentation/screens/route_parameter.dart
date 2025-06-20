@@ -7,9 +7,9 @@ import 'package:runaway/config/extensions.dart';
 import 'package:runaway/core/widgets/icon_btn.dart';
 import 'package:runaway/features/account/presentation/screens/account_screen.dart';
 
-import '../../../home/presentation/blocs/route_parameters/route_parameters_bloc.dart';
-import '../../../home/presentation/blocs/route_parameters/route_parameters_event.dart';
-import '../../../home/presentation/blocs/route_parameters/route_parameters_state.dart';
+import '../../../home/presentation/blocs/route_parameters_bloc.dart';
+import '../../../home/presentation/blocs/route_parameters_event.dart';
+import '../../../home/presentation/blocs/route_parameters_state.dart';
 import '../widgets/activity_selector.dart';
 import '../widgets/parameter_slider.dart';
 import '../widgets/terrain_selector.dart';
