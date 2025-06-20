@@ -33,3 +33,8 @@ class LogInRequested extends AuthEvent {
 }
 
 class LogOutRequested extends AuthEvent {}
+
+class GoogleSignInRequested extends AuthEvent {}
+
+class AppleSignInRequested extends AuthEvent {}
+

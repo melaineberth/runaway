@@ -252,15 +252,7 @@ class _LoginScreenState extends State<LoginScreen> {
             children: [
               Expanded(
                 child: SquircleContainer(
-                  onTap: isLoading ? null : () {
-                    // TODO: Implémenter la connexion Apple
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(context.l10n.appleLoginTodo),
-                        backgroundColor: Colors.orange,
-                      ),
-                    );
-                  },
+                  onTap: isLoading ? null : _handleAppleSignIn,
                   height: 60,
                   color: isLoading ? AppColors.primary.withValues(alpha: 0.5) : AppColors.primary,
                   radius: 30,
@@ -291,15 +283,7 @@ class _LoginScreenState extends State<LoginScreen> {
               10.w,
               Expanded(
                 child: SquircleContainer(
-                  onTap: isLoading ? null : () {
-                    // TODO: Implémenter la connexion Google
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(context.l10n.googleLoginTodo),
-                        backgroundColor: Colors.orange,
-                      ),
-                    );
-                  },
+                  onTap: isLoading ? null : _handleGoogleSignIn,
                   height: 60,
                   color: isLoading ? AppColors.primary.withValues(alpha: 0.5) : AppColors.primary,
                   radius: 30,
@@ -343,5 +327,13 @@ class _LoginScreenState extends State<LoginScreen> {
         ),
       );
     }
+  }
+
+  void _handleGoogleSignIn() {
+    context.read<AuthBloc>().add(GoogleSignInRequested());
+  }
+
+  void _handleAppleSignIn() {
+    context.read<AuthBloc>().add(AppleSignInRequested());
   }
 }

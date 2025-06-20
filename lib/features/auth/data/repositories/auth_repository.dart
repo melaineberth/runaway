@@ -1,14 +1,24 @@
 // lib/features/auth/data/repositories/auth_repository.dart
 
+import 'dart:convert';
 import 'dart:io';
+import 'dart:math';
 
+import 'package:crypto/crypto.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:path/path.dart' as p;
 import 'package:runaway/core/errors/auth_exceptions.dart';
 import 'package:runaway/features/auth/domain/models/profile.dart';
+import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' hide AuthException;
 
 class AuthRepository {
   final SupabaseClient _supabase = Supabase.instance.client;
+
+  // Configuration Google Sign-In
+  final GoogleSignIn _googleSignIn = GoogleSignIn(
+    scopes: ['email', 'profile'],
+  );
 
   User? get currentUser => _supabase.auth.currentUser;
 
@@ -39,6 +49,226 @@ class AuthRepository {
       print('❌ Erreur inscription: $e');
       throw AuthExceptionHandler.handleSupabaseError(e);
     }
+  }
+
+  /* ───────── GOOGLE SIGN-IN ───────── */
+  Future<Profile?> signInWithGoogle() async {
+    try {
+      print('🔑 Tentative de connexion Google');
+      
+      // 1. Déconnecter d'abord si déjà connecté
+      await _googleSignIn.signOut();
+      
+      // 2. Initier la connexion Google
+      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
+      
+      if (googleUser == null) {
+        print('❌ Connexion Google annulée par l\'utilisateur');
+        throw AuthException('Connexion Google annulée');
+      }
+      
+      // 3. Obtenir les détails d'authentification
+      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+      
+      if (googleAuth.accessToken == null) {
+        throw AuthException('Impossible d\'obtenir le token Google');
+      }
+      
+      print('✅ Token Google obtenu');
+      
+      // 4. Connexion avec Supabase
+      final AuthResponse response = await _supabase.auth.signInWithIdToken(
+        provider: OAuthProvider.google,
+        idToken: googleAuth.idToken!,
+        accessToken: googleAuth.accessToken!,
+      );
+      
+      if (response.user == null) {
+        throw AuthException('Échec de la connexion avec Supabase');
+      }
+      
+      print('✅ Connexion Supabase réussie: ${response.user!.email}');
+      
+      // 5. Créer ou récupérer le profil
+      final profile = await _createOrGetSocialProfile(
+        user: response.user!,
+        displayName: googleUser.displayName,
+        photoUrl: googleUser.photoUrl,
+        provider: 'google',
+      );
+      
+      return profile;
+      
+    } catch (e) {
+      print('❌ Erreur Google Sign-In: $e');
+      throw AuthExceptionHandler.handleSupabaseError(e);
+    }
+  }
+
+  /* ───────── APPLE SIGN-IN ───────── */
+  Future<Profile?> signInWithApple() async {
+    try {
+      print('🔑 Tentative de connexion Apple');
+      
+      // 1. Vérifier la disponibilité d'Apple Sign-In
+      if (!await SignInWithApple.isAvailable()) {
+        throw AuthException('Apple Sign-In non disponible sur cet appareil');
+      }
+      
+      // 2. Générer un nonce sécurisé
+      final rawNonce = _generateNonce();
+      final nonce = sha256.convert(utf8.encode(rawNonce)).toString();
+      
+      // 3. Initier la connexion Apple
+      final credential = await SignInWithApple.getAppleIDCredential(
+        scopes: [
+          AppleIDAuthorizationScopes.email,
+          AppleIDAuthorizationScopes.fullName,
+        ],
+        nonce: nonce,
+      );
+      
+      print('✅ Credentials Apple obtenus');
+      
+      // 4. Connexion avec Supabase
+      final AuthResponse response = await _supabase.auth.signInWithIdToken(
+        provider: OAuthProvider.apple,
+        idToken: credential.identityToken!,
+        nonce: rawNonce,
+      );
+      
+      if (response.user == null) {
+        throw AuthException('Échec de la connexion avec Supabase');
+      }
+      
+      print('✅ Connexion Supabase réussie: ${response.user!.email}');
+      
+      // 5. Créer le nom d'affichage à partir des informations Apple
+      String? displayName;
+      if (credential.givenName != null || credential.familyName != null) {
+        displayName = '${credential.givenName ?? ''} ${credential.familyName ?? ''}'.trim();
+        if (displayName.isEmpty) displayName = null;
+      }
+      
+      // 6. Créer ou récupérer le profil
+      final profile = await _createOrGetSocialProfile(
+        user: response.user!,
+        displayName: displayName,
+        photoUrl: null, // Apple ne fournit pas de photo de profil
+        provider: 'apple',
+      );
+      
+      return profile;
+      
+    } catch (e) {
+      print('❌ Erreur Apple Sign-In: $e');
+      throw AuthExceptionHandler.handleSupabaseError(e);
+    }
+  }
+
+  /* ───────── HELPER POUR PROFILS SOCIAUX ───────── */
+  Future<Profile?> _createOrGetSocialProfile({
+    required User user,
+    String? displayName,
+    String? photoUrl,
+    required String provider,
+  }) async {
+    try {
+      // 1. Vérifier si le profil existe déjà
+      final existingProfile = await getProfile(user.id, skipCleanup: true);
+      if (existingProfile != null && existingProfile.isComplete) {
+        print('✅ Profil existant trouvé: ${existingProfile.username}');
+        return existingProfile;
+      }
+      
+      // 2. Créer un nouveau profil pour les connexions sociales
+      String? fullName = displayName;
+      String? username;
+      String? avatarUrl = photoUrl;
+      
+      // Générer un nom d'utilisateur unique basé sur l'email ou le nom
+      if (fullName != null && fullName.isNotEmpty) {
+        username = await _generateUniqueUsername(fullName);
+      } else if (user.email != null) {
+        final emailUsername = user.email!.split('@').first;
+        username = await _generateUniqueUsername(emailUsername);
+      } else {
+        username = await _generateUniqueUsername('user');
+      }
+      
+      // Si pas de nom complet, utiliser l'email comme base
+      if (fullName == null || fullName.isEmpty) {
+        fullName = user.email?.split('@').first ?? 'Utilisateur';
+      }
+      
+      print('👤 Création profil social: $fullName (@$username)');
+      
+      // 3. Sauvegarder le profil
+      final data = await _supabase
+          .from('profiles')
+          .upsert({
+            'id': user.id,
+            'email': user.email!,
+            'full_name': fullName,
+            'username': username,
+            'avatar_url': avatarUrl,
+            'updated_at': DateTime.now().toIso8601String(),
+          })
+          .select()
+          .maybeSingle();
+
+      if (data == null) {
+        throw ProfileException('Impossible de créer le profil social');
+      }
+
+      final profile = Profile.fromJson(data);
+      print('✅ Profil social créé: ${profile.username}');
+      return profile;
+      
+    } catch (e) {
+      print('❌ Erreur création profil social: $e');
+      if (e is AuthException) {
+        rethrow;
+      }
+      throw AuthExceptionHandler.handleSupabaseError(e);
+    }
+  }
+
+  /* ───────── HELPER POUR GÉNÉRER USERNAME UNIQUE ───────── */
+  Future<String> _generateUniqueUsername(String baseName) async {
+    // Nettoyer le nom de base
+    String cleanBase = baseName
+        .toLowerCase()
+        .replaceAll(RegExp(r'[^a-z0-9]'), '')
+        .substring(0, min(baseName.length, 15));
+    
+    if (cleanBase.isEmpty) {
+      cleanBase = 'user';
+    }
+    
+    // Essayer le nom de base d'abord
+    if (await isUsernameAvailable(cleanBase)) {
+      return cleanBase;
+    }
+    
+    // Ajouter des nombres jusqu'à trouver un nom disponible
+    for (int i = 1; i <= 999; i++) {
+      final candidate = '$cleanBase$i';
+      if (await isUsernameAvailable(candidate)) {
+        return candidate;
+      }
+    }
+    
+    // Fallback avec timestamp
+    final timestamp = DateTime.now().millisecondsSinceEpoch.toString();
+    return '${cleanBase}_${timestamp.substring(timestamp.length - 6)}';
+  }
+
+  /* ───────── HELPER POUR GÉNÉRER NONCE ───────── */
+  String _generateNonce([int length = 32]) {
+    const charset = '0123456789ABCDEFGHIJKLMNOPQRSTUVXYZabcdefghijklmnopqrstuvwxyz-._';
+    final random = Random.secure();
+    return List.generate(length, (_) => charset[random.nextInt(charset.length)]).join();
   }
 
   /* ───────── 2) COMPLÉMENT DE PROFIL (ÉTAPE 2) ───────── */
@@ -156,7 +386,6 @@ class AuthRepository {
   }
 
   // ---------- lecture profile ----------
-  // FIX: Ne plus nettoyer automatiquement les comptes
   Future<Profile?> getProfile(String id, {bool skipCleanup = false}) async {
     try {
       print('👤 Récupération profil: $id');
@@ -313,7 +542,6 @@ class AuthRepository {
   }
 
   /// Nettoie un compte corrompu (authentifié dans Supabase mais sans profil complet)
-  /// FIX: Maintenant appelée explicitement seulement quand nécessaire
   Future<void> cleanupCorruptedAccount() async {
     try {
       final user = currentUser;

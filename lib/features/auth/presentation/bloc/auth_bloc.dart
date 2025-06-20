@@ -17,6 +17,8 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     on<SignUpBasicRequested>(_onSignUpBasic);
     on<CompleteProfileRequested>(_onCompleteProfile);
     on<LogInRequested>(_onLogin);
+    on<GoogleSignInRequested>(_onGoogleSignIn);
+    on<AppleSignInRequested>(_onAppleSignIn);
     on<LogOutRequested>(_onLogout);
 
     // handlers internes
@@ -143,6 +145,60 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       }
     } catch (err) {
       print('❌ Erreur connexion: $err');
+      emit(AuthError(err.toString()));
+    }
+  }
+
+  /* ───────── GOOGLE SIGN-IN HANDLER ───────── */
+  Future<void> _onGoogleSignIn(GoogleSignInRequested e, Emitter<AuthState> emit) async {
+    emit(AuthLoading());
+    try {
+      print('🔑 Début Google Sign-In');
+      
+      final profile = await _repo.signInWithGoogle();
+      
+      if (profile == null) {
+        // Connexion réussie mais pas de profil - rare mais possible
+        final user = supabase.Supabase.instance.client.auth.currentUser;
+        if (user != null) {
+          print('⚠️ Connexion Google réussie mais pas de profil');
+          emit(ProfileIncomplete(user));
+        } else {
+          emit(AuthError('Connexion Google échouée'));
+        }
+      } else {
+        print('✅ Connexion Google réussie: ${profile.email}');
+        emit(Authenticated(profile));
+      }
+    } catch (err) {
+      print('❌ Erreur Google Sign-In: $err');
+      emit(AuthError(err.toString()));
+    }
+  }
+
+  /* ───────── APPLE SIGN-IN HANDLER ───────── */
+  Future<void> _onAppleSignIn(AppleSignInRequested e, Emitter<AuthState> emit) async {
+    emit(AuthLoading());
+    try {
+      print('🔑 Début Apple Sign-In');
+      
+      final profile = await _repo.signInWithApple();
+      
+      if (profile == null) {
+        // Connexion réussie mais pas de profil - rare mais possible
+        final user = supabase.Supabase.instance.client.auth.currentUser;
+        if (user != null) {
+          print('⚠️ Connexion Apple réussie mais pas de profil');
+          emit(ProfileIncomplete(user));
+        } else {
+          emit(AuthError('Connexion Apple échouée'));
+        }
+      } else {
+        print('✅ Connexion Apple réussie: ${profile.email}');
+        emit(Authenticated(profile));
+      }
+    } catch (err) {
+      print('❌ Erreur Apple Sign-In: $err');
       emit(AuthError(err.toString()));
     }
   }

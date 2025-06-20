@@ -24,105 +24,41 @@ class NavigationOverlay extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        // Instruction principale avec badge de mode
-        SquircleContainer(
-          width: double.infinity,
-          padding: EdgeInsets.all(20),
-          color: Colors.black.withValues(alpha: 0.9),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Badge de mode + bouton stop
-              Row(
-                children: [
-                  // Badge de mode
-                  SquircleContainer(
-                    radius: 20,
-                    padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    color: _getModeColor().withValues(alpha: 0.2),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        HugeIcon(
-                          icon: _getModeIcon(),
-                          color: _getModeColor(),
-                          size: 14,
-                        ),
-                        6.w,
-                        Text(
-                          _getModeText(context),
-                          style: context.bodySmall?.copyWith(
-                            color: _getModeColor(),
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  
-                  Spacer(),
-                  
-                  // Bouton stop
-                  GestureDetector(
-                    onTap: onStop,
-                    child: Container(
-                      padding: EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: Colors.red.withValues(alpha: 0.2),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: HugeIcon(
-                        icon: HugeIcons.strokeRoundedStop,
-                        color: Colors.red,
-                        size: 20,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              
-              12.h,
-              
-              // Instruction
-              Text(
-                instruction,
-                style: context.titleMedium?.copyWith(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              
-              if (navUpdate != null && !navUpdate!.isFinished) ...[
-                16.h,
-                
-                // Distance et progression
+    return SizedBox(
+      height: MediaQuery.of(context).size.height / 1.2,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          // Instruction principale avec badge de mode
+          SquircleContainer(
+            width: double.infinity,
+            padding: EdgeInsets.all(20),
+            color: Colors.black.withValues(alpha: 0.9),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Badge de mode + bouton stop
                 Row(
                   children: [
-                    // Distance restante
-                    Container(
+                    // Badge de mode
+                    SquircleContainer(
+                      radius: 20,
                       padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                      decoration: BoxDecoration(
-                        color: _getModeColor().withValues(alpha: 0.2),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
+                      color: _getModeColor().withValues(alpha: 0.2),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           HugeIcon(
-                            icon: isNavigatingToRoute 
-                                ? HugeIcons.strokeRoundedNavigation04
-                                : HugeIcons.strokeRoundedRoute03,
+                            icon: _getModeIcon(),
                             color: _getModeColor(),
-                            size: 16,
+                            size: 14,
                           ),
                           6.w,
                           Text(
-                            _formatDistance(navUpdate!.distanceToTarget),
+                            _getModeText(context),
                             style: context.bodySmall?.copyWith(
                               color: _getModeColor(),
+                              fontSize: 12,
                               fontWeight: FontWeight.w600,
                             ),
                           ),
@@ -130,93 +66,160 @@ class NavigationOverlay extends StatelessWidget {
                       ),
                     ),
                     
-                    16.w,
+                    Spacer(),
                     
-                    // Progression
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(
-                                isNavigatingToRoute 
-                                    ? context.l10n.toTheRun
-                                    : '${context.l10n.pathPoint} ${navUpdate!.waypointIndex + 1}/${navUpdate!.totalWaypoints}',
-                                style: context.bodySmall?.copyWith(color: Colors.white70),
-                              ),
-                              Text(
-                                isNavigatingToRoute 
-                                    ? '...'
-                                    : '${(((navUpdate!.waypointIndex + 1) / navUpdate!.totalWaypoints) * 100).round()}%',
-                                style: context.bodySmall?.copyWith(
-                                  color: Colors.white70,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ],
-                          ),
-                          6.h,
-                          LinearProgressIndicator(
-                            value: isNavigatingToRoute 
-                                ? null // Indéterminé pour navigation vers le parcours
-                                : (navUpdate!.waypointIndex + 1) / navUpdate!.totalWaypoints,
-                            backgroundColor: Colors.white30,
-                            valueColor: AlwaysStoppedAnimation(_getModeColor()),
-                            minHeight: 4,
-                          ),
-                        ],
+                    // Bouton stop
+                    GestureDetector(
+                      onTap: onStop,
+                      child: Container(
+                        padding: EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.red.withValues(alpha: 0.2),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: HugeIcon(
+                          icon: HugeIcons.strokeRoundedStop,
+                          color: Colors.red,
+                          size: 20,
+                        ),
                       ),
                     ),
                   ],
                 ),
-              ],
-            ],
-          ),
-        ),
-        
-        16.h,
-        
-        // Statistiques du parcours (seulement si on navigue sur le parcours)
-        if (!isNavigatingToRoute) ...[
-          Container(
-            padding: EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.black.withValues(alpha: 0.7),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: IntrinsicHeight(
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  _buildCompactStat(
-                    icon: HugeIcons.strokeRoundedRoute03,
-                    value: '${_parseDistance(routeStats['distance_km']).toStringAsFixed(1)} km',
-                    label: context.l10n.pathTotal,
+                
+                12.h,
+                
+                // Instruction
+                Text(
+                  instruction,
+                  style: context.titleMedium?.copyWith(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
                   ),
+                ),
+                
+                if (navUpdate != null && !navUpdate!.isFinished) ...[
+                  16.h,
                   
-                  VerticalDivider(color: Colors.white30, width: 1),
-                  
-                  _buildCompactStat(
-                    icon: HugeIcons.strokeRoundedTime01,
-                    value: '${routeStats['duration_minutes']} min',
-                    label: context.l10n.pathTime,
-                  ),
-                  
-                  VerticalDivider(color: Colors.white30, width: 1),
-                  
-                  _buildCompactStat(
-                    icon: HugeIcons.strokeRoundedAbacusBefore,
-                    value: '${routeStats['points_count']}',
-                    label: context.l10n.pointsCount,
+                  // Distance et progression
+                  Row(
+                    children: [
+                      // Distance restante
+                      Container(
+                        padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: _getModeColor().withValues(alpha: 0.2),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            HugeIcon(
+                              icon: isNavigatingToRoute 
+                                  ? HugeIcons.strokeRoundedNavigation04
+                                  : HugeIcons.strokeRoundedRoute03,
+                              color: _getModeColor(),
+                              size: 16,
+                            ),
+                            6.w,
+                            Text(
+                              _formatDistance(navUpdate!.distanceToTarget),
+                              style: context.bodySmall?.copyWith(
+                                color: _getModeColor(),
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      
+                      16.w,
+                      
+                      // Progression
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  isNavigatingToRoute 
+                                      ? context.l10n.toTheRun
+                                      : '${context.l10n.pathPoint} ${navUpdate!.waypointIndex + 1}/${navUpdate!.totalWaypoints}',
+                                  style: context.bodySmall?.copyWith(color: Colors.white70),
+                                ),
+                                Text(
+                                  isNavigatingToRoute 
+                                      ? '...'
+                                      : '${(((navUpdate!.waypointIndex + 1) / navUpdate!.totalWaypoints) * 100).round()}%',
+                                  style: context.bodySmall?.copyWith(
+                                    color: Colors.white70,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            6.h,
+                            LinearProgressIndicator(
+                              value: isNavigatingToRoute 
+                                  ? null // Indéterminé pour navigation vers le parcours
+                                  : (navUpdate!.waypointIndex + 1) / navUpdate!.totalWaypoints,
+                              backgroundColor: Colors.white30,
+                              valueColor: AlwaysStoppedAnimation(_getModeColor()),
+                              minHeight: 4,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
                 ],
-              ),
+              ],
             ),
           ),
+          
+          
+          // Statistiques du parcours (seulement si on navigue sur le parcours)
+          if (!isNavigatingToRoute) ...[
+            Container(
+              padding: EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.black.withValues(alpha: 0.7),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: IntrinsicHeight(
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    _buildCompactStat(
+                      icon: HugeIcons.strokeRoundedRoute03,
+                      value: '${_parseDistance(routeStats['distance_km']).toStringAsFixed(1)} km',
+                      label: context.l10n.pathTotal,
+                    ),
+                    
+                    VerticalDivider(color: Colors.white30, width: 1),
+                    
+                    _buildCompactStat(
+                      icon: HugeIcons.strokeRoundedTime01,
+                      value: '${routeStats['duration_minutes']} min',
+                      label: context.l10n.pathTime,
+                    ),
+                    
+                    VerticalDivider(color: Colors.white30, width: 1),
+                    
+                    _buildCompactStat(
+                      icon: HugeIcons.strokeRoundedAbacusBefore,
+                      value: '${routeStats['points_count']}',
+                      label: context.l10n.pointsCount,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
         ],
-      ],
+      ),
     );
   }
 

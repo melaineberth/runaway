@@ -25,7 +25,8 @@ import '../../domain/config/navigation_camera_config.dart';
 import '../blocs/map_style/map_style_bloc.dart';
 import '../blocs/map_style/map_style_event.dart';
 import '../blocs/map_style/map_style_state.dart';
-import '../../../route_generator/presentation/screens/route_parameter.dart' as gen;
+import '../../../route_generator/presentation/screens/route_parameter.dart'
+    as gen;
 import '../../../../core/widgets/icon_btn.dart';
 import '../blocs/route_parameters/route_parameters_bloc.dart';
 import '../blocs/route_parameters/route_parameters_event.dart';
@@ -89,7 +90,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   routeToStartPoint; // Coordonnées pour aller au point de départ
 
   // Variables pour la caméra de navigation
-  List<List<double>> userPositionHistory = []; // Historique des positions pour calculer la direction
+  List<List<double>> userPositionHistory =
+      []; // Historique des positions pour calculer la direction
   double currentUserBearing = 0.0; // Direction actuelle de l'utilisateur
   bool isNavigationCameraActive = false;
   Timer? positionUpdateTimer;
@@ -102,7 +104,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     _setupPositionTracking();
-    
+
     // FIX: Initialisation sécurisée du NavigationService
     try {
       NavigationService.initialize();
@@ -112,7 +114,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       // Essayer de réinitialiser
       NavigationService.reinitialize();
     }
-    
+
     WidgetsBinding.instance.addObserver(this);
   }
 
@@ -201,7 +203,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             content: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
-              children: [ 
+              children: [
                 Text(
                   context.l10n.userAreStartingPoint,
                   style: context.bodyMedium?.copyWith(color: Colors.white70),
@@ -238,7 +240,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             actions: [
               TextButton(
                 onPressed: () => Navigator.of(context).pop(),
-                child: Text(context.l10n.cancel, style: TextStyle(color: Colors.white70)),
+                child: Text(
+                  context.l10n.cancel,
+                  style: TextStyle(color: Colors.white70),
+                ),
               ),
               ElevatedButton(
                 onPressed: () {
@@ -271,7 +276,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  context.l10n.userToStartingPoint(_formatDistance(distanceToStart)),
+                  context.l10n.userToStartingPoint(
+                    _formatDistance(distanceToStart),
+                  ),
                   style: context.bodyMedium?.copyWith(color: Colors.white70),
                 ),
                 16.h,
@@ -314,7 +321,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             actions: [
               TextButton(
                 onPressed: () => Navigator.of(context).pop(),
-                child: Text(context.l10n.cancel, style: TextStyle(color: Colors.white70)),
+                child: Text(
+                  context.l10n.cancel,
+                  style: TextStyle(color: Colors.white70),
+                ),
               ),
               TextButton(
                 onPressed: () {
@@ -363,9 +373,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       );
 
       if (routeToStart.length < 2) {
-        throw Exception(
-          context.l10n.unableCalculateRoute,
-        );
+        throw Exception(context.l10n.unableCalculateRoute);
       }
 
       // ✅ FIX: Sauvegarder les coordonnées de l'itinéraire
@@ -393,13 +401,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         );
       } catch (navError) {
         print('❌ Erreur spécifique NavigationService: $navError');
-        
+
         // FIX: Essayer de réinitialiser et recommencer
         try {
           print('🔄 Tentative de réinitialisation NavigationService');
           NavigationService.reinitialize();
           await Future.delayed(Duration(milliseconds: 500)); // Petit délai
-          
+
           success = await NavigationService.startCustomNavigation(
             context: context,
             coordinates: routeToStart,
@@ -456,10 +464,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
-            errorMessage,
-            style: TextStyle(color: Colors.white),
-          ),
+          content: Text(errorMessage, style: TextStyle(color: Colors.white)),
           backgroundColor: Colors.red,
           duration: Duration(seconds: 5),
           action: SnackBarAction(
@@ -1371,9 +1376,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     }
 
     if (permission == gl.LocationPermission.deniedForever) {
-      return Future.error(
-        context.l10n.disabledAndDenied,
-      );
+      return Future.error(context.l10n.disabledAndDenied);
     }
 
     gl.LocationSettings locationSettings = gl.LocationSettings(
@@ -1438,8 +1441,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     );
 
     // Créer le gestionnaire d'annotations
-    pointAnnotationManager = await mapboxMap.annotations.createPointAnnotationManager();
-    circleAnnotationManager = await mapboxMap.annotations.createCircleAnnotationManager();
+    pointAnnotationManager =
+        await mapboxMap.annotations.createPointAnnotationManager();
+    circleAnnotationManager =
+        await mapboxMap.annotations.createCircleAnnotationManager();
 
     // Masquer les éléments d'interface
     await mapboxMap.compass.updateSettings(mp.CompassSettings(enabled: false));
@@ -2112,7 +2117,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   styleUri: MapboxStyles.DARK,
                 ),
               ),
-        
+
               if (!isNavigationMode) // Masquer en mode navigation
                 IgnorePointer(
                   ignoring: true,
@@ -2130,7 +2135,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                     ),
                   ),
                 ),
-        
+
               // Interface de navigation (overlay)
               if (isNavigationMode)
                 Positioned(
@@ -2143,10 +2148,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                     routeStats: generatedRouteStats!,
                     onStop: _stopNavigation,
                     navigationMode: navigationMode, // Nouveau paramètre
-                    isNavigatingToRoute: isNavigatingToRoute, // Nouveau paramètre
+                    isNavigatingToRoute:
+                        isNavigatingToRoute, // Nouveau paramètre
                   ),
                 ),
-        
+
               // Interface normale (masquée en mode navigation)
               if (!isNavigationMode)
                 Padding(
@@ -2168,7 +2174,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                               userLatitude: userLatitude,
                             ),
                           ),
-        
+
                           Expanded(
                             child: Padding(
                               padding: const EdgeInsets.only(right: 15.0),
@@ -2182,23 +2188,30 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                                       IconBtn(
                                         padding: 10.0,
                                         icon: HugeIcons.strokeRoundedGpsOff02,
-                                        onPressed: !isTrackingUser
-                                          ? () async => await _lockPositionOnScreenCenter()
-                                          : null,
-                                        iconColor: isTrackingUser
-                                          ? Colors.white38
-                                          : Colors.white,
+                                        onPressed:
+                                            !isTrackingUser
+                                                ? () async =>
+                                                    await _lockPositionOnScreenCenter()
+                                                : null,
+                                        iconColor:
+                                            isTrackingUser
+                                                ? Colors.white38
+                                                : Colors.white,
                                       ),
                                       15.h,
                                       IconBtn(
                                         padding: 10.0,
-                                        icon: isTrackingUser
-                                          ? HugeIcons.solidRoundedLocationShare02
-                                          : HugeIcons.strokeRoundedLocationShare02,
+                                        icon:
+                                            isTrackingUser
+                                                ? HugeIcons
+                                                    .solidRoundedLocationShare02
+                                                : HugeIcons
+                                                    .strokeRoundedLocationShare02,
                                         onPressed: _goToUserLocation,
-                                        iconColor: isTrackingUser
-                                          ? AppColors.primary
-                                          : Colors.white,
+                                        iconColor:
+                                            isTrackingUser
+                                                ? AppColors.primary
+                                                : Colors.white,
                                       ),
                                       15.h,
                                       IconBtn(
@@ -2217,11 +2230,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                     ),
                   ),
                 ),
-        
+
               if (isGenerateEnabled) LoadingOverlay(),
-        
+
               // RouteInfoCard (masqué en mode navigation)
-              if (generatedRouteCoordinates != null && generatedRouteStats != null && !isNavigationMode) // Masquer pendant la navigation
+              if (generatedRouteCoordinates != null &&
+                  generatedRouteStats != null &&
+                  !isNavigationMode) // Masquer pendant la navigation
                 Positioned(
                   bottom: MediaQuery.of(context).padding.bottom + 20,
                   left: 15,
@@ -2243,7 +2258,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                         generatedRouteStats!['distance_km'],
                       ),
                       isLoop: generatedRouteStats!['is_loop'] as bool? ?? true,
-                      waypointCount: generatedRouteStats!['points_count'] as int? ?? 0,
+                      waypointCount:
+                          generatedRouteStats!['points_count'] as int? ?? 0,
                       onClear: _clearRoute,
                       onNavigate: _startNavigation,
                       onShare: _shareCurrentRoute,
