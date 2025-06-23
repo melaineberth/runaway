@@ -78,8 +78,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _initializeLocationTracking();
-    
-    // Écouter les changements du RouteGenerationBloc
     _setupRouteGenerationListener();
   }
 
@@ -142,23 +140,25 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     }
   }
 
-  // 🔧 FIX : Auto-sauvegarde avec vraie distance
   Future<void> _autoSaveGeneratedRoute(RouteGenerationState state) async {
     if (!state.hasGeneratedRoute || state.usedParameters == null) {
       return;
     }
 
     try {
-      // 🔧 FIX : Utiliser la vraie distance générée au lieu de la distance demandée
+      // Utiliser la vraie distance générée au lieu de la distance demandée
       final realDistance = _getGeneratedRouteDistance();
       final routeName = _generateAutoRouteName(state.usedParameters!, realDistance);
       
-      // Sauvegarder via le RouteGenerationBloc
+      // 🆕 Sauvegarder via le RouteGenerationBloc avec la GlobalKey pour la screenshot
       context.read<RouteGenerationBloc>().add(
-        GeneratedRouteSaved(routeName),
+        GeneratedRouteSaved(
+          routeName,
+          map: mapboxMap!,
+        ),
       );
 
-      print('✅ Parcours auto-sauvegardé: $routeName (distance réelle: ${realDistance.toStringAsFixed(1)}km)');
+      print('✅ Parcours auto-sauvegardé avec screenshot: $routeName (distance réelle: ${realDistance.toStringAsFixed(1)}km)');
 
     } catch (e) {
       print('❌ Erreur auto-sauvegarde: $e');
@@ -166,13 +166,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     }
   }
 
-  // 🔧 FIX : Génération du nom avec vraie distance
+  // Génération du nom avec vraie distance
   String _generateAutoRouteName(RouteParameters parameters, double realDistanceKm) {
     final now = DateTime.now();
     final timeString = '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
     final dateString = '${now.day}/${now.month}';
     
-    // 🔧 FIX : Utiliser la vraie distance au lieu de parameters.distanceKm
     return '${parameters.activityType.title} ${realDistanceKm.toStringAsFixed(0)}km - $timeString ($dateString)';
   }
 
@@ -180,7 +179,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   double _getGeneratedRouteDistance() {
     if (routeMetadata == null) return 0.0;
     
-    // Essayer d'abord avec la clé 'distanceKm' (ajoutée dans la solution 1)
+    // Essayer d'abord avec la clé 'distanceKm'
     final distanceKm = routeMetadata!['distanceKm'];
     if (distanceKm != null) {
       return (distanceKm as num).toDouble();
@@ -199,7 +198,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     
     return 0.0;
   }
-
+  
   // Méthode de calcul de distance à partir des coordonnées
   double _calculateDistanceFromCoordinates(List<List<double>> coordinates) {
     if (coordinates.length < 2) return 0.0;

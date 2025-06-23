@@ -1,4 +1,6 @@
 import 'package:equatable/equatable.dart';
+import 'package:flutter/material.dart';
+import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart';
 import 'package:runaway/features/route_generator/domain/models/route_parameters.dart';
 
 abstract class RouteGenerationEvent extends Equatable {
@@ -34,14 +36,18 @@ class RouteGenerationRequested extends RouteGenerationEvent {
   List<Object?> get props => [parameters];
 }
 
-/// Événement pour sauvegarder le parcours généré
+/// 🆕 Sauvegarde de parcours avec capture de screenshot optionnelle
 class GeneratedRouteSaved extends RouteGenerationEvent {
   final String name;
+  final MapboxMap map;
 
-  const GeneratedRouteSaved(this.name);
+  const GeneratedRouteSaved(
+    this.name, {
+    required this.map, // 🆕 Paramètre optionnel
+  });
 
   @override
-  List<Object?> get props => [name];
+  List<Object?> get props => [name, map];
 }
 
 /// Événement pour charger un parcours sauvegardé

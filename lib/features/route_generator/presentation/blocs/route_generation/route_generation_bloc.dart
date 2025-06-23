@@ -132,18 +132,25 @@ class RouteGenerationBloc extends HydratedBloc<RouteGenerationEvent, RouteGenera
     }
 
     try {
-      print('💾 Début sauvegarde: ${event.name}');
+      print('💾 Début sauvegarde avec screenshot: ${event.name}');
       
-      // 🔧 FIX : Calculer la vraie distance depuis les métadonnées
-      final actualDistanceKm = state.routeMetadata?['distanceKm'] as double? ?? 
-                              _calculateRouteDistance(state.generatedRoute!);
+      // 🆕 Indiquer qu'une sauvegarde est en cours
+      emit(state.copyWith(
+        isGeneratingRoute: true, // Réutiliser ce flag pour l'UI
+        errorMessage: null,
+      ));
       
+      // Calculer la vraie distance depuis les métadonnées
+      final actualDistanceKm = state.routeMetadata?['distanceKm'] as double? ?? _calculateRouteDistance(state.generatedRoute!);
+      
+      // 🆕 Sauvegarder avec capture de screenshot optionnelle
       final savedRoute = await _routesRepository.saveRoute(
         name: event.name,
         parameters: state.usedParameters!,
         coordinates: state.generatedRoute!,
         actualDistance: actualDistanceKm,
         estimatedDuration: state.routeMetadata?['durationMinutes'] as int?,
+        imageUrl: null,
       );
 
       // Mettre à jour la liste des parcours sauvegardés
@@ -151,15 +158,17 @@ class RouteGenerationBloc extends HydratedBloc<RouteGenerationEvent, RouteGenera
         ..add(savedRoute);
 
       emit(state.copyWith(
+        isGeneratingRoute: false, // Fin de la sauvegarde
         savedRoutes: updatedRoutes,
         errorMessage: null,
       ));
 
-      print('✅ Parcours sauvegardé: ${savedRoute.name} (${savedRoute.formattedDistance})');
+      print('✅ Parcours sauvegardé avec image: ${savedRoute.name} (${savedRoute.formattedDistance}) - Image: ${savedRoute.hasImage ? 'Oui' : 'Non'}');
 
     } catch (e) {
-      print('❌ Erreur sauvegarde complète: $e');
+      print('❌ Erreur sauvegarde complète avec screenshot: $e');
       emit(state.copyWith(
+        isGeneratingRoute: false,
         errorMessage: 'Erreur lors de la sauvegarde: $e',
       ));
     }
@@ -333,33 +342,40 @@ class RouteGenerationBloc extends HydratedBloc<RouteGenerationEvent, RouteGenera
 
   double _calculateRouteDistance(List<List<double>> coordinates) {
     if (coordinates.length < 2) return 0.0;
-
+    
     double totalDistance = 0.0;
+    
     for (int i = 0; i < coordinates.length - 1; i++) {
-      totalDistance += _calculateDistance(
-        coordinates[i][1], // lat1
-        coordinates[i][0], // lon1
-        coordinates[i + 1][1], // lat2
-        coordinates[i + 1][0], // lon2
-      );
+      final lat1 = coordinates[i][1];
+      final lon1 = coordinates[i][0];
+      final lat2 = coordinates[i + 1][1];
+      final lon2 = coordinates[i + 1][0];
+      
+      totalDistance += _haversineDistance(lat1, lon1, lat2, lon2);
     }
-
-    return totalDistance / 1000; // Convertir en km
+    
+    return totalDistance;
   }
 
-  double _calculateDistance(double lat1, double lon1, double lat2, double lon2) {
-    const double earthRadius = 6371000; // mètres
-    final double dLat = (lat2 - lat1) * 3.14159265359 / 180;
-    final double dLon = (lon2 - lon1) * 3.14159265359 / 180;
+  /// Calcule la distance entre deux points géographiques (formule de Haversine)
+  double _haversineDistance(double lat1, double lon1, double lat2, double lon2) {
+    const double earthRadius = 6371; // Rayon de la Terre en km
     
-    final double a = 
-        math.sin(dLat / 2) * math.sin(dLat / 2) +
-        math.cos(lat1 * 3.14159265359 / 180) * 
-        math.cos(lat2 * 3.14159265359 / 180) *
+    final double dLat = _degreesToRadians(lat2 - lat1);
+    final double dLon = _degreesToRadians(lon2 - lon1);
+    
+    final double a = math.sin(dLat / 2) * math.sin(dLat / 2) +
+        math.cos(_degreesToRadians(lat1)) * math.cos(_degreesToRadians(lat2)) *
         math.sin(dLon / 2) * math.sin(dLon / 2);
     
     final double c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a));
+    
     return earthRadius * c;
+  }
+
+  /// Convertit des degrés en radians
+  double _degreesToRadians(double degrees) {
+    return degrees * (math.pi / 180);
   }
 
   /// Persistance locale uniquement pour les données de session

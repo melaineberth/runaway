@@ -4,7 +4,9 @@ import 'package:runaway/core/widgets/particles_spark.dart';
 import 'package:runaway/core/widgets/particles_spark_loader.dart';
 
 class LoadingOverlay extends StatefulWidget {
-  const LoadingOverlay({super.key});
+  final String? message;
+
+  const LoadingOverlay({super.key, this.message});
 
   @override
   State<LoadingOverlay> createState() => _LoadingOverlayState();
@@ -37,7 +39,7 @@ class _LoadingOverlayState extends State<LoadingOverlay> {
                 ),
                 16.h,
                 Text(
-                  context.l10n.currentGeneration,
+                  widget.message ?? context.l10n.currentGeneration,
                   style: TextStyle(
                     fontSize: 16,
                     color: Colors.white,

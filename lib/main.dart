@@ -7,6 +7,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:runaway/config/environment_config.dart';
 import 'package:runaway/config/router.dart';
 import 'package:runaway/config/theme.dart';
+import 'package:runaway/core/services/app_initialization_service.dart';
 import 'package:runaway/features/auth/data/repositories/auth_repository.dart';
 import 'package:runaway/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:runaway/features/auth/presentation/bloc/auth_event.dart';
@@ -21,53 +22,45 @@ import 'features/route_generator/presentation/blocs/route_generation/route_gener
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Observer pour debug
-  Bloc.observer = AppBlocObserver();
-
-  // Charger les variables d'environnement
-  await dotenv.load(fileName: ".env");
-
-  // Valider la configuration d'environnement
   try {
+    // Observer pour debug
+    Bloc.observer = AppBlocObserver();
+
+    // Charger les variables d'environnement
+    await dotenv.load(fileName: ".env");
+
+    // Valider la configuration d'environnement
     EnvironmentConfig.validate();
-  } catch (e) {
-    print('❌ Erreur de configuration: $e');
-    // En mode debug, continuer malgré les erreurs de config
-    // En production, vous pourriez vouloir arrêter l'app
-  }
 
-  // Initialiser HydratedBloc pour la persistance
-  try {
+    // Initialiser HydratedBloc pour la persistance
     final directory = await getApplicationDocumentsDirectory();
     HydratedBloc.storage = await HydratedStorage.build(
       storageDirectory: HydratedStorageDirectory(directory.path),
     );
     print('✅ HydratedBloc storage initialisé');
-  } catch (e) {
-    print('❌ Erreur HydratedBloc storage: $e');
-  }
 
-  // Initialiser Supabase
-  try {
+    
+    // Initialiser Supabase
     await Supabase.initialize(
       url: dotenv.get('SUPABASE_URL'),
       anonKey: dotenv.get('SUPABASE_ANON_KEY'),
     );
     print('✅ Supabase initialisé');
-  } catch (e) {
-    print('❌ Erreur Supabase: $e');
-  }
+    
+    // 🆕 Initialiser les services de l'application
+    await AppInitializationService.initialize();
 
-  // Configurer Mapbox
-  try {
+    // Configurer Mapbox
     String mapBoxToken = dotenv.get('MAPBOX_TOKEN');
     MapboxOptions.setAccessToken(mapBoxToken);
     print('✅ Mapbox configuré');
+    
+    runApp(const RunAway());
+    
   } catch (e) {
-    print('❌ Erreur Mapbox: $e');
+    print('❌ Erreur lors de l\'initialisation: $e');
+    runApp(ErrorApp(error: e.toString()));
   }
-
-  runApp(const RunAway());
 }
 
 class RunAway extends StatelessWidget {
@@ -124,6 +117,60 @@ class RunAway extends StatelessWidget {
             child: child ?? Container(),
           );
         },
+      ),
+    );
+  }
+}
+
+/// 🆕 Widget d'erreur en cas d'échec d'initialisation
+class ErrorApp extends StatelessWidget {
+  final String error;
+  
+  const ErrorApp({super.key, required this.error});
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      home: Scaffold(
+        body: Center(
+          child: Padding(
+            padding: EdgeInsets.all(20),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.error_outline,
+                  size: 64,
+                  color: Colors.red,
+                ),
+                SizedBox(height: 16),
+                Text(
+                  'Erreur d\'initialisation',
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                SizedBox(height: 8),
+                Text(
+                  error,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: Colors.grey[600],
+                  ),
+                ),
+                SizedBox(height: 24),
+                ElevatedButton(
+                  onPressed: () {
+                    // Redémarrer l'app
+                    main();
+                  },
+                  child: Text('Réessayer'),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }

@@ -4,8 +4,6 @@ import 'dart:math' as math;
 import 'package:equatable/equatable.dart';
 import 'route_parameters.dart';
 import 'activity_type.dart';
-import 'terrain_type.dart';
-import 'urban_density.dart';
 
 /// Modèle pour un parcours sauvegardé
 class SavedRoute extends Equatable {
@@ -19,6 +17,7 @@ class SavedRoute extends Equatable {
   final bool isSynced; // Indique si synchronisé avec le serveur
   final int timesUsed; // Nombre d'utilisations
   final DateTime? lastUsedAt; // Dernière utilisation
+  final String? imageUrl; // 🆕 URL de la screenshot du parcours
 
   const SavedRoute({
     required this.id,
@@ -31,6 +30,7 @@ class SavedRoute extends Equatable {
     this.isSynced = false,
     this.timesUsed = 0,
     this.lastUsedAt,
+    this.imageUrl, // 🆕 Champ pour l'image
   });
 
   /// Crée une copie avec des champs modifiés
@@ -45,6 +45,7 @@ class SavedRoute extends Equatable {
     bool? isSynced,
     int? timesUsed,
     DateTime? lastUsedAt,
+    String? imageUrl, // 🆕
   }) {
     return SavedRoute(
       id: id ?? this.id,
@@ -57,6 +58,7 @@ class SavedRoute extends Equatable {
       isSynced: isSynced ?? this.isSynced,
       timesUsed: timesUsed ?? this.timesUsed,
       lastUsedAt: lastUsedAt ?? this.lastUsedAt,
+      imageUrl: imageUrl ?? this.imageUrl, // 🆕
     );
   }
 
@@ -73,6 +75,7 @@ class SavedRoute extends Equatable {
       'is_synced': isSynced,
       'times_used': timesUsed,
       'last_used_at': lastUsedAt?.toIso8601String(),
+      'image_url': imageUrl, // 🆕
     };
   }
 
@@ -92,91 +95,75 @@ class SavedRoute extends Equatable {
         lastUsedAt: json['last_used_at'] != null 
             ? DateTime.parse(json['last_used_at'] as String) 
             : null,
+        imageUrl: json['image_url'] as String?, // 🆕
       );
     } catch (e) {
-      print('❌ Erreur parsing SavedRoute: $e');
-      print('📄 JSON problématique: $json');
-      rethrow;
+      throw FormatException('Erreur parsing SavedRoute: $e');
     }
   }
 
-  /// 🔧 Helper pour parser les coordonnées de manière robuste
-  static List<List<double>> _parseCoordinates(dynamic coords) {
-    if (coords is! List) {
-      throw FormatException('Coordinates must be a List, got ${coords.runtimeType}');
+  /// Parse les coordonnées de manière robuste
+  static List<List<double>> _parseCoordinates(dynamic coordinatesData) {
+    if (coordinatesData is List) {
+      return coordinatesData.map((coord) {
+        if (coord is List) {
+          return coord.map((e) => (e as num).toDouble()).toList();
+        }
+        throw FormatException('Format de coordonnées invalide');
+      }).toList();
     }
-    
-    return coords.map<List<double>>((coord) {
-      if (coord is! List) {
-        throw FormatException('Each coordinate must be a List, got ${coord.runtimeType}');
-      }
-      return coord.map<double>((c) => (c as num).toDouble()).toList();
-    }).toList();
+    throw FormatException('Format de coordonnées invalide');
   }
 
-  /// 🔧 Helper pour parser double de manière robuste
+  /// Parse un double de manière robuste
   static double? _parseDouble(dynamic value) {
     if (value == null) return null;
-    if (value is double) return value;
-    if (value is int) return value.toDouble();
+    if (value is num) return value.toDouble();
     if (value is String) return double.tryParse(value);
     return null;
   }
 
-  /// 🔧 Helper pour parser int de manière robuste
+  /// Parse un int de manière robuste
   static int? _parseInt(dynamic value) {
     if (value == null) return null;
-    if (value is int) return value;
-    if (value is double) return value.round();
+    if (value is num) return value.toInt();
     if (value is String) return int.tryParse(value);
     return null;
   }
 
-  /// Propriétés calculées utiles
-  
-  /// Distance formatée
+  /// Distance formatée pour l'affichage
   String get formattedDistance {
     final distance = actualDistance ?? parameters.distanceKm;
-    return '${distance.toStringAsFixed(1)} km';
+    return '${distance.toStringAsFixed(1)}km';
   }
 
-  /// Durée formatée
+  /// Durée formatée pour l'affichage
   String get formattedDuration {
-    if (actualDuration == null) {
-      return '${parameters.estimatedDuration.inMinutes} min (est.)';
-    }
+    if (actualDuration == null) return '';
     final hours = actualDuration! ~/ 60;
     final minutes = actualDuration! % 60;
-    return hours > 0 ? '${hours}h ${minutes}min' : '${minutes}min';
+    if (hours > 0) {
+      return '${hours}h${minutes.toString().padLeft(2, '0')}';
+    }
+    return '${minutes}min';
   }
 
-  /// Type d'activité formaté
-  String get activityTypeDisplayName {
-    return parameters.activityType.title;
-  }
-
-  /// Indicateur de synchronisation
-  String get syncStatus {
-    return isSynced ? '☁️ Synchronisé' : '📱 Local seulement';
-  }
-
-  /// Age du parcours
+  /// Temps écoulé depuis la création
   String get timeAgo {
-    final now = DateTime.now();
-    final difference = now.difference(createdAt);
+    final difference = DateTime.now().difference(createdAt);
     
-    if (difference.inDays > 30) {
-      return '${(difference.inDays / 30).floor()} mois';
-    } else if (difference.inDays > 0) {
-      return '${difference.inDays} jours';
+    if (difference.inDays > 0) {
+      return 'il y a ${difference.inDays} jour${difference.inDays > 1 ? 's' : ''}';
     } else if (difference.inHours > 0) {
-      return '${difference.inHours}h';
+      return 'il y a ${difference.inHours}h';
+    } else if (difference.inMinutes > 0) {
+      return 'il y a ${difference.inMinutes}min';
     } else {
-      return '${difference.inMinutes}min';
+      return 'à l\'instant';
     }
   }
 
-  /// Vérifie si le parcours a été utilisé récemment
+  /// Détermine si le parcours a été utilisé récemment
   bool get isRecentlyUsed {
     if (lastUsedAt == null) return false;
     final daysSinceLastUse = DateTime.now().difference(lastUsedAt!).inDays;
@@ -192,6 +179,9 @@ class SavedRoute extends Equatable {
     return recencyBonus + usageScore + ageScore;
   }
 
+  /// 🆕 Vérifie si le parcours a une image
+  bool get hasImage => imageUrl != null && imageUrl!.isNotEmpty;
+
   @override
   List<Object?> get props => [
     id,
@@ -204,11 +194,12 @@ class SavedRoute extends Equatable {
     isSynced,
     timesUsed,
     lastUsedAt,
+    imageUrl, // 🆕
   ];
 
   @override
   String toString() {
-    return 'SavedRoute(id: $id, name: $name, distance: $formattedDistance, synced: $isSynced)';
+    return 'SavedRoute(id: $id, name: $name, distance: $formattedDistance, synced: $isSynced, hasImage: $hasImage)';
   }
 }
 
@@ -251,5 +242,10 @@ extension SavedRouteListExtensions on List<SavedRoute> {
   /// Filtre les favoris (utilisés récemment)
   List<SavedRoute> get favoriteRoutes {
     return where((route) => route.isRecentlyUsed || route.timesUsed > 3).toList();
+  }
+
+  /// 🆕 Filtre les parcours avec images
+  List<SavedRoute> get routesWithImages {
+    return where((route) => route.hasImage).toList();
   }
 }

@@ -3,9 +3,10 @@ import 'package:hugeicons/hugeicons.dart';
 import 'package:runaway/config/colors.dart';
 import 'package:runaway/config/extensions.dart';
 import 'package:runaway/core/widgets/squircle_container.dart';
+import 'package:runaway/core/services/reverse_geocoding_service.dart';
 import 'package:runaway/features/route_generator/domain/models/saved_route.dart';
 
-class HistoricCard extends StatelessWidget {
+class HistoricCard extends StatefulWidget {
   final SavedRoute route;
   final VoidCallback? onTap;
   final VoidCallback? onDelete;
@@ -18,6 +19,41 @@ class HistoricCard extends StatelessWidget {
   });
 
   @override
+  State<HistoricCard> createState() => _HistoricCardState();
+}
+
+class _HistoricCardState extends State<HistoricCard> {
+  String? _locationName;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadLocationName();
+  }
+
+  /// 🆕 Charge le nom de la localisation via reverse geocoding
+  Future<void> _loadLocationName() async {
+    try {
+      final locationInfo = await ReverseGeocodingService.getLocationNameForRoute(
+        widget.route.coordinates,
+      );
+      
+      if (mounted) {
+        setState(() {
+          _locationName = locationInfo.displayName;
+        });
+      }
+    } catch (e) {
+      print('❌ Erreur reverse geocoding pour ${widget.route.id}: $e');
+      if (mounted) {
+        setState(() {
+          _locationName = 'Localisation';
+        });
+      }
+    }
+  }
+
+@override
   Widget build(BuildContext context) {
     const innerRadius = 30.0;
     const double imgSize = 150;
@@ -62,7 +98,7 @@ class HistoricCard extends StatelessWidget {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                route.name,
+                                widget.route.name,
                                 overflow: TextOverflow.ellipsis,
                                 maxLines: 2,
                                 style: context.bodyMedium?.copyWith(
@@ -78,10 +114,10 @@ class HistoricCard extends StatelessWidget {
                                   text: '${_getLocationName()} • ',
                                   children: <InlineSpan>[
                                     TextSpan(
-                                      text: route.timeAgo,
+                                      text: widget.route.timeAgo,
                                       style: context.bodySmall?.copyWith(
                                         height: 1.3,
-                                        fontSize: 13,
+                                        fontSize: 15,
                                         fontStyle: FontStyle.normal,
                                         fontWeight: FontWeight.w500,
                                         color: Colors.white38,
@@ -108,35 +144,35 @@ class HistoricCard extends StatelessWidget {
                           runSpacing: 8.0,
                           children: [
                             _buildDetailChip(
-                              icon: route.parameters.activityType.icon,
-                              text: route.parameters.activityType.title,
+                              icon: widget.route.parameters.activityType.icon,
+                              text: widget.route.parameters.activityType.title,
                             ),
                             _buildDetailChip(
                               icon: HugeIcons.solidRoundedNavigator01,
-                              text: route.formattedDistance,
+                              text: widget.route.formattedDistance,
                             ),
                             _buildDetailChip(
                               icon: _getTerrainIcon(),
-                              text: route.parameters.terrainType.title,
+                              text: widget.route.parameters.terrainType.title,
                             ),
                             _buildDetailChip(
                               icon: _getUrbanDensityIcon(),
-                              text: route.parameters.urbanDensity.title,
+                              text: widget.route.parameters.urbanDensity.title,
                             ),
-                            if (route.parameters.elevationGain > 0)
+                            if (widget.route.parameters.elevationGain > 0)
                               _buildDetailChip(
                                 icon: HugeIcons.solidSharpMountain,
-                                text: '${route.parameters.elevationGain.toStringAsFixed(0)}m',
+                                text: '${widget.route.parameters.elevationGain.toStringAsFixed(0)}m',
                               ),
-                            if (route.parameters.isLoop)
+                            if (widget.route.parameters.isLoop)
                               _buildDetailChip(
                                 icon: HugeIcons.solidRoundedRepeat,
                                 text: 'Boucle',
                               ),
-                            if (route.timesUsed > 0)
+                            if (widget.route.timesUsed > 0)
                               _buildDetailChip(
                                 icon: HugeIcons.solidRoundedFavourite,
-                                text: '${route.timesUsed}x',
+                                text: '${widget.route.timesUsed}x',
                                 color: Colors.orange,
                               ),
                           ],
@@ -152,7 +188,7 @@ class HistoricCard extends StatelessWidget {
                       // Bouton principal "Suivre"
                       Expanded(
                         child: SquircleContainer(
-                          onTap: onTap,
+                          onTap: widget.onTap,
                           radius: innerRadius,
                           color: AppColors.primary,
                           padding: EdgeInsets.symmetric(vertical: 15.0),
@@ -172,14 +208,13 @@ class HistoricCard extends StatelessWidget {
                       
                       // Bouton supprimer
                       SquircleContainer(
-                        onTap: onDelete,
+                        onTap: widget.onDelete,
                         radius: innerRadius,
-                        color: Colors.red.withAlpha(30),
+                        color: Colors.red.withValues(alpha: 0.3),
                         padding: EdgeInsets.all(15.0),
                         child: Icon(
-                          HugeIcons.strokeRoundedDelete02,
+                          HugeIcons.solidRoundedDelete02,
                           color: Colors.red,
-                          size: 20,
                         ),
                       ),
                     ],
@@ -193,74 +228,106 @@ class HistoricCard extends StatelessWidget {
     );
   }
 
-  /// Widget de visualisation de la route (simple pattern géométrique)
+  /// 🆕 Construit la visualisation de la route avec image ou fallback
   Widget _buildRouteVisualization() {
+    if (widget.route.hasImage) {
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(30.0),
+        child: Stack(
+          children: [
+            // Image de la route
+            Image.network(
+              widget.route.imageUrl!,
+              width: double.infinity,
+              height: double.infinity,
+              fit: BoxFit.cover,
+              loadingBuilder: (context, child, loadingProgress) {
+                if (loadingProgress == null) return child;
+                return Container(
+                  color: _getActivityColor(),
+                  child: Center(
+                    child: CircularProgressIndicator(
+                      color: Colors.white,
+                      value: loadingProgress.expectedTotalBytes != null
+                          ? loadingProgress.cumulativeBytesLoaded /
+                              (loadingProgress.expectedTotalBytes ?? 1)
+                          : null,
+                    ),
+                  ),
+                );
+              },
+              errorBuilder: (context, error, stackTrace) {
+                print('❌ Erreur chargement image: $error');
+                return _buildFallbackVisualization();
+              },
+            ),
+            // Overlay avec icône d'activité
+            Positioned(
+              top: 12,
+              right: 12,
+              child: Container(
+                padding: EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.black54,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Icon(
+                  widget.route.parameters.activityType.icon,
+                  color: Colors.white,
+                  size: 20,
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    } else {
+      return _buildFallbackVisualization();
+    }
+  }
+
+  /// Visualisation de fallback quand pas d'image
+  Widget _buildFallbackVisualization() {
     return Container(
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(30),
+        borderRadius: BorderRadius.circular(30.0),
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
             _getActivityColor(),
-            _getActivityColor().withAlpha(180),
+            _getActivityColor().withOpacity(0.7),
           ],
         ),
       ),
       child: Stack(
         children: [
-          // Pattern de route stylisé
-          Center(
-            child: Icon(
-              route.parameters.activityType.icon,
-              size: 80,
-              color: Colors.white.withAlpha(150),
+          // Pattern de fond
+          CustomPaint(
+            size: Size.infinite,
+            painter: _RoutePatternPainter(
+              color: Colors.white.withOpacity(0.1),
             ),
           ),
-          
-          // Badge de synchronisation si pertinent
-          if (!route.isSynced)
-            Positioned(
-              top: 10,
-              right: 10,
-              child: Container(
-                padding: EdgeInsets.all(6),
-                decoration: BoxDecoration(
-                  color: Colors.orange,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(
-                  HugeIcons.strokeRoundedWifiOff01,
-                  size: 16,
-                  color: Colors.white,
-                ),
-              ),
+          // Icône centrale
+          Center(
+            child: Icon(
+              widget.route.parameters.activityType.icon,
+              color: Colors.white,
+              size: 48,
             ),
-            
-          // Badge de favori si utilisé plusieurs fois
-          if (route.timesUsed > 3)
-            Positioned(
-              top: 10,
-              left: 10,
-              child: Container(
-                padding: EdgeInsets.all(6),
-                decoration: BoxDecoration(
-                  color: Colors.amber,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(
-                  HugeIcons.solidRoundedStar,
-                  size: 16,
-                  color: Colors.black,
-                ),
-              ),
-            ),
+          ),
         ],
       ),
     );
   }
 
-  /// Chip de détail personnalisé
+  /// 🆕 Retourne le nom de la localisation (implémentation complète)
+  String _getLocationName() {
+    return _locationName ?? 'Localisation';
+  }
+
+  /// Crée un chip de détail
   Widget _buildDetailChip({
     required IconData icon,
     required String text,
@@ -296,7 +363,7 @@ class HistoricCard extends StatelessWidget {
 
   /// Couleur basée sur le type d'activité
   Color _getActivityColor() {
-    switch (route.parameters.activityType.title.toLowerCase()) {
+    switch (widget.route.parameters.activityType.title.toLowerCase()) {
       case 'course':
         return Colors.red;
       case 'vélo':
@@ -310,7 +377,7 @@ class HistoricCard extends StatelessWidget {
 
   /// Icône pour le terrain
   IconData _getTerrainIcon() {
-    switch (route.parameters.terrainType.title.toLowerCase()) {
+    switch (widget.route.parameters.terrainType.title.toLowerCase()) {
       case 'plat':
         return HugeIcons.strokeRoundedRoad;
       case 'vallonné':
@@ -322,7 +389,7 @@ class HistoricCard extends StatelessWidget {
 
   /// Icône pour la densité urbaine
   IconData _getUrbanDensityIcon() {
-    switch (route.parameters.urbanDensity.title.toLowerCase()) {
+    switch (widget.route.parameters.urbanDensity.title.toLowerCase()) {
       case 'urbain':
         return HugeIcons.solidRoundedCity03;
       case 'nature':
@@ -331,11 +398,48 @@ class HistoricCard extends StatelessWidget {
         return HugeIcons.strokeRoundedLocation04;
     }
   }
+}
 
-  /// Nom de localisation simplifié
-  String _getLocationName() {
-    // Pour l'instant, retourner une localisation générique
-    // Plus tard, on pourrait faire du reverse geocoding avec les coordonnées
-    return 'Localisation';
+/// 🆕 Painter pour créer un pattern de route stylisé
+class _RoutePatternPainter extends CustomPainter {
+  final Color color;
+
+  _RoutePatternPainter({required this.color});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = 2.0
+      ..style = PaintingStyle.stroke;
+
+    final path = Path();
+    
+    // Créer un pattern de route sinueuse
+    final width = size.width;
+    final height = size.height;
+    
+    // Ligne principale ondulée
+    path.moveTo(width * 0.2, height * 0.3);
+    path.quadraticBezierTo(width * 0.5, height * 0.1, width * 0.8, height * 0.4);
+    path.quadraticBezierTo(width * 0.6, height * 0.7, width * 0.9, height * 0.8);
+    
+    // Ligne secondaire
+    path.moveTo(width * 0.1, height * 0.6);
+    path.quadraticBezierTo(width * 0.4, height * 0.5, width * 0.7, height * 0.7);
+    
+    canvas.drawPath(path, paint);
+    
+    // Quelques points de jalons
+    final pointPaint = Paint()
+      ..color = color
+      ..style = PaintingStyle.fill;
+    
+    canvas.drawCircle(Offset(width * 0.2, height * 0.3), 3, pointPaint);
+    canvas.drawCircle(Offset(width * 0.8, height * 0.4), 3, pointPaint);
+    canvas.drawCircle(Offset(width * 0.9, height * 0.8), 3, pointPaint);
   }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

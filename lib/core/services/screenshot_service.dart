@@ -1,52 +1,103 @@
-// lib/core/services/screenshot_service.dart
-
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart';
+import 'package:runaway/config/colors.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:uuid/uuid.dart';
 
 class ScreenshotService {
   static final SupabaseClient _supabase = Supabase.instance.client;
   static const String _bucketName = 'route-screenshots';
-  static const Uuid _uuid = Uuid();
 
-  /// Capture une screenshot de la carte et l'upload vers Supabase
-  static Future<String?> captureAndUploadMapScreenshot({
-    required GlobalKey mapKey,
+/// Capture la carte (Mapbox) hors-écran et upload l’image PNG.
+  static Future<String?> captureAndUploadMapSnapshot({
+    required MapboxMap liveMap,               // carte affichée
+    required List<List<double>> routeCoords,  // polyligne à dessiner
     required String routeId,
     required String userId,
   }) async {
     try {
-      print('📸 Début capture screenshot pour route: $routeId');
-
-      // 1. Capturer la screenshot
-      final imageBytes = await _captureWidgetScreenshot(mapKey);
-      if (imageBytes == null) {
-        print('❌ Impossible de capturer la screenshot');
-        return null;
-      }
-
-      // 2. Upload vers Supabase Storage
-      final imageUrl = await _uploadScreenshotToStorage(
-        imageBytes: imageBytes,
-        routeId: routeId,
-        userId: userId,
+      // ------------------------------------------------------------------
+      // 1.  Récupérer le style + la caméra du rendu courant
+      // ------------------------------------------------------------------
+      final camState  = await liveMap.getCameraState();
+      final camOpts   = CameraOptions(
+        center  : camState.center,
+        zoom    : camState.zoom,
+        pitch   : camState.pitch,
+        bearing : camState.bearing,
       );
 
-      if (imageUrl != null) {
-        print('✅ Screenshot uploadée: $imageUrl');
-      }
+      // ------------------------------------------------------------------
+      // 2.  Préparer Snapshotter
+      // ------------------------------------------------------------------
+      final pixelRatio  = ui.window.devicePixelRatio;
+      final logicalSize = ui.window.physicalSize / pixelRatio;
 
-      return imageUrl;
+      final snap = await Snapshotter.create(
+        options: MapSnapshotOptions(
+          size: Size(width: logicalSize.width, height: logicalSize.height),
+          pixelRatio: pixelRatio,
+        ),
+      );
 
+      // Style + caméra identiques à la carte live
+      await snap.style.setStyleURI(MapboxStyles.DARK);
+      await snap.setCamera(camOpts);
+
+      // ------------------------------------------------------------------
+      // 3.  Ajouter la polyligne du parcours
+      // ------------------------------------------------------------------
+      final geoJson = {
+        "type": "Feature",
+        "geometry": {
+          "type": "LineString",
+          "coordinates": routeCoords,
+        }
+      };
+      await snap.style.addSource(
+        GeoJsonSource(id: 'route-source', data: geoJson.toString()),
+      );
+
+      await snap.style.addLayer(
+        LineLayer(
+          id            : "route-layer",
+          sourceId      : "route-source",
+          lineColor     : AppColors.primary.toARGB32(),  // violet (réglage libre)
+          lineWidth     : 4,
+          lineOpacity   : 1,
+        ),
+      );
+
+      // ------------------------------------------------------------------
+      // 4.  Prendre la capture PNG
+      // ------------------------------------------------------------------
+      final Uint8List? pngBytes = await snap.start();
+      await snap.dispose();
+
+      // ------------------------------------------------------------------
+      // 5.  Upload Supabase
+      // ------------------------------------------------------------------
+      final fileName = 'route_${routeId}_${DateTime.now().millisecondsSinceEpoch}.png';
+      final filePath = '$userId/$fileName';
+
+      await _supabase.storage
+          .from(_bucketName)
+          .uploadBinary(filePath, pngBytes!,
+              fileOptions: const FileOptions(
+                contentType: 'image/png',
+                upsert: false,
+              ));
+
+      return _supabase.storage.from(_bucketName).getPublicUrl(filePath);
     } catch (e) {
-      print('❌ Erreur capture/upload screenshot: $e');
+      debugPrint('❌ Snapshot / upload error: $e');
       return null;
     }
   }
 
+  
   /// Capture la screenshot d'un widget via sa GlobalKey
   static Future<Uint8List?> _captureWidgetScreenshot(GlobalKey key) async {
     try {
@@ -160,33 +211,6 @@ class ScreenshotService {
     } catch (e) {
       print('❌ Erreur suppression screenshot: $e');
       return false;
-    }
-  }
-
-  /// Initialise le bucket de screenshots (à appeler au démarrage de l'app)
-  static Future<void> initializeScreenshotBucket() async {
-    try {
-      // Vérifier si le bucket existe
-      final buckets = await _supabase.storage.listBuckets();
-      final bucketExists = buckets.any((bucket) => bucket.name == _bucketName);
-
-      if (!bucketExists) {
-        // Créer le bucket s'il n'existe pas
-        await _supabase.storage.createBucket(
-          _bucketName,
-          BucketOptions(
-            public: true,
-            allowedMimeTypes: ['image/png', 'image/jpeg'],
-            fileSizeLimit: '5242880', // 5MB max
-          ),
-        );
-        print('✅ Bucket $_bucketName créé');
-      } else {
-        print('✅ Bucket $_bucketName existe déjà');
-      }
-
-    } catch (e) {
-      print('❌ Erreur initialisation bucket: $e');
     }
   }
 

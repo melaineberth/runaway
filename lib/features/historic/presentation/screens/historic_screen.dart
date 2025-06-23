@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:runaway/config/extensions.dart';
 import 'package:runaway/core/widgets/ask_registration.dart';
+import 'package:runaway/core/widgets/squircle_container.dart';
 import 'package:runaway/features/account/presentation/screens/account_screen.dart';
 import 'package:runaway/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:runaway/features/auth/presentation/bloc/auth_state.dart';
@@ -32,7 +33,7 @@ class _HistoricScreenState extends State<HistoricScreen> {
   }
 
   /// Charge les parcours sauvegardés
-  void _loadSavedRoutes() {
+  Future<void> _loadSavedRoutes() async {
     context.read<RouteGenerationBloc>().add(SavedRoutesRequested());
   }
 
@@ -258,7 +259,7 @@ class _HistoricScreenState extends State<HistoricScreen> {
         forceMaterialTransparency: true,
         backgroundColor: Colors.transparent,
         title: Text(
-          "Historique (${routes.length})",
+          "Historique",
           style: context.bodySmall?.copyWith(color: Colors.white),
         ),
         actions: [
@@ -269,44 +270,39 @@ class _HistoricScreenState extends State<HistoricScreen> {
             },
             icon: Icon(HugeIcons.strokeRoundedCloudUpload, color: Colors.white),
           ),
-          // Bouton de rafraîchissement
-          IconButton(
-            onPressed: _loadSavedRoutes,
-            icon: Icon(HugeIcons.strokeRoundedRefresh, color: Colors.white),
-          ),
         ],
       ),
-      body: BlurryPage(
-        padding: EdgeInsets.all(20.0),
-        children: [
-          // Espacement pour l'AppBar
-          60.h,
-          
-          // Statistiques rapides
-          if (routes.length > 1) ...[
-            _buildStatsCard(routes),
-            20.h,
+      body: RefreshIndicator(
+        onRefresh: _loadSavedRoutes,
+        child: BlurryPage(
+          padding: EdgeInsets.all(20.0),
+          children: [          
+            // Statistiques rapides
+            if (routes.length > 1) ...[
+              _buildStatsCard(routes),
+              20.h,
+            ],
+            
+            // Liste des parcours
+            ...sortedRoutes.asMap().entries.map(
+              (entry) {
+                final index = entry.key;
+                final route = entry.value;
+                
+                return Padding(
+                  padding: EdgeInsets.only(
+                    bottom: index >= sortedRoutes.length - 1 ? 90.0 : 15.0,
+                  ),
+                  child: HistoricCard(
+                    route: route,
+                    onTap: () => _navigateToRoute(route),
+                    onDelete: () => _deleteRoute(route),
+                  ),
+                );
+              },
+            ),
           ],
-          
-          // Liste des parcours
-          ...sortedRoutes.asMap().entries.map(
-            (entry) {
-              final index = entry.key;
-              final route = entry.value;
-              
-              return Padding(
-                padding: EdgeInsets.only(
-                  bottom: index >= sortedRoutes.length - 1 ? 0 : 15.0,
-                ),
-                child: HistoricCard(
-                  route: route,
-                  onTap: () => _navigateToRoute(route),
-                  onDelete: () => _deleteRoute(route),
-                ),
-              );
-            },
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -320,12 +316,9 @@ class _HistoricScreenState extends State<HistoricScreen> {
     final totalRoutes = routes.length;
     final unsyncedCount = routes.unsyncedRoutes.length;
     
-    return Container(
+    return SquircleContainer(
       padding: EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white.withAlpha(10),
-        borderRadius: BorderRadius.circular(20),
-      ),
+      color: Colors.white10,
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
