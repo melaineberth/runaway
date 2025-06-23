@@ -1,6 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const logger = require('../config/logger');
+const RouteValidationMiddleware = require('../middleware/routeValidationMiddleware');
+const routeQualityService = require('../services/routeQualityService');
 
 console.log('🔧 routes/index.js est en train de se charger...');
 
@@ -54,9 +56,11 @@ console.log('🔧 Routes de métriques ajoutées');
 
 // ============= ROUTES DE GÉNÉRATION =============
 
-// Génération de parcours
+// ✅ FIX: Génération de parcours avec validation et optimisation complètes
 router.post('/routes/generate', 
-  routeController.generateRoute
+  RouteValidationMiddleware.validateAndOptimizeParams(),
+  RouteValidationMiddleware.validateGenerationResult(),
+  routeController.generateRoute // ✅ Appel direct sans wrapper inutile
 );
 
 console.log('🔧 Route /routes/generate ajoutée');
@@ -78,7 +82,6 @@ router.post('/routes/simple', (req, res, next) => {
   console.log('🔧 Route /routes/simple interceptée, body:', req.body);
   console.log('🔧 Appel de routeController.generateSimpleRoute...');
   
-  // Vérifier si la méthode existe
   if (typeof routeController.generateSimpleRoute !== 'function') {
     console.log('❌ generateSimpleRoute n\'est pas une fonction!');
     return res.status(500).json({
@@ -88,6 +91,63 @@ router.post('/routes/simple', (req, res, next) => {
   }
   
   routeController.generateSimpleRoute(req, res, next);
+});
+
+// Nouvelle route pour validation de qualité d'un parcours existant
+router.post('/routes/validate-quality', async (req, res, next) => {
+  try {
+    const { route, originalParams } = req.body;
+    
+    if (!route || !route.coordinates || !originalParams) {
+      return res.status(400).json({
+        success: false,
+        error: 'Route et paramètres originaux requis'
+      });
+    }
+
+    const qualityValidation = routeQualityService.validateRoute(route, originalParams);
+    const suggestions = routeQualityService.suggestImprovements(route, originalParams, qualityValidation);
+    
+    res.json({
+      success: true,
+      validation: qualityValidation,
+      suggestions,
+      canAutoFix: qualityValidation.issues.length > 0 && qualityValidation.quality !== 'critical'
+    });
+
+  } catch (error) {
+    logger.error('Route quality validation failed:', error);
+    next(error);
+  }
+});
+
+// Nouvelle route pour appliquer des corrections automatiques
+router.post('/routes/auto-fix', async (req, res, next) => {
+  try {
+    const { route, originalParams } = req.body;
+    
+    if (!route || !route.coordinates || !originalParams) {
+      return res.status(400).json({
+        success: false,
+        error: 'Route et paramètres originaux requis'
+      });
+    }
+
+    const { route: fixedRoute, fixes } = routeQualityService.autoFixRoute(route, originalParams);
+    const newValidation = routeQualityService.validateRoute(fixedRoute, originalParams);
+    
+    res.json({
+      success: true,
+      fixedRoute,
+      appliedFixes: fixes,
+      validation: newValidation,
+      improvement: fixes.length > 0
+    });
+
+  } catch (error) {
+    logger.error('Auto-fix failed:', error);
+    next(error);
+  }
 });
 
 console.log('🔧 Route /routes/simple ajoutée avec debug');
@@ -305,6 +365,158 @@ router.use((error, req, res, next) => {
   });
 });
 
+// Route pour obtenir des paramètres optimisés
+router.post('/routes/optimize-params', (req, res, next) => {
+  try {
+    const { validateRouteParams } = require('../utils/validators');
+    const baseValidation = validateRouteParams(req.body);
+    if (!baseValidation.valid) {
+      return res.status(400).json({
+        success: false,
+        error: 'Paramètres invalides',
+        details: baseValidation.errors
+      });
+    }
+
+    const optimizedParams = RouteValidationMiddleware.optimizeParameters(baseValidation.value);
+    const riskLevel = RouteValidationMiddleware.assessRiskLevel(optimizedParams);
+    const appliedOptimizations = RouteValidationMiddleware.getAppliedOptimizations(
+      baseValidation.value, 
+      optimizedParams
+    );
+
+    res.json({
+      success: true,
+      originalParams: baseValidation.value,
+      optimizedParams,
+      riskLevel,
+      appliedOptimizations,
+      recommendations: RouteValidationMiddleware.getRecommendations(optimizedParams)
+    });
+
+  } catch (error) {
+    logger.error('Parameter optimization failed:', error);
+    next(error);
+  }
+});
+
+// ============= NOUVELLES ROUTES DE MONITORING =============
+
+// Statistiques de qualité des parcours
+router.get('/routes/quality-stats', async (req, res, next) => {
+  try {
+    const { metricsService } = require('../services/metricsService');
+    // Récupérer les statistiques depuis les métriques
+    const metrics = metricsService.getMetrics();
+    
+    // Ajouter des statistiques spécifiques à la qualité
+    const qualityStats = {
+      totalRoutes: metrics.routes.generated,
+      successRate: metrics.routes.generated > 0 ? 
+        ((metrics.routes.generated - metrics.routes.failed) / metrics.routes.generated * 100).toFixed(1) : 0,
+      averageDistance: metrics.routes.averageDistance,
+      qualityDistribution: {
+        // Ces données seraient collectées dans une implémentation réelle
+        excellent: 0,
+        good: 0,
+        acceptable: 0,
+        poor: 0,
+        critical: 0
+      }
+    };
+
+    res.json({
+      success: true,
+      stats: qualityStats,
+      timestamp: new Date().toISOString()
+    });
+
+  } catch (error) {
+    logger.error('Failed to get quality stats:', error);
+    next(error);
+  }
+});
+
+// Route de test pour différentes stratégies
+router.post('/routes/test-strategies', async (req, res, next) => {
+  try {
+    const { params, strategiesToTest = ['optimized_default', 'controlled_radius'] } = req.body;
+    
+    const results = [];
+    
+    for (const strategyName of strategiesToTest) {
+      try {
+        // Simuler les différentes stratégies
+        const testParams = {
+          ...params,
+          _testStrategy: strategyName,
+          requestId: `test_${strategyName}_${Date.now()}`
+        };
+        
+        logger.info(`Testing strategy: ${strategyName}`);
+        
+        // Ici, dans une implémentation réelle, on appellerait le service avec chaque stratégie
+        // Pour cette démonstration, on simule des résultats
+        results.push({
+          strategy: strategyName,
+          success: true,
+          simulatedDistance: params.distanceKm * (0.9 + Math.random() * 0.2),
+          estimatedQuality: ['excellent', 'good', 'acceptable'][Math.floor(Math.random() * 3)]
+        });
+        
+      } catch (error) {
+        results.push({
+          strategy: strategyName,
+          success: false,
+          error: error.message
+        });
+      }
+    }
+
+    res.json({
+      success: true,
+      testResults: results,
+      recommendedStrategy: results.find(r => r.success && r.estimatedQuality === 'excellent')?.strategy || 
+                           results.find(r => r.success)?.strategy
+    });
+
+  } catch (error) {
+    logger.error('Strategy testing failed:', error);
+    next(error);
+  }
+});
+
 console.log('🔧 Toutes les routes sont configurées');
+
+// ✅ FIX: Ajouter la méthode manquante
+RouteValidationMiddleware.getRecommendations = function(params) {
+  const recommendations = [];
+  
+  if (params.distanceKm > 30) {
+    recommendations.push({
+      type: 'long_distance',
+      message: 'Pour les longues distances, considérez diviser en segments',
+      priority: 'medium'
+    });
+  }
+  
+  if (params.elevationGain > 1000) {
+    recommendations.push({
+      type: 'high_elevation',
+      message: 'Dénivelé important, vérifiez la faisabilité',
+      priority: 'high'
+    });
+  }
+  
+  if (params.distanceKm < 1 && !params.isLoop) {
+    recommendations.push({
+      type: 'short_distance',
+      message: 'Pour les courtes distances, une boucle est recommandée',
+      priority: 'low'
+    });
+  }
+  
+  return recommendations;
+};
 
 module.exports = router;

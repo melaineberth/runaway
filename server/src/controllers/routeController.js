@@ -1,6 +1,7 @@
 const routeGeneratorService = require("../services/routeGeneratorService");
 const { validateRouteParams } = require("../utils/validators");
 const logger = require("../config/logger"); // Import direct du logger
+const routeQualityService = require("../services/routeQualityService"); // ✅ AJOUT MANQUANT
 
 class RouteController {
   /**
@@ -125,58 +126,269 @@ class RouteController {
    */
   async generateRoute(req, res, next) {
     try {
-      // Validation des paramètres
-      const validationResult = validateRouteParams(req.body);
-      if (!validationResult.valid) {
+      // Utiliser les paramètres validés du middleware
+      const params = req.validatedParams || req.body;
+      
+      if (!params) {
         return res.status(400).json({
-          error: "Paramètres invalides",
-          details: validationResult.errors,
+          success: false,
+          error: "Paramètres manquants"
         });
       }
-
-      const params = {
-        startLat: validationResult.value.startLatitude,
-        startLon: validationResult.value.startLongitude,
-        activityType: validationResult.value.activityType,
-        distanceKm: validationResult.value.distanceKm,
-        terrainType: validationResult.value.terrainType,
-        urbanDensity: validationResult.value.urbanDensity,
-        elevationGain: validationResult.value.elevationGain || 0,
-        isLoop: validationResult.value.isLoop !== false,
-        avoidTraffic: validationResult.value.avoidTraffic !== false,
-        preferScenic: validationResult.value.preferScenic !== false,
-        searchRadius:
-          validationResult.value.searchRadius ||
-          validationResult.value.distanceKm * 1000,
+  
+      // Construire les paramètres pour le service avec validation
+      const serviceParams = {
+        startLat: params.startLatitude || params.startLat,
+        startLon: params.startLongitude || params.startLon,
+        activityType: params.activityType,
+        distanceKm: params.distanceKm,
+        terrainType: params.terrainType || 'mixed',
+        urbanDensity: params.urbanDensity || 'mixed',
+        elevationGain: params.elevationGain || 0,
+        isLoop: params.isLoop !== false,
+        avoidTraffic: params.avoidTraffic !== false,
+        preferScenic: params.preferScenic !== false,
+        searchRadius: params.searchRadius || params.distanceKm * 1000,
+        requestId: params.requestId || `route_${Date.now()}`
       };
-
-      logger.info("Demande de génération de parcours:", params);
-
-      // Générer le parcours
-      const route = await routeGeneratorService.generateRoute(params);
-
-      // Formater la réponse pour Flutter
+  
+      logger.info("Enhanced route generation started:", {
+        requestId: serviceParams.requestId,
+        params: serviceParams
+      });
+  
+      // Générer le parcours avec le service amélioré
+      const route = await routeGeneratorService.generateRoute(serviceParams);
+  
+      // Validation de qualité post-génération
+      const qualityValidation = routeQualityService.validateRoute(route, serviceParams);
+      
+      logger.info("Route quality validation completed:", {
+        requestId: serviceParams.requestId,
+        isValid: qualityValidation.isValid,
+        quality: qualityValidation.quality,
+        issues: qualityValidation.issues.length
+      });
+  
+      // Si la qualité n'est pas acceptable, essayer de corriger
+      let finalRoute = route;
+      let appliedFixes = [];
+      
+      if (!qualityValidation.isValid && qualityValidation.quality !== 'critical') {
+        logger.info("Attempting auto-fix for quality issues:", {
+          requestId: serviceParams.requestId,
+          issues: qualityValidation.issues
+        });
+        
+        const { route: fixedRoute, fixes } = routeQualityService.autoFixRoute(route, serviceParams);
+        finalRoute = fixedRoute;
+        appliedFixes = fixes;
+        
+        if (fixes.length > 0) {
+          logger.info("Auto-fixes applied successfully:", {
+            requestId: serviceParams.requestId,
+            fixes: fixes
+          });
+        }
+      }
+  
+      // Formater la réponse enrichie pour Flutter
       const response = {
         success: true,
         route: {
-          coordinates: route.coordinates,
-          distance: route.distance,
-          duration: route.duration,
-          elevationGain: route.metadata.elevationGain || 0,
+          coordinates: finalRoute.coordinates,
+          distance: finalRoute.distance,
+          duration: finalRoute.duration,
+          elevationGain: finalRoute.metadata?.elevationGain || 0,
           metadata: {
-            ...route.metadata,
+            ...finalRoute.metadata,
             generatedAt: new Date().toISOString(),
-            parameters: params,
+            parameters: serviceParams,
+            quality: qualityValidation.quality,
+            appliedFixes: appliedFixes,
+            validationMetrics: qualityValidation.metrics,
+            requestId: serviceParams.requestId
           },
         },
-        instructions: route.instructions,
-        elevationProfile: route.elevationProfile,
-        bbox: route.bbox,
+        instructions: finalRoute.instructions || [],
+        elevationProfile: finalRoute.elevationProfile || [],
+        bbox: finalRoute.bbox,
+        qualityInfo: {
+          overallQuality: qualityValidation.quality,
+          isValid: qualityValidation.isValid,
+          issues: qualityValidation.issues,
+          appliedFixes: appliedFixes,
+          suggestions: qualityValidation.suggestions || []
+        }
+      };
+  
+      // Logging final pour métriques
+      logger.info("Enhanced route generation completed successfully:", {
+        requestId: serviceParams.requestId,
+        distance: `${(finalRoute.distance / 1000).toFixed(1)}km`,
+        quality: qualityValidation.quality,
+        fixes: appliedFixes.length,
+        duration: `${Math.round(finalRoute.duration / 60000)}min`
+      });
+  
+      res.json(response);
+  
+    } catch (error) {
+      const requestId = req.validatedParams?.requestId || req.body?.requestId || 'unknown';
+      
+      logger.error("Enhanced route generation failed:", {
+        requestId: requestId,
+        error: error.message,
+        stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+      });
+  
+      // Gestion d'erreurs spécifique selon le type d'erreur
+      if (error.message.includes('Unable to generate acceptable route')) {
+        return res.status(422).json({
+          success: false,
+          error: "Impossible de générer un parcours de qualité acceptable",
+          details: {
+            message: "Essayez de modifier les paramètres (distance, zone géographique, type d'activité)",
+            suggestions: [
+              "Réduire la distance demandée",
+              "Changer de zone géographique", 
+              "Modifier le type de terrain",
+              "Ajuster le rayon de recherche"
+            ]
+          },
+          requestId: requestId
+        });
+      }
+  
+      if (error.message.includes('Distance ratio too extreme')) {
+        return res.status(422).json({
+          success: false,
+          error: "Distance générée trop différente de celle demandée",
+          details: {
+            message: "La zone géographique ne permet pas de générer un parcours de cette distance",
+            suggestions: [
+              "Essayer une distance différente",
+              "Changer de point de départ",
+              "Modifier les préférences de terrain"
+            ]
+          },
+          requestId: requestId
+        });
+      }
+  
+      if (error.message.includes('GraphHopper')) {
+        return res.status(503).json({
+          success: false,
+          error: 'Service de routage temporairement indisponible',
+          details: process.env.NODE_ENV === 'development' ? error.message : undefined,
+          requestId: requestId
+        });
+      }
+  
+      // Erreur générique
+      res.status(500).json({
+        success: false,
+        error: error.message,
+        requestId: requestId
+      });
+    }
+  }  
+
+  // Ajouter cette nouvelle méthode pour la régénération avec paramètres ajustés
+  async regenerateWithAdjustments(req, res, next) {
+    try {
+      const { originalParams, adjustments } = req.body;
+      
+      if (!originalParams) {
+        return res.status(400).json({
+          success: false,
+          error: "Paramètres originaux manquants"
+        });
+      }
+
+      // Appliquer les ajustements
+      const adjustedParams = {
+        ...originalParams,
+        ...adjustments,
+        requestId: `regen_${Date.now()}`
       };
 
-      res.json(response);
+      logger.info("Route regeneration with adjustments:", {
+        requestId: adjustedParams.requestId,
+        adjustments: adjustments
+      });
+
+      // Utiliser la méthode generateRoute avec les paramètres ajustés
+      req.body = adjustedParams;
+      req.validatedParams = adjustedParams;
+      
+      return this.generateRoute(req, res, next);
+
     } catch (error) {
-      logger.error("Erreur génération route:", error);
+      logger.error("Route regeneration failed:", error);
+      next(error);
+    }
+  }
+
+  // Ajouter cette méthode pour l'analyse comparative
+  async compareRouteOptions(req, res, next) {
+    try {
+      const baseParams = req.body;
+      const variations = [
+        { ...baseParams, terrainType: 'flat' },
+        { ...baseParams, terrainType: 'mixed' },
+        { ...baseParams, terrainType: 'hilly' },
+        { ...baseParams, urbanDensity: 'urban' },
+        { ...baseParams, urbanDensity: 'nature' }
+      ];
+
+      const results = [];
+      
+      for (let i = 0; i < variations.length; i++) {
+        try {
+          const params = {
+            ...variations[i],
+            requestId: `compare_${i}_${Date.now()}`
+          };
+
+          logger.info(`Generating comparison route ${i + 1}/${variations.length}`);
+          
+          const route = await routeGeneratorService.generateRoute(params);
+          const quality = routeQualityService.validateRoute(route, params);
+          
+          results.push({
+            params: params,
+            route: {
+              distance: route.distance,
+              duration: route.duration,
+              coordinates: route.coordinates.length
+            },
+            quality: quality.quality,
+            isValid: quality.isValid
+          });
+          
+        } catch (error) {
+          results.push({
+            params: variations[i],
+            error: error.message,
+            quality: 'failed'
+          });
+        }
+      }
+
+      // Trier par qualité
+      const qualityOrder = { 'excellent': 5, 'good': 4, 'acceptable': 3, 'poor': 2, 'critical': 1, 'failed': 0 };
+      results.sort((a, b) => qualityOrder[b.quality] - qualityOrder[a.quality]);
+
+      res.json({
+        success: true,
+        comparisons: results,
+        recommendation: results[0],
+        timestamp: new Date().toISOString()
+      });
+
+    } catch (error) {
+      logger.error("Route comparison failed:", error);
       next(error);
     }
   }

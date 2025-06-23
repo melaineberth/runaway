@@ -4,6 +4,7 @@ class SquircleContainer extends StatelessWidget {
   final Widget child;
   final double? radius;
   final EdgeInsetsGeometry? padding;
+  final EdgeInsetsGeometry? margin;
   final Color? color;
   final List<BoxShadow>? boxShadow;
   final double? width;
@@ -15,6 +16,7 @@ class SquircleContainer extends StatelessWidget {
     required this.child,
     this.radius,
     this.padding,
+    this.margin,
     this.color, 
     this.boxShadow, 
     this.width, 
@@ -35,6 +37,7 @@ class SquircleContainer extends StatelessWidget {
         child: Container(
           width: width,
           height: height,
+          margin: margin,
           padding: padding ?? EdgeInsets.zero,
           decoration: BoxDecoration(
             color: color,

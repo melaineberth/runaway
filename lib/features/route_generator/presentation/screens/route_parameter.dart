@@ -200,12 +200,7 @@ class _RouteParameterScreenState extends State<RouteParameterScreen> with Single
   }
 
   Widget _buildAdvancedOptions(RouteParametersState state) {
-    return ExpansionTile(
-      collapsedIconColor: Colors.white,
-      iconColor: AppColors.primary,
-      tilePadding: EdgeInsets.zero,
-      childrenPadding: EdgeInsets.zero,
-      title: Text(context.l10n.advancedOptions, style: context.bodySmall?.copyWith(color: Colors.white)),
+    return Column(
       children: [
         SwitchListTile(
           inactiveTrackColor: Colors.white12,

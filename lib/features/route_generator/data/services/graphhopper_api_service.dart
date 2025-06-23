@@ -158,7 +158,7 @@ class GraphHopperApiService {
   }) async {
     try {
       final response = await http.post(
-        Uri.parse('$EnvironmentConfig.apiBaseUrl/routes/analyze'),
+        Uri.parse('${EnvironmentConfig.apiBaseUrl}/routes/analyze'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'coordinates': coordinates}),
       ).timeout(Duration(seconds: 15));

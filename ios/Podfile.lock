@@ -47,17 +47,17 @@ PODS:
     - GTMSessionFetcher/Core
   - image_picker_ios (0.0.1):
     - Flutter
-  - mapbox_maps_flutter (2.8.0):
+  - mapbox_maps_flutter (2.9.0):
     - Flutter
-    - MapboxMaps (= 11.12.0)
+    - MapboxMaps (= 11.13.0)
     - Turf (= 4.0.0)
-  - MapboxCommon (24.12.0):
+  - MapboxCommon (24.13.0):
     - Turf (= 4.0.0)
-  - MapboxCoreMaps (11.12.0):
-    - MapboxCommon (= 24.12.0)
-  - MapboxMaps (11.12.0):
-    - MapboxCommon (= 24.12.0)
-    - MapboxCoreMaps (= 11.12.0)
+  - MapboxCoreMaps (11.13.0):
+    - MapboxCommon (= 24.13.0)
+  - MapboxMaps (11.13.0):
+    - MapboxCommon (= 24.13.0)
+    - MapboxCoreMaps (= 11.13.0)
     - Turf (= 4.0.0)
   - path_provider_foundation (0.0.1):
     - Flutter
@@ -151,10 +151,10 @@ SPEC CHECKSUMS:
   GTMAppAuth: f69bd07d68cd3b766125f7e072c45d7340dea0de
   GTMSessionFetcher: 5aea5ba6bd522a239e236100971f10cb71b96ab6
   image_picker_ios: 7fe1ff8e34c1790d6fff70a32484959f563a928a
-  mapbox_maps_flutter: d2baa706ab3c1e5ec304ee1e011f25449f754746
-  MapboxCommon: 5be9807f4d03e616ecf470ab8202f0d88ecbd459
-  MapboxCoreMaps: 036e9ce8711450a368304e30adc0156383357096
-  MapboxMaps: 9539e2193f6723b3179d1e8243aac5abf9b0e365
+  mapbox_maps_flutter: 36bce1e084f6aca22ea3a58a35429fda15be29fc
+  MapboxCommon: 5f918338024f4f33a07013dbc51ab222a1d41a7c
+  MapboxCoreMaps: 8bf3572e446be27508bfba0b4580ad5e9b1a577d
+  MapboxMaps: c553f390b0e0eed0cc68710a6cee7ba5fa3143b3
   path_provider_foundation: 080d55be775b7414fd5a5ef3ac137b97b097e564
   permission_handler_apple: 4ed2196e43d0651e8ff7ca3483a069d469701f2d
   PromisesObjC: f5707f49cb48b9636751c5b2e7d227e43fba9f47

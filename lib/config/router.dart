@@ -10,6 +10,7 @@ import 'package:runaway/features/auth/presentation/screens/login_screen.dart';
 import 'package:runaway/features/auth/presentation/screens/onboarding_screen.dart';
 import 'package:runaway/features/auth/presentation/screens/signup_screen.dart';
 import 'package:runaway/features/historic/presentation/screens/historic_screen.dart';
+import 'package:runaway/features/navigation/presentation/screens/navigation_screen.dart';
 import '../features/home/presentation/screens/home_screen.dart';
 
 // Clé globale pour accéder au contexte du router
@@ -120,6 +121,17 @@ final GoRouter router = GoRouter(
             child: AccountScreen(),
           ),
         ),
+        GoRoute(
+          path: '/navigation',
+          pageBuilder: (context, state) {
+            final args = state.extra as NavigationArgs;
+            return NoTransitionPage(
+              key: state.pageKey,
+              child: NavigationScreen(args: args),
+            );
+          },
+        ),
+
       ],
     ),
   ],

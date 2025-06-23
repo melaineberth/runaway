@@ -86,12 +86,30 @@ class RouteGenerationBloc extends HydratedBloc<RouteGenerationEvent, RouteGenera
         return;
       }
 
+      // MODIFICATION : Stocker les données complètes dans routeMetadata
+      final completeMetadata = {
+        // Données de l'objet GraphHopperRouteResult
+        'distanceKm': result.distanceKm, // ← AJOUT : Distance déjà en km
+        'distance': (result.distanceKm * 1000).round(), // ← AJOUT : Distance en mètres pour compatibilité
+        'durationMinutes': result.durationMinutes,
+        'elevationGain': result.elevationGain,
+        'points_count': routeCoordinates.length,
+        'is_loop': event.parameters.isLoop,
+        
+        // Métadonnées originales de l'API
+        ...result.metadata,
+        
+        // Informations additionnelles
+        'generatedAt': DateTime.now().toIso8601String(),
+        'parameters': event.parameters.toJson(),
+      };
+
       emit(state.copyWith(
         isGeneratingRoute: false,
         generatedRoute: routeCoordinates,
         usedParameters: event.parameters,
-        routeMetadata: result.metadata, // Nouveaux métadonnées
-        routeInstructions: result.instructions, // Nouvelles instructions
+        routeMetadata: completeMetadata, // ← MODIFICATION : Métadonnées complètes
+        routeInstructions: result.instructions,
         errorMessage: null,
       ));
 
