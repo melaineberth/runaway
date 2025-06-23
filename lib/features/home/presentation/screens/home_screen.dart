@@ -9,6 +9,7 @@ import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart';
 import 'package:runaway/config/colors.dart';
 import 'package:runaway/config/extensions.dart';
 import 'package:runaway/core/widgets/loading_overlay.dart';
+import 'package:runaway/features/home/domain/enums/tracking_mode.dart';
 import 'package:runaway/features/home/presentation/widgets/route_info_card.dart';
 import 'package:smooth_gradient/smooth_gradient.dart';
 import '../../../route_generator/presentation/screens/route_parameter.dart' as gen;
@@ -25,176 +26,164 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
+  // === MAPBOX ===
   mp.MapboxMap? mapboxMap;
-  StreamSubscription? userPositionStream;
   mp.PointAnnotationManager? pointAnnotationManager;
   mp.CircleAnnotationManager? circleAnnotationManager;
-
   mp.CircleAnnotationManager? markerCircleManager;
   List<mp.CircleAnnotation> locationMarkers = [];
 
+  // === POSITIONS ===
+  StreamSubscription? _positionStream;
+  
+  // Position GPS réelle de l'utilisateur (toujours à jour)
+  double? _userLatitude;
+  double? _userLongitude;
+  
+  // Position actuellement sélectionnée pour les parcours
+  double? _selectedLatitude;
+  double? _selectedLongitude;
+  
+  // Mode de tracking actuel
+  TrackingMode _trackingMode = TrackingMode.userTracking;
+
+  // === ROUTE GENERATION ===
   bool isGenerateEnabled = false;
-
-  double? userLongitude;
-  double? userLatitude;
-
-  double? currentLongitude;
-  double? currentLatitude;
-
-  bool isTrackingUser = true;
-
   List<List<double>>? generatedRouteCoordinates;
   Map<String, dynamic>? generatedRouteStats;
 
+  // === NAVIGATION ===
   bool isNavigationMode = false;
-
   bool isNavigationCameraActive = false;
 
   @override
   void initState() {
     super.initState();
-
-    _setupPositionTracking();
-
+    _initializeLocationTracking();
     WidgetsBinding.instance.addObserver(this);
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-
-    userPositionStream?.cancel();
-
+    _positionStream?.cancel();
     super.dispose();
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     super.didChangeAppLifecycleState(state);
-
-    // Gérer la navigation selon l'état de l'app
     switch (state) {
       case AppLifecycleState.paused:
-        // L'app passe en arrière-plan, la navigation continue
         print('📱 App en arrière-plan, navigation continue');
         break;
       case AppLifecycleState.resumed:
-        // L'app revient au premier plan
         print('📱 App au premier plan');
-        break;
-      case AppLifecycleState.detached:
-        // L'app est fermée, arrêter la navigation
         break;
       default:
         break;
     }
   }
 
-  Future<void> _setupPositionTracking() async {
+  // === INITIALISATION GÉOLOCALISATION ===
+  Future<void> _initializeLocationTracking() async {
     bool serviceEnabled;
     gl.LocationPermission permission;
 
+    // Vérifier si le service de localisation est activé
     serviceEnabled = await gl.Geolocator.isLocationServiceEnabled();
     if (!serviceEnabled) {
-      return Future.error(context.l10n.disabledLocation);
+      _showLocationError(context.l10n.disabledLocation);
+      return;
     }
 
+    // Vérifier les permissions
     permission = await gl.Geolocator.checkPermission();
     if (permission == gl.LocationPermission.denied) {
       permission = await gl.Geolocator.requestPermission();
       if (permission == gl.LocationPermission.denied) {
-        return Future.error(context.l10n.deniedPermission);
+        _showLocationError(context.l10n.deniedPermission);
+        return;
       }
     }
 
     if (permission == gl.LocationPermission.deniedForever) {
-      return Future.error(context.l10n.disabledAndDenied);
+      _showLocationError(context.l10n.disabledAndDenied);
+      return;
     }
 
+    // Configuration du stream de géolocalisation
     gl.LocationSettings locationSettings = gl.LocationSettings(
       accuracy: gl.LocationAccuracy.high,
-      distanceFilter: 2,
+      distanceFilter: 2, // Mise à jour tous les 2 mètres
     );
 
-    userPositionStream?.cancel();
-    userPositionStream = gl.Geolocator.getPositionStream(
+    // Démarrer le stream de position
+    _positionStream = gl.Geolocator.getPositionStream(
       locationSettings: locationSettings,
-    ).listen((gl.Position? pos) {
-      if (pos != null) {
-        setState(() {
-          userLongitude = pos.longitude;
-          userLatitude = pos.latitude;
-
-          if (currentLongitude == null || currentLatitude == null) {
-            _setActiveLocation(
-              latitude: pos.latitude,
-              longitude: pos.longitude,
-              userPosition: true,
-              moveCamera: !isNavigationCameraActive, // FIX: Important !
-              addMarker: false,
-            );
-          }
-        });
-
-        if (isNavigationCameraActive && mapboxMap != null) {
-        } else if (mapboxMap != null && isTrackingUser && !isNavigationCameraActive) {
-          // Mise à jour normale seulement si pas en navigation
-          mapboxMap?.setCamera(
-            mp.CameraOptions(
-              zoom: 13,
-              center: mp.Point(
-                coordinates: mp.Position(pos.longitude, pos.latitude),
-              ),
-            ),
-          );
-        }
-      } else {
-        if (mapboxMap != null) {
-          mapboxMap?.setCamera(
-            mp.CameraOptions(
-              center: mp.Point(coordinates: mp.Position(-98.0, 39.5)),
-              zoom: 2,
-              bearing: 0,
-              pitch: 0,
-            ),
-          );
-        }
-      }
-    });
+    ).listen(
+      _onPositionUpdate,
+      onError: (error) {
+        print('❌ Erreur géolocalisation: $error');
+        _showLocationError('Erreur de géolocalisation: $error');
+      },
+    );
   }
 
-  Future<void> _setActiveLocation({
+  void _onPositionUpdate(gl.Position position) {
+    // Toujours mettre à jour la position utilisateur
+    setState(() {
+      _userLatitude = position.latitude;
+      _userLongitude = position.longitude;
+    });
+
+    // Si on est en mode suivi utilisateur, mettre à jour la position sélectionnée
+    if (_trackingMode == TrackingMode.userTracking) {
+      _updateSelectedPosition(
+        latitude: position.latitude,
+        longitude: position.longitude,
+        updateCamera: true,
+      );
+    }
+
+    // Mise à jour de la caméra uniquement en mode suivi et si pas en navigation
+    if (_trackingMode == TrackingMode.userTracking && 
+        mapboxMap != null && 
+        !isNavigationCameraActive) {
+      mapboxMap?.setCamera(
+        mp.CameraOptions(
+          zoom: 13,
+          center: mp.Point(
+            coordinates: mp.Position(position.longitude, position.latitude),
+          ),
+        ),
+      );
+    }
+  }
+
+  // === GESTION DES POSITIONS ===
+  void _updateSelectedPosition({
     required double latitude,
     required double longitude,
-    bool userPosition = false,
-    bool moveCamera = true,
+    bool updateCamera = false,
     bool addMarker = false,
-  }) async {
-    if (mapboxMap == null || circleAnnotationManager == null) return;
+  }) {
+    setState(() {
+      _selectedLatitude = latitude;
+      _selectedLongitude = longitude;
+    });
 
-    // 1) Pause ou resume le suivi
-    if (userPosition) {
-      userPositionStream?.resume();
-    } else {
-      userPositionStream?.pause();
-    }
-    setState(() => isTrackingUser = userPosition);
+    // Mettre à jour le BLoC
+    context.read<RouteParametersBloc>().add(
+      StartLocationUpdated(longitude: longitude, latitude: latitude),
+    );
 
-    // 2) Nettoyage des anciens cercles + marqueurs si on en pose un nouveau
-    await circleAnnotationManager!.deleteAll();
-    if (addMarker && markerCircleManager != null) {
-      for (final m in locationMarkers) {
-        await markerCircleManager!.delete(m);
-      }
-      locationMarkers.clear();
-    }
-
-    // 3) Centrage caméra (si demandé)
-    if (moveCamera) {
-      await mapboxMap!.flyTo(
+    // Mise à jour optionnelle de la caméra
+    if (updateCamera && mapboxMap != null) {
+      mapboxMap?.flyTo(
         mp.CameraOptions(
           center: mp.Point(coordinates: mp.Position(longitude, latitude)),
-          zoom: userPosition ? 13 : 13,
+          zoom: 13,
           pitch: 0,
           bearing: 0,
         ),
@@ -202,31 +191,117 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       );
     }
 
-    // 5) Marqueur rouge (facultatif)
+    // Ajout optionnel d'un marqueur
     if (addMarker) {
-      markerCircleManager ??= await mapboxMap!.annotations.createCircleAnnotationManager();
-      final red = await markerCircleManager!.create(
-        mp.CircleAnnotationOptions(
-          geometry: mp.Point(coordinates: mp.Position(longitude, latitude)),
-          circleColor: AppColors.primary.toARGB32(),
-          circleRadius: 7,
-          circleStrokeWidth: 2,
-          circleStrokeColor: Colors.white.toARGB32(),
-        ),
-      );
-      locationMarkers.add(red);
+      _addLocationMarker(longitude, latitude);
     }
+  }
 
-    // 6) Mise à jour du state / BLoC
+  Future<void> _addLocationMarker(double longitude, double latitude) async {
+    if (mapboxMap == null) return;
+
+    // Nettoyer les anciens marqueurs
+    await _clearLocationMarkers();
+
+    // Créer le gestionnaire de marqueurs si nécessaire
+    markerCircleManager ??= await mapboxMap!.annotations.createCircleAnnotationManager();
+
+    // Ajouter le nouveau marqueur
+    final marker = await markerCircleManager!.create(
+      mp.CircleAnnotationOptions(
+        geometry: mp.Point(coordinates: mp.Position(longitude, latitude)),
+        circleColor: AppColors.primary.toARGB32(),
+        circleRadius: 7.0,
+        circleStrokeWidth: 2.0,
+        circleStrokeColor: Colors.white.toARGB32(),
+      ),
+    );
+    locationMarkers.add(marker);
+  }
+
+  Future<void> _clearLocationMarkers() async {
+    if (markerCircleManager != null) {
+      for (final marker in locationMarkers) {
+        await markerCircleManager!.delete(marker);
+      }
+      locationMarkers.clear();
+    }
+    await circleAnnotationManager?.deleteAll();
+  }
+
+  // === ACTIONS UTILISATEUR ===
+  
+  /// Active le mode suivi utilisateur
+  void _activateUserTracking() {
+    if (_userLatitude != null && _userLongitude != null) {
+      setState(() {
+        _trackingMode = TrackingMode.userTracking;
+      });
+
+      _updateSelectedPosition(
+        latitude: _userLatitude!,
+        longitude: _userLongitude!,
+        updateCamera: true,
+      );
+
+      // Nettoyer les marqueurs car on suit la position en temps réel
+      _clearLocationMarkers();
+    }
+  }
+
+  /// Active le mode sélection manuelle
+  void _activateManualSelection() async {
+    // Ne rien faire si on est déjà en mode suivi utilisateur
+    if (_trackingMode == TrackingMode.userTracking) return;
+    
     setState(() {
-      currentLatitude = latitude;
-      currentLongitude = longitude;
+      _trackingMode = TrackingMode.manual;
     });
-    context.read<RouteParametersBloc>().add(
-      StartLocationUpdated(longitude: longitude, latitude: latitude),
+
+    // Placer un marqueur au centre de l'écran (caméra actuelle)
+    if (mapboxMap != null) {
+      try {
+        final cameraState = await mapboxMap!.getCameraState();
+        final centerCoordinate = cameraState.center;
+        
+        _updateSelectedPosition(
+          latitude: centerCoordinate.coordinates.lat.toDouble(),
+          longitude: centerCoordinate.coordinates.lng.toDouble(),
+          updateCamera: false,
+          addMarker: true,
+        );
+      } catch (e) {
+        print('❌ Erreur récupération centre caméra: $e');
+        // Fallback : utiliser la position actuelle si erreur
+        if (_selectedLatitude != null && _selectedLongitude != null) {
+          _addLocationMarker(_selectedLongitude!, _selectedLatitude!);
+        } else if (_userLatitude != null && _userLongitude != null) {
+          _updateSelectedPosition(
+            latitude: _userLatitude!,
+            longitude: _userLongitude!,
+            updateCamera: false,
+            addMarker: true,
+          );
+        }
+      }
+    }
+  }
+
+  /// Sélection via recherche d'adresse
+  void _onLocationSelected(double longitude, double latitude, String placeName) {
+    setState(() {
+      _trackingMode = TrackingMode.searchSelected;
+    });
+
+    _updateSelectedPosition(
+      latitude: latitude,
+      longitude: longitude,
+      updateCamera: true,
+      addMarker: true,
     );
   }
 
+  // === GESTION DE LA CARTE ===
   _onMapCreated(mp.MapboxMap mapboxMap) async {
     this.mapboxMap = mapboxMap;
 
@@ -234,33 +309,41 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       mp.LocationComponentSettings(enabled: true, pulsingEnabled: true),
     );
 
-    // Créer le gestionnaire d'annotations
-    pointAnnotationManager =
-        await mapboxMap.annotations.createPointAnnotationManager();
-    circleAnnotationManager =
-        await mapboxMap.annotations.createCircleAnnotationManager();
+    // Créer les gestionnaires d'annotations
+    pointAnnotationManager = await mapboxMap.annotations.createPointAnnotationManager();
+    circleAnnotationManager = await mapboxMap.annotations.createCircleAnnotationManager();
 
     // Masquer les éléments d'interface
     await mapboxMap.compass.updateSettings(mp.CompassSettings(enabled: false));
-    await mapboxMap.attribution.updateSettings(
-      mp.AttributionSettings(enabled: false),
-    );
+    await mapboxMap.attribution.updateSettings(mp.AttributionSettings(enabled: false));
     await mapboxMap.logo.updateSettings(mp.LogoSettings(enabled: false));
-    await mapboxMap.scaleBar.updateSettings(
-      mp.ScaleBarSettings(enabled: false),
-    );
+    await mapboxMap.scaleBar.updateSettings(mp.ScaleBarSettings(enabled: false));
 
-    // Configurer le listener de scroll pour désactiver le suivi
+    // Configurer le listener de déplacement de carte
     mapboxMap.setOnMapMoveListener((context) {
-      // Si le mouvement n'est pas causé par une mise à jour de position
-      if (isTrackingUser) {
+      // Si on était en mode suivi utilisateur, passer en mode manuel
+      if (_trackingMode == TrackingMode.userTracking) {
         setState(() {
-          isTrackingUser = false;
+          _trackingMode = TrackingMode.manual;
         });
       }
     });
+
+    // Activer la sélection par clic
   }
 
+  void _showLocationError(String message) {
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(message),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  // === INTERFACE UTILISATEUR ===
   void openGenerator() {
     showModalBottomSheet(
       useRootNavigator: true,
@@ -271,89 +354,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       backgroundColor: Colors.black,
       builder: (modalCtx) {
         return gen.RouteParameterScreen(
-          startLongitude: currentLongitude ?? userLongitude ?? 0.0,
-          startLatitude: currentLatitude ?? userLatitude ?? 0.0,
+          startLongitude: _selectedLongitude ?? _userLongitude ?? 0.0,
+          startLatitude: _selectedLatitude ?? _userLatitude ?? 0.0,
           generateRoute: () {},
         );
       },
-    );
-  }
-
-  void _goToUserLocation() async {
-    if (userLongitude != null && userLatitude != null && mapboxMap != null) {
-      // Activer le suivi en temps réel
-      userPositionStream?.resume();
-      setState(() {
-        isTrackingUser = true;
-        currentLongitude = userLongitude;
-        currentLatitude = userLatitude;
-      });
-
-      await mapboxMap!.flyTo(
-        mp.CameraOptions(
-          center: mp.Point(
-            coordinates: mp.Position(userLongitude!, userLatitude!),
-          ),
-          zoom: 13,
-        ),
-        mp.MapAnimationOptions(duration: 1000),
-      );
-
-      // Attendre la fin de l'animation
-      await Future.delayed(Duration(milliseconds: 1100));
-    } 
-  }
-
-  void _onLocationSelected(
-    double longitude,
-    double latitude,
-    String placeName,
-  ) async {
-    if (mapboxMap == null) return;
-
-    // désactive les mises à jour automatiques
-    userPositionStream?.pause();
-    setState(() => isTrackingUser = false);
-
-    // nettoyer markers + ancien cercle (au cas où)
-    await circleAnnotationManager?.deleteAll();
-
-    // Si aucune position de recherche n'est définie, utiliser la position utilisateur
-    if (currentLongitude == null || currentLatitude == null) {
-      currentLongitude = longitude;
-      currentLatitude = latitude;
-    }
-
-    // Centrer la carte sur la nouvelle position avec animation
-    await mapboxMap!.flyTo(
-      mp.CameraOptions(
-        center: mp.Point(coordinates: mp.Position(longitude, latitude)),
-        zoom: 13,
-        pitch: 0,
-        bearing: 0,
-      ),
-      mp.MapAnimationOptions(duration: 1500),
-    );
-
-    // Créer un CircleAnnotationManager si pas déjà fait
-    markerCircleManager ??=
-        await mapboxMap!.annotations.createCircleAnnotationManager();
-
-    // Créer un cercle rouge comme marqueur
-    final redMarker = await markerCircleManager!.create(
-      mp.CircleAnnotationOptions(
-        geometry: mp.Point(coordinates: mp.Position(longitude, latitude)),
-        circleColor: AppColors.primary.toARGB32(),
-        circleRadius: 7.0,
-        circleStrokeWidth: 2.0,
-        circleStrokeColor: Colors.white.toARGB32(),
-      ),
-    );
-    locationMarkers.add(redMarker);
-
-    // Mettre à jour la position dans le BLoC
-    context.read<RouteParametersBloc>().add(
-      StartLocationUpdated(longitude: longitude, latitude: latitude),
     );
   }
 
@@ -406,13 +411,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 15.0,
-                        ),
+                        padding: const EdgeInsets.symmetric(horizontal: 15.0),
                         child: LocationSearchBar(
                           onLocationSelected: _onLocationSelected,
-                          userLongitude: userLongitude,
-                          userLatitude: userLatitude,
+                          userLongitude: _userLongitude,
+                          userLatitude: _userLatitude,
                         ),
                       ),
 
@@ -426,29 +429,31 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                               Column(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
+                                  // Bouton sélection manuelle
                                   IconBtn(
                                     padding: 10.0,
-                                    icon: HugeIcons.strokeRoundedGpsOff02,
-                                    onPressed: () {},
-                                    iconColor:
-                                        isTrackingUser
-                                            ? Colors.white38
-                                            : Colors.white,
+                                    icon: _trackingMode == TrackingMode.manual
+                                        ? HugeIcons.solidRoundedGpsOff02
+                                        : HugeIcons.strokeRoundedGpsOff02,
+                                    onPressed: _activateManualSelection,
+                                    iconColor: _trackingMode == TrackingMode.manual
+                                        ? Colors.white
+                                        : Colors.white38,
                                   ),
                                   15.h,
+                                  // Bouton retour position utilisateur
                                   IconBtn(
                                     padding: 10.0,
-                                    icon:
-                                        isTrackingUser
-                                            ? HugeIcons.solidRoundedLocationShare02
-                                            : HugeIcons.strokeRoundedLocationShare02,
-                                    onPressed: _goToUserLocation,
-                                    iconColor:
-                                        isTrackingUser
-                                            ? AppColors.primary
-                                            : Colors.white,
+                                    icon: _trackingMode == TrackingMode.userTracking
+                                        ? HugeIcons.solidRoundedLocationShare02
+                                        : HugeIcons.strokeRoundedLocationShare02,
+                                    onPressed: _activateUserTracking,
+                                    iconColor: _trackingMode == TrackingMode.userTracking
+                                        ? AppColors.primary
+                                        : Colors.white,
                                   ),
                                   15.h,
+                                  // Bouton générateur
                                   IconBtn(
                                     padding: 10.0,
                                     icon: HugeIcons.strokeRoundedAiMagic,
@@ -469,9 +474,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           if (isGenerateEnabled) LoadingOverlay(),
 
           // RouteInfoCard (masqué en mode navigation)
-          if (generatedRouteCoordinates != null &&
-              generatedRouteStats != null &&
-              !isNavigationMode) // Masquer pendant la navigation
+          if (generatedRouteCoordinates != null && generatedRouteStats != null && !isNavigationMode)
             Positioned(
               bottom: MediaQuery.of(context).padding.bottom + 20,
               left: 15,
