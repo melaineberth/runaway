@@ -46,6 +46,8 @@ dependencies:
   crypto: ^3.0.6
   mapbox_maps_flutter: ^2.9.0
   top_snackbar_flutter: ^3.3.0
+  shared_preferences: ^2.5.3
+  connectivity_plus: ^6.1.4
 
 dev_dependencies:
   flutter_test:

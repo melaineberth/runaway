@@ -10,6 +10,7 @@ import 'package:runaway/config/theme.dart';
 import 'package:runaway/features/auth/data/repositories/auth_repository.dart';
 import 'package:runaway/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:runaway/features/auth/presentation/bloc/auth_event.dart';
+import 'package:runaway/features/route_generator/data/repositories/routes_repository.dart';
 import 'package:runaway/l10n/app_localizations.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -94,7 +95,9 @@ class RunAway extends StatelessWidget {
         ),
         
         BlocProvider(
-          create: (_) => RouteGenerationBloc(),
+          create: (_) => RouteGenerationBloc(
+            routesRepository: RoutesRepository(),
+          ),
         ),
       ],
       child: MaterialApp.router(

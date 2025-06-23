@@ -1,5 +1,6 @@
 import 'package:equatable/equatable.dart';
 import 'package:runaway/features/route_generator/domain/models/route_parameters.dart';
+import 'package:runaway/features/route_generator/domain/models/saved_route.dart';
 
 import '../../../domain/models/graphhopper_route_result.dart';
 
@@ -156,37 +157,5 @@ class ZoneStatistics extends Equatable {
         toiletsCount,
         greenSpaceRatio,
         suitabilityLevel,
-      ];
-}
-
-/// Parcours sauvegardé
-class SavedRoute extends Equatable {
-  final String id;
-  final String name;
-  final RouteParameters parameters;
-  final List<List<double>> coordinates;
-  final DateTime createdAt;
-  final double? actualDistance;
-  final int? actualDuration;
-
-  const SavedRoute({
-    required this.id,
-    required this.name,
-    required this.parameters,
-    required this.coordinates,
-    required this.createdAt,
-    this.actualDistance,
-    this.actualDuration,
-  });
-
-  @override
-  List<Object?> get props => [
-        id,
-        name,
-        parameters,
-        coordinates,
-        createdAt,
-        actualDistance,
-        actualDuration,
       ];
 }

@@ -56,3 +56,51 @@ class SavedRouteLoaded extends RouteGenerationEvent {
 
 /// Événement pour effacer l'analyse de zone
 class ZoneAnalysisCleared extends RouteGenerationEvent {}
+
+/// Événement pour supprimer un parcours sauvegardé
+class SavedRouteDeleted extends RouteGenerationEvent {
+  final String routeId;
+
+  const SavedRouteDeleted(this.routeId);
+
+  @override
+  List<Object?> get props => [routeId];
+}
+
+/// Événement pour demander la liste des parcours sauvegardés
+class SavedRoutesRequested extends RouteGenerationEvent {
+  const SavedRoutesRequested();
+}
+
+/// Événement pour mettre à jour les statistiques d'utilisation d'un parcours
+class RouteUsageUpdated extends RouteGenerationEvent {
+  final String routeId;
+
+  const RouteUsageUpdated(this.routeId);
+
+  @override
+  List<Object?> get props => [routeId];
+}
+
+/// Événement pour synchroniser les parcours en attente
+class SyncPendingRoutesRequested extends RouteGenerationEvent {
+  const SyncPendingRoutesRequested();
+}
+
+/// Événement pour filtrer les parcours par critères
+class RoutesFilterRequested extends RouteGenerationEvent {
+  final String? activityType;
+  final double? minDistance;
+  final double? maxDistance;
+  final String? searchQuery;
+
+  const RoutesFilterRequested({
+    this.activityType,
+    this.minDistance,
+    this.maxDistance,
+    this.searchQuery,
+  });
+
+  @override
+  List<Object?> get props => [activityType, minDistance, maxDistance, searchQuery];
+}

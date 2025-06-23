@@ -1,3 +1,5 @@
+// Ajout à faire dans lib/features/route_generator/domain/models/route_parameters.dart
+
 import 'activity_type.dart';
 import 'terrain_type.dart';
 import 'urban_density.dart';
@@ -11,7 +13,7 @@ class RouteParameters {
   final double startLongitude;
   final double startLatitude;
   final DateTime? preferredStartTime;
-  final bool isLoop; // Parcours en boucle ou aller simple
+  final bool isLoop;
   final bool avoidTraffic;
   final bool preferScenic;
 
@@ -70,6 +72,47 @@ class RouteParameters {
     'avoid_traffic': avoidTraffic,
     'prefer_scenic': preferScenic,
   };
+
+  /// 🆕 Désérialisation depuis JSON
+  factory RouteParameters.fromJson(Map<String, dynamic> json) {
+    return RouteParameters(
+      activityType: _parseActivityType(json['activity_type'] as String),
+      terrainType: _parseTerrainType(json['terrain_type'] as String),
+      urbanDensity: _parseUrbanDensity(json['urban_density'] as String),
+      distanceKm: (json['distance_km'] as num).toDouble(),
+      elevationGain: (json['elevation_gain'] as num).toDouble(),
+      startLongitude: (json['start_longitude'] as num).toDouble(),
+      startLatitude: (json['start_latitude'] as num).toDouble(),
+      preferredStartTime: json['preferred_start_time'] != null 
+          ? DateTime.parse(json['preferred_start_time'] as String)
+          : null,
+      isLoop: json['is_loop'] as bool? ?? true,
+      avoidTraffic: json['avoid_traffic'] as bool? ?? true,
+      preferScenic: json['prefer_scenic'] as bool? ?? true,
+    );
+  }
+
+  /// Parsing helpers pour les enums
+  static ActivityType _parseActivityType(String type) {
+    return ActivityType.values.firstWhere(
+      (e) => e.id == type,
+      orElse: () => ActivityType.running,
+    );
+  }
+
+  static TerrainType _parseTerrainType(String type) {
+    return TerrainType.values.firstWhere(
+      (e) => e.id == type,
+      orElse: () => TerrainType.mixed,
+    );
+  }
+
+  static UrbanDensity _parseUrbanDensity(String density) {
+    return UrbanDensity.values.firstWhere(
+      (e) => e.id == density,
+      orElse: () => UrbanDensity.mixed,
+    );
+  }
 
   // Calculer la durée estimée
   Duration get estimatedDuration {

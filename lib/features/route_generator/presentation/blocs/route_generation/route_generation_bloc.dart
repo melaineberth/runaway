@@ -1,21 +1,28 @@
-import 'dart:math' as math;
 
+import 'dart:math' as math;
 import 'package:hydrated_bloc/hydrated_bloc.dart';
-import 'package:uuid/uuid.dart';
+import 'package:runaway/features/route_generator/domain/models/saved_route.dart';
+import '../../../data/repositories/routes_repository.dart';
 import '../../../data/services/graphhopper_api_service.dart';
 import 'route_generation_event.dart';
 import 'route_generation_state.dart';
 
 /// BLoC pour gérer l'analyse de zone et la génération de parcours
 class RouteGenerationBloc extends HydratedBloc<RouteGenerationEvent, RouteGenerationState> {
-  final _uuid = const Uuid();
+  final RoutesRepository _routesRepository;
 
-  RouteGenerationBloc() : super(const RouteGenerationState()) {
+  RouteGenerationBloc({RoutesRepository? routesRepository}) 
+      : _routesRepository = routesRepository ?? RoutesRepository(),
+        super(const RouteGenerationState()) {
     on<ZoneAnalysisRequested>(_onZoneAnalysisRequested);
     on<RouteGenerationRequested>(_onRouteGenerationRequested);
     on<GeneratedRouteSaved>(_onGeneratedRouteSaved);
     on<SavedRouteLoaded>(_onSavedRouteLoaded);
     on<ZoneAnalysisCleared>(_onZoneAnalysisCleared);
+    on<SavedRouteDeleted>(_onSavedRouteDeleted);
+    on<SavedRoutesRequested>(_onSavedRoutesRequested);
+    on<RouteUsageUpdated>(_onRouteUsageUpdated);
+    on<SyncPendingRoutesRequested>(_onSyncPendingRoutesRequested);
   }
 
   /// Analyse de zone simplifiée
@@ -29,24 +36,21 @@ class RouteGenerationBloc extends HydratedBloc<RouteGenerationEvent, RouteGenera
     ));
 
     try {
-      // Avec l'API GraphHopper, pas besoin d'analyse préalable
-      // On simule une analyse réussie pour maintenir l'UX
       await Future.delayed(Duration(milliseconds: 500));
 
-      // Créer des statistiques basiques pour la zone (compatible avec l'API GraphHopper)
       final stats = ZoneStatistics(
         parksCount: 0,
         waterPointsCount: 0,
         viewPointsCount: 0,
         drinkingWaterCount: 0,
         toiletsCount: 0,
-        greenSpaceRatio: 0.3, // Ratio fictif pour maintenir l'UX
-        suitabilityLevel: 'good', // Niveau par défaut
+        greenSpaceRatio: 0.3,
+        suitabilityLevel: 'good',
       );
 
       emit(state.copyWith(
         isAnalyzingZone: false,
-        pois: [_createDummyPoi(event.latitude, event.longitude)], // POI fictif pour maintenir la compatibilité
+        pois: [_createDummyPoi(event.latitude, event.longitude)],
         zoneStats: stats,
         errorMessage: null,
       ));
@@ -70,12 +74,10 @@ class RouteGenerationBloc extends HydratedBloc<RouteGenerationEvent, RouteGenera
     ));
 
     try {
-      // REMPLACER L'ANCIEN CODE PAR L'APPEL API
       final result = await GraphHopperApiService.generateRoute(
         parameters: event.parameters,
       );
 
-      // Convertir le résultat pour l'UI existante
       final routeCoordinates = result.coordinatesForUI;
 
       if (routeCoordinates.isEmpty) {
@@ -86,20 +88,14 @@ class RouteGenerationBloc extends HydratedBloc<RouteGenerationEvent, RouteGenera
         return;
       }
 
-      // MODIFICATION : Stocker les données complètes dans routeMetadata
       final completeMetadata = {
-        // Données de l'objet GraphHopperRouteResult
-        'distanceKm': result.distanceKm, // ← AJOUT : Distance déjà en km
-        'distance': (result.distanceKm * 1000).round(), // ← AJOUT : Distance en mètres pour compatibilité
+        'distanceKm': result.distanceKm,
+        'distance': (result.distanceKm * 1000).round(),
         'durationMinutes': result.durationMinutes,
         'elevationGain': result.elevationGain,
         'points_count': routeCoordinates.length,
         'is_loop': event.parameters.isLoop,
-        
-        // Métadonnées originales de l'API
         ...result.metadata,
-        
-        // Informations additionnelles
         'generatedAt': DateTime.now().toIso8601String(),
         'parameters': event.parameters.toJson(),
       };
@@ -108,7 +104,7 @@ class RouteGenerationBloc extends HydratedBloc<RouteGenerationEvent, RouteGenera
         isGeneratingRoute: false,
         generatedRoute: routeCoordinates,
         usedParameters: event.parameters,
-        routeMetadata: completeMetadata, // ← MODIFICATION : Métadonnées complètes
+        routeMetadata: completeMetadata,
         routeInstructions: result.instructions,
         errorMessage: null,
       ));
@@ -123,19 +119,7 @@ class RouteGenerationBloc extends HydratedBloc<RouteGenerationEvent, RouteGenera
     }
   }
 
-  // Méthode helper pour créer un POI fictif (compatibilité)
-  Map<String, dynamic> _createDummyPoi(double lat, double lon) {
-    return {
-      'id': 'start_point',
-      'name': 'Point de départ',
-      'type': 'start',
-      'coordinates': [lon, lat],
-      'tags': {},
-      'distance': 0.0,
-    };
-  }
-
-  /// Gestion de la sauvegarde du parcours
+  /// 🆕 Sauvegarde du parcours via RoutesRepository
   Future<void> _onGeneratedRouteSaved(
     GeneratedRouteSaved event,
     Emitter<RouteGenerationState> emit,
@@ -147,40 +131,179 @@ class RouteGenerationBloc extends HydratedBloc<RouteGenerationEvent, RouteGenera
       return;
     }
 
-    final newRoute = SavedRoute(
-      id: _uuid.v4(),
-      name: event.name,
-      parameters: state.usedParameters!,
-      coordinates: state.generatedRoute!,
-      createdAt: DateTime.now(),
-      actualDistance: _calculateRouteDistance(state.generatedRoute!),
-    );
+    try {
+      print('💾 Début sauvegarde: ${event.name}');
+      
+      // 🔧 FIX : Calculer la vraie distance depuis les métadonnées
+      final actualDistanceKm = state.routeMetadata?['distanceKm'] as double? ?? 
+                              _calculateRouteDistance(state.generatedRoute!);
+      
+      final savedRoute = await _routesRepository.saveRoute(
+        name: event.name,
+        parameters: state.usedParameters!,
+        coordinates: state.generatedRoute!,
+        actualDistance: actualDistanceKm,
+        estimatedDuration: state.routeMetadata?['durationMinutes'] as int?,
+      );
 
-    final updatedRoutes = List<SavedRoute>.from(state.savedRoutes)
-      ..add(newRoute);
+      // Mettre à jour la liste des parcours sauvegardés
+      final updatedRoutes = List<SavedRoute>.from(state.savedRoutes)
+        ..add(savedRoute);
 
-    emit(state.copyWith(
-      savedRoutes: updatedRoutes,
-    ));
+      emit(state.copyWith(
+        savedRoutes: updatedRoutes,
+        errorMessage: null,
+      ));
+
+      print('✅ Parcours sauvegardé: ${savedRoute.name} (${savedRoute.formattedDistance})');
+
+    } catch (e) {
+      print('❌ Erreur sauvegarde complète: $e');
+      emit(state.copyWith(
+        errorMessage: 'Erreur lors de la sauvegarde: $e',
+      ));
+    }
   }
 
-  /// Gestion du chargement d'un parcours sauvegardé
+  /// 🆕 Chargement des parcours sauvegardés
+  Future<void> _onSavedRoutesRequested(
+    SavedRoutesRequested event,
+    Emitter<RouteGenerationState> emit,
+  ) async {
+    try {
+      emit(state.copyWith(isAnalyzingZone: true));
+
+      final routes = await _routesRepository.getUserRoutes();
+
+      emit(state.copyWith(
+        isAnalyzingZone: false,
+        savedRoutes: routes,
+        errorMessage: null,
+      ));
+
+      print('✅ ${routes.length} parcours chargés');
+
+    } catch (e) {
+      emit(state.copyWith(
+        isAnalyzingZone: false,
+        errorMessage: 'Erreur lors du chargement des parcours: $e',
+      ));
+    }
+  }
+
+  /// 🆕 Suppression d'un parcours
+  Future<void> _onSavedRouteDeleted(
+    SavedRouteDeleted event,
+    Emitter<RouteGenerationState> emit,
+  ) async {
+    try {
+      await _routesRepository.deleteRoute(event.routeId);
+
+      final updatedRoutes = state.savedRoutes
+          .where((r) => r.id != event.routeId)
+          .toList();
+
+      emit(state.copyWith(
+        savedRoutes: updatedRoutes,
+      ));
+
+      print('✅ Parcours supprimé: ${event.routeId}');
+
+    } catch (e) {
+      emit(state.copyWith(
+        errorMessage: 'Erreur lors de la suppression: $e',
+      ));
+    }
+  }
+
+  /// Chargement d'un parcours sauvegardé
   void _onSavedRouteLoaded(
     SavedRouteLoaded event,
     Emitter<RouteGenerationState> emit,
   ) {
-    final route = state.savedRoutes.firstWhere(
-      (r) => r.id == event.routeId,
-      orElse: () => throw Exception('Parcours non trouvé'),
-    );
+    try {
+      final route = state.savedRoutes.firstWhere(
+        (r) => r.id == event.routeId,
+        orElse: () => throw Exception('Parcours non trouvé'),
+      );
 
-    emit(state.copyWith(
-      generatedRoute: route.coordinates,
-      usedParameters: route.parameters,
-    ));
+      emit(state.copyWith(
+        generatedRoute: route.coordinates,
+        usedParameters: route.parameters,
+        routeMetadata: {
+          'distanceKm': route.actualDistance ?? route.parameters.distanceKm,
+          'distance': ((route.actualDistance ?? route.parameters.distanceKm) * 1000).round(),
+          'durationMinutes': route.actualDuration ?? route.parameters.estimatedDuration.inMinutes,
+          'points_count': route.coordinates.length,
+          'is_loop': route.parameters.isLoop,
+        },
+      ));
+
+      // Mettre à jour les statistiques d'utilisation
+      add(RouteUsageUpdated(event.routeId));
+
+    } catch (e) {
+      emit(state.copyWith(
+        errorMessage: 'Parcours non trouvé',
+      ));
+    }
   }
 
-  /// Gestion de l'effacement de l'analyse
+  /// 🆕 Mise à jour des statistiques d'utilisation
+  Future<void> _onRouteUsageUpdated(
+    RouteUsageUpdated event,
+    Emitter<RouteGenerationState> emit,
+  ) async {
+    try {
+      await _routesRepository.updateRouteUsage(event.routeId);
+      
+      // Mettre à jour localement aussi
+      final updatedRoutes = state.savedRoutes.map((route) {
+        if (route.id == event.routeId) {
+          return route.copyWith(
+            timesUsed: route.timesUsed + 1,
+            lastUsedAt: DateTime.now(),
+          );
+        }
+        return route;
+      }).toList();
+
+      emit(state.copyWith(savedRoutes: updatedRoutes));
+
+    } catch (e) {
+      print('❌ Erreur mise à jour statistiques: $e');
+    }
+  }
+
+  /// 🆕 Synchronisation des parcours en attente
+  Future<void> _onSyncPendingRoutesRequested(
+    SyncPendingRoutesRequested event,
+    Emitter<RouteGenerationState> emit,
+  ) async {
+    try {
+      emit(state.copyWith(isAnalyzingZone: true));
+
+      await _routesRepository.syncPendingRoutes();
+      
+      // Recharger les parcours après sync
+      final routes = await _routesRepository.getUserRoutes();
+
+      emit(state.copyWith(
+        isAnalyzingZone: false,
+        savedRoutes: routes,
+      ));
+
+      print('✅ Synchronisation terminée');
+
+    } catch (e) {
+      emit(state.copyWith(
+        isAnalyzingZone: false,
+        errorMessage: 'Erreur de synchronisation: $e',
+      ));
+    }
+  }
+
+  /// Effacement de l'analyse
   void _onZoneAnalysisCleared(
     ZoneAnalysisCleared event,
     Emitter<RouteGenerationState> emit,
@@ -190,10 +313,24 @@ class RouteGenerationBloc extends HydratedBloc<RouteGenerationEvent, RouteGenera
       zoneStats: null,
       generatedRoute: null,
       usedParameters: null,
+      routeMetadata: null,
+      routeInstructions: null,
     ));
   }
 
-  /// Calculer la distance totale d'un parcours
+  // === MÉTHODES UTILITAIRES ===
+
+  Map<String, dynamic> _createDummyPoi(double lat, double lon) {
+    return {
+      'id': 'start_point',
+      'name': 'Point de départ',
+      'type': 'start',
+      'coordinates': [lon, lat],
+      'tags': {},
+      'distance': 0.0,
+    };
+  }
+
   double _calculateRouteDistance(List<List<double>> coordinates) {
     if (coordinates.length < 2) return 0.0;
 
@@ -210,7 +347,6 @@ class RouteGenerationBloc extends HydratedBloc<RouteGenerationEvent, RouteGenera
     return totalDistance / 1000; // Convertir en km
   }
 
-  /// Calculer la distance entre deux points (formule de Haversine)
   double _calculateDistance(double lat1, double lon1, double lat2, double lon2) {
     const double earthRadius = 6371000; // mètres
     final double dLat = (lat2 - lat1) * 3.14159265359 / 180;
@@ -226,26 +362,23 @@ class RouteGenerationBloc extends HydratedBloc<RouteGenerationEvent, RouteGenera
     return earthRadius * c;
   }
 
-  /// Restauration depuis le stockage
+  /// Persistance locale uniquement pour les données de session
   @override
   RouteGenerationState? fromJson(Map<String, dynamic> json) {
     try {
+      // Ne persister que les données temporaires, pas les parcours sauvegardés
       return const RouteGenerationState();
     } catch (e) {
       return null;
     }
   }
 
-  /// Sauvegarde dans le stockage
   @override
   Map<String, dynamic>? toJson(RouteGenerationState state) {
     try {
+      // Stocker seulement les métadonnées de session
       return {
-        'saved_routes': state.savedRoutes.map((r) => {
-          'id': r.id,
-          'name': r.name,
-          'created_at': r.createdAt.toIso8601String(),
-        }).toList(),
+        'last_generation_timestamp': DateTime.now().toIso8601String(),
       };
     } catch (e) {
       return null;

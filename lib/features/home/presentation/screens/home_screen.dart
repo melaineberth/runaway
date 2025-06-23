@@ -11,17 +11,17 @@ import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart';
 import 'package:runaway/config/colors.dart';
 import 'package:runaway/config/extensions.dart';
 import 'package:runaway/core/widgets/loading_overlay.dart';
-import 'package:runaway/core/widgets/squircle_container.dart';
+import 'package:runaway/core/widgets/top_snackbar.dart';
 import 'package:runaway/features/home/domain/enums/tracking_mode.dart';
 import 'package:runaway/features/home/presentation/widgets/export_format_dialog.dart';
 import 'package:runaway/features/home/presentation/widgets/route_info_card.dart';
 import 'package:runaway/features/navigation/presentation/screens/navigation_screen.dart';
 import 'package:runaway/features/route_generator/data/services/route_export_service.dart';
+import 'package:runaway/features/route_generator/domain/models/route_parameters.dart';
 import 'package:runaway/features/route_generator/presentation/blocs/route_generation/route_generation_bloc.dart';
 import 'package:runaway/features/route_generator/presentation/blocs/route_generation/route_generation_event.dart';
 import 'package:runaway/features/route_generator/presentation/blocs/route_generation/route_generation_state.dart';
 import 'package:smooth_gradient/smooth_gradient.dart';
-import 'package:top_snackbar_flutter/custom_snack_bar.dart';
 import 'package:top_snackbar_flutter/top_snack_bar.dart';
 import '../../../route_generator/presentation/screens/route_parameter.dart' as gen;
 import '../../../../core/widgets/icon_btn.dart';
@@ -71,6 +71,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   bool isNavigationMode = false;
   bool isNavigationCameraActive = false;
 
+  bool _hasAutoSaved = false;
+
   @override
   void initState() {
     super.initState();
@@ -108,7 +110,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   // Gestion des changements d'état
   void _handleRouteGenerationStateChange(RouteGenerationState state) async {
-    if (state.hasGeneratedRoute) {
+    if (state.hasGeneratedRoute && !_hasAutoSaved) { // 🔧 FIX : Éviter double traitement
       // AJOUTER : Sauvegarder le mode de tracking avant génération
       _trackingModeBeforeGeneration = _trackingMode;
       
@@ -116,15 +118,18 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       setState(() {
         generatedRouteCoordinates = state.generatedRoute;
         routeMetadata = state.routeMetadata;
+        _hasAutoSaved = true; // 🔧 FIX : Marquer comme sauvegardé
       });
       
       // DEBUG : Afficher les données reçues
       print('🔍 DEBUG routeMetadata keys: ${routeMetadata?.keys}');
-      print('🔍 DEBUG routeMetadata: $routeMetadata');
       print('🔍 DEBUG distance calculée: ${_getGeneratedRouteDistance()}km');
       
       // Afficher la route sur la carte
       await _displayRouteOnMap(state.generatedRoute!);
+      
+      // 🆕 AUTO-SAUVEGARDE : Sauvegarder automatiquement le parcours généré
+      await _autoSaveGeneratedRoute(state);
       
       // Afficher un message de succès
       _showRouteGeneratedSuccess(state);
@@ -132,7 +137,43 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     } else if (state.errorMessage != null) {
       // Erreur lors de la génération
       _showRouteGenerationError(state.errorMessage!);
+      // 🔧 FIX : Reset du flag en cas d'erreur
+      _hasAutoSaved = false;
     }
+  }
+
+  // 🔧 FIX : Auto-sauvegarde avec vraie distance
+  Future<void> _autoSaveGeneratedRoute(RouteGenerationState state) async {
+    if (!state.hasGeneratedRoute || state.usedParameters == null) {
+      return;
+    }
+
+    try {
+      // 🔧 FIX : Utiliser la vraie distance générée au lieu de la distance demandée
+      final realDistance = _getGeneratedRouteDistance();
+      final routeName = _generateAutoRouteName(state.usedParameters!, realDistance);
+      
+      // Sauvegarder via le RouteGenerationBloc
+      context.read<RouteGenerationBloc>().add(
+        GeneratedRouteSaved(routeName),
+      );
+
+      print('✅ Parcours auto-sauvegardé: $routeName (distance réelle: ${realDistance.toStringAsFixed(1)}km)');
+
+    } catch (e) {
+      print('❌ Erreur auto-sauvegarde: $e');
+      // Ne pas afficher d'erreur à l'utilisateur pour une sauvegarde automatique
+    }
+  }
+
+  // 🔧 FIX : Génération du nom avec vraie distance
+  String _generateAutoRouteName(RouteParameters parameters, double realDistanceKm) {
+    final now = DateTime.now();
+    final timeString = '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
+    final dateString = '${now.day}/${now.month}';
+    
+    // 🔧 FIX : Utiliser la vraie distance au lieu de parameters.distanceKm
+    return '${parameters.activityType.title} ${realDistanceKm.toStringAsFixed(0)}km - $timeString ($dateString)';
   }
 
   // Calcul de la distance réelle du parcours généré
@@ -217,6 +258,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     setState(() {
       generatedRouteCoordinates = null;
       routeMetadata = null;
+      _hasAutoSaved = false; // 🔧 FIX : Reset du flag de sauvegarde
     });
 
     // Revenir au mode de tracking précédent
@@ -799,6 +841,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   // Gestionnaire de génération de route
   void _handleGenerateRoute() {
+    // 🔧 FIX : Reset du flag avant nouvelle génération
+    _hasAutoSaved = false;
+
     final parametersState = context.read<RouteParametersBloc>().state;
     final parameters = parametersState.parameters;
 
@@ -1080,44 +1125,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 ),
               ),
             ),
-        ],
-      ),
-    );
-  }
-}
-
-class TopSnackBar extends StatelessWidget {
-  final Color? color;
-  final String title;
-  final IconData icon;
-
-  const TopSnackBar({
-    super.key,
-    this.color,
-    required this.title,
-    required this.icon,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return SquircleContainer(
-      radius: 40,
-      padding: EdgeInsets.all(20.0),
-      color: color ?? Colors.red,
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.end,
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(
-            title,
-            style: context.bodySmall?.copyWith(
-              color: Colors.white
-            ),
-          ),
-          Icon(
-            icon,
-            size: 25,
-          ),
         ],
       ),
     );
