@@ -33,6 +33,12 @@ class RouteGenerationState extends Equatable {
   /// Parcours sauvegardés
   final List<SavedRoute> savedRoutes;
 
+  // Indique si le parcours affiché provient de l'historique
+  final bool isLoadedFromHistory;
+
+  // ID unique pour tracker les changements d'état
+  final String stateId;
+
   const RouteGenerationState({
     this.pois = const [],
     this.isAnalyzingZone = false,
@@ -44,6 +50,8 @@ class RouteGenerationState extends Equatable {
     this.savedRoutes = const [],
     this.routeMetadata,
     this.routeInstructions,
+    this.isLoadedFromHistory = false, 
+    this.stateId = 'empty',
   });
 
   /// Vérifie si la zone a été analysée
@@ -51,6 +59,15 @@ class RouteGenerationState extends Equatable {
   
   /// Vérifie si un parcours a été généré
   bool get hasGeneratedRoute => generatedRoute != null && generatedRoute!.isNotEmpty;
+
+  // Indique si c'est un nouveau parcours généré (pas chargé depuis l'historique)
+  bool get isNewlyGenerated => hasGeneratedRoute && !isLoadedFromHistory;
+
+  // Indique si l'état est vide/reseté
+  bool get isEmpty => generatedRoute == null && 
+                     routeMetadata == null && 
+                     usedParameters == null &&
+                     !isLoadedFromHistory;
 
   RouteGenerationState copyWith({
     List<Map<String, dynamic>>? pois,
@@ -63,6 +80,8 @@ class RouteGenerationState extends Equatable {
     List<SavedRoute>? savedRoutes,
     Map<String, dynamic>? routeMetadata,
     List<RouteInstruction>? routeInstructions,
+    bool? isLoadedFromHistory,
+    String? stateId,
   }) {
     return RouteGenerationState(
       pois: pois ?? this.pois,
@@ -75,6 +94,8 @@ class RouteGenerationState extends Equatable {
       savedRoutes: savedRoutes ?? this.savedRoutes,
       routeMetadata: routeMetadata ?? this.routeMetadata,
       routeInstructions: routeInstructions ?? this.routeInstructions,
+      isLoadedFromHistory: isLoadedFromHistory ?? this.isLoadedFromHistory,
+      stateId: stateId ?? DateTime.now().millisecondsSinceEpoch.toString(),
     );
   }
 
@@ -90,6 +111,8 @@ class RouteGenerationState extends Equatable {
     savedRoutes,
     routeMetadata,
     routeInstructions,
+    isLoadedFromHistory,
+    stateId,
   ];
 }
 

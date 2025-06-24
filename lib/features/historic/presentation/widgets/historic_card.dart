@@ -280,6 +280,9 @@ class _HistoricCardState extends State<HistoricCard> {
           },
         ),
 
+        if (_isImageLoading)
+        CircularProgressIndicator(),
+
         IgnorePointer(
           ignoring: true,
           child: Container(

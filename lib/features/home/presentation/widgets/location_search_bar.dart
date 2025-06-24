@@ -212,6 +212,7 @@ class _LocationSearchBarState extends State<LocationSearchBar> {
   }
 
   void _clearSearch() {
+    FocusScope.of(context).unfocus();
     _searchController.clear();
     _suggestions = [];
     _removeOverlay();
@@ -220,21 +221,11 @@ class _LocationSearchBarState extends State<LocationSearchBar> {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return SquircleContainer(
+      radius: 40,
       padding: EdgeInsets.symmetric(horizontal: 15, vertical: 8),
-      height: 50,
-      decoration: BoxDecoration(
-        color: Colors.black,
-        borderRadius: BorderRadius.circular(100),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.18),
-            spreadRadius: 2,
-            blurRadius: 30,
-            offset: Offset(0, 0),
-          ),
-        ],
-      ),
+      height: 60,
+      color: Colors.black,
       child: Row(
         children: [
           HugeIcon(
@@ -269,19 +260,19 @@ class _LocationSearchBarState extends State<LocationSearchBar> {
               ),
             ),
           ),
-          if (_isLoading) ...[
-            8.w,
-            SizedBox(
-              width: 20,
-              height: 20,
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-                valueColor: AlwaysStoppedAnimation<Color>(Colors.white70),
-              ),
-            ),
-          ] else if (_searchController.text.isNotEmpty) ...[
-            8.w,
-            GestureDetector(
+          if (_searchController.text.isNotEmpty)
+          AnimatedSwitcher(
+          duration: Duration(milliseconds: 300),
+          child: _isLoading
+              ? SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white38),
+                ),
+              )
+              : GestureDetector(
               onTap: _clearSearch,
               child: HugeIcon(
                 icon: HugeIcons.solidRoundedCancelCircle,
@@ -289,7 +280,8 @@ class _LocationSearchBarState extends State<LocationSearchBar> {
                 color: Colors.white38,
               ),
             ),
-          ],
+        ),
+
         ],
       ),
     );

@@ -24,6 +24,7 @@ import 'package:runaway/features/route_generator/presentation/blocs/route_genera
 import 'package:smooth_gradient/smooth_gradient.dart';
 import 'package:top_snackbar_flutter/top_snack_bar.dart';
 import '../../../route_generator/presentation/screens/route_parameter.dart' as gen;
+import 'package:supabase_flutter/supabase_flutter.dart' as sb;
 import '../../../../core/widgets/icon_btn.dart';
 import '../blocs/route_parameters_bloc.dart';
 import '../blocs/route_parameters_event.dart';
@@ -108,7 +109,27 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   // Gestion des changements d'état
   void _handleRouteGenerationStateChange(RouteGenerationState state) async {
-    if (state.hasGeneratedRoute && !_hasAutoSaved) { // 🔧 FIX : Éviter double traitement
+    
+    // 🆕 Cas 1: Parcours chargé depuis l'historique
+    if (state.hasGeneratedRoute && state.isLoadedFromHistory) {
+      print('📂 Parcours chargé depuis l\'historique - pas de sauvegarde automatique');
+      
+      setState(() {
+        generatedRouteCoordinates = state.generatedRoute;
+        routeMetadata = state.routeMetadata;
+        // Pas de changement de _hasAutoSaved car c'est un parcours existant
+      });
+      
+      // Afficher la route sur la carte
+      await _displayRouteOnMap(state.generatedRoute!);
+            
+      return; // 🔑 IMPORTANT : Sortir ici pour éviter la double sauvegarde
+    }
+    
+    // 🆕 Cas 2: Nouveau parcours généré (pas depuis l'historique)
+    if (state.isNewlyGenerated && !_hasAutoSaved) {
+      print('🆕 Nouveau parcours généré - sauvegarde automatique');
+      
       // AJOUTER : Sauvegarder le mode de tracking avant génération
       _trackingModeBeforeGeneration = _trackingMode;
       
@@ -128,12 +149,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       
       // 🆕 AUTO-SAUVEGARDE : Sauvegarder automatiquement le parcours généré
       await _autoSaveGeneratedRoute(state);
-      
-      // Afficher un message de succès
-      _showRouteGeneratedSuccess(state);
-      
+            
     } else if (state.errorMessage != null) {
-      // Erreur lors de la génération
+      // Erreur lors de la génération ou du chargement
       _showRouteGenerationError(state.errorMessage!);
       // 🔧 FIX : Reset du flag en cas d'erreur
       _hasAutoSaved = false;
@@ -141,7 +159,16 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }
 
   Future<void> _autoSaveGeneratedRoute(RouteGenerationState state) async {
+    // 1️⃣  Annuler si l’utilisateur n’est pas connecté
+    if (sb.Supabase.instance.client.auth.currentUser == null) {
+      print('🚫 Auto-save annulé : aucun utilisateur connecté');
+      _hasAutoSaved = false; // permet une nouvelle tentative si besoin
+      return; // on s’arrête là
+    }
+
+    // 2️⃣  Procédure normale (inchangée)
     if (!state.hasGeneratedRoute || state.usedParameters == null) {
+      print('⚠️ Pas de sauvegarde automatique: parcours non nouveau ou paramètres manquants');
       return;
     }
 
@@ -246,6 +273,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     // Supprimer la route de la carte
     if (routeLineManager != null && mapboxMap != null) {
       try {
+        await routeLineManager!.deleteAll();
         await mapboxMap!.annotations.removeAnnotationManager(routeLineManager!);
         routeLineManager = null;
       } catch (e) {
@@ -295,17 +323,15 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       
       // Réinitialiser le tracking mode sauvegardé
       _trackingModeBeforeGeneration = null;
-    }
-
-    // Afficher un message de confirmation
-    if (mounted) {
-      showTopSnackBar(
-        Overlay.of(context),
-        TopSnackBar(
-          title: 'Parcours supprimé avec succès',
-          icon: HugeIcons.solidRoundedTick04,
-          color: Colors.lightGreen,
+    } else {
+      await mapboxMap!.flyTo(
+        mp.CameraOptions(
+          center: mp.Point(
+            coordinates: mp.Position(_userLongitude!, _userLatitude!),
+          ),
+          zoom: 15,
         ),
+        mp.MapAnimationOptions(duration: 1200),
       );
     }
   }
@@ -364,15 +390,14 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   Future<void> _drawRouteProgressively(List<List<double>> coordinates) async {
     if (mapboxMap == null || coordinates.isEmpty) return;
 
-    // Supprimer l'ancienne route si elle existe
-    if (routeLineManager != null) {
-      await mapboxMap!.annotations.removeAnnotationManager(routeLineManager!);
-    }
+    // Crée le manager une seule fois
+    routeLineManager ??=
+        await mapboxMap!.annotations.createPolylineAnnotationManager();
 
-    // Créer le gestionnaire de lignes
-    routeLineManager = await mapboxMap!.annotations.createPolylineAnnotationManager();
+    // Efface l’éventuel tracé précédent
+    await routeLineManager!.deleteAll();
 
-    // Affichage direct avec animation d'opacité
+    // Puis dessine la nouvelle polyline
     await _drawRoute(coordinates);
   }
 
@@ -522,23 +547,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     } catch (e) {
       print('❌ Erreur lors de l\'ajustement smooth de la vue: $e');
     }
-  }
-
-  // Affichage du succès
-  void _showRouteGeneratedSuccess(RouteGenerationState state) {
-    if (!mounted) return;
-
-    final distance = routeMetadata?['distance'] ?? 0;
-    final distanceKm = (distance / 1000).toStringAsFixed(1);
-
-    showTopSnackBar(
-      Overlay.of(context),
-      TopSnackBar(
-        title: 'Parcours généré de ${distanceKm}km',
-        icon: HugeIcons.solidRoundedTick04,
-        color: Colors.lightGreen,
-      ),
-    );
   }
 
   // Affichage des erreurs
@@ -797,8 +805,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         });
       }
     });
-
-    // Activer la sélection par clic
   }
 
   void _showLocationError(String message) {
@@ -891,40 +897,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     if (generatedRouteCoordinates == null || routeMetadata == null) return;
 
     final Completer<void> completer = Completer<void>();
-    OverlayEntry? overlayEntry;
 
     try {
-      // Créer un overlay au lieu d'un dialog pour éviter les conflits Navigator
-      overlayEntry = OverlayEntry(
-        builder: (context) => Material(
-          color: Colors.black54,
-          child: Center(
-            child: Container(
-              padding: EdgeInsets.all(20),
-              margin: EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  CircularProgressIndicator(),
-                  SizedBox(height: 16),
-                  Text(
-                    'Export en cours...',
-                    style: context.bodySmall,
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      );
-
-      // Ajouter l'overlay
-      Overlay.of(context).insert(overlayEntry);
-
       // Exporter la route
       await RouteExportService.exportRoute(
         coordinates: generatedRouteCoordinates!,
@@ -935,17 +909,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       // Succès
       completer.complete();
 
-    } catch (e) {
-      completer.completeError(e);
-    } finally {
-      // Supprimer l'overlay
-      overlayEntry?.remove();
-    }
-
-    // Attendre la completion et afficher le résultat
-    try {
-      await completer.future;
-      
       if (mounted) {
         showTopSnackBar(
           Overlay.of(context),
@@ -956,7 +919,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           ),
         );
       }
+
     } catch (e) {
+      completer.completeError(e);
+
       if (mounted) {
         showTopSnackBar(
           Overlay.of(context),
@@ -999,7 +965,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             IgnorePointer(
               ignoring: true,
               child: Container(
-                height: MediaQuery.of(context).size.height / 3,
+                height: MediaQuery.of(context).size.height / 3.5,
                 decoration: BoxDecoration(
                   gradient: SmoothGradient(
                     from: Colors.black.withValues(alpha: 0),

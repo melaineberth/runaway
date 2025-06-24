@@ -38,10 +38,6 @@ class ScreenshotService {
       // 3. Récupérer l'état actuel de la caméra
       final cameraState = await liveMap.getCameraState();
       print('📍 Position caméra: ${cameraState.center.coordinates.lat}, ${cameraState.center.coordinates.lng}');
-
-      // 4. Créer le snapshotter avec des dimensions optimisées
-      final pixelRatio = ui.window.devicePixelRatio;
-      final screenSize = ui.window.physicalSize / pixelRatio;
       
       // Dimensions optimisées pour les cartes (ratio 16:9)
       const double targetWidth = 800;

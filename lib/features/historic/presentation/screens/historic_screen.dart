@@ -163,30 +163,39 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
 
   /// Charge les parcours sauvegardés
   Future<void> _loadSavedRoutes() async {
+    print('📂 Rechargement des parcours sauvegardés...');
     context.read<RouteGenerationBloc>().add(SavedRoutesRequested());
   }
 
   /// 🧭 Navigation vers le parcours sélectionné - Chargement dans HomeScreen
   void _navigateToRoute(SavedRoute route) {
-    // Charger le parcours dans le bloc pour l'afficher sur la carte
+    print('🧭 === DÉBUT NAVIGATION VERS PARCOURS ===');
+    print('📊 Route ID: ${route.id}');
+    print('📊 Route Name: ${route.name}');
+    print('📊 Route Distance: ${route.formattedDistance}');
+    print('📊 Route Points: ${route.coordinates.length}');
+    print('📊 Created: ${route.createdAt}');
+    print('📊 Times Used: ${route.timesUsed}');
+    
+    // 🔑 ÉTAPE 1: Charger le parcours dans le bloc pour l'afficher sur la carte
+    // Note: Ceci va déclencher SavedRouteLoaded dans RouteGenerationBloc
+    // qui va mettre isLoadedFromHistory = true pour éviter la double sauvegarde
     context.read<RouteGenerationBloc>().add(SavedRouteLoaded(route.id));
+    print('✅ Événement SavedRouteLoaded envoyé au bloc');
     
-    // Naviguer vers HomeScreen où le parcours sera affiché
+    // 🔑 ÉTAPE 2: Naviguer vers HomeScreen où le parcours sera affiché
+    // HomeScreen va détecter que isLoadedFromHistory = true et ne pas sauvegarder automatiquement
     context.go('/home');
+    print('✅ Navigation vers /home lancée');
     
-    // Feedback optionnel pour l'utilisateur
-    showTopSnackBar(
-      Overlay.of(context),
-      TopSnackBar(
-        title: 'Parcours "${route.name}" chargé sur la carte',
-        icon: HugeIcons.solidRoundedTick04,
-        color: Colors.lightGreen,
-      ),
-    );
+    print('✅ Notification utilisateur affichée');
+    print('🧭 === FIN NAVIGATION VERS PARCOURS ===');
   }
 
   /// Suppression d'un parcours avec confirmation
   void _deleteRoute(SavedRoute route) {
+    print('🗑️ Demande de suppression: ${route.name} (${route.id})');
+    
     showDialog(
       context: context,
       builder: (dialogContext) => AlertDialog(
@@ -196,12 +205,15 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
           style: context.titleMedium?.copyWith(color: Colors.white),
         ),
         content: Text(
-          'Êtes-vous sûr de vouloir supprimer "${route.name}" ?',
+          'Êtes-vous sûr de vouloir supprimer "${route.name}" ?\n\nCette action est irréversible.',
           style: context.bodyMedium?.copyWith(color: Colors.white70),
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(),
+            onPressed: () {
+              Navigator.of(dialogContext).pop();
+              print('❌ Suppression annulée par l\'utilisateur');
+            },
             child: Text(
               'Annuler', 
               style: TextStyle(color: Colors.white70),
@@ -210,16 +222,20 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
           ElevatedButton(
             onPressed: () {
               Navigator.of(dialogContext).pop();
+              
+              print('🗑️ Suppression confirmée - envoi de SavedRouteDeleted');
               context.read<RouteGenerationBloc>().add(SavedRouteDeleted(route.id));
               
               // Afficher un feedback
               showTopSnackBar(
                 Overlay.of(context),
                 TopSnackBar(
-                  title: 'Parcours "${route.name}" supprimé',
+                  title: 'Parcours supprimé',
                   icon: HugeIcons.solidRoundedDelete02,
+                  color: Colors.red,
                 ),
               );
+              print('✅ Notification suppression affichée');
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.red,
@@ -358,7 +374,7 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
                     scale: scaleValue,
                     child: Padding(
                       padding: EdgeInsets.only(
-                        bottom: index >= sortedRoutes.length - 1 ? 90.0 : 15.0,
+                        bottom: index >= sortedRoutes.length - 1 ? 90.0 : 20.0,
                       ),
                       child: HistoricCard(
                         route: route,

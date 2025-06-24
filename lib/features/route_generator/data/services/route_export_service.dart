@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:path/path.dart' as p;   // pour basename
 import 'package:intl/intl.dart';
 
 class RouteExportService {
@@ -230,24 +231,36 @@ class RouteExportService {
     String fileName,
     RouteExportFormat format,
   ) async {
-    try {
-      // Obtenir le répertoire temporaire
-      final Directory tempDir = await getTemporaryDirectory();
-      final String filePath = '${tempDir.path}/$fileName';
-      
-      // Écrire le fichier
-      final File file = File(filePath);
-      await file.writeAsString(content, encoding: utf8);
-      
-      // Partager le fichier
-      await Share.shareXFiles(
-        [XFile(filePath)],
-        text: 'Parcours exporté depuis Runaway',
-        subject: fileName,
-      );
-      
-    } catch (e) {
-      throw RouteExportException('Erreur lors de la sauvegarde: $e');
+    // 1. Dossier temporaire
+    final dir = await getTemporaryDirectory();
+    final filePath = p.join(dir.path, fileName);
+
+    // 2. Écriture du fichier
+    final file = File(filePath);
+    await file.writeAsString(content, encoding: utf8);
+
+    // 3. Partage
+    final params = ShareParams(
+      text: 'Parcours exporté depuis Runaway',
+      files: [XFile(filePath, mimeType: _mimeFromFormat(format))], 
+    );
+    
+    final result = await SharePlus.instance.share(params);
+
+    if (result.status == ShareResultStatus.success) {
+        print('Thank you for sharing the picture!');
+    }
+  }
+
+  /// Petit helper pour donner un MIME type cohérent
+  static String _mimeFromFormat(RouteExportFormat format) {
+    switch (format) {
+      case RouteExportFormat.gpx:
+        return 'application/gpx+xml';
+      case RouteExportFormat.kml:
+        return 'application/vnd.google-earth.kml+xml';
+      case RouteExportFormat.json:
+        return 'application/json';
     }
   }
 }

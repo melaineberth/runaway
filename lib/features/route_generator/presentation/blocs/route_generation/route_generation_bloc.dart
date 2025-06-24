@@ -69,9 +69,19 @@ class RouteGenerationBloc extends HydratedBloc<RouteGenerationEvent, RouteGenera
     RouteGenerationRequested event,
     Emitter<RouteGenerationState> emit,
   ) async {
+    final generationId = DateTime.now().millisecondsSinceEpoch.toString();
+    print('🚀 === DÉBUT GÉNÉRATION PARCOURS (ID: $generationId) ===');
+    
     emit(state.copyWith(
       isGeneratingRoute: true,
       errorMessage: null,
+      isLoadedFromHistory: false, // 🔧 Reset flag pour nouvelle génération
+      stateId: generationId, // 🆕 Nouvel ID unique
+      // 🔧 IMPORTANT : Reset des données précédentes
+      generatedRoute: null,
+      usedParameters: null,
+      routeMetadata: null,
+      routeInstructions: null,
     ));
 
     try {
@@ -85,6 +95,8 @@ class RouteGenerationBloc extends HydratedBloc<RouteGenerationEvent, RouteGenera
         emit(state.copyWith(
           isGeneratingRoute: false,
           errorMessage: 'Impossible de générer un parcours avec ces paramètres',
+          isLoadedFromHistory: false,
+          stateId: '$generationId-error', // 🆕 ID d'erreur
         ));
         return;
       }
@@ -108,6 +120,8 @@ class RouteGenerationBloc extends HydratedBloc<RouteGenerationEvent, RouteGenera
         routeMetadata: completeMetadata,
         routeInstructions: result.instructions,
         errorMessage: null,
+        isLoadedFromHistory: false,
+        stateId: '$generationId-success', // 🆕 ID de succès
       ));
 
       print('✅ Route générée via API GraphHopper: ${routeCoordinates.length} points, ${result.distanceKm.toStringAsFixed(1)}km');
@@ -116,6 +130,8 @@ class RouteGenerationBloc extends HydratedBloc<RouteGenerationEvent, RouteGenera
       emit(state.copyWith(
         isGeneratingRoute: false,
         errorMessage: 'Erreur lors de la génération du parcours: $e',
+        isLoadedFromHistory: false,
+        stateId: '$generationId-exception', // 🆕 ID d'exception
       ));
     }
   }
@@ -253,11 +269,17 @@ class RouteGenerationBloc extends HydratedBloc<RouteGenerationEvent, RouteGenera
     SavedRouteLoaded event,
     Emitter<RouteGenerationState> emit,
   ) {
+    final loadId = DateTime.now().millisecondsSinceEpoch.toString();
+    print('📂 === DÉBUT CHARGEMENT HISTORIQUE (ID: $loadId) ===');
+    print('📂 Route ID demandé: ${event.routeId}');
+
     try {
       final route = state.savedRoutes.firstWhere(
         (r) => r.id == event.routeId,
         orElse: () => throw Exception('Parcours non trouvé'),
       );
+
+      print('📂 Parcours trouvé: ${route.name} (${route.coordinates.length} points)');
 
       emit(state.copyWith(
         generatedRoute: route.coordinates,
@@ -269,14 +291,22 @@ class RouteGenerationBloc extends HydratedBloc<RouteGenerationEvent, RouteGenera
           'points_count': route.coordinates.length,
           'is_loop': route.parameters.isLoop,
         },
+        isLoadedFromHistory: true, // 🔧 CRUCIAL : Marquer comme chargé depuis l'historique
+        errorMessage: null, // Reset les erreurs
+        stateId: '$loadId-loaded', // 🆕 ID unique pour le chargement
       ));
 
       // Mettre à jour les statistiques d'utilisation
       add(RouteUsageUpdated(event.routeId));
 
+      print('✅ === FIN CHARGEMENT HISTORIQUE (SUCCESS: $loadId-loaded) ===');
+
     } catch (e) {
+      print('❌ Erreur chargement: $e');
       emit(state.copyWith(
         errorMessage: 'Parcours non trouvé',
+        isLoadedFromHistory: false,
+        stateId: '$loadId-error', // 🆕 ID d'erreur
       ));
     }
   }
@@ -340,6 +370,10 @@ class RouteGenerationBloc extends HydratedBloc<RouteGenerationEvent, RouteGenera
     ZoneAnalysisCleared event,
     Emitter<RouteGenerationState> emit,
   ) {
+    final clearId = DateTime.now().millisecondsSinceEpoch.toString();
+    print('🧹 === DÉBUT NETTOYAGE COMPLET (ID: $clearId) ===');
+    
+    // 🔧 RESET COMPLET de tous les champs liés aux parcours
     emit(state.copyWith(
       pois: [],
       zoneStats: null,
@@ -347,7 +381,12 @@ class RouteGenerationBloc extends HydratedBloc<RouteGenerationEvent, RouteGenera
       usedParameters: null,
       routeMetadata: null,
       routeInstructions: null,
+      isLoadedFromHistory: false, // 🔧 IMPORTANT : Reset du flag
+      errorMessage: null, // 🔧 Reset des erreurs
+      stateId: '$clearId-cleared', // 🆕 Nouvel ID pour l'état vide
     ));
+
+    print('✅ === FIN NETTOYAGE COMPLET (CLEARED: $clearId-cleared) ===');
   }
 
   // === MÉTHODES UTILITAIRES ===
