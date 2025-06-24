@@ -24,6 +24,34 @@ class RouteGenerationBloc extends HydratedBloc<RouteGenerationEvent, RouteGenera
     on<SavedRoutesRequested>(_onSavedRoutesRequested);
     on<RouteUsageUpdated>(_onRouteUsageUpdated);
     on<SyncPendingRoutesRequested>(_onSyncPendingRoutesRequested);
+    on<RouteStateReset>(_onRouteStateReset);
+  }
+
+  /// 🆕 Reset complet de l'état pour une nouvelle génération propre
+  Future<void> _onRouteStateReset(
+    RouteStateReset event,
+    Emitter<RouteGenerationState> emit,
+  ) async {
+    final resetId = DateTime.now().millisecondsSinceEpoch.toString();
+    print('🔄 === DÉBUT RESET COMPLET ÉTAT (ID: $resetId) ===');
+    
+    // Reset complet vers l'état initial
+    emit(RouteGenerationState(
+      pois: const [],
+      isAnalyzingZone: false,
+      isGeneratingRoute: false,
+      generatedRoute: null,
+      usedParameters: null,
+      errorMessage: null,
+      zoneStats: null,
+      savedRoutes: state.savedRoutes, // Garder les parcours sauvegardés
+      routeMetadata: null,
+      routeInstructions: null,
+      isLoadedFromHistory: false,
+      stateId: '$resetId-reset',
+    ));
+    
+    print('✅ === FIN RESET COMPLET ÉTAT (RESET: $resetId-reset) ===');
   }
 
   /// Analyse de zone simplifiée

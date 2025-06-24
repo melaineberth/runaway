@@ -10,6 +10,8 @@ import 'package:runaway/features/auth/presentation/screens/login_screen.dart';
 import 'package:runaway/features/auth/presentation/screens/onboarding_screen.dart';
 import 'package:runaway/features/auth/presentation/screens/signup_screen.dart';
 import 'package:runaway/features/historic/presentation/screens/historic_screen.dart';
+import 'package:runaway/features/navigation/blocs/navigation_bloc.dart';
+import 'package:runaway/features/navigation/presentation/screens/live_navigation_screen.dart';
 import 'package:runaway/features/navigation/presentation/screens/navigation_screen.dart';
 import '../features/home/presentation/screens/home_screen.dart';
 
@@ -83,6 +85,31 @@ final GoRouter router = GoRouter(
         child: const OnboardingScreen(),
       ),
     ),
+    GoRoute(
+      path: '/live-navigation',
+      name: 'live-navigation',
+      pageBuilder: (context, state) {
+        final args = state.extra as LiveNavigationArgs?;
+        
+        if (args == null) {
+          return NoTransitionPage(
+            key: state.pageKey,
+            child: const HomeScreen(),
+          );
+        }
+        
+        // 🔧 SOLUTION : AuthWrapper + BlocProvider
+        return NoTransitionPage(
+          key: state.pageKey,
+          child: AuthWrapper(  // ← Garde l'accès aux BLoCs d'auth
+            child: BlocProvider(
+              create: (context) => NavigationBloc(),
+              child: LiveNavigationScreen(args: args),
+            ),
+          ),
+        );
+      },
+    ),
     
     // Routes principales avec shell (navigation bottom)
     ShellRoute(
@@ -121,17 +148,6 @@ final GoRouter router = GoRouter(
             child: AccountScreen(),
           ),
         ),
-        GoRoute(
-          path: '/navigation',
-          pageBuilder: (context, state) {
-            final args = state.extra as NavigationArgs;
-            return NoTransitionPage(
-              key: state.pageKey,
-              child: NavigationScreen(args: args),
-            );
-          },
-        ),
-
       ],
     ),
   ],

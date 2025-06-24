@@ -10,6 +10,7 @@ class SquircleContainer extends StatelessWidget {
   final double? width;
   final double? height;
   final Function()? onTap;
+  final bool isBorder;
 
   const SquircleContainer({
     super.key,
@@ -22,6 +23,7 @@ class SquircleContainer extends StatelessWidget {
     this.width, 
     this.height,
     this.onTap,
+    this.isBorder = false,
   });
 
   @override
@@ -29,7 +31,8 @@ class SquircleContainer extends StatelessWidget {
     return ClipPath(
       clipper: ShapeBorderClipper(
         shape: ContinuousRectangleBorder(
-          borderRadius: BorderRadius.all(Radius.circular(radius ?? 60)),
+          borderRadius: BorderRadius.all(
+            Radius.circular(radius ?? 60)),
         ),
       ),
       child: GestureDetector(

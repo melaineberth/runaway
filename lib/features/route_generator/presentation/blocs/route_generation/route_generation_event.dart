@@ -9,6 +9,14 @@ abstract class RouteGenerationEvent extends Equatable {
   List<Object?> get props => [];
 }
 
+/// 🆕 Événement pour nettoyer complètement l'état et préparer une nouvelle génération
+class RouteStateReset extends RouteGenerationEvent {
+  const RouteStateReset();
+
+  @override
+  List<Object?> get props => [];
+}
+
 /// Événement pour analyser la zone et récupérer les POIs
 class ZoneAnalysisRequested extends RouteGenerationEvent {
   final double latitude;

@@ -15,6 +15,8 @@ import 'package:runaway/core/widgets/top_snackbar.dart';
 import 'package:runaway/features/home/domain/enums/tracking_mode.dart';
 import 'package:runaway/features/home/presentation/widgets/export_format_dialog.dart';
 import 'package:runaway/features/home/presentation/widgets/route_info_card.dart';
+import 'package:runaway/features/navigation/blocs/navigation_bloc.dart';
+import 'package:runaway/features/navigation/presentation/screens/live_navigation_screen.dart';
 import 'package:runaway/features/navigation/presentation/screens/navigation_screen.dart';
 import 'package:runaway/features/route_generator/data/services/route_export_service.dart';
 import 'package:runaway/features/route_generator/domain/models/route_parameters.dart';
@@ -71,6 +73,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   // === NAVIGATION ===
   bool isNavigationMode = false;
   bool isNavigationCameraActive = false;
+  bool _isInNavigationMode = false;
 
   bool _hasAutoSaved = false;
 
@@ -91,6 +94,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         break;
       case AppLifecycleState.resumed:
         print('📱 App au premier plan');
+
+        // Réinitialiser le mode navigation si on revient
+        if (_isInNavigationMode) {
+          setState(() {
+            _isInNavigationMode = false;
+          });
+        }
         break;
       default:
         break;
@@ -270,60 +280,54 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   // Fonction onClear pour supprimer le parcours et revenir à l'état précédent
   Future<void> _clearGeneratedRoute() async {
-    // Supprimer la route de la carte
+    print('🧹 === DÉBUT NETTOYAGE COMPLET DU PARCOURS ===');
+    
+    // 1. Supprimer la route de la carte
     if (routeLineManager != null && mapboxMap != null) {
       try {
         await routeLineManager!.deleteAll();
         await mapboxMap!.annotations.removeAnnotationManager(routeLineManager!);
         routeLineManager = null;
+        print('✅ Route supprimée de la carte');
       } catch (e) {
         print('❌ Erreur lors de la suppression de la route: $e');
       }
     }
 
-    // Réinitialiser les données de route
+    // 2. 🔧 CRUCIAL : Utiliser le nouvel événement de reset pour nettoyer l'état du bloc
+    if (mounted) {
+      context.read<RouteGenerationBloc>().add(const RouteStateReset());
+      print('✅ État du bloc RouteGeneration reseté complètement');
+    }
+
+    // 3. Réinitialiser toutes les variables locales liées au parcours
     setState(() {
       generatedRouteCoordinates = null;
       routeMetadata = null;
-      _hasAutoSaved = false; // 🔧 FIX : Reset du flag de sauvegarde
+      _hasAutoSaved = false;
+      
+      // 🔧 CRUCIAL : Réinitialiser les positions sélectionnées
+      _selectedLatitude = null;
+      _selectedLongitude = null;
+      
+      print('✅ Variables locales réinitialisées');
     });
 
-    // Revenir au mode de tracking précédent
-    if (_trackingModeBeforeGeneration != null) {
-      switch (_trackingModeBeforeGeneration!) {
-        case TrackingMode.userTracking:
-          _activateUserTracking();
-          break;
-        case TrackingMode.manual:
-        case TrackingMode.searchSelected:
-          // Pour manual et searchSelected, on remet en mode manuel avec le marqueur
-          setState(() {
-            _trackingMode = _trackingModeBeforeGeneration!;
-          });
-          
-          // Replacer le marqueur si on a une position sélectionnée
-          if (_selectedLatitude != null && _selectedLongitude != null) {
-            await _addLocationMarker(_selectedLongitude!, _selectedLatitude!);
-            
-            // Recentrer la caméra sur la position
-            if (mapboxMap != null) {
-              await mapboxMap!.flyTo(
-                mp.CameraOptions(
-                  center: mp.Point(
-                    coordinates: mp.Position(_selectedLongitude!, _selectedLatitude!),
-                  ),
-                  zoom: 15,
-                ),
-                mp.MapAnimationOptions(duration: 1000),
-              );
-            }
-          }
-          break;
-      }
-      
-      // Réinitialiser le tracking mode sauvegardé
-      _trackingModeBeforeGeneration = null;
-    } else {
+    // 4. Supprimer tous les marqueurs de position manuelle
+    await _clearLocationMarkers();
+
+    // 5. 🔧 IMPORTANT : Revenir systématiquement au tracking utilisateur
+    print('🔄 Retour au tracking utilisateur');
+    
+    setState(() {
+      _trackingMode = TrackingMode.userTracking;
+      // Synchroniser avec la position utilisateur actuelle
+      _selectedLatitude = _userLatitude;
+      _selectedLongitude = _userLongitude;
+    });
+
+    // 6. Recentrer sur la position utilisateur si disponible
+    if (_userLatitude != null && _userLongitude != null && mapboxMap != null) {
       await mapboxMap!.flyTo(
         mp.CameraOptions(
           center: mp.Point(
@@ -331,9 +335,15 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           ),
           zoom: 15,
         ),
-        mp.MapAnimationOptions(duration: 1200),
+        mp.MapAnimationOptions(duration: 1000),
       );
+      print('📍 Caméra recentrée sur la position utilisateur');
     }
+
+    // 7. Réinitialiser le mode de tracking sauvegardé
+    _trackingModeBeforeGeneration = null;
+
+    print('✅ === FIN NETTOYAGE COMPLET DU PARCOURS ===');
   }
 
   // Affichage de la route sur la carte
@@ -626,7 +636,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     // Mise à jour de la caméra uniquement en mode suivi et si pas en navigation
     if (_trackingMode == TrackingMode.userTracking && 
         mapboxMap != null && 
-        !isNavigationCameraActive) {
+        !isNavigationCameraActive && !_isInNavigationMode) {
       mapboxMap?.setCamera(
         mp.CameraOptions(
           zoom: 13,
@@ -727,55 +737,156 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }
 
   /// Active le mode sélection manuelle
-  void _activateManualSelection() async {
-    // Ne rien faire si on est déjà en mode suivi utilisateur
-    if (_trackingMode == TrackingMode.userTracking) return;
-    
-    setState(() {
-      _trackingMode = TrackingMode.manual;
-    });
+  Future<void> _activateManualSelection() async {
+    if (mapboxMap == null) {
+      print('❌ Carte non initialisée pour sélection manuelle');
+      return;
+    }
 
-    // Placer un marqueur au centre de l'écran (caméra actuelle)
-    if (mapboxMap != null) {
-      try {
-        final cameraState = await mapboxMap!.getCameraState();
-        final centerCoordinate = cameraState.center;
+    try {
+      // 🔧 CRUCIAL : Récupérer le centre actuel de la carte
+      final cameraState = await mapboxMap!.getCameraState();
+      final center = cameraState.center;
+      final longitude = center.coordinates.lng.toDouble();
+      final latitude = center.coordinates.lat.toDouble();
+      
+      print('📍 === POSITIONNEMENT MANUEL AU CENTRE CARTE ===');
+      print('📍 Centre carte: ($latitude, $longitude)');
+      
+      // 🔧 CRUCIAL : Si un parcours existe, le nettoyer d'abord
+      if (generatedRouteCoordinates != null) {
+        print('🧹 Nettoyage du parcours existant avant nouveau positionnement');
         
-        _updateSelectedPosition(
-          latitude: centerCoordinate.coordinates.lat.toDouble(),
-          longitude: centerCoordinate.coordinates.lng.toDouble(),
-          updateCamera: false,
-          addMarker: true,
-        );
-      } catch (e) {
-        print('❌ Erreur récupération centre caméra: $e');
-        // Fallback : utiliser la position actuelle si erreur
-        if (_selectedLatitude != null && _selectedLongitude != null) {
-          _addLocationMarker(_selectedLongitude!, _selectedLatitude!);
-        } else if (_userLatitude != null && _userLongitude != null) {
-          _updateSelectedPosition(
-            latitude: _userLatitude!,
-            longitude: _userLongitude!,
-            updateCamera: false,
-            addMarker: true,
-          );
+        // Nettoyer seulement la route, pas la position
+        if (routeLineManager != null && mapboxMap != null) {
+          try {
+            await routeLineManager!.deleteAll();
+            await mapboxMap!.annotations.removeAnnotationManager(routeLineManager!);
+            routeLineManager = null;
+          } catch (e) {
+            print('❌ Erreur suppression route: $e');
+          }
         }
+        
+        // Nettoyer l'état du bloc mais garder la nouvelle position
+        if (mounted) {
+          context.read<RouteGenerationBloc>().add(const RouteStateReset());
+        }
+        
+        setState(() {
+          generatedRouteCoordinates = null;
+          routeMetadata = null;
+          _hasAutoSaved = false;
+        });
+      }
+      
+      // Mettre à jour le mode et les positions avec le centre de la carte
+      setState(() {
+        _trackingMode = TrackingMode.manual;
+        _selectedLatitude = latitude;
+        _selectedLongitude = longitude;
+      });
+
+      // Supprimer les anciens marqueurs et ajouter le nouveau au centre
+      await _clearLocationMarkers();
+      await _addLocationMarker(longitude, latitude);
+
+      // Mettre à jour le BLoC avec la nouvelle position
+      if (mounted) {
+        context.read<RouteParametersBloc>().add(
+          StartLocationUpdated(longitude: longitude, latitude: latitude),
+        );
+      }
+
+      print('✅ Position manuelle définie au centre de la carte: ($latitude, $longitude)');
+      
+    } catch (e) {
+      print('❌ Erreur lors de l\'activation manuelle: $e');
+      
+      // Fallback : utiliser la position utilisateur si erreur
+      if (_userLatitude != null && _userLongitude != null) {
+        await _setManualPositionFallback(_userLongitude!, _userLatitude!);
       }
     }
   }
 
-  /// Sélection via recherche d'adresse
-  void _onLocationSelected(double longitude, double latitude, String placeName) {
+  // 🔧 MÉTHODE FALLBACK : En cas d'erreur, utiliser la position utilisateur
+  Future<void> _setManualPositionFallback(double longitude, double latitude) async {
+    print('⚠️ Fallback: Position manuelle à la position utilisateur');
+    
     setState(() {
-      _trackingMode = TrackingMode.searchSelected;
+      _trackingMode = TrackingMode.manual;
+      _selectedLatitude = latitude;
+      _selectedLongitude = longitude;
     });
 
-    _updateSelectedPosition(
-      latitude: latitude,
-      longitude: longitude,
-      updateCamera: true,
-      addMarker: true,
-    );
+    await _clearLocationMarkers();
+    await _addLocationMarker(longitude, latitude);
+
+    if (mounted) {
+      context.read<RouteParametersBloc>().add(
+        StartLocationUpdated(longitude: longitude, latitude: latitude),
+      );
+    }
+  }
+
+  /// Sélection via recherche d'adresse
+  Future<void> _onLocationSelected(double longitude, double latitude, String placeName) async {
+    print('🔍 === POSITION SÉLECTIONNÉE VIA RECHERCHE ===');
+    print('🔍 Lieu: $placeName ($latitude, $longitude)');
+    
+    // 🔧 CRUCIAL : Nettoyer l'ancien parcours si il existe
+    if (generatedRouteCoordinates != null) {
+      print('🧹 Nettoyage du parcours existant avant nouvelle recherche');
+      
+      // Nettoyer seulement la route, pas la position
+      if (routeLineManager != null && mapboxMap != null) {
+        try {
+          await routeLineManager!.deleteAll();
+          await mapboxMap!.annotations.removeAnnotationManager(routeLineManager!);
+          routeLineManager = null;
+        } catch (e) {
+          print('❌ Erreur suppression route: $e');
+        }
+      }
+      
+      // Nettoyer l'état du bloc
+      if (mounted) {
+        context.read<RouteGenerationBloc>().add(const RouteStateReset());
+      }
+      
+      setState(() {
+        generatedRouteCoordinates = null;
+        routeMetadata = null;
+        _hasAutoSaved = false;
+      });
+    }
+    
+    // Mettre à jour le mode et les positions
+    setState(() {
+      _trackingMode = TrackingMode.searchSelected;
+      _selectedLatitude = latitude;
+      _selectedLongitude = longitude;
+    });
+
+    // Supprimer les anciens marqueurs et ajouter le nouveau
+    await _clearLocationMarkers();
+    await _addLocationMarker(longitude, latitude);
+
+    // Centrer la caméra sur la nouvelle position
+    if (mapboxMap != null) {
+      await mapboxMap!.flyTo(
+        mp.CameraOptions(
+          center: mp.Point(
+            coordinates: mp.Position(longitude, latitude),
+          ),
+          zoom: 15,
+        ),
+        mp.MapAnimationOptions(duration: 1000),
+      );
+    }
+
+    print('✅ Position de recherche définie: $placeName');
   }
 
   // === GESTION DE LA CARTE ===
@@ -979,8 +1090,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               ),
             ),
 
-          // Interface normale (masquée en mode navigation)
-          if (!isNavigationMode)
+            // Interface normale (masquée en mode navigation OU navigation live)
+            if (!isNavigationMode && !_isInNavigationMode)
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 30.0),
               child: SizedBox(
@@ -1054,7 +1165,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           if (isGenerateEnabled) LoadingOverlay(),
 
           // RouteInfoCard (masqué en mode navigation)
-          if (generatedRouteCoordinates != null && routeMetadata != null && !isNavigationMode)
+          if (generatedRouteCoordinates != null && routeMetadata != null && !isNavigationMode & !_isInNavigationMode)
             Positioned(
               bottom: MediaQuery.of(context).padding.bottom + 20,
               left: 15,
@@ -1078,12 +1189,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   onClear: _clearGeneratedRoute, // MODIFICATION : Vraie fonction onClear
                   onNavigate: () {
                     if (generatedRouteCoordinates != null && routeMetadata != null) {
-                      final args = NavigationArgs(
+                      final args = LiveNavigationArgs(
                         route: generatedRouteCoordinates!,
-                        routeDistanceKm: (routeMetadata!['distance_km'] as num?)?.toDouble() ?? 0.0,
-                        estimatedDurationMinutes: (routeMetadata!['duration_minutes'] as num?)?.toInt() ?? 0,
+                        targetDistanceKm: _getGeneratedRouteDistance(),
+                        routeName: 'Parcours ${DateTime.now().day}/${DateTime.now().month}',
                       );
-                      context.push('/navigation', extra: args);
+                      
+                      context.push('/live-navigation', extra: args);
                     }
                   },
                   onShare: _showExportDialog,

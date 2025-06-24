@@ -20,24 +20,22 @@ class TopSnackBar extends StatelessWidget {
       radius: 40,
       padding: EdgeInsets.all(20.0),
       color: color ?? Colors.red,
-      child: Flexible(
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.end,
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              title,
-              style: context.bodySmall?.copyWith(
-                color: Colors.white,
-              ),
-              overflow: TextOverflow.ellipsis,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            title,
+            style: context.bodySmall?.copyWith(
+              color: Colors.white,
             ),
-            Icon(
-              icon,
-              size: 25,
-            ),
-          ],
-        ),
+            overflow: TextOverflow.ellipsis,
+          ),
+          Icon(
+            icon,
+            size: 25,
+          ),
+        ],
       ),
     );
   }
