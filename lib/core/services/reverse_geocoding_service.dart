@@ -237,7 +237,6 @@ class LocationInfo {
     double lat,
     double lon,
   ) {
-    final properties = feature['properties'] as Map<String, dynamic>? ?? {};
     final context = feature['context'] as List<dynamic>? ?? [];
     final placeName = feature['place_name'] as String? ?? '';
 
