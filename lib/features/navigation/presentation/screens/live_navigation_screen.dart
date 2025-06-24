@@ -2,7 +2,9 @@ import 'dart:async';
 import 'dart:math' as math;
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_compass/flutter_compass.dart';
 import 'package:go_router/go_router.dart';
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart' as mp;
 import 'package:hugeicons/hugeicons.dart';
@@ -40,12 +42,6 @@ class LiveNavigationScreen extends StatefulWidget {
 }
 
 class _LiveNavigationScreenState extends State<LiveNavigationScreen> with TickerProviderStateMixin {
-  Color _arrowBlue      = Color(0xFF1E88E5);          // material blue-600
-  Color _haloBlue       = Color(0xFF1E88E5);          // même teinte
-  double _strokeWidthPx  = 4.0;                        // contour blanc
-  double _bodyRatio      = 0.54;                       // largeur/base ↔️ hauteur
-  double _haloRadiusPct  = 0.60;                       // halo = 60 % du canvas
-
   // === MAPBOX ===
   mp.MapboxMap? mapboxMap;
   mp.PolylineAnnotationManager? routeLineManager;
@@ -58,9 +54,16 @@ class _LiveNavigationScreenState extends State<LiveNavigationScreen> with Ticker
   late AnimationController _pulseAnimationController;
 
   // === ORIENTATION ===
-  StreamSubscription<MagnetometerEvent>? _magnetometerSubscription;
+  StreamSubscription<CompassEvent>? _compassSubscription;
   double _currentHeading = 0.0;
-  bool _cameraFollowsOrientation = true; // 🆕 Mode caméra orientée
+  bool _cameraFollowsOrientation = true;
+  bool _isCompassAvailable = false;
+  
+  // Gestion des mises à jour
+  Timer? _orientationUpdateTimer;
+  DateTime _lastOrientationUpdate = DateTime.now();
+  static const Duration _updateInterval = Duration(milliseconds: 200);
+  static const double _headingThreshold = 2.0;
 
   // === GESTION CAMÉRA ===
   bool _isFirstPositionReceived = false;
@@ -83,7 +86,7 @@ class _LiveNavigationScreenState extends State<LiveNavigationScreen> with Ticker
       vsync: this,
     )..repeat();
 
-    _startOrientationTracking();
+    _startCompassTracking();
 
     // 🔧 ATTENDRE que la carte soit prête avant de démarrer
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -100,7 +103,8 @@ class _LiveNavigationScreenState extends State<LiveNavigationScreen> with Ticker
   void dispose() {
     _metricsAnimationController.dispose();
     _pulseAnimationController.dispose();
-    _magnetometerSubscription?.cancel();
+    _compassSubscription?.cancel();
+    _orientationUpdateTimer?.cancel();
     super.dispose();
   }
 
@@ -114,70 +118,118 @@ class _LiveNavigationScreenState extends State<LiveNavigationScreen> with Ticker
     );
   }
 
-  /// 🎨 CRÉER L'IMAGE DE LA FLÈCHE PROFESSIONNELLE
-  void _drawExactPhotoArrow(Canvas canvas, Size size) {
-  final c   = Offset(size.width / 2, size.height / 2);
-  final R   = size.width * _haloRadiusPct;          // rayon du halo
-  final h   = size.height * 0.50;                   // demi-hauteur de la flèche
-  final bW  = h * _bodyRatio;                       // demi-largeur (base)
-
-  // --- HALO ---
-  final haloPaint = Paint()
-    ..color = _haloBlue.withOpacity(0.16)           // même opacité que Google Maps (~16 %)
-    ..style = PaintingStyle.fill;
-  canvas.drawCircle(c, R, haloPaint);
-
-  // --- CONTOUR BLANC ---
-  final stroke = Paint()
-    ..color       = Colors.white
-    ..style       = PaintingStyle.stroke
-    ..strokeWidth = _strokeWidthPx
-    ..strokeJoin  = StrokeJoin.round
-    ..strokeCap   = StrokeCap.round;
-
-  // --- REMPLISSAGE ---
-  final fill = Paint()
-    ..color = _arrowBlue
-    ..style = PaintingStyle.fill;
-
-  // --- PATH ---
-  final p = Path()
-    ..moveTo(c.dx,           c.dy - h)              // pointe
-    ..lineTo(c.dx - bW,      c.dy + h * 0.10)       // flanc G
-    ..lineTo(c.dx - bW * .55,c.dy + h)              // bas G avant arrondi
-
-    ..arcToPoint(
-      Offset(c.dx + bW * .55, c.dy + h),             // bas D après arrondi
-      radius: Radius.circular(bW * .55),
-      clockwise: false,
-    )
-
-    ..lineTo(c.dx + bW,      c.dy + h * 0.10)       // flanc D
-    ..close();
-
-  canvas.drawPath(p, stroke);
-  canvas.drawPath(p, fill);
-}
-
   /// 🆕 DÉMARRER LE TRACKING D'ORIENTATION
-  void _startOrientationTracking() {
+  void _startCompassTracking() {
     try {
-      _magnetometerSubscription = magnetometerEvents.listen((MagnetometerEvent event) {
-        // Calculer l'angle en degrés (0° = Nord)
-        final heading = (math.atan2(event.y, event.x) * 180 / math.pi + 360) % 360;
-        
-        // Filtrer les petits changements pour éviter les tremblements
-        if ((heading - _currentHeading).abs() > 5 || (heading - _currentHeading).abs() > 355) {
-          setState(() {
-            _currentHeading = heading;
-          });
-        }
-      });
+      // 🔧 PAS DE VÉRIFICATION PRÉALABLE - Essayer directement d'écouter
+      final compassStream = FlutterCompass.events;
       
-      print('🧭 Tracking d\'orientation démarré');
+      if (compassStream != null) {
+        _compassSubscription = compassStream.listen(
+          (CompassEvent event) {
+            // Premier événement reçu = compass disponible
+            if (!_isCompassAvailable) {
+              _isCompassAvailable = true;
+              print('✅ Compass disponible et actif');
+            }
+            
+            if (event.heading != null && !event.heading!.isNaN) {
+              _onCompassEvent(event.heading!);
+            }
+          },
+          onError: (error) {
+            print('❌ Erreur compass: $error');
+            _isCompassAvailable = false;
+          },
+          onDone: () {
+            print('🔚 Stream compass terminé');
+            _isCompassAvailable = false;
+          },
+        );
+        
+        print('🧭 Écoute du compass démarrée...');
+        
+        // 🔧 TIMEOUT pour détecter si compass indisponible
+        Timer(const Duration(seconds: 5), () {
+          if (!_isCompassAvailable && mounted) {
+            print('⚠️ Compass probablement indisponible (timeout 5s)');
+            _compassSubscription?.cancel();
+          }
+        });
+        
+      } else {
+        print('⚠️ Stream compass null - indisponible');
+        _isCompassAvailable = false;
+      }
     } catch (e) {
-      print('⚠️ Orientation non disponible: $e');
-      // Pas grave, on continue sans orientation
+      print('❌ Erreur démarrage compass: $e');
+      _isCompassAvailable = false;
+    }
+  }
+
+  /// 📡 TRAITEMENT DES ÉVÉNEMENTS COMPASS
+  void _onCompassEvent(double heading) {
+    // Normaliser l'angle (0-360°)
+    double normalizedHeading = heading;
+    if (normalizedHeading < 0) {
+      normalizedHeading += 360;
+    }
+    
+    // Filtrer les changements minimes et throttling
+    if (_shouldUpdateHeading(normalizedHeading)) {
+      _scheduleOrientationUpdate(normalizedHeading);
+    }
+  }
+
+  /// 🔧 VÉRIFIER SI MISE À JOUR NÉCESSAIRE
+  bool _shouldUpdateHeading(double newHeading) {
+    // Calculer la différence en tenant compte du passage 359°→0°
+    double difference = (newHeading - _currentHeading).abs();
+    if (difference > 180) {
+      difference = 360 - difference;
+    }
+    
+    // Seuil + délai minimum
+    final timeSinceLastUpdate = DateTime.now().difference(_lastOrientationUpdate);
+    return difference >= _headingThreshold && 
+           timeSinceLastUpdate >= _updateInterval;
+  }
+
+  /// ⏰ PROGRAMMER LA MISE À JOUR
+  void _scheduleOrientationUpdate(double newHeading) {
+    _orientationUpdateTimer?.cancel();
+    
+    _orientationUpdateTimer = Timer(const Duration(milliseconds: 100), () {
+      if (mounted) {
+        setState(() {
+          _currentHeading = newHeading;
+        });
+        
+        _lastOrientationUpdate = DateTime.now();
+        
+        // Mettre à jour l'UI si activé
+        if (_cameraFollowsOrientation && _isCompassAvailable) {
+          _updateOrientationUI();
+        }
+      }
+    });
+  }
+
+  /// 🆕 METTRE À JOUR L'INTERFACE selon l'orientation
+  Future<void> _updateOrientationUI() async {
+    try {
+      // Mettre à jour la flèche
+      if (_currentUserArrow != null && userArrowManager != null) {
+        await _updateArrowRotation();
+      }
+      
+      // Mettre à jour la caméra
+      if (_isFirstPositionReceived && mapboxMap != null) {
+        await _updateCameraBearing();
+      }
+      
+    } catch (e) {
+      print('❌ Erreur mise à jour orientation UI: $e');
     }
   }
 
@@ -243,6 +295,9 @@ class _LiveNavigationScreenState extends State<LiveNavigationScreen> with Ticker
 
                 // 🆕 BOUTON ORIENTATION CAMÉRA
                 _buildOrientationToggle(),
+
+                // 🆕 INDICATEUR D'ORIENTATION
+                _buildOrientationIndicator(),
                                 
                 // === INDICATEUR DE STATUT ===
                 if (navigationState.isPaused)
@@ -336,26 +391,23 @@ class _LiveNavigationScreenState extends State<LiveNavigationScreen> with Ticker
 
   /// Mettre à jour la position actuelle de l'utilisateur
   Future<void> _updateUserPosition(NavigationState state) async {
-    if (userArrowManager == null || state.trackingPoints.isEmpty || mapboxMap == null) return;
+    if (userArrowManager == null || state.trackingPoints.isEmpty) return;
 
     try {
-      // Obtenir la dernière position
       final lastPoint = state.trackingPoints.last;
 
-      // Supprimer l'ancienne flèche si elle existe
       if (_currentUserArrow != null) {
         await userArrowManager!.delete(_currentUserArrow!);
         _currentUserArrow = null;
       }
 
-      // 🎯 CRÉER LA NOUVELLE FLÈCHE ORIENTÉE
       final arrowOptions = mp.PointAnnotationOptions(
         geometry: mp.Point(
           coordinates: mp.Position(lastPoint.longitude, lastPoint.latitude),
         ),
         iconImage: 'navigation_arrow',
         iconSize: 1.0,
-        iconRotate: _currentHeading, // 🔄 Rotation selon l'orientation
+        iconRotate: _currentHeading, // 🧭 Rotation selon compass
         iconAnchor: mp.IconAnchor.CENTER,
       );
 
@@ -372,15 +424,15 @@ class _LiveNavigationScreenState extends State<LiveNavigationScreen> with Ticker
             ),
             zoom: 17.0,
             pitch: 0.0,
-            bearing: _cameraFollowsOrientation ? _currentHeading : 0.0, // 🔄 Orientation initiale
+            bearing: (_cameraFollowsOrientation && _isCompassAvailable) ? _currentHeading : 0.0,
           ),
         );
         
         _isFirstPositionReceived = true;
-        print('✅ Caméra centrée avec flèche et orientation');
+        print('✅ Caméra centrée avec orientation: ${_currentHeading.toStringAsFixed(1)}°');
         
-      } else if (state.isNavigating) {
-        // Suivi fluide avec orientation
+      } else if (state.isNavigating && _cameraFollowsOrientation && _isCompassAvailable) {
+        // Suivi fluide avec orientation temps réel
         await mapboxMap!.flyTo(
           mp.CameraOptions(
             center: mp.Point(
@@ -388,26 +440,80 @@ class _LiveNavigationScreenState extends State<LiveNavigationScreen> with Ticker
             ),
             zoom: 17.0,
             pitch: 0.0,
-            bearing: _cameraFollowsOrientation ? _currentHeading : 0.0, // 🔄 Maintenir orientation
+            bearing: _currentHeading,
           ),
-          mp.MapAnimationOptions(duration: 1000),
+          mp.MapAnimationOptions(duration: 300),
         );
       }
 
     } catch (e) {
-      print('❌ Erreur mise à jour flèche utilisateur: $e');
+      print('❌ Erreur mise à jour position: $e');
     }
+  }
+
+  // 🆕 INDICATEUR D'ORIENTATION dans l'UI
+  Widget _buildOrientationIndicator() {
+    if (!_cameraFollowsOrientation || !_isCompassAvailable) {
+      return const SizedBox.shrink();
+    }
+    
+    return Positioned(
+      top: MediaQuery.of(context).padding.top + 200,
+      right: 16,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: BoxDecoration(
+          color: Colors.black.withOpacity(0.8),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: Colors.white.withOpacity(0.3),
+            width: 1,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              HugeIcons.strokeRoundedCompass01,
+              color: Colors.blue,
+              size: 16,
+            ),
+            const SizedBox(width: 4),
+            Text(
+              '${_currentHeading.round()}°',
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   /// 🎛️ BASCULER LE MODE ORIENTATION CAMÉRA
   void _toggleCameraOrientation() {
+    if (!_isCompassAvailable) {
+      // Afficher un message si compass non disponible
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Compass non disponible sur cet appareil'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
     setState(() {
       _cameraFollowsOrientation = !_cameraFollowsOrientation;
     });
     
     if (!_cameraFollowsOrientation) {
-      // Remettre la caméra vers le nord
       _resetCameraBearing();
+    } else {
+      _updateCameraBearing();
     }
     
     print('📹 Mode orientation caméra: ${_cameraFollowsOrientation ? 'ON' : 'OFF'}');
@@ -425,9 +531,9 @@ class _LiveNavigationScreenState extends State<LiveNavigationScreen> with Ticker
           center: currentCamera.center,
           zoom: currentCamera.zoom,
           pitch: currentCamera.pitch,
-          bearing: 0.0, // Nord
+          bearing: 0.0,
         ),
-        mp.MapAnimationOptions(duration: 800),
+        mp.MapAnimationOptions(duration: 600),
       );
     } catch (e) {
       print('❌ Erreur reset caméra: $e');
@@ -444,19 +550,32 @@ class _LiveNavigationScreenState extends State<LiveNavigationScreen> with Ticker
         child: Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: _cameraFollowsOrientation 
-                ? AppColors.primary.withOpacity(0.9)
-                : Colors.black.withOpacity(0.7),
-            borderRadius: BorderRadius.circular(12),
+            color: (_cameraFollowsOrientation && _isCompassAvailable)
+                ? Colors.blue.withOpacity(0.9)
+                : _isCompassAvailable 
+                    ? Colors.black.withOpacity(0.7)
+                    : Colors.red.withOpacity(0.7), // Rouge si compass indisponible
+            borderRadius: BorderRadius.circular(25),
             border: Border.all(
-              color: Colors.white.withOpacity(0.2),
+              color: Colors.white.withOpacity(0.3),
               width: 1,
             ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.3),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
           ),
           child: Icon(
-            HugeIcons.strokeRoundedCompass,
+            _isCompassAvailable
+                ? (_cameraFollowsOrientation 
+                    ? HugeIcons.strokeRoundedCompass01
+                    : HugeIcons.strokeRoundedCompass)
+                : HugeIcons.solidSharpAlert02,
             color: Colors.white,
-            size: 20,
+            size: 24,
           ),
         ),
       ),
@@ -551,42 +670,34 @@ class _LiveNavigationScreenState extends State<LiveNavigationScreen> with Ticker
     if (mapboxMap == null) return;
 
     try {
-      // Créer l'image de la flèche
-      final recorder = ui.PictureRecorder();
-      final canvas = Canvas(recorder);
-      const size = Size(96, 96);
-      
-      _drawExactPhotoArrow(canvas, size);
-      
-      final picture = recorder.endRecording();
-      final image = await picture.toImage(size.width.toInt(), size.height.toInt());
-      final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
-      
-      if (byteData != null) {
-        final imageBytes = byteData.buffer.asUint8List();
-        
-        // 🔧 CRÉER MbxImage AVEC LES BONS PARAMÈTRES
-        final mbxImage = mp.MbxImage(
-          width: size.width.toInt(),
-          height: size.height.toInt(),
-          data: imageBytes,
-        );
-        
-        // 🚀 UTILISER addStyleImage AVEC LA NOUVELLE API
-        await mapboxMap!.style.addStyleImage(
-          'navigation_arrow',     // imageId
-          1.0,                   // scale
-          mbxImage,              // image
-          false,                 // sdf (pas de distance field)
-          [],                    // stretchX (pas d'étirement)
-          [],                    // stretchY (pas d'étirement) 
-          null,                  // content (pas de contenu spécial)
-        );
-        
-        print('✅ Image flèche ajoutée avec addStyleImage');
-      }
+      // 1. lire le fichier PNG
+      final bytes = await rootBundle.load('assets/img/arrow.png');
+      final buffer = bytes.buffer;
+
+      // 2. récupérer la taille du PNG pour MbxImage
+      final codec = await ui.instantiateImageCodec(buffer.asUint8List());
+      final frame = await codec.getNextFrame();
+      final img   = frame.image;
+
+      // 3. créer le MbxImage
+      final mbxImg = mp.MbxImage(
+        width : img.width,
+        height: img.height,
+        data  : buffer.asUint8List(),
+      );
+
+      // 4. l’injecter dans le style
+      await mapboxMap!.style.addStyleImage(
+        'navigation_arrow',   // ⬅️ même id que celui déclaré dans PointAnnotation
+        1.0,                  // scale
+        mbxImg,
+        false,                // sdf
+        [], [], null,
+      );
+
+      debugPrint('✅ PNG flèche ajouté');
     } catch (e) {
-      print('❌ Erreur addStyleImage: $e');
+      debugPrint('❌ Impossible de charger l’icône PNG : $e');
     }
   }
 
@@ -595,15 +706,15 @@ class _LiveNavigationScreenState extends State<LiveNavigationScreen> with Ticker
     if (_currentUserArrow == null || userArrowManager == null) return;
 
     try {
-      // Supprimer l'ancienne flèche
+      final currentGeometry = _currentUserArrow!.geometry;
+      
       await userArrowManager!.delete(_currentUserArrow!);
       
-      // Créer la nouvelle flèche avec rotation
       final arrowOptions = mp.PointAnnotationOptions(
-        geometry: _currentUserArrow!.geometry,
+        geometry: currentGeometry,
         iconImage: 'navigation_arrow',
         iconSize: 1.0,
-        iconRotate: _currentHeading, // 🔄 Rotation selon l'orientation
+        iconRotate: _currentHeading,
         iconAnchor: mp.IconAnchor.CENTER,
       );
 
@@ -619,21 +730,17 @@ class _LiveNavigationScreenState extends State<LiveNavigationScreen> with Ticker
     if (mapboxMap == null || !_isFirstPositionReceived) return;
 
     try {
-      // Obtenir l'état actuel de la caméra
       final currentCamera = await mapboxMap!.getCameraState();
       
-      // Créer nouvelle caméra avec bearing mis à jour
-      final newCamera = mp.CameraOptions(
-        center: currentCamera.center,
-        zoom: currentCamera.zoom,
-        pitch: currentCamera.pitch,
-        bearing: _currentHeading, // 🔄 Orienter la caméra selon le téléphone
-      );
-
-      // Animation fluide vers la nouvelle orientation
+      // 🔧 ANIMATION FLUIDE vers la nouvelle orientation
       await mapboxMap!.easeTo(
-        newCamera,
-        mp.MapAnimationOptions(duration: 500), // Animation courte et fluide
+        mp.CameraOptions(
+          center: currentCamera.center,
+          zoom: currentCamera.zoom,
+          pitch: currentCamera.pitch,
+          bearing: _currentHeading, // 🧭 Orientation compass
+        ),
+        mp.MapAnimationOptions(duration: 150), // Animation très fluide
       );
 
     } catch (e) {
