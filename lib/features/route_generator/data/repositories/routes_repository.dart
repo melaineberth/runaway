@@ -1,3 +1,5 @@
+// lib/features/route_generator/data/repositories/routes_repository.dart
+
 import 'dart:convert';
 import 'package:runaway/core/services/screenshot_service.dart';
 import 'package:runaway/features/route_generator/domain/models/activity_type.dart';
@@ -16,7 +18,7 @@ class RoutesRepository {
   static const String _localCacheKey = 'cached_user_routes';
   static const String _pendingSyncKey = 'pending_sync_routes';
 
-  /// 🆕 Sauvegarde un nouveau parcours avec capture de screenshot optionnelle
+  /// 🆕 Sauvegarde un nouveau parcours avec image_url
   Future<SavedRoute> saveRoute({
     required String name,
     required RouteParameters parameters,
@@ -30,41 +32,47 @@ class RoutesRepository {
       throw Exception('Utilisateur non connecté');
     }
 
+    // Générer un ID unique pour le parcours
+    final routeId = _uuid.v4();
+
+     // 🔧 S'assurer que la date est en temps local
+  final now = DateTime.now().toLocal();
+
+    print('💾 Sauvegarde parcours: $name');
+    print('🖼️ Image URL: ${imageUrl ?? "Aucune"}');
+
     final route = SavedRoute(
-      id: _uuid.v4(),
+      id: routeId,
       name: name,
       parameters: parameters,
       coordinates: coordinates,
-      createdAt: DateTime.now(),
+      createdAt: now,
       actualDistance: actualDistance,
       actualDuration: estimatedDuration,
-      imageUrl: imageUrl,
+      imageUrl: imageUrl, // Utiliser l'URL fournie (peut être null)
     );
 
-    // Créer la route finale avec l'URL de l'image
-    final finalRoute = route.copyWith(imageUrl: imageUrl);
+    // 1. Sauvegarder localement immédiatement
+    await _saveRouteLocally(route);
 
-    // 2. Sauvegarder localement immédiatement
-    await _saveRouteLocally(finalRoute);
-
-    // 3. Essayer de synchroniser avec Supabase
+    // 2. Essayer de synchroniser avec Supabase
     try {
       if (await _isConnected()) {
-        await _saveRouteToSupabase(finalRoute, user.id);
+        await _saveRouteToSupabase(route, user.id);
         // Marquer comme synchronisé
-        await _markRouteSynced(finalRoute.id);
-        print('✅ Route synchronisée avec Supabase: ${finalRoute.id}');
+        await _markRouteSynced(route.id);
+        print('✅ Route synchronisée avec Supabase: ${route.id}');
       } else {
         // Marquer pour synchronisation ultérieure
-        await _markRouteForSync(finalRoute.id);
-        print('📱 Route marquée pour sync ultérieure: ${finalRoute.id}');
+        await _markRouteForSync(route.id);
+        print('📱 Route marquée pour sync ultérieure: ${route.id}');
       }
     } catch (e) {
       print('❌ Erreur sync Supabase, sauvegarde en local: $e');
-      await _markRouteForSync(finalRoute.id);
+      await _markRouteForSync(route.id);
     }
 
-    return finalRoute;
+    return route;
   }
 
   /// Récupère tous les parcours de l'utilisateur
@@ -145,6 +153,88 @@ class RoutesRepository {
     }
   }
 
+  /// 🔧 Met à jour les statistiques d'utilisation d'un parcours - CORRIGÉ
+  Future<void> updateRouteUsage(String routeId) async {
+    final user = _supabase.auth.currentUser;
+    if (user == null) return;
+
+    try {
+      if (await _isConnected()) {
+        // Méthode 1: Utiliser RPC pour incrémenter atomiquement côté serveur
+        // Cette approche est plus efficace et évite les conditions de course
+        try {
+          await _supabase.rpc('increment_route_usage', params: {
+            'route_id': routeId,
+            'user_id': user.id,
+          });
+          print('✅ Statistiques mises à jour via RPC: $routeId');
+        } catch (rpcError) {
+          print('⚠️ RPC non disponible, utilisation de la méthode alternative');
+          
+          // Méthode 2: Récupérer puis mettre à jour (fallback)
+          final currentRoute = await _supabase
+              .from('user_routes')
+              .select('times_used')
+              .eq('id', routeId)
+              .eq('user_id', user.id)
+              .single();
+
+          final currentTimesUsed = (currentRoute['times_used'] as int?) ?? 0;
+          
+          await _supabase
+              .from('user_routes')
+              .update({
+                'times_used': currentTimesUsed + 1,
+                'last_used_at': DateTime.now().toIso8601String(),
+              })
+              .eq('id', routeId)
+              .eq('user_id', user.id);
+          
+          print('✅ Statistiques mises à jour: $routeId (${currentTimesUsed + 1}x)');
+        }
+
+        // Mettre à jour le cache local aussi
+        await _updateLocalRouteUsage(routeId);
+        
+      } else {
+        // Mode hors ligne : mettre à jour seulement le cache local
+        await _updateLocalRouteUsage(routeId);
+        print('📱 Statistiques mises à jour localement (hors ligne): $routeId');
+      }
+    } catch (e) {
+      print('❌ Erreur mise à jour usage: $e');
+      // Essayer au moins de mettre à jour localement
+      try {
+        await _updateLocalRouteUsage(routeId);
+      } catch (localError) {
+        print('❌ Erreur mise à jour locale: $localError');
+      }
+    }
+  }
+
+  /// 🆕 Met à jour les statistiques d'usage dans le cache local
+  Future<void> _updateLocalRouteUsage(String routeId) async {
+    try {
+      final routes = await _getLocalRoutes();
+      final routeIndex = routes.indexWhere((r) => r.id == routeId);
+      
+      if (routeIndex != -1) {
+        final route = routes[routeIndex];
+        final updatedRoute = route.copyWith(
+          timesUsed: route.timesUsed + 1,
+          lastUsedAt: DateTime.now(),
+        );
+        
+        routes[routeIndex] = updatedRoute;
+        await _updateLocalCache(routes);
+        
+        print('✅ Cache local mis à jour pour: $routeId');
+      }
+    } catch (e) {
+      print('❌ Erreur mise à jour cache local: $e');
+    }
+  }
+
   /// Synchronise tous les parcours en attente
   Future<void> syncPendingRoutes() async {
     final user = _supabase.auth.currentUser;
@@ -161,6 +251,12 @@ class RoutesRepository {
     print('📤 Envoi vers Supabase: ${route.id}');
     
     try {
+      // 🔧 Convertir explicitement en UTC pour Supabase
+      final createdAtUtc = route.createdAt.toUtc().toIso8601String();
+      final lastUsedAtUtc = route.lastUsedAt?.toUtc().toIso8601String();
+      
+      print('🕒 Sauvegarde date UTC: $createdAtUtc (original local: ${route.createdAt})');
+      
       await _supabase.from('user_routes').insert({
         'id': route.id,
         'user_id': userId,
@@ -178,13 +274,14 @@ class RoutesRepository {
         'start_longitude': route.parameters.startLongitude,
         'actual_distance_km': route.actualDistance,
         'estimated_duration_minutes': route.actualDuration,
-        'created_at': route.createdAt.toIso8601String(),
+        'created_at': createdAtUtc, // 🔧 UTC explicite
         'times_used': 0,
-        'last_used_at': null,
-        'image_url': route.imageUrl, // 🆕 Inclure l'URL de l'image
+        'last_used_at': lastUsedAtUtc, // 🔧 UTC explicite
+        'image_url': route.imageUrl,
       });
       
-      print('✅ Route sauvée dans Supabase: ${route.id}');
+      print('✅ Route sauvée dans Supabase avec image: ${route.id}');
+      print('🖼️ Image URL: ${route.imageUrl ?? "Aucune"}');
     } catch (e) {
       print('❌ Erreur sauvegarde Supabase détaillée: $e');
       rethrow;
@@ -200,6 +297,35 @@ class RoutesRepository {
         .order('created_at', ascending: false);
 
     return (response as List).map((data) {
+      // 🔧 Parser les dates depuis UTC vers local de façon EXPLICITE
+      DateTime createdAt;
+      DateTime? lastUsedAt;
+      
+      try {
+        final createdAtString = data['created_at'] as String;
+        // Parse en UTC puis convertir en local
+        final utcDate = DateTime.parse(createdAtString).toUtc();
+        createdAt = utcDate.toLocal();
+        
+        print('🕒 Date Supabase: $createdAtString');
+        print('   -> UTC: $utcDate');  
+        print('   -> Local: $createdAt');
+      } catch (e) {
+        print('❌ Erreur parsing date: $e');
+        createdAt = DateTime.now().toLocal(); // Fallback
+      }
+      
+      if (data['last_used_at'] != null) {
+        try {
+          final lastUsedAtString = data['last_used_at'] as String;
+          final utcLastUsed = DateTime.parse(lastUsedAtString).toUtc();
+          lastUsedAt = utcLastUsed.toLocal();
+        } catch (e) {
+          print('❌ Erreur parsing last_used_at: $e');
+          lastUsedAt = null;
+        }
+      }
+
       return SavedRoute(
         id: data['id'],
         name: data['name'],
@@ -220,163 +346,116 @@ class RoutesRepository {
             List<double>.from(coord)
           )
         ),
-        createdAt: DateTime.parse(data['created_at']),
+        createdAt: createdAt, // 🔧 Date correctement convertie
         actualDistance: data['actual_distance_km']?.toDouble(),
         actualDuration: data['estimated_duration_minutes'],
         isSynced: true,
         timesUsed: data['times_used'] ?? 0,
-        lastUsedAt: data['last_used_at'] != null 
-            ? DateTime.parse(data['last_used_at']) 
-            : null,
-        imageUrl: data['image_url'] as String?, // 🆕 Récupérer l'URL de l'image
+        lastUsedAt: lastUsedAt, // 🔧 Date correctement convertie
+        imageUrl: data['image_url'],
       );
     }).toList();
   }
 
-  /// Met à jour les statistiques d'utilisation d'un parcours
-  Future<void> updateRouteUsage(String routeId) async {
-    final user = _supabase.auth.currentUser;
-    if (user == null) return;
-
-    try {
-      if (await _isConnected()) {
-        await _supabase.rpc('increment_route_usage', params: {
-          'route_id': routeId,
-          'user_id': user.id,
-        });
-        print('✅ Usage mis à jour pour: $routeId');
-      }
-    } catch (e) {
-      print('❌ Erreur mise à jour usage: $e');
-      try {
-        await _supabase
-            .from('user_routes')
-            .update({
-              'last_used_at': DateTime.now().toIso8601String(),
-            })
-            .eq('id', routeId)
-            .eq('user_id', user.id);
-      } catch (fallbackError) {
-        print('❌ Erreur fallback usage: $fallbackError');
-      }
-    }
-  }
-
-  /// Nettoie les routes en attente qui n'existent plus localement
-  Future<void> _cleanupInvalidPendingRoutes() async {
-    final prefs = await SharedPreferences.getInstance();
-    final pending = prefs.getStringList(_pendingSyncKey) ?? [];
-    
-    if (pending.isEmpty) return;
-
-    final localRoutes = await _getLocalRoutes();
-    final localRouteIds = localRoutes.map((r) => r.id).toSet();
-    
-    final validPending = pending.where((id) => localRouteIds.contains(id)).toList();
-    
-    if (validPending.length != pending.length) {
-      await prefs.setStringList(_pendingSyncKey, validPending);
-      print('🧹 Nettoyé ${pending.length - validPending.length} routes pendantes invalides');
-    }
-  }
-
-  /// Supprime une route de la liste de synchronisation en attente
-  Future<void> _removeFromPendingSync(String routeId) async {
-    final prefs = await SharedPreferences.getInstance();
-    final pending = prefs.getStringList(_pendingSyncKey) ?? [];
-    pending.remove(routeId);
-    await prefs.setStringList(_pendingSyncKey, pending);
-  }
-
-  /// Sauvegarde locale avec SharedPreferences
+  /// 🆕 Sauvegarde locale avec support image_url
   Future<void> _saveRouteLocally(SavedRoute route) async {
     final prefs = await SharedPreferences.getInstance();
     final routes = await _getLocalRoutes();
     
+    // Supprimer l'ancienne version si elle existe
     routes.removeWhere((r) => r.id == route.id);
+    
+    // Ajouter la nouvelle version
     routes.add(route);
     
-    final jsonList = routes.map((r) => r.toJson()).toList();
-    await prefs.setString(_localCacheKey, jsonEncode(jsonList));
-    print('💾 Route sauvée localement: ${route.name}');
+    // Sauvegarder
+    final routesJson = routes.map((r) => r.toJson()).toList();
+    await prefs.setString(_localCacheKey, jsonEncode(routesJson));
+    
+    print('💾 Route sauvée localement: ${route.id} - Image: ${route.hasImage ? "✅" : "❌"}');
   }
 
-  /// Récupère les parcours locaux avec gestion d'erreurs robuste
+  /// 🆕 Récupération locale avec support image_url
   Future<List<SavedRoute>> _getLocalRoutes() async {
-    final prefs = await SharedPreferences.getInstance();
-    final jsonString = prefs.getString(_localCacheKey);
-    
-    if (jsonString == null) return [];
-    
     try {
-      final jsonList = jsonDecode(jsonString) as List;
-      final routes = <SavedRoute>[];
+      final prefs = await SharedPreferences.getInstance();
+      final routesJson = prefs.getString(_localCacheKey);
       
-      for (final json in jsonList) {
+      if (routesJson == null) return [];
+      
+      final routesList = jsonDecode(routesJson) as List;
+      return routesList.map((json) {
         try {
-          routes.add(SavedRoute.fromJson(json));
+          return SavedRoute.fromJson(json);
         } catch (e) {
-          print('❌ Erreur parsing route individuelle: $e');
+          print('❌ Erreur parsing route locale: $e');
+          print('📄 JSON problématique: $json');
+          // Retourner null pour filtrer cette route corrompue
+          return null;
         }
-      }
-      
-      return routes;
+      }).whereType<SavedRoute>().toList(); // 🔧 Filtrer les nulls
     } catch (e) {
-      print('❌ Erreur parsing routes locales: $e');
-      await prefs.setString(_localCacheKey, jsonEncode([]));
+      print('❌ Erreur lecture cache local: $e');
       return [];
     }
   }
 
-  /// Met à jour le cache local
   Future<void> _updateLocalCache(List<SavedRoute> routes) async {
     final prefs = await SharedPreferences.getInstance();
-    final jsonList = routes.map((r) => r.toJson()).toList();
-    await prefs.setString(_localCacheKey, jsonEncode(jsonList));
+    final routesJson = routes.map((r) => r.toJson()).toList();
+    await prefs.setString(_localCacheKey, jsonEncode(routesJson));
   }
 
-  /// Supprime un parcours localement
   Future<void> _deleteRouteLocally(String routeId) async {
     final routes = await _getLocalRoutes();
     routes.removeWhere((r) => r.id == routeId);
     await _updateLocalCache(routes);
   }
 
-  /// Marque un parcours comme devant être synchronisé
+  Future<bool> _isConnected() async {
+    final connectivityResult = await Connectivity().checkConnectivity();
+    return connectivityResult != ConnectivityResult.none;
+  }
+
   Future<void> _markRouteForSync(String routeId) async {
     final prefs = await SharedPreferences.getInstance();
-    final pending = prefs.getStringList(_pendingSyncKey) ?? [];
-    if (!pending.contains(routeId)) {
-      pending.add(routeId);
-      await prefs.setStringList(_pendingSyncKey, pending);
+    final pendingIds = prefs.getStringList(_pendingSyncKey) ?? [];
+    if (!pendingIds.contains(routeId)) {
+      pendingIds.add(routeId);
+      await prefs.setStringList(_pendingSyncKey, pendingIds);
     }
   }
 
-  /// Marque un parcours comme synchronisé
   Future<void> _markRouteSynced(String routeId) async {
     final prefs = await SharedPreferences.getInstance();
-    final pending = prefs.getStringList(_pendingSyncKey) ?? [];
-    pending.remove(routeId);
-    await prefs.setStringList(_pendingSyncKey, pending);
+    final pendingIds = prefs.getStringList(_pendingSyncKey) ?? [];
+    pendingIds.remove(routeId);
+    await prefs.setStringList(_pendingSyncKey, pendingIds);
   }
 
-  /// Synchronise les parcours en attente
-  Future<void> _syncPendingRoutes() async {
-    final user = _supabase.auth.currentUser;
-    if (user == null) return;
+  Future<void> _removeFromPendingSync(String routeId) async {
+    await _markRouteSynced(routeId);
+  }
 
+  Future<void> _syncPendingRoutes() async {
     final prefs = await SharedPreferences.getInstance();
-    final pending = prefs.getStringList(_pendingSyncKey) ?? [];
+    final pendingIds = prefs.getStringList(_pendingSyncKey) ?? [];
+    final user = _supabase.auth.currentUser;
     
-    if (pending.isEmpty) return;
+    if (user == null || pendingIds.isEmpty) return;
 
     final localRoutes = await _getLocalRoutes();
     
-    for (final routeId in List.from(pending)) {
+    for (final routeId in List.from(pendingIds)) {
       try {
-        final route = localRoutes.firstWhere((r) => r.id == routeId);
+        final route = localRoutes.firstWhere(
+          (r) => r.id == routeId,
+          orElse: () => throw Exception('Route introuvable localement'),
+        );
+        
         await _saveRouteToSupabase(route, user.id);
         await _markRouteSynced(routeId);
+        
         print('✅ Route synchronisée: $routeId');
       } catch (e) {
         print('❌ Erreur sync route $routeId: $e');
@@ -384,14 +463,22 @@ class RoutesRepository {
     }
   }
 
-  /// Vérifie la connectivité
-  Future<bool> _isConnected() async {
-    final connectivityResult = await Connectivity().checkConnectivity();
-    return connectivityResult.contains(ConnectivityResult.mobile) ||
-           connectivityResult.contains(ConnectivityResult.wifi);
+  Future<void> _cleanupInvalidPendingRoutes() async {
+    final prefs = await SharedPreferences.getInstance();
+    final pendingIds = prefs.getStringList(_pendingSyncKey) ?? [];
+    final localRoutes = await _getLocalRoutes();
+    final localIds = localRoutes.map((r) => r.id).toSet();
+    
+    // Retirer les IDs qui n'existent plus localement
+    final validPendingIds = pendingIds.where((id) => localIds.contains(id)).toList();
+    
+    if (validPendingIds.length != pendingIds.length) {
+      await prefs.setStringList(_pendingSyncKey, validPendingIds);
+      print('🧹 ${pendingIds.length - validPendingIds.length} routes en attente nettoyées');
+    }
   }
 
-  /// Parse les enums depuis les données Supabase
+  // Parsers pour les enums
   ActivityType _parseActivityType(String id) {
     return ActivityType.values.firstWhere(
       (type) => type.id == id,
@@ -402,7 +489,7 @@ class RoutesRepository {
   TerrainType _parseTerrainType(String id) {
     return TerrainType.values.firstWhere(
       (type) => type.id == id,
-      orElse: () => TerrainType.flat,
+      orElse: () => TerrainType.mixed,
     );
   }
 

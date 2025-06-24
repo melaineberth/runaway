@@ -1,6 +1,7 @@
 
 import 'dart:math' as math;
 import 'package:hydrated_bloc/hydrated_bloc.dart';
+import 'package:runaway/core/services/screenshot_service.dart';
 import 'package:runaway/features/route_generator/domain/models/saved_route.dart';
 import '../../../data/repositories/routes_repository.dart';
 import '../../../data/services/graphhopper_api_service.dart';
@@ -131,45 +132,67 @@ class RouteGenerationBloc extends HydratedBloc<RouteGenerationEvent, RouteGenera
       return;
     }
 
+    emit(state.copyWith(
+      isGeneratingRoute: true,
+      errorMessage: null,
+    ));
+
     try {
-      print('💾 Début sauvegarde avec screenshot: ${event.name}');
+      print('🚀 Début sauvegarde avec screenshot pour: ${event.name}');
+
+      // 1. 📸 Capturer le screenshot de la carte
+      String? screenshotUrl;
+      try {
+        print('📸 Capture du screenshot...');
+        screenshotUrl = await ScreenshotService.captureAndUploadMapSnapshot(
+          liveMap: event.map,
+          routeCoords: state.generatedRoute!,
+          routeId: 'temp_${DateTime.now().millisecondsSinceEpoch}', // ID temporaire
+          userId: 'temp_user', // ID temporaire, sera remplacé
+        );
+
+        if (screenshotUrl != null) {
+          print('✅ Screenshot capturé avec succès: $screenshotUrl');
+        } else {
+          print('⚠️ Screenshot non capturé, sauvegarde sans image');
+        }
+      } catch (screenshotError) {
+        print('❌ Erreur capture screenshot: $screenshotError');
+        // Continuer la sauvegarde sans image
+        screenshotUrl = null;
+      }
+
+      // 2. 💾 Sauvegarder le parcours avec l'URL de l'image
+      final actualDistanceKm = state.routeMetadata?['distanceKm'] as double? ?? 
+          _calculateRouteDistance(state.generatedRoute!);
       
-      // 🆕 Indiquer qu'une sauvegarde est en cours
-      emit(state.copyWith(
-        isGeneratingRoute: true, // Réutiliser ce flag pour l'UI
-        errorMessage: null,
-      ));
-      
-      // Calculer la vraie distance depuis les métadonnées
-      final actualDistanceKm = state.routeMetadata?['distanceKm'] as double? ?? _calculateRouteDistance(state.generatedRoute!);
-      
-      // 🆕 Sauvegarder avec capture de screenshot optionnelle
       final savedRoute = await _routesRepository.saveRoute(
         name: event.name,
         parameters: state.usedParameters!,
         coordinates: state.generatedRoute!,
         actualDistance: actualDistanceKm,
         estimatedDuration: state.routeMetadata?['durationMinutes'] as int?,
-        imageUrl: null,
+        imageUrl: screenshotUrl, // 🆕 Utiliser l'URL capturée
       );
 
-      // Mettre à jour la liste des parcours sauvegardés
+      // 3. 🔄 Mettre à jour la liste des parcours sauvegardés
       final updatedRoutes = List<SavedRoute>.from(state.savedRoutes)
         ..add(savedRoute);
 
       emit(state.copyWith(
-        isGeneratingRoute: false, // Fin de la sauvegarde
+        isGeneratingRoute: false,
         savedRoutes: updatedRoutes,
         errorMessage: null,
       ));
 
-      print('✅ Parcours sauvegardé avec image: ${savedRoute.name} (${savedRoute.formattedDistance}) - Image: ${savedRoute.hasImage ? 'Oui' : 'Non'}');
+      print('✅ Parcours sauvegardé avec succès: ${savedRoute.name} (${savedRoute.formattedDistance})');
+      print('🖼️ Image: ${savedRoute.hasImage ? "✅ Capturée" : "❌ Aucune"}');
 
     } catch (e) {
-      print('❌ Erreur sauvegarde complète avec screenshot: $e');
+      print('❌ Erreur sauvegarde complète: $e');
       emit(state.copyWith(
         isGeneratingRoute: false,
-        errorMessage: 'Erreur lors de la sauvegarde: $e',
+        errorMessage: 'Erreur lors de la sauvegarde: ${e.toString()}',
       ));
     }
   }
@@ -344,39 +367,32 @@ class RouteGenerationBloc extends HydratedBloc<RouteGenerationEvent, RouteGenera
     if (coordinates.length < 2) return 0.0;
     
     double totalDistance = 0.0;
-    
     for (int i = 0; i < coordinates.length - 1; i++) {
       final lat1 = coordinates[i][1];
       final lon1 = coordinates[i][0];
       final lat2 = coordinates[i + 1][1];
       final lon2 = coordinates[i + 1][0];
       
-      totalDistance += _haversineDistance(lat1, lon1, lat2, lon2);
+      totalDistance += _calculateHaversineDistance(lat1, lon1, lat2, lon2);
     }
     
-    return totalDistance;
+    return totalDistance / 1000; // Convertir en kilomètres
   }
 
-  /// Calcule la distance entre deux points géographiques (formule de Haversine)
-  double _haversineDistance(double lat1, double lon1, double lat2, double lon2) {
-    const double earthRadius = 6371; // Rayon de la Terre en km
-    
-    final double dLat = _degreesToRadians(lat2 - lat1);
-    final double dLon = _degreesToRadians(lon2 - lon1);
+  /// Calcule la distance haversine entre deux points
+  double _calculateHaversineDistance(double lat1, double lon1, double lat2, double lon2) {
+    const double earthRadius = 6371000; // Rayon de la Terre en mètres
+    final double dLat = (lat2 - lat1) * (3.14159265359 / 180);
+    final double dLon = (lon2 - lon1) * (3.14159265359 / 180);
     
     final double a = math.sin(dLat / 2) * math.sin(dLat / 2) +
-        math.cos(_degreesToRadians(lat1)) * math.cos(_degreesToRadians(lat2)) *
+        lat1 * math.cos(3.14159265359 / 180) * lat2 * math.cos(3.14159265359 / 180) *
         math.sin(dLon / 2) * math.sin(dLon / 2);
     
-    final double c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a));
-    
+    final double c = 2 * math.asin(math.sqrt(a));
     return earthRadius * c;
   }
 
-  /// Convertit des degrés en radians
-  double _degreesToRadians(double degrees) {
-    return degrees * (math.pi / 180);
-  }
 
   /// Persistance locale uniquement pour les données de session
   @override

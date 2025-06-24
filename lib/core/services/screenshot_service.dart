@@ -1,7 +1,8 @@
+import 'dart:convert'; // 🆕 Import manquant pour jsonEncode
 import 'dart:typed_data';
 import 'dart:ui' as ui;
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart';
 import 'package:runaway/config/colors.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -10,132 +11,287 @@ class ScreenshotService {
   static final SupabaseClient _supabase = Supabase.instance.client;
   static const String _bucketName = 'route-screenshots';
 
-/// Capture la carte (Mapbox) hors-écran et upload l’image PNG.
+  /// 🆕 Capture la carte Mapbox avec le parcours et l'upload vers Supabase
   static Future<String?> captureAndUploadMapSnapshot({
-    required MapboxMap liveMap,               // carte affichée
-    required List<List<double>> routeCoords,  // polyligne à dessiner
+    required MapboxMap liveMap,
+    required List<List<double>> routeCoords,
     required String routeId,
     required String userId,
   }) async {
     try {
-      // ------------------------------------------------------------------
-      // 1.  Récupérer le style + la caméra du rendu courant
-      // ------------------------------------------------------------------
-      final camState  = await liveMap.getCameraState();
-      final camOpts   = CameraOptions(
-        center  : camState.center,
-        zoom    : camState.zoom,
-        pitch   : camState.pitch,
-        bearing : camState.bearing,
-      );
+      print('🚀 Début capture screenshot pour route: $routeId');
 
-      // ------------------------------------------------------------------
-      // 2.  Préparer Snapshotter
-      // ------------------------------------------------------------------
-      final pixelRatio  = ui.window.devicePixelRatio;
-      final logicalSize = ui.window.physicalSize / pixelRatio;
+      // 1. Vérifier que les coordonnées sont valides
+      if (routeCoords.isEmpty) {
+        print('❌ Aucune coordonnée de parcours fournie');
+        return null;
+      }
 
-      final snap = await Snapshotter.create(
+      // 2. Obtenir l'utilisateur connecté pour l'ID
+      final user = _supabase.auth.currentUser;
+      if (user == null) {
+        print('❌ Utilisateur non connecté');
+        return null;
+      }
+      final realUserId = user.id;
+
+      // 3. Récupérer l'état actuel de la caméra
+      final cameraState = await liveMap.getCameraState();
+      print('📍 Position caméra: ${cameraState.center.coordinates.lat}, ${cameraState.center.coordinates.lng}');
+
+      // 4. Créer le snapshotter avec des dimensions optimisées
+      final pixelRatio = ui.window.devicePixelRatio;
+      final screenSize = ui.window.physicalSize / pixelRatio;
+      
+      // Dimensions optimisées pour les cartes (ratio 16:9)
+      const double targetWidth = 800;
+      const double targetHeight = 600;
+      
+      final snapshotter = await Snapshotter.create(
         options: MapSnapshotOptions(
-          size: Size(width: logicalSize.width, height: logicalSize.height),
-          pixelRatio: pixelRatio,
+          size: Size(width: targetWidth, height: targetHeight),
+          pixelRatio: 2.0, // Haute qualité
         ),
       );
 
-      // Style + caméra identiques à la carte live
-      await snap.style.setStyleURI(MapboxStyles.DARK);
-      await snap.setCamera(camOpts);
+      try {
+        // 5. Configurer le style (theme sombre pour correspondre à l'app)
+        await snapshotter.style.setStyleURI(MapboxStyles.DARK);
+        
+        // Note: Le Snapshotter ne permet pas de masquer le logo Mapbox
+        // contrairement à la MapboxMap normale. Le logo fait partie de l'image générée.
+        
+        // 6. Calculer les bounds du parcours pour centrer la vue
+        final bounds = _calculateRouteBounds(routeCoords);
+        
+        // 7. Configurer la caméra pour englober tout le parcours
+        final cameraOptions = CameraOptions(
+          center: Point(coordinates: Position(bounds.centerLng, bounds.centerLat)),
+          zoom: _calculateOptimalZoom(bounds, targetWidth, targetHeight),
+          bearing: 0.0,
+          pitch: 0.0,
+        );
+        
+        await snapshotter.setCamera(cameraOptions);
+        print('📷 Caméra configurée - Centre: ${bounds.centerLat}, ${bounds.centerLng}');
 
-      // ------------------------------------------------------------------
-      // 3.  Ajouter la polyligne du parcours
-      // ------------------------------------------------------------------
-      final geoJson = {
+        // 8. Ajouter la polyligne du parcours
+        await _addRouteToSnapshot(snapshotter, routeCoords);
+
+        // 9. Attendre que le rendu soit prêt
+        await Future.delayed(Duration(milliseconds: 800));
+
+        // 10. Capturer l'image
+        print('📸 Capture en cours...');
+        final rawImageBytes = await snapshotter.start();
+        
+        if (rawImageBytes == null || rawImageBytes.isEmpty) {
+          print('❌ Image capturée vide');
+          return null;
+        }
+
+        // 🆕 Post-traitement pour enlever le logo Mapbox (optionnel)
+        final processedImageBytes = await _removeMapboxLogo(rawImageBytes);
+        final imageBytes = processedImageBytes ?? rawImageBytes;
+
+        print('✅ Image capturée: ${imageBytes.length} bytes');
+
+        // 11. Upload vers Supabase Storage
+        final imageUrl = await _uploadScreenshotToStorage(
+          imageBytes: imageBytes,
+          routeId: routeId,
+          userId: realUserId,
+        );
+
+        print('✅ Screenshot uploadé avec succès: $imageUrl');
+        return imageUrl;
+
+      } finally {
+        // Nettoyer le snapshotter
+        await snapshotter.dispose();
+      }
+
+    } catch (e, stackTrace) {
+      print('❌ Erreur capture screenshot: $e');
+      print('📜 Stack trace: $stackTrace');
+      return null;
+    }
+  }
+
+  /// 🔧 Ajoute la polyligne du parcours au snapshotter - CORRIGÉ
+  static Future<void> _addRouteToSnapshot(
+    Snapshotter snapshotter,
+    List<List<double>> routeCoords,
+  ) async {
+    try {
+      // Créer le GeoJSON pour la polyligne
+      final geoJsonMap = {
         "type": "Feature",
+        "properties": {},
         "geometry": {
           "type": "LineString",
           "coordinates": routeCoords,
         }
       };
-      await snap.style.addSource(
-        GeoJsonSource(id: 'route-source', data: geoJson.toString()),
-      );
 
-      await snap.style.addLayer(
-        LineLayer(
-          id            : "route-layer",
-          sourceId      : "route-source",
-          lineColor     : AppColors.primary.toARGB32(),  // violet (réglage libre)
-          lineWidth     : 4,
-          lineOpacity   : 1,
+      // 🔧 FIX: Utiliser jsonEncode au lieu de .toString()
+      final geoJsonString = jsonEncode(geoJsonMap);
+      print('📍 GeoJSON créé: ${geoJsonString.substring(0, 100)}...');
+
+      // Ajouter la source GeoJSON
+      await snapshotter.style.addSource(
+        GeoJsonSource(
+          id: 'route-source',
+          data: geoJsonString, // 🔧 Maintenant c'est du JSON valide
         ),
       );
 
-      // ------------------------------------------------------------------
-      // 4.  Prendre la capture PNG
-      // ------------------------------------------------------------------
-      final Uint8List? pngBytes = await snap.start();
-      await snap.dispose();
+      // Ajouter la couche de ligne avec le style de l'app
+      await snapshotter.style.addLayer(
+        LineLayer(
+          id: "route-layer",
+          sourceId: "route-source",
+          lineColor: AppColors.primary.toARGB32(), // Couleur primaire de l'app
+          lineWidth: 5.0, // Ligne épaisse pour la visibilité
+          lineOpacity: 0.9,
+          lineCap: LineCap.ROUND,
+          lineJoin: LineJoin.ROUND,
+        ),
+      );
 
-      // ------------------------------------------------------------------
-      // 5.  Upload Supabase
-      // ------------------------------------------------------------------
-      final fileName = 'route_${routeId}_${DateTime.now().millisecondsSinceEpoch}.png';
-      final filePath = '$userId/$fileName';
+      // Ajouter des points de début et fin
+      if (routeCoords.length >= 2) {
+        await _addStartEndMarkers(snapshotter, routeCoords);
+      }
 
-      await _supabase.storage
-          .from(_bucketName)
-          .uploadBinary(filePath, pngBytes!,
-              fileOptions: const FileOptions(
-                contentType: 'image/png',
-                upsert: false,
-              ));
+      print('✅ Parcours ajouté au snapshot');
 
-      return _supabase.storage.from(_bucketName).getPublicUrl(filePath);
     } catch (e) {
-      debugPrint('❌ Snapshot / upload error: $e');
-      return null;
+      print('❌ Erreur ajout parcours: $e');
+      throw e;
     }
   }
 
-  
-  /// Capture la screenshot d'un widget via sa GlobalKey
-  static Future<Uint8List?> _captureWidgetScreenshot(GlobalKey key) async {
+  /// 🔧 Ajoute les marqueurs de début et fin - CORRIGÉ
+  static Future<void> _addStartEndMarkers(
+    Snapshotter snapshotter,
+    List<List<double>> routeCoords,
+  ) async {
     try {
-      // Attendre que le widget soit complètement rendu
-      await Future.delayed(Duration(milliseconds: 500));
+      final startPoint = routeCoords.first;
+      final endPoint = routeCoords.last;
 
-      final RenderRepaintBoundary? boundary = 
-          key.currentContext?.findRenderObject() as RenderRepaintBoundary?;
+      // Source pour les marqueurs
+      final markersGeoJsonMap = {
+        "type": "FeatureCollection",
+        "features": [
+          {
+            "type": "Feature",
+            "properties": {"type": "start"},
+            "geometry": {
+              "type": "Point",
+              "coordinates": startPoint,
+            }
+          },
+          {
+            "type": "Feature",
+            "properties": {"type": "end"},
+            "geometry": {
+              "type": "Point",
+              "coordinates": endPoint,
+            }
+          }
+        ]
+      };
 
-      if (boundary == null) {
-        print('❌ RenderRepaintBoundary introuvable');
-        return null;
-      }
+      // 🔧 FIX: Utiliser jsonEncode au lieu de .toString()
+      final markersGeoJsonString = jsonEncode(markersGeoJsonMap);
+      print('🎯 Marqueurs GeoJSON créé');
 
-      // Capturer l'image avec une bonne qualité
-      final ui.Image image = await boundary.toImage(
-        pixelRatio: 2.0, // Haute qualité
+      await snapshotter.style.addSource(
+        GeoJsonSource(
+          id: 'markers-source',
+          data: markersGeoJsonString, // 🔧 Maintenant c'est du JSON valide
+        ),
       );
 
-      // Convertir en bytes PNG
-      final ByteData? byteData = await image.toByteData(
-        format: ui.ImageByteFormat.png,
+      // Marqueur de début (vert)
+      await snapshotter.style.addLayer(
+        CircleLayer(
+          id: "start-marker",
+          sourceId: "markers-source",
+          circleColor: Colors.green.toARGB32(),
+          circleRadius: 8.0,
+          circleStrokeWidth: 2.0,
+          circleStrokeColor: Colors.white.toARGB32(),
+          filter: ["==", ["get", "type"], "start"],
+        ),
       );
 
-      if (byteData == null) {
-        print('❌ Impossible de convertir l\'image en bytes');
-        return null;
-      }
+      // Marqueur de fin (rouge)
+      await snapshotter.style.addLayer(
+        CircleLayer(
+          id: "end-marker",
+          sourceId: "markers-source",
+          circleColor: Colors.red.toARGB32(),
+          circleRadius: 8.0,
+          circleStrokeWidth: 2.0,
+          circleStrokeColor: Colors.white.toARGB32(),
+          filter: ["==", ["get", "type"], "end"],
+        ),
+      );
 
-      return byteData.buffer.asUint8List();
+      print('✅ Marqueurs début/fin ajoutés');
 
     } catch (e) {
-      print('❌ Erreur capture screenshot: $e');
-      return null;
+      print('❌ Erreur ajout marqueurs: $e');
+      // Ne pas faire échouer toute la capture pour les marqueurs
     }
   }
 
-  /// Upload la screenshot vers Supabase Storage
+  /// Calcule les bounds d'un parcours
+  static _RouteBounds _calculateRouteBounds(List<List<double>> routeCoords) {
+    if (routeCoords.isEmpty) {
+      return _RouteBounds(0, 0, 0, 0);
+    }
+
+    double minLat = routeCoords.first[1];
+    double maxLat = routeCoords.first[1];
+    double minLng = routeCoords.first[0];
+    double maxLng = routeCoords.first[0];
+
+    for (final coord in routeCoords) {
+      final lng = coord[0];
+      final lat = coord[1];
+      
+      if (lat < minLat) minLat = lat;
+      if (lat > maxLat) maxLat = lat;
+      if (lng < minLng) minLng = lng;
+      if (lng > maxLng) maxLng = lng;
+    }
+
+    return _RouteBounds(minLat, maxLat, minLng, maxLng);
+  }
+
+  /// Calcule le zoom optimal pour englober le parcours
+  static double _calculateOptimalZoom(_RouteBounds bounds, double width, double height) {
+    const double padding = 0.1; // 10% de padding
+    
+    final latDiff = (bounds.maxLat - bounds.minLat) * (1 + padding);
+    final lngDiff = (bounds.maxLng - bounds.minLng) * (1 + padding);
+    
+    // Formule approximative pour le calcul du zoom Mapbox
+    final latZoom = math.log(360 / latDiff) / math.ln2;
+    final lngZoom = math.log(360 / lngDiff) / math.ln2;
+    
+    // Prendre le zoom minimum pour que tout soit visible
+    final optimalZoom = math.min(latZoom, lngZoom).clamp(8.0, 16.0);
+    
+    print('📏 Zoom optimal calculé: $optimalZoom');
+    return optimalZoom;
+  }
+
+  /// Upload l'image vers Supabase Storage
   static Future<String?> _uploadScreenshotToStorage({
     required Uint8List imageBytes,
     required String routeId,
@@ -144,10 +300,10 @@ class ScreenshotService {
     try {
       // Générer un nom de fichier unique
       final timestamp = DateTime.now().millisecondsSinceEpoch;
-      final fileName = 'route_${routeId}_${timestamp}.png';
+      final fileName = 'route_${routeId}_$timestamp.png';
       final filePath = '$userId/$fileName';
 
-      print('📤 Upload vers Storage: $filePath');
+      print('📤 Upload vers Storage: $filePath (${imageBytes.length} bytes)');
 
       // Upload vers le bucket
       await _supabase.storage
@@ -167,20 +323,11 @@ class ScreenshotService {
           .from(_bucketName)
           .getPublicUrl(filePath);
 
-      print('✅ Screenshot uploadée avec succès: $publicUrl');
+      print('✅ Screenshot uploadé avec succès: $publicUrl');
       return publicUrl;
 
     } catch (e) {
       print('❌ Erreur upload screenshot: $e');
-      
-      // Essayer de supprimer le fichier en cas d'erreur partielle
-      try {
-        final filePath = '$userId/route_${routeId}_${DateTime.now().millisecondsSinceEpoch}.png';
-        await _supabase.storage.from(_bucketName).remove([filePath]);
-      } catch (cleanupError) {
-        print('❌ Erreur nettoyage après échec: $cleanupError');
-      }
-      
       return null;
     }
   }
@@ -228,4 +375,72 @@ class ScreenshotService {
         return 'https://images.unsplash.com/photo-1551698618-1dfe5d97d256?w=400&h=300&fit=crop';
     }
   }
+
+  /// 🆕 Enlève le logo Mapbox par recadrage de l'image
+  static Future<Uint8List?> _removeMapboxLogo(Uint8List imageBytes) async {
+    try {
+      // Décoder l'image
+      final codec = await ui.instantiateImageCodec(imageBytes);
+      final frame = await codec.getNextFrame();
+      final originalImage = frame.image;
+      
+      // Dimensions originales
+      final originalWidth = originalImage.width;
+      final originalHeight = originalImage.height;
+      
+      // Zone à recadrer (enlever ~80px en bas pour le logo/attributions)
+      const cropBottomPixels = 50;
+      final newHeight = originalHeight - cropBottomPixels;
+      
+      if (newHeight <= 0) {
+        print('⚠️ Image trop petite pour recadrage');
+        return null;
+      }
+      
+      // Créer une nouvelle image recadrée
+      final recorder = ui.PictureRecorder();
+      final canvas = Canvas(recorder);
+      
+      // Dessiner la partie de l'image sans le logo
+      canvas.drawImageRect(
+        originalImage,
+        Rect.fromLTWH(0, 0, originalWidth.toDouble(), newHeight.toDouble()),
+        Rect.fromLTWH(0, 0, originalWidth.toDouble(), newHeight.toDouble()),
+        Paint(),
+      );
+      
+      final picture = recorder.endRecording();
+      final croppedImage = await picture.toImage(originalWidth, newHeight);
+      
+      // Convertir en bytes PNG
+      final byteData = await croppedImage.toByteData(format: ui.ImageByteFormat.png);
+      if (byteData == null) return null;
+      
+      final croppedBytes = byteData.buffer.asUint8List();
+      
+      // Nettoyer les ressources
+      originalImage.dispose();
+      croppedImage.dispose();
+      
+      print('✅ Logo Mapbox retiré par recadrage (${originalHeight} -> ${newHeight}px)');
+      return croppedBytes;
+      
+    } catch (e) {
+      print('❌ Erreur recadrage image: $e');
+      return null;
+    }
+  }
+}
+
+/// Classe helper pour les bounds d'un parcours
+class _RouteBounds {
+  final double minLat;
+  final double maxLat;
+  final double minLng;
+  final double maxLng;
+
+  _RouteBounds(this.minLat, this.maxLat, this.minLng, this.maxLng);
+
+  double get centerLat => (minLat + maxLat) / 2;
+  double get centerLng => (minLng + maxLng) / 2;
 }

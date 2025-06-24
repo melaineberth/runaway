@@ -24,6 +24,8 @@ class HistoricCard extends StatefulWidget {
 
 class _HistoricCardState extends State<HistoricCard> {
   String? _locationName;
+  bool _isImageLoading = true;
+  bool _hasImageError = false;
 
   @override
   void initState() {
@@ -69,7 +71,7 @@ class _HistoricCardState extends State<HistoricCard> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Image générée ou icône représentative
+            // 🖼️ Image générée ou visualisation de fallback
             SizedBox(
               height: 250,
               width: imgSize,
@@ -228,99 +230,211 @@ class _HistoricCardState extends State<HistoricCard> {
     );
   }
 
-  /// 🆕 Construit la visualisation de la route avec image ou fallback
+/// 🆕 Construit la visualisation de la route avec image ou fallback amélioré
   Widget _buildRouteVisualization() {
     if (widget.route.hasImage) {
-      return ClipRRect(
-        borderRadius: BorderRadius.circular(30.0),
-        child: Stack(
-          children: [
-            // Image de la route
-            Image.network(
-              widget.route.imageUrl!,
-              width: double.infinity,
-              height: double.infinity,
-              fit: BoxFit.cover,
-              loadingBuilder: (context, child, loadingProgress) {
-                if (loadingProgress == null) return child;
-                return Container(
-                  color: _getActivityColor(),
-                  child: Center(
-                    child: CircularProgressIndicator(
-                      color: Colors.white,
-                      value: loadingProgress.expectedTotalBytes != null
-                          ? loadingProgress.cumulativeBytesLoaded /
-                              (loadingProgress.expectedTotalBytes ?? 1)
-                          : null,
-                    ),
-                  ),
-                );
-              },
-              errorBuilder: (context, error, stackTrace) {
-                print('❌ Erreur chargement image: $error');
-                return _buildFallbackVisualization();
-              },
+      return _buildRouteImage();
+    } else {
+      return _buildActivityFallback();
+    }
+  }
+
+  /// 🖼️ Affiche l'image de la route avec gestion d'erreurs
+  Widget _buildRouteImage() {
+    return Stack(
+      children: [
+        // Image principale
+        Image.network(
+          widget.route.imageUrl!,
+          width: double.infinity,
+          height: double.infinity,
+          fit: BoxFit.cover,
+          loadingBuilder: (context, child, loadingProgress) {
+            if (loadingProgress == null) {
+              // Image chargée avec succès
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (mounted) {
+                  setState(() {
+                    _isImageLoading = false;
+                    _hasImageError = false;
+                  });
+                }
+              });
+              return child;
+            }
+            // En cours de chargement
+            return _buildLoadingState(loadingProgress);
+          },
+          errorBuilder: (context, error, stackTrace) {
+            print('❌ Erreur chargement image: $error');
+            // Marquer l'erreur et afficher le fallback
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted) {
+                setState(() {
+                  _hasImageError = true;
+                  _isImageLoading = false;
+                });
+              }
+            });
+            return _buildActivityFallback();
+          },
+        ),
+
+        IgnorePointer(
+          ignoring: true,
+          child: Container(
+            height: MediaQuery.of(context).size.height,
+            color: Colors.white.withAlpha(18),
+          ),
+        ),
+    
+        // Indicator de statut sync
+        if (!widget.route.isSynced)
+          Positioned(
+            top: 8,
+            right: 8,
+            child: Container(
+              padding: EdgeInsets.all(4),
+              decoration: BoxDecoration(
+                color: Colors.orange.withValues(alpha: 0.9),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(
+                HugeIcons.strokeRoundedWifiOff01,
+                color: Colors.white,
+                size: 12,
+              ),
             ),
-            // Overlay avec icône d'activité
-            Positioned(
-              top: 12,
-              right: 12,
-              child: Container(
-                padding: EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.black54,
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Icon(
-                  widget.route.parameters.activityType.icon,
-                  color: Colors.white,
-                  size: 20,
-                ),
+          ),
+      ],
+    );
+  }
+
+  /// 📱 Affiche l'état de chargement de l'image
+  Widget _buildLoadingState(ImageChunkEvent loadingProgress) {
+    return Container(
+      color: _getActivityColor(),
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            CircularProgressIndicator(
+              color: Colors.white,
+              value: loadingProgress.expectedTotalBytes != null
+                  ? loadingProgress.cumulativeBytesLoaded /
+                      (loadingProgress.expectedTotalBytes ?? 1)
+                  : null,
+            ),
+            8.h,
+            Text(
+              'Chargement...',
+              style: context.bodySmall?.copyWith(
+                color: Colors.white,
+                fontSize: 12,
               ),
             ),
           ],
         ),
-      );
-    } else {
-      return _buildFallbackVisualization();
-    }
+      ),
+    );
   }
 
-  /// Visualisation de fallback quand pas d'image
-  Widget _buildFallbackVisualization() {
+  /// 🎨 Fallback avec design basé sur l'activité
+  Widget _buildActivityFallback() {
     return Container(
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(30.0),
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
             _getActivityColor(),
-            _getActivityColor().withOpacity(0.7),
+            _getActivityColor().withValues(alpha: 0.7),
           ],
         ),
+        borderRadius: BorderRadius.circular(30.0),
       ),
       child: Stack(
         children: [
-          // Pattern de fond
-          CustomPaint(
-            size: Size.infinite,
-            painter: _RoutePatternPainter(
-              color: Colors.white.withOpacity(0.1),
+          // Pattern de fond subtil
+          Positioned.fill(
+            child: CustomPaint(
+              painter: RoutePatternPainter(_getActivityColor()),
             ),
           ),
-          // Icône centrale
+          
+          // Contenu principal
           Center(
-            child: Icon(
-              widget.route.parameters.activityType.icon,
-              color: Colors.white,
-              size: 48,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                // Icône de l'activité
+                Icon(
+                  _getActivityIcon(),
+                  color: Colors.white,
+                  size: 40,
+                ),
+                12.h,
+                
+                // Informations sur le parcours
+                Text(
+                  widget.route.formattedDistance,
+                  style: context.titleMedium?.copyWith(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                4.h,
+                Text(
+                  widget.route.parameters.activityType.title,
+                  style: context.bodySmall?.copyWith(
+                    color: Colors.white70,
+                    fontSize: 12,
+                  ),
+                ),
+              ],
             ),
           ),
+          
+          // Badge "Pas d'image" si erreur
+          if (_hasImageError)
+            Positioned(
+              top: 8,
+              left: 8,
+              child: Container(
+                padding: EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.6),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  'Image indisponible',
+                  style: context.bodySmall?.copyWith(
+                    color: Colors.white70,
+                    fontSize: 10,
+                  ),
+                ),
+              ),
+            ),
         ],
       ),
     );
   }
+
+   /// Icône basée sur le type d'activité
+  IconData _getActivityIcon() {
+    switch (widget.route.parameters.activityType.id) {
+      case 'running':
+        return HugeIcons.strokeRoundedBicycle01;
+      case 'cycling':
+        return HugeIcons.strokeRoundedBicycle01;
+      case 'walking':
+        return HugeIcons.strokeRoundedBicycle01;
+      default:
+        return HugeIcons.strokeRoundedRoute01;
+    }
+  }
+
+
 
   /// 🆕 Retourne le nom de la localisation (implémentation complète)
   String _getLocationName() {
@@ -401,43 +515,26 @@ class _HistoricCardState extends State<HistoricCard> {
 }
 
 /// 🆕 Painter pour créer un pattern de route stylisé
-class _RoutePatternPainter extends CustomPainter {
+class RoutePatternPainter extends CustomPainter {
   final Color color;
 
-  _RoutePatternPainter({required this.color});
+  RoutePatternPainter(this.color);
 
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = color
-      ..strokeWidth = 2.0
+      ..color = Colors.white.withValues(alpha: 0.1)
+      ..strokeWidth = 1.5
       ..style = PaintingStyle.stroke;
 
-    final path = Path();
-    
-    // Créer un pattern de route sinueuse
-    final width = size.width;
-    final height = size.height;
-    
-    // Ligne principale ondulée
-    path.moveTo(width * 0.2, height * 0.3);
-    path.quadraticBezierTo(width * 0.5, height * 0.1, width * 0.8, height * 0.4);
-    path.quadraticBezierTo(width * 0.6, height * 0.7, width * 0.9, height * 0.8);
-    
-    // Ligne secondaire
-    path.moveTo(width * 0.1, height * 0.6);
-    path.quadraticBezierTo(width * 0.4, height * 0.5, width * 0.7, height * 0.7);
-    
-    canvas.drawPath(path, paint);
-    
-    // Quelques points de jalons
-    final pointPaint = Paint()
-      ..color = color
-      ..style = PaintingStyle.fill;
-    
-    canvas.drawCircle(Offset(width * 0.2, height * 0.3), 3, pointPaint);
-    canvas.drawCircle(Offset(width * 0.8, height * 0.4), 3, pointPaint);
-    canvas.drawCircle(Offset(width * 0.9, height * 0.8), 3, pointPaint);
+    // Dessiner des lignes diagonales subtiles
+    for (double i = -size.height; i < size.width + size.height; i += 20) {
+      canvas.drawLine(
+        Offset(i, 0),
+        Offset(i + size.height, size.height),
+        paint,
+      );
+    }
   }
 
   @override

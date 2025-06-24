@@ -69,35 +69,58 @@ class SavedRoute extends Equatable {
       'name': name,
       'parameters': parameters.toJson(),
       'coordinates': coordinates,
-      'created_at': createdAt.toIso8601String(),
+      'created_at': createdAt.toLocal().toIso8601String(), // 🔧 S'assurer du format local
       'actual_distance': actualDistance,
       'actual_duration': actualDuration,
       'is_synced': isSynced,
       'times_used': timesUsed,
-      'last_used_at': lastUsedAt?.toIso8601String(),
-      'image_url': imageUrl, // 🆕
+      'last_used_at': lastUsedAt?.toLocal().toIso8601String(), // 🔧 Pareil pour lastUsedAt
+      'image_url': imageUrl,
     };
   }
 
   /// Création depuis JSON avec gestion d'erreurs robuste
   factory SavedRoute.fromJson(Map<String, dynamic> json) {
     try {
+      // 🔧 Parser les dates avec gestion explicite du timezone
+      DateTime createdAt;
+      DateTime? lastUsedAt;
+      
+      try {
+        final createdAtString = json['created_at'] as String;
+        createdAt = DateTime.parse(createdAtString).toLocal(); // 🔧 Forcer temps local
+        print('🕒 Date parsée depuis JSON: $createdAtString -> $createdAt');
+      } catch (e) {
+        print('❌ Erreur parsing created_at: $e');
+        createdAt = DateTime.now().toLocal(); // Fallback sécurisé
+      }
+      
+      if (json['last_used_at'] != null) {
+        try {
+          final lastUsedAtString = json['last_used_at'] as String;
+          lastUsedAt = DateTime.parse(lastUsedAtString).toLocal(); // 🔧 Forcer temps local
+        } catch (e) {
+          print('❌ Erreur parsing last_used_at: $e');
+          lastUsedAt = null;
+        }
+      }
+      
       return SavedRoute(
         id: json['id'] as String,
         name: json['name'] as String,
         parameters: RouteParameters.fromJson(json['parameters'] as Map<String, dynamic>),
         coordinates: _parseCoordinates(json['coordinates']),
-        createdAt: DateTime.parse(json['created_at'] as String),
+        createdAt: createdAt, // 🔧 Date corrigée
         actualDistance: _parseDouble(json['actual_distance']),
         actualDuration: _parseInt(json['actual_duration']),
         isSynced: json['is_synced'] as bool? ?? false,
         timesUsed: json['times_used'] as int? ?? 0,
-        lastUsedAt: json['last_used_at'] != null 
-            ? DateTime.parse(json['last_used_at'] as String) 
-            : null,
-        imageUrl: json['image_url'] as String?, // 🆕
+        lastUsedAt: lastUsedAt, // 🔧 Date corrigée
+        imageUrl: json['image_url'] as String?,
       );
     } catch (e) {
+      print('❌ Erreur parsing SavedRoute complète: $e');
+      print('📄 JSON problématique: $json');
       throw FormatException('Erreur parsing SavedRoute: $e');
     }
   }
@@ -150,16 +173,40 @@ class SavedRoute extends Equatable {
 
   /// Temps écoulé depuis la création
   String get timeAgo {
-    final difference = DateTime.now().difference(createdAt);
-    
-    if (difference.inDays > 0) {
-      return 'il y a ${difference.inDays} jour${difference.inDays > 1 ? 's' : ''}';
-    } else if (difference.inHours > 0) {
-      return 'il y a ${difference.inHours}h';
-    } else if (difference.inMinutes > 0) {
-      return 'il y a ${difference.inMinutes}min';
-    } else {
-      return 'à l\'instant';
+    try {
+      final now = DateTime.now();
+      
+      // S'assurer que les deux dates sont dans le même timezone
+      final createdLocal = createdAt.toLocal();
+      final nowLocal = now.toLocal();
+      
+      final difference = nowLocal.difference(createdLocal);
+            
+      // 🔧 Gestion robuste des différences négatives
+      if (difference.isNegative) {
+        print('⚠️ Différence négative: ${difference.inMinutes}min - Probablement un problème de timezone');
+        // Si c'est une petite différence négative, considérer comme "à l'instant"  
+        if (difference.inMinutes.abs() < 60) {
+          return 'à l\'instant';
+        } else {
+          return 'récent'; // Fallback pour des erreurs plus importantes
+        }
+      }
+      
+      if (difference.inDays > 0) {
+        return 'il y a ${difference.inDays} jour${difference.inDays > 1 ? 's' : ''}';
+      } else if (difference.inHours > 0) {
+        return 'il y a ${difference.inHours}h';
+      } else if (difference.inMinutes > 0) {
+        return 'il y a ${difference.inMinutes}min';
+      } else if (difference.inSeconds > 10) {
+        return 'il y a ${difference.inSeconds}s';
+      } else {
+        return 'à l\'instant';
+      }
+    } catch (e) {
+      print('❌ Erreur calcul timeAgo: $e');
+      return 'récent';
     }
   }
 
