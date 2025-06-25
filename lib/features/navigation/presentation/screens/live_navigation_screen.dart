@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:math' as math;
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -12,7 +11,6 @@ import 'package:runaway/core/widgets/squircle_container.dart';
 import 'package:runaway/features/navigation/blocs/navigation_bloc.dart';
 import 'package:runaway/features/navigation/blocs/navigation_event.dart';
 import 'package:runaway/features/navigation/blocs/navigation_state.dart';
-import 'package:sensors_plus/sensors_plus.dart';
 import '../../../../config/colors.dart';
 import '../../../../config/extensions.dart';
 import '../../domain/models/navigation_models.dart';
@@ -217,12 +215,7 @@ class _LiveNavigationScreenState extends State<LiveNavigationScreen> with Ticker
 
   /// 🆕 METTRE À JOUR L'INTERFACE selon l'orientation
   Future<void> _updateOrientationUI() async {
-    try {
-      // Mettre à jour la flèche
-      if (_currentUserArrow != null && userArrowManager != null) {
-        await _updateArrowRotation();
-      }
-      
+    try {      
       // Mettre à jour la caméra
       if (_isFirstPositionReceived && mapboxMap != null) {
         await _updateCameraBearing();
@@ -231,6 +224,7 @@ class _LiveNavigationScreenState extends State<LiveNavigationScreen> with Ticker
     } catch (e) {
       print('❌ Erreur mise à jour orientation UI: $e');
     }
+
   }
 
   void _pauseNavigation() {
@@ -407,7 +401,7 @@ class _LiveNavigationScreenState extends State<LiveNavigationScreen> with Ticker
         ),
         iconImage: 'navigation_arrow',
         iconSize: 1.0,
-        iconRotate: _currentHeading, // 🧭 Rotation selon compass
+        iconRotate: 0.0, // 🧭 Rotation selon compass
         iconAnchor: mp.IconAnchor.CENTER,
       );
 
@@ -714,7 +708,7 @@ class _LiveNavigationScreenState extends State<LiveNavigationScreen> with Ticker
         geometry: currentGeometry,
         iconImage: 'navigation_arrow',
         iconSize: 1.0,
-        iconRotate: _currentHeading,
+        iconRotate: 0.0,
         iconAnchor: mp.IconAnchor.CENTER,
       );
 
