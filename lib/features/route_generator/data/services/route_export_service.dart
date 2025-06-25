@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:path/path.dart' as p;   // pour basename
@@ -9,6 +10,7 @@ class RouteExportService {
   
   /// Exporte la route dans le format choisi
   static Future<void> exportRoute({
+    required BuildContext context,          // 🆕
     required List<List<double>> coordinates,
     required Map<String, dynamic> metadata,
     required RouteExportFormat format,
@@ -19,7 +21,7 @@ class RouteExportService {
       final content = _generateContent(coordinates, metadata, format, routeName);
       final fileName = '$routeName.${format.extension}';
       
-      await _saveAndShareFile(content, fileName, format);
+      await _saveAndShareFile(context, content, fileName, format);
       
     } catch (e) {
       throw RouteExportException('Erreur lors de l\'export: $e');
@@ -227,22 +229,25 @@ class RouteExportService {
 
   /// Sauvegarde et partage le fichier
   static Future<void> _saveAndShareFile(
+    BuildContext context,               // 🆕
     String content,
     String fileName,
     RouteExportFormat format,
   ) async {
-    // 1. Dossier temporaire
     final dir = await getTemporaryDirectory();
-    final filePath = p.join(dir.path, fileName);
+    final path = p.join(dir.path, fileName);
+    await File(path).writeAsString(content, encoding: utf8);
 
-    // 2. Écriture du fichier
-    final file = File(filePath);
-    await file.writeAsString(content, encoding: utf8);
+    final box = context.findRenderObject() as RenderBox?;
+    final origin = box != null
+      ? box.localToGlobal(Offset.zero) & box.size
+      : const Rect.fromLTWH(0, 0, 1, 1); // fallback
 
-    // 3. Partage
+     // 3. Partage
     final params = ShareParams(
       text: 'Parcours exporté depuis Runaway',
-      files: [XFile(filePath, mimeType: _mimeFromFormat(format))], 
+      files: [XFile(path, mimeType: _mimeFromFormat(format))], 
+      sharePositionOrigin: origin
     );
     
     final result = await SharePlus.instance.share(params);

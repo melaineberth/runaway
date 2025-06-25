@@ -1172,6 +1172,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
     try {
       // Exporter la route
       await RouteExportService.exportRoute(
+        context: context,
         coordinates: generatedRouteCoordinates!,
         metadata: routeMetadata!,
         format: format,
