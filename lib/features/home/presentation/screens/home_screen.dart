@@ -15,6 +15,7 @@ import 'package:runaway/config/colors.dart';
 import 'package:runaway/config/extensions.dart';
 import 'package:runaway/core/widgets/loading_overlay.dart';
 import 'package:runaway/core/widgets/top_snackbar.dart';
+import 'package:runaway/features/home/data/services/map_state_service.dart';
 import 'package:runaway/features/home/domain/enums/tracking_mode.dart';
 import 'package:runaway/features/home/presentation/widgets/export_format_dialog.dart';
 import 'package:runaway/features/home/presentation/widgets/route_info_card.dart';
@@ -41,6 +42,9 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, TickerProviderStateMixin {
+  // 🆕 Service de persistance
+  final MapStateService _mapStateService = MapStateService();
+  
   // === MAPBOX ===
   mp.MapboxMap? mapboxMap;
   mp.PointAnnotationManager? pointAnnotationManager;
@@ -92,7 +96,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _lottieController = AnimationController(vsync: this);
+
+    _initializeAnimationControllers();
+    _restoreStateFromService();
     _initializeLocationTracking();
     _setupRouteGenerationListener();
   }
@@ -102,12 +108,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
     super.didChangeAppLifecycleState(state);
     switch (state) {
       case AppLifecycleState.paused:
-        print('📱 App en arrière-plan, navigation continue');
+        print('📱 App en arrière-plan');
+        _saveStateToService(); // 💾 Sauvegarder lors de la mise en arrière-plan
         break;
       case AppLifecycleState.resumed:
         print('📱 App au premier plan');
-
-        // Réinitialiser le mode navigation si on revient
         if (_isInNavigationMode) {
           setState(() {
             _isInNavigationMode = false;
@@ -117,6 +122,68 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
       default:
         break;
     }
+  }
+
+  void _initializeAnimationControllers() {
+    _lottieController = AnimationController(
+      duration: const Duration(milliseconds: 800),
+      vsync: this,
+    );
+  }
+
+  /// 🔄 Restaurer l'état depuis le service
+  void _restoreStateFromService() {
+    print('🔄 Restauration de l\'état depuis le service...');
+    
+    // Restaurer les positions
+    _userLatitude = _mapStateService.lastUserLatitude;
+    _userLongitude = _mapStateService.lastUserLongitude;
+    _selectedLatitude = _mapStateService.selectedLatitude;
+    _selectedLongitude = _mapStateService.selectedLongitude;
+    
+    // Restaurer le mode de tracking
+    _trackingMode = _mapStateService.trackingMode;
+    
+    // Restaurer le parcours
+    generatedRouteCoordinates = _mapStateService.generatedRouteCoordinates;
+    routeMetadata = _mapStateService.routeMetadata;
+    _hasAutoSaved = _mapStateService.hasAutoSaved;
+    
+    print('✅ État restauré: positions=${_userLatitude != null}, mode=$_trackingMode, route=${generatedRouteCoordinates != null}');
+  }
+
+  /// 💾 Sauvegarder l'état dans le service
+  void _saveStateToService() {
+    print('💾 Sauvegarde de l\'état dans le service...');
+    
+    // Sauvegarder les positions
+    if (_userLatitude != null && _userLongitude != null) {
+      _mapStateService.saveUserPosition(_userLatitude!, _userLongitude!);
+    }
+    
+    if (_selectedLatitude != null && _selectedLongitude != null) {
+      _mapStateService.saveSelectedPosition(_selectedLatitude!, _selectedLongitude!);
+    }
+    
+    // Sauvegarder le mode de tracking
+    _mapStateService.saveTrackingMode(_trackingMode);
+    
+    // Sauvegarder le parcours
+    _mapStateService.saveGeneratedRoute(generatedRouteCoordinates, routeMetadata, _hasAutoSaved);
+    
+    // Sauvegarder l'état des marqueurs
+    _mapStateService.saveMarkerState(
+      locationMarkers.isNotEmpty,
+      _selectedLatitude,
+      _selectedLongitude,
+    );
+    
+    // Sauvegarder l'état de la caméra
+    if (mapboxMap != null) {
+      _mapStateService.saveCameraState(mapboxMap!);
+    }
+    
+    print('✅ État sauvegardé dans le service');
   }
 
   // Configuration de l'écoute de génération
@@ -141,6 +208,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
         routeMetadata = state.routeMetadata;
         // Pas de changement de _hasAutoSaved car c'est un parcours existant
       });
+
+      // 💾 Sauvegarder le nouveau parcours
+      _mapStateService.saveGeneratedRoute(state.generatedRoute, state.routeMetadata, _hasAutoSaved);
       
       // Afficher la route sur la carte
       await _displayRouteOnMap(state.generatedRoute!);
@@ -165,6 +235,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
       // DEBUG : Afficher les données reçues
       print('🔍 DEBUG routeMetadata keys: ${routeMetadata?.keys}');
       print('🔍 DEBUG distance calculée: ${_getGeneratedRouteDistance()}km');
+
+      // 💾 Sauvegarder le nouveau parcours
+      _mapStateService.saveGeneratedRoute(state.generatedRoute, state.routeMetadata, _hasAutoSaved);
       
       // Afficher la route sur la carte
       await _displayRouteOnMap(state.generatedRoute!);
@@ -367,6 +440,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
 
     // 6. Nettoyage du helper
     _trackingModeBeforeGeneration = null;
+
+    // 💾 Nettoyer dans le service
+    _mapStateService.saveGeneratedRoute(null, null, false);
 
     print('✅ === FIN NETTOYAGE COMPLET DU PARCOURS ===');
   }
@@ -685,6 +761,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
       _selectedLongitude = longitude;
     });
 
+    // 💾 Sauvegarder dans le service
+    _mapStateService.saveSelectedPosition(latitude, longitude);
+
     // Mettre à jour le BLoC
     context.read<RouteParametersBloc>().add(
       StartLocationUpdated(longitude: longitude, latitude: latitude),
@@ -712,14 +791,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
   Future<void> _addLocationMarker(double longitude, double latitude) async {
     if (mapboxMap == null) return;
 
-    // 🆕 Afficher le marqueur Lottie au lieu du marqueur Mapbox
-    setState(() {
-      _showLottieMarker = true;
-      _lottieMarkerLat = latitude;
-      _lottieMarkerLng = longitude;
-    });
-
-    print('✅ Marqueur Lottie affiché à: ($latitude, $longitude)');
+    print('🎯 Ajout marqueur à: ($latitude, $longitude)');
+    
+    // 🔧 FIX : Utiliser la nouvelle méthode corrigée
+    await _placeMarkerWithLottie(longitude, latitude);
   }
 
   Future<void> _ensureCustomMarkerImage() async {
@@ -747,73 +822,114 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
     if (mapboxMap == null) return;
 
     try {
-      // Nettoyer les anciens marqueurs
-      await _clearLocationMarkers();
-      
+      print('🎯 Placement du marqueur Lottie à: ($lat, $lon)');
+            
       // Retour haptique immédiat
       HapticFeedback.mediumImpact(); 
 
-      // 1️⃣  Positionner / lancer l’animation Lottie (overlay)
+      // 1️⃣ Positionner / lancer l'animation Lottie (overlay)
       setState(() {
         _showLottieMarker = true;
-        _lottieMarkerLng  = lon;
-        _lottieMarkerLat  = lat;
+        _lottieMarkerLng = lon;
+        _lottieMarkerLat = lat;
       });
+      
+      print('✅ Lottie affiché à: ($lat, $lon)');
+      
+      // Démarrer l'animation
       _lottieController
         ..reset()
         ..forward();
 
-      // 3️⃣  Attendre la fin de l’animation
+      // 2️⃣ Attendre la fin de l'animation
       await Future.delayed(
         _lottieController.duration ?? const Duration(seconds: 1),
       );
 
       if (!mounted) return;
 
-      // 4️⃣  Masquer Lottie
+      // 3️⃣ Masquer Lottie
       setState(() => _showLottieMarker = false);
 
-      // 5️⃣  Créer un *vrai* marqueur Mapbox – parfaitement stable
+      // 4️⃣ Créer un *vrai* marqueur Mapbox – parfaitement stable
       await _ensureCustomMarkerImage();
       markerPointManager ??= await mapboxMap!.annotations.createPointAnnotationManager();
 
-      await markerPointManager!.create(
-        mp.PointAnnotationOptions(
-          geometry:   mp.Point(coordinates: mp.Position(lon, lat)),
-          iconImage:  'custom-pin',
-          iconSize:   1,
-          iconOffset: [0, -_markerSize / 2],
-        ),
-      );
-
-      print('✅ Marqueur personnalisé ajouté');
-      
-    } catch (e) {
-      print('❌ Erreur ajout marqueur personnalisé: $e');
-      // Fallback: utiliser l'icône par défaut de Mapbox
       final marker = await markerPointManager!.create(
         mp.PointAnnotationOptions(
           geometry: mp.Point(coordinates: mp.Position(lon, lat)),
-          iconSize: 1.0,
+          iconImage: 'custom-pin',
+          iconSize: 1,
+          iconOffset: [0, -_markerSize / 2],
         ),
       );
+      
+      // 🔧 FIX : Ajouter le marqueur à la liste pour le tracking
       locationMarkers.add(marker);
+
+      // 💾 Sauvegarder l'état du marqueur
+      _mapStateService.saveMarkerState(true, lat, lon);
+
+      print('✅ Marqueur personnalisé ajouté et Lottie masqué');
+      
+    } catch (e) {
+      print('❌ Erreur ajout marqueur personnalisé: $e');
+      
+      // Fallback: utiliser l'icône par défaut de Mapbox
+      try {
+        markerPointManager ??= await mapboxMap!.annotations.createPointAnnotationManager();
+        final marker = await markerPointManager!.create(
+          mp.PointAnnotationOptions(
+            geometry: mp.Point(coordinates: mp.Position(lon, lat)),
+            iconSize: 1.0,
+          ),
+        );
+        locationMarkers.add(marker);
+        print('✅ Marqueur par défaut ajouté en fallback');
+      } catch (fallbackError) {
+        print('❌ Erreur fallback marqueur: $fallbackError');
+      }
     }
   }
 
   Future<void> _clearLocationMarkers() async {
-    // 🆕 Masquer le marqueur Lottie
-    setState(() {
-      _showLottieMarker = false;
-      _lottieMarkerLat = null;
-      _lottieMarkerLng = null;
-    });
+    print('🧹 Nettoyage des marqueurs...');
     
-    // ➜ on vide aussi les PointAnnotations
-    await markerPointManager?.deleteAll();
+    // 1️⃣ Masquer le marqueur Lottie
+    if (_showLottieMarker) {
+      setState(() {
+        _showLottieMarker = false;
+        _lottieMarkerLat = null;
+        _lottieMarkerLng = null;
+      });
+      print('✅ Lottie marqueur masqué');
+    }
+    
+    // 2️⃣ Supprimer les PointAnnotations
+    try {
+      if (markerPointManager != null) {
+        await markerPointManager!.deleteAll();
+        locationMarkers.clear();
+        print('✅ PointAnnotations supprimés');
+      }
+    } catch (e) {
+      print('❌ Erreur suppression PointAnnotations: $e');
+    }
 
-    // (si vous utilisez encore des cercles)
-    await circleAnnotationManager?.deleteAll();
+    // 3️⃣ Supprimer les cercles (si utilisés)
+    try {
+      if (circleAnnotationManager != null) {
+        await circleAnnotationManager!.deleteAll();
+        print('✅ CircleAnnotations supprimés');
+      }
+    } catch (e) {
+      print('❌ Erreur suppression CircleAnnotations: $e');
+    }
+
+    // 💾 Sauvegarder l'absence de marqueurs
+    _mapStateService.saveMarkerState(false, null, null);
+    
+    print('✅ Nettoyage des marqueurs terminé');
   }
 
   Future<Offset?> _getScreenPosition(double lat, double lng) async {
@@ -836,6 +952,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
       setState(() {
         _trackingMode = TrackingMode.userTracking;
       });
+
+      // 💾 Sauvegarder le mode
+      _mapStateService.saveTrackingMode(_trackingMode);
 
       _updateSelectedPosition(
         latitude: _userLatitude!,
@@ -873,11 +992,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
     print('🔍 === POSITION SÉLECTIONNÉE VIA RECHERCHE ===');
     print('🔍 Lieu: $placeName ($latitude, $longitude)');
     
-    // 🔧 CRUCIAL : Nettoyer l'ancien parcours si il existe
+    // Nettoyer parcours existant
     if (generatedRouteCoordinates != null) {
       print('🧹 Nettoyage du parcours existant avant nouvelle recherche');
       
-      // Nettoyer seulement la route, pas la position
       if (routeLineManager != null && mapboxMap != null) {
         try {
           await routeLineManager!.deleteAll();
@@ -888,7 +1006,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
         }
       }
       
-      // Nettoyer l'état du bloc
       if (mounted) {
         context.read<RouteGenerationBloc>().add(const RouteStateReset());
       }
@@ -898,73 +1015,205 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
         routeMetadata = null;
         _hasAutoSaved = false;
       });
+      
+      // 💾 Nettoyer dans le service
+      _mapStateService.clearMarkersAndRoute();
     }
     
-    // Mettre à jour le mode et les positions
+    // Mettre à jour la position
     setState(() {
       _trackingMode = TrackingMode.searchSelected;
       _selectedLatitude = latitude;
       _selectedLongitude = longitude;
     });
 
-    // Supprimer les anciens marqueurs et ajouter le nouveau
+    // 💾 Sauvegarder le nouveau mode et position
+    _mapStateService.saveTrackingMode(_trackingMode);
+    _mapStateService.saveSelectedPosition(latitude, longitude);
+
+    // Placer le marqueur
     await _clearLocationMarkers();
     await _placeMarkerWithLottie(longitude, latitude);
 
-    // Centrer la caméra sur la nouvelle position
+    // Centrer la caméra
     if (mapboxMap != null) {
       await mapboxMap!.flyTo(
         mp.CameraOptions(
-          center: mp.Point(
-            coordinates: mp.Position(longitude, latitude),
-          ),
+          center: mp.Point(coordinates: mp.Position(longitude, latitude)),
           zoom: 15,
         ),
         mp.MapAnimationOptions(duration: 1000),
       );
     }
 
-    print('✅ Position de recherche définie: $placeName');
+    print('✅ Position de recherche définie avec sauvegarde: $placeName');
   }
 
   // === GESTION DE LA CARTE ===
-  _onMapCreated(mp.MapboxMap mapboxMap) async {
+  Future<void> _onMapCreated(mp.MapboxMap mapboxMap) async {
     this.mapboxMap = mapboxMap;
+    
+    print('🗺️ === INITIALISATION DE LA CARTE ===');
+    print('🗺️ Première initialisation: ${!_mapStateService.isMapInitialized}');
+    print('🗺️ Caméra déjà définie: ${_mapStateService.hasInitialCameraBeenSet}');
 
-    mapboxMap.location.updateSettings(
-      mp.LocationComponentSettings(enabled: true, pulsingEnabled: true),
-    );
-
-    // Créer les gestionnaires d'annotations
-    pointAnnotationManager = await mapboxMap.annotations.createPointAnnotationManager();
-    circleAnnotationManager = await mapboxMap.annotations.createCircleAnnotationManager();
-
-    markerPointManager = await mapboxMap.annotations.createPointAnnotationManager();
-
-    // Masquer les éléments d'interface
-    await mapboxMap.compass.updateSettings(mp.CompassSettings(enabled: false));
-    await mapboxMap.attribution.updateSettings(mp.AttributionSettings(enabled: false));
-    await mapboxMap.logo.updateSettings(mp.LogoSettings(enabled: false));
-    await mapboxMap.scaleBar.updateSettings(mp.ScaleBarSettings(enabled: false));
-
-    // 🆕 AJOUTER L'INTERACTION LONGTAP POUR PLACEMENT MANUEL
+    // Configuration de base
+    await _setupMapboxSettings();
     await _setupLongTapInteraction();
+    await _setupMapMoveListener();
 
-    // Configurer le listener de déplacement de carte
-    mapboxMap.setOnMapMoveListener((context) {
+    // 🔄 Gestion intelligente de l'initialisation
+    if (!_mapStateService.isMapInitialized) {
+      // === PREMIÈRE INITIALISATION ===
+      print('🆕 Première initialisation de la carte');
+      await _performInitialSetup();
+      _mapStateService.markMapAsInitialized();
+    } else {
+      // === RETOUR SUR LA PAGE ===
+      print('🔄 Retour sur la page - restauration de l\'état');
+      await _restoreMapState();
+    }
+  }
+
+  /// 🆕 Configuration initiale (première fois)
+  Future<void> _performInitialSetup() async {
+    print('🆕 Configuration initiale de la carte');
+    
+    // Attendre la position utilisateur si elle n'est pas encore disponible
+    if (_userLatitude == null || _userLongitude == null) {
+      print('⏳ Attente de la position utilisateur...');
+      // La position sera gérée par _initializeLocationTracking
+      return;
+    }
+    
+    // Centrer sur la position utilisateur avec animation
+    await _centerOnUserLocation(animate: true);
+    _mapStateService.markInitialCameraAsSet();
+  }
+
+  /// 🔄 Restauration de l'état (retour)
+  Future<void> _restoreMapState() async {
+    print('🔄 Restauration de l\'état de la carte');
+    
+    // 1️⃣ Restaurer la caméra (sans animation pour instantané)
+    if (_mapStateService.hasInitialCameraBeenSet) {
+      await _mapStateService.restoreCameraState(mapboxMap!, animate: false);
+    } else if (_userLatitude != null && _userLongitude != null) {
+      await _centerOnUserLocation(animate: false);
+    }
+    
+    // 2️⃣ Restaurer les marqueurs
+    if (_mapStateService.hasActiveMarker && 
+        _mapStateService.markerLatitude != null && 
+        _mapStateService.markerLongitude != null) {
+      
+      print('📌 Restauration du marqueur à: (${_mapStateService.markerLatitude}, ${_mapStateService.markerLongitude})');
+      await _restoreMarker(_mapStateService.markerLongitude!, _mapStateService.markerLatitude!);
+    }
+    
+    // 3️⃣ Restaurer le parcours
+    if (generatedRouteCoordinates != null) {
+      print('🛣️ Restauration du parcours avec ${generatedRouteCoordinates!.length} points');
+      await _displayRouteOnMap(generatedRouteCoordinates!);
+    }
+  }
+
+  /// 📌 Restaurer un marqueur existant (sans animation Lottie)
+  Future<void> _restoreMarker(double longitude, double latitude) async {
+    try {
+      await _ensureCustomMarkerImage();
+      markerPointManager ??= await mapboxMap!.annotations.createPointAnnotationManager();
+
+      final marker = await markerPointManager!.create(
+        mp.PointAnnotationOptions(
+          geometry: mp.Point(coordinates: mp.Position(longitude, latitude)),
+          iconImage: 'custom-pin',
+          iconSize: 1,
+          iconOffset: [0, -_markerSize / 2],
+        ),
+      );
+      
+      locationMarkers.add(marker);
+      print('✅ Marqueur restauré sans animation');
+      
+    } catch (e) {
+      print('❌ Erreur restauration marqueur: $e');
+    }
+  }
+
+  /// 🎯 Centrer sur la position utilisateur
+  Future<void> _centerOnUserLocation({required bool animate}) async {
+    if (mapboxMap == null || _userLatitude == null || _userLongitude == null) return;
+
+    try {
+      final cameraOptions = mp.CameraOptions(
+        center: mp.Point(coordinates: mp.Position(_userLongitude!, _userLatitude!)),
+        zoom: 15,
+        pitch: 0,
+        bearing: 0,
+      );
+
+      if (animate) {
+        await mapboxMap!.flyTo(cameraOptions, mp.MapAnimationOptions(duration: 1500));
+        print('🎬 Centrage animé sur position utilisateur');
+      } else {
+        await mapboxMap!.setCamera(cameraOptions);
+        print('📷 Centrage instantané sur position utilisateur');
+      }
+      
+    } catch (e) {
+      print('❌ Erreur centrage position utilisateur: $e');
+    }
+  }
+
+  /// ⚙️ Configuration des paramètres Mapbox
+  Future<void> _setupMapboxSettings() async {
+    if (mapboxMap == null) return;
+
+    try {
+      // Configuration de la localisation
+      mapboxMap!.location.updateSettings(
+        mp.LocationComponentSettings(enabled: true, pulsingEnabled: true),
+      );
+
+      // Créer les gestionnaires d'annotations
+      pointAnnotationManager = await mapboxMap!.annotations.createPointAnnotationManager();
+      circleAnnotationManager = await mapboxMap!.annotations.createCircleAnnotationManager();
+      markerPointManager = await mapboxMap!.annotations.createPointAnnotationManager();
+
+      // Masquer les éléments d'interface
+      await mapboxMap!.compass.updateSettings(mp.CompassSettings(enabled: false));
+      await mapboxMap!.attribution.updateSettings(mp.AttributionSettings(enabled: false));
+      await mapboxMap!.logo.updateSettings(mp.LogoSettings(enabled: false));
+      await mapboxMap!.scaleBar.updateSettings(mp.ScaleBarSettings(enabled: false));
+      
+      print('⚙️ Paramètres Mapbox configurés');
+      
+    } catch (e) {
+      print('❌ Erreur configuration Mapbox: $e');
+    }
+  }
+
+  /// 🤏 Configuration du listener de déplacement
+  Future<void> _setupMapMoveListener() async {
+    if (mapboxMap == null) return;
+
+    mapboxMap!.setOnMapMoveListener((context) {
       // Si on était en mode suivi utilisateur, passer en mode manuel
       if (_trackingMode == TrackingMode.userTracking) {
         setState(() {
           _trackingMode = TrackingMode.manual;
         });
+        _mapStateService.saveTrackingMode(_trackingMode);
       }
 
-      // 🆕 Mettre à jour la position du marqueur Lottie lors du déplacement
+      // Mettre à jour la position du marqueur Lottie lors du déplacement
       if (_showLottieMarker) {
         setState(() {}); // Force rebuild pour recalculer la position
       }
-
     });
+    
+    print('🤏 Listener de déplacement configuré');
   }
 
   /// 🆕 CONFIGURATION DE L'INTERACTION LONGTAP
@@ -1008,11 +1257,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
       print('📍 === POSITIONNEMENT MANUEL VIA LONGTAP ===');
       print('📍 Position: ($latitude, $longitude)');
       
-      // 🔧 CRUCIAL : Si un parcours existe, le nettoyer d'abord
+      // Nettoyer parcours existant
       if (generatedRouteCoordinates != null) {
-        print('🧹 Nettoyage du parcours existant avant nouveau positionnement');
+        print('🧹 Nettoyage du parcours existant');
         
-        // Nettoyer seulement la route, pas la position
         if (routeLineManager != null && mapboxMap != null) {
           try {
             await routeLineManager!.deleteAll();
@@ -1023,7 +1271,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
           }
         }
         
-        // Nettoyer l'état du bloc mais garder la nouvelle position
         if (mounted) {
           context.read<RouteGenerationBloc>().add(const RouteStateReset());
         }
@@ -1033,45 +1280,49 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
           routeMetadata = null;
           _hasAutoSaved = false;
         });
+        
+        // 💾 Nettoyer dans le service
+        _mapStateService.clearMarkersAndRoute();
       }
       
-      // Mettre à jour le mode et les positions avec la position du LongTap
+      // Mettre à jour la position
       setState(() {
         _trackingMode = TrackingMode.manual;
         _selectedLatitude = latitude;
         _selectedLongitude = longitude;
       });
 
-      // Supprimer les anciens marqueurs et ajouter le nouveau à la position tapée
+      // 💾 Sauvegarder le nouveau mode et position
+      _mapStateService.saveTrackingMode(_trackingMode);
+      _mapStateService.saveSelectedPosition(latitude, longitude);
+
+      // Placer le marqueur avec transition fluide
       await _clearLocationMarkers();
       await _placeMarkerWithLottie(longitude, latitude);
 
-      // Centrer la caméra sur la nouvelle position
+      // Centrer la caméra
       if (mapboxMap != null) {
         await mapboxMap!.flyTo(
           mp.CameraOptions(
-            center: mp.Point(
-              coordinates: mp.Position(longitude, latitude),
-            ),
+            center: mp.Point(coordinates: mp.Position(longitude, latitude)),
             zoom: 15,
           ),
           mp.MapAnimationOptions(duration: 1000),
         );
       }
 
-      // Mettre à jour le BLoC avec la nouvelle position
+      // Mettre à jour le BLoC
       if (mounted) {
         context.read<RouteParametersBloc>().add(
           StartLocationUpdated(longitude: longitude, latitude: latitude),
         );
       }
 
-      print('✅ Position manuelle définie via LongTap: ($latitude, $longitude)');
+      print('✅ Position manuelle définie avec sauvegarde d\'état');
       
     } catch (e) {
       print('❌ Erreur lors de l\'activation manuelle: $e');
       
-      // Fallback : utiliser la position utilisateur si erreur
       if (_userLatitude != null && _userLongitude != null) {
         await _setManualPositionFallback(_userLongitude!, _userLatitude!);
       }
@@ -1209,7 +1460,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
 
   @override
   void dispose() {
-    _positionStream?.cancel();    
+    _saveStateToService();
+    
+    _positionStream?.cancel();
+    _lottieController.dispose();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
