@@ -12,7 +12,6 @@ import 'package:runaway/features/auth/presentation/screens/signup_screen.dart';
 import 'package:runaway/features/historic/presentation/screens/historic_screen.dart';
 import 'package:runaway/features/navigation/blocs/navigation_bloc.dart';
 import 'package:runaway/features/navigation/presentation/screens/live_navigation_screen.dart';
-import 'package:runaway/features/navigation/presentation/screens/navigation_screen.dart';
 import '../features/home/presentation/screens/home_screen.dart';
 
 // Clé globale pour accéder au contexte du router

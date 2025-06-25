@@ -49,6 +49,7 @@ dependencies:
   shared_preferences: ^2.5.3
   connectivity_plus: ^6.1.4
   flutter_compass: ^0.8.1
+  lottie: ^3.3.1
 
 dev_dependencies:
   flutter_test:
@@ -76,3 +77,4 @@ flutter:
     - assets/img/lock.png
     - assets/img/road.png
     - assets/img/arrow.png
+    - assets/img/pin.png

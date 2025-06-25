@@ -1,4 +1,4 @@
-// lib/features/navigation/presentation/blocs/navigation/navigation_bloc.dart
+// lib/features/navigation/blocs/navigation_bloc.dart
 import 'dart:async';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:geolocator/geolocator.dart';
@@ -10,7 +10,17 @@ import 'navigation_state.dart';
 class NavigationBloc extends Bloc<NavigationEvent, NavigationState> {
   Timer? _timer;
   StreamSubscription<Position>? _positionSubscription;
-  bool _hasReceivedFirstPosition = false; // 🆕 Flag pour première position
+  bool _hasReceivedFirstPosition = false;
+  
+  // 🆕 CACHE INTELLIGENT POUR ÉVITER MISES À JOUR REDONDANTES
+  Position? _lastCachedPosition;
+  DateTime _lastPositionUpdate = DateTime.now();
+  
+  // 🆕 FILTRAGE PRÉCISION
+  static const double _maxAccuracyThreshold = 30.0; // 30m max
+  
+  // 🆕 THROTTLING INTELLIGENT
+  static const Duration _minUpdateInterval = Duration(milliseconds: 100);
 
   NavigationBloc() : super(NavigationState.initial) {
     on<NavigationStarted>(_onNavigationStarted);
@@ -36,12 +46,14 @@ class NavigationBloc extends Bloc<NavigationEvent, NavigationState> {
     Emitter<NavigationState> emit,
   ) async {
     try {
-      print('🚀 === DÉBUT NAVIGATION ===');
+      print('🚀 === DÉBUT NAVIGATION OPTIMISÉE ===');
       print('📍 Route: ${event.originalRoute.length} points');
       print('📏 Distance cible: ${event.targetDistanceKm}km');
 
-      // Réinitialiser le flag de première position
+      // Réinitialiser caches et flags
       _hasReceivedFirstPosition = false;
+      _lastCachedPosition = null;
+      _lastPositionUpdate = DateTime.now();
 
       // Créer une nouvelle session
       final session = NavigationSession.initial(
@@ -59,13 +71,10 @@ class NavigationBloc extends Bloc<NavigationEvent, NavigationState> {
         errorMessage: null,
       ));
 
-      // 🔧 DÉMARRER LE GPS EN PREMIER
-      await _startLocationTracking();
+      // 🔧 DÉMARRER LE GPS HAUTE FRÉQUENCE
+      await _startHighFrequencyLocationTracking();
 
-      // 🔧 ATTENDRE LA PREMIÈRE POSITION AVANT DE MARQUER COMME ACTIF
-      // Le passage à "active" se fera dans _onNavigationPositionUpdated
-
-      print('✅ Navigation en attente de première position GPS');
+      print('✅ Navigation haute performance démarrée');
 
     } catch (e) {
       print('❌ Erreur démarrage navigation: $e');
@@ -105,7 +114,7 @@ class NavigationBloc extends Bloc<NavigationEvent, NavigationState> {
     print('▶️ Navigation reprise');
 
     _startTimer();
-    await _startLocationTracking();
+    await _startHighFrequencyLocationTracking();
 
     if (state.currentSession != null) {
       final activeSession = state.currentSession!.copyWith(
@@ -127,7 +136,8 @@ class NavigationBloc extends Bloc<NavigationEvent, NavigationState> {
 
     _timer?.cancel();
     _positionSubscription?.cancel();
-    _hasReceivedFirstPosition = false; // 🔧 Reset du flag
+    _hasReceivedFirstPosition = false;
+    _lastCachedPosition = null;
 
     if (state.currentSession != null) {
       final finishedSession = state.currentSession!.copyWith(
@@ -141,13 +151,12 @@ class NavigationBloc extends Bloc<NavigationEvent, NavigationState> {
         isPaused: false,
       ));
 
-      // Afficher les statistiques finales
       final finalStats = NavigationMetricsService.calculateFinalStats(finishedSession);
       print('📊 Statistiques finales: $finalStats');
     }
   }
 
-  /// Nouvelle position GPS
+  /// 🆕 NOUVELLE GESTION GPS HAUTE FRÉQUENCE
   void _onNavigationPositionUpdated(
     NavigationPositionUpdated event,
     Emitter<NavigationState> emit,
@@ -156,6 +165,21 @@ class NavigationBloc extends Bloc<NavigationEvent, NavigationState> {
 
     final position = event.position;
     
+    // 🆕 FILTRAGE PRÉCISION - Ignorer positions > 30m
+    if (position.accuracy > _maxAccuracyThreshold) {
+      print('⚠️ Position rejetée - précision trop faible: ${position.accuracy.toStringAsFixed(1)}m');
+      return;
+    }
+    
+    // 🆕 THROTTLING INTELLIGENT - Éviter spam positions identiques
+    if (_isDuplicatePosition(position)) {
+      return;
+    }
+    
+    // 🆕 CACHE POSITIONS pour optimiser performances
+    _lastCachedPosition = position;
+    _lastPositionUpdate = DateTime.now();
+    
     // Créer un nouveau point de tracking
     final trackingPoint = TrackingPoint(
       latitude: position.latitude,
@@ -163,38 +187,31 @@ class NavigationBloc extends Bloc<NavigationEvent, NavigationState> {
       altitude: position.altitude,
       speed: position.speed,
       accuracy: position.accuracy,
+      heading: position.heading,
       timestamp: DateTime.now(),
     );
 
-    // Ajouter le point à la session
-    final updatedPoints = List<TrackingPoint>.from(state.trackingPoints)
-      ..add(trackingPoint);
+    // Ajouter le point à la liste existante
+    final updatedPoints = [...state.trackingPoints, trackingPoint];
 
-    // 🔧 GESTION SPÉCIALE PREMIÈRE POSITION
+    // 🔧 PREMIÈRE POSITION - Démarrer immédiatement la navigation
     if (!_hasReceivedFirstPosition) {
-      print('📍 === PREMIÈRE POSITION REÇUE ===');
-      print('📍 Latitude: ${position.latitude.toStringAsFixed(6)}');
-      print('📍 Longitude: ${position.longitude.toStringAsFixed(6)}');
-      print('📍 Précision: ${position.accuracy.toStringAsFixed(1)}m');
-      
       _hasReceivedFirstPosition = true;
+      _startTimer();
       
-      // Marquer la session comme active maintenant qu'on a une position
+      print('✅ Première position GPS reçue - navigation active');
+      
       final activeSession = state.currentSession!.copyWith(
         status: NavigationStatus.active,
-        trackingPoints: updatedPoints,
+        startTime: DateTime.now(),
+        trackingPoints: updatedPoints, // 🔧 CORRECTION: via currentSession
       );
-
-      // Démarrer le timer maintenant
-      _startTimer();
-
-      emit(state.copyWith(currentSession: activeSession));
       
-      print('✅ Navigation activée avec première position');
+      emit(state.copyWith(currentSession: activeSession));
       return;
     }
 
-    // Calculer les nouvelles métriques pour les positions suivantes
+    // Calculer les nouvelles métriques
     final newMetrics = NavigationMetricsService.calculateMetrics(
       trackingPoints: updatedPoints,
       originalRoute: state.originalRoute,
@@ -202,28 +219,21 @@ class NavigationBloc extends Bloc<NavigationEvent, NavigationState> {
       targetDistanceKm: state.targetDistanceKm,
     );
 
-    // Mettre à jour la session
     final updatedSession = state.currentSession!.copyWith(
-      trackingPoints: updatedPoints,
+      trackingPoints: updatedPoints, // 🔧 CORRECTION: via currentSession
       metrics: newMetrics,
     );
-
+    
     emit(state.copyWith(currentSession: updatedSession));
-
-    // Debug des métriques (moins verbose après la première position)
-    if (updatedPoints.length % 10 == 0) { // Log toutes les 10 positions
-      print('📍 Distance: ${newMetrics.distanceKm.toStringAsFixed(2)}km, Vitesse: ${newMetrics.currentSpeedKmh.toStringAsFixed(1)}km/h');
-    }
   }
 
-  /// Tick du timer (chaque seconde)
+  /// Tick du timer
   void _onNavigationTimerTick(
     NavigationTimerTick event,
     Emitter<NavigationState> emit,
   ) {
     if (!state.isNavigating || state.currentSession == null) return;
 
-    // Recalculer les métriques avec le temps écoulé mis à jour
     final newMetrics = NavigationMetricsService.calculateMetrics(
       trackingPoints: state.trackingPoints,
       originalRoute: state.originalRoute,
@@ -244,7 +254,8 @@ class NavigationBloc extends Bloc<NavigationEvent, NavigationState> {
     
     _timer?.cancel();
     _positionSubscription?.cancel();
-    _hasReceivedFirstPosition = false; // 🔧 Reset du flag
+    _hasReceivedFirstPosition = false;
+    _lastCachedPosition = null;
 
     emit(NavigationState.initial);
   }
@@ -279,15 +290,15 @@ class NavigationBloc extends Bloc<NavigationEvent, NavigationState> {
   void _startTimer() {
     _timer?.cancel();
     _timer = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (state.isNavigating) { // Seulement si navigation active
+      if (state.isNavigating) {
         add(const NavigationTimerTick());
       }
     });
     print('⏱️ Timer de navigation démarré');
   }
 
-  /// Démarrer le tracking GPS
-  Future<void> _startLocationTracking() async {
+  /// 🆕 TRACKING GPS HAUTE FRÉQUENCE OPTIMISÉ
+  Future<void> _startHighFrequencyLocationTracking() async {
     try {
       // Vérifier les permissions
       LocationPermission permission = await Geolocator.checkPermission();
@@ -302,57 +313,86 @@ class NavigationBloc extends Bloc<NavigationEvent, NavigationState> {
         throw 'Permissions de localisation définitivement refusées';
       }
 
-      // 🔧 CONFIGURATION OPTIMISÉE POUR PREMIÈRE POSITION
-      const LocationSettings locationSettings = LocationSettings(
+      // 🆕 CONFIGURATION HAUTE PERFORMANCE
+      const LocationSettings highPerformanceSettings = LocationSettings(
         accuracy: LocationAccuracy.bestForNavigation,
-        distanceFilter: 1, // Plus sensible pour capturer la première position rapidement
-        timeLimit: Duration(seconds: 30), // Timeout pour éviter d'attendre indéfiniment
+        distanceFilter: 0, // 🔧 Capturer CHAQUE mouvement
+        timeLimit: Duration(seconds: 10), // Timeout réduit
       );
 
-      print('📡 Démarrage tracking GPS avec configuration optimisée...');
+      print('📡 Démarrage GPS haute fréquence (100ms)...');
 
-      // Démarrer le stream de positions
+      // Démarrer le stream haute fréquence
       _positionSubscription?.cancel();
       _positionSubscription = Geolocator.getPositionStream(
-        locationSettings: locationSettings,
+        locationSettings: highPerformanceSettings,
       ).listen(
-        (position) {
-          // Vérifier la précision de la position
-          if (position.accuracy > 100) {
-            print('⚠️ Position imprécise (${position.accuracy.toStringAsFixed(1)}m), attente meilleure précision...');
-            return;
-          }
-          
-          add(NavigationPositionUpdated(position));
-        },
+        (position) => _handleHighFrequencyPosition(position),
         onError: (error) {
           print('❌ Erreur GPS: $error');
           add(NavigationStopped());
         },
       );
 
-      // 🆕 OBTENIR UNE POSITION IMMÉDIATE POUR DÉMARRER PLUS VITE
-      try {
-        print('🎯 Tentative d\'obtention d\'une position immédiate...');
-        final currentPosition = await Geolocator.getCurrentPosition(
-          desiredAccuracy: LocationAccuracy.bestForNavigation,
-          timeLimit: Duration(seconds: 10),
-        );
-        
-        if (currentPosition.accuracy <= 50) { // Seulement si précision acceptable
-          print('✅ Position immédiate obtenue avec bonne précision');
-          add(NavigationPositionUpdated(currentPosition));
-        }
-      } catch (e) {
-        print('⚠️ Impossible d\'obtenir position immédiate: $e');
-        // Pas grave, on attend le stream
-      }
+      // 🆕 ACQUISITION IMMÉDIATE EN PARALLÈLE
+      _getImmediatePosition();
 
-      print('📡 Tracking GPS démarré');
+      print('📡 GPS haute performance activé');
 
     } catch (e) {
       print('❌ Erreur démarrage GPS: $e');
       throw 'Impossible de démarrer le GPS: $e';
     }
+  }
+
+  /// 🆕 GESTION POSITION HAUTE FRÉQUENCE
+  void _handleHighFrequencyPosition(Position position) {
+    // Throttling intelligent pour maintenir 100ms minimum
+    final timeSinceLastUpdate = DateTime.now().difference(_lastPositionUpdate);
+    if (timeSinceLastUpdate < _minUpdateInterval) {
+      return;
+    }
+    
+    add(NavigationPositionUpdated(position));
+  }
+
+  /// 🆕 ACQUISITION IMMÉDIATE POSITION
+  Future<void> _getImmediatePosition() async {
+    try {
+      print('🎯 Acquisition position immédiate...');
+      final currentPosition = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.bestForNavigation,
+        timeLimit: Duration(seconds: 5), // Timeout plus court
+      );
+      
+      if (currentPosition.accuracy <= _maxAccuracyThreshold) {
+        print('✅ Position immédiate obtenue (${currentPosition.accuracy.toStringAsFixed(1)}m)');
+        add(NavigationPositionUpdated(currentPosition));
+      }
+    } catch (e) {
+      print('⚠️ Position immédiate échouée: $e');
+      // Pas grave, on attend le stream
+    }
+  }
+
+  /// 🆕 DÉTECTION POSITIONS DUPLIQUÉES
+  bool _isDuplicatePosition(Position newPosition) {
+    if (_lastCachedPosition == null) return false;
+    
+    // Comparer latitude, longitude et timestamp
+    const double precisionThreshold = 0.000001; // ~0.1m
+    final latDiff = (newPosition.latitude - _lastCachedPosition!.latitude).abs();
+    final lngDiff = (newPosition.longitude - _lastCachedPosition!.longitude).abs();
+    
+    final timeDiff = DateTime.now().difference(_lastPositionUpdate);
+    
+    // Position identique si coordonnées très proches ET update récent
+    if (latDiff < precisionThreshold && 
+        lngDiff < precisionThreshold && 
+        timeDiff < _minUpdateInterval) {
+      return true;
+    }
+    
+    return false;
   }
 }

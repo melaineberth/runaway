@@ -21,7 +21,7 @@ class NavigationMetricsService {
     
     // Calculs de base
     final distanceKm = _calculateTotalDistance(trackingPoints);
-    final currentAltitude = trackingPoints.last.altitude;
+    final currentAltitude = trackingPoints.last.altitude ?? 0.0;
     final elevationGain = _calculateElevationGain(trackingPoints);
     
     // Calculs de vitesse
@@ -40,6 +40,13 @@ class NavigationMetricsService {
       averageSpeedKmh,
     );
 
+    final remainingDistanceKm = _calculateRemainingDistance(
+      trackingPoints: trackingPoints,
+      originalRoute: originalRoute,
+      targetDistanceKm: targetDistanceKm,
+      travelledKm: distanceKm,
+    );
+
     return NavigationMetrics(
       elapsedTime: elapsedTime,
       distanceKm: distanceKm,
@@ -51,6 +58,7 @@ class NavigationMetricsService {
       averagePaceSecPerKm: averagePaceSecPerKm,
       estimatedTimeRemaining: estimatedTimeRemaining,
       progressPercent: progressPercent,
+      remainingDistanceKm: remainingDistanceKm,
     );
   }
 
@@ -60,7 +68,7 @@ class NavigationMetricsService {
 
     double totalDistance = 0.0;
     for (int i = 1; i < points.length; i++) {
-      totalDistance += points[i].distanceFrom(points[i - 1]);
+      totalDistance += points[i].distanceFrom(points[i - 1]); // ✅ Méthode maintenant définie
     }
 
     return totalDistance / 1000.0; // Convertir en km
@@ -72,7 +80,11 @@ class NavigationMetricsService {
 
     double totalGain = 0.0;
     for (int i = 1; i < points.length; i++) {
-      final altitudeDiff = points[i].altitude - points[i - 1].altitude;
+      // 🔧 FIX: Gestion des altitudes nullables
+      final currentAlt = points[i].altitude ?? 0.0;
+      final previousAlt = points[i - 1].altitude ?? 0.0;
+      final altitudeDiff = currentAlt - previousAlt;
+      
       if (altitudeDiff > 0) {
         totalGain += altitudeDiff;
       }
@@ -87,8 +99,9 @@ class NavigationMetricsService {
 
     // Utiliser la vitesse du GPS si disponible
     final lastPoint = points.last;
-    if (lastPoint.speed > 0) {
-      return lastPoint.speed * 3.6; // Convertir m/s en km/h
+    final speed = lastPoint.speed ?? 0.0; // 🔧 FIX: Gestion nullable
+    if (speed > 0) {
+      return speed * 3.6; // Convertir m/s en km/h
     }
 
     // Sinon calculer à partir des derniers points (sur 30 secondes max)
@@ -225,6 +238,17 @@ class NavigationMetricsService {
     final metrics = session.metrics;
     final duration = session.totalDuration;
     
+    // 🔧 FIX: Fonction helper pour gérer max/min avec nullables
+    double safeMax(List<double?> values) {
+      final nonNullValues = values.where((v) => v != null).map((v) => v!).toList();
+      return nonNullValues.isNotEmpty ? nonNullValues.reduce(math.max) : 0.0;
+    }
+    
+    double safeMin(List<double?> values) {
+      final nonNullValues = values.where((v) => v != null).map((v) => v!).toList();
+      return nonNullValues.isNotEmpty ? nonNullValues.reduce(math.min) : 0.0;
+    }
+    
     return {
       'total_distance_km': metrics.distanceKm,
       'total_duration_seconds': duration.inSeconds,
@@ -232,14 +256,37 @@ class NavigationMetricsService {
       'average_pace_sec_per_km': metrics.averagePaceSecPerKm,
       'total_elevation_gain_m': metrics.totalElevationGain,
       'max_altitude_m': session.trackingPoints.isNotEmpty 
-          ? session.trackingPoints.map((p) => p.altitude).reduce(math.max)
+          ? safeMax(session.trackingPoints.map((p) => p.altitude).toList())
           : 0.0,
       'min_altitude_m': session.trackingPoints.isNotEmpty
-          ? session.trackingPoints.map((p) => p.altitude).reduce(math.min)
+          ? safeMin(session.trackingPoints.map((p) => p.altitude).toList())
           : 0.0,
       'tracking_points_count': session.trackingPoints.length,
       'start_time': session.startTime.toIso8601String(),
       'end_time': session.endTime?.toIso8601String(),
     };
+  }
+
+  static double _calculateRemainingDistance({
+    required List<TrackingPoint> trackingPoints,
+    required List<List<double>> originalRoute,
+    required double targetDistanceKm,
+    required double travelledKm,
+  }) {
+    // 1️⃣ cible explicite (ex. footing 10 km)
+    if (targetDistanceKm > 0) {
+      return math.max(0, targetDistanceKm - travelledKm);
+    }
+
+    // 2️⃣ on suit un GPX : calculer la distance le long du tracé
+    if (originalRoute.isNotEmpty) {
+      return calculateDistanceToRouteEnd(
+        currentPosition: trackingPoints.last,
+        originalRoute: originalRoute,
+      );
+    }
+
+    // 3️⃣ aucune info ➜ 0
+    return 0.0;
   }
 }

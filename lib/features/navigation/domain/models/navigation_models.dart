@@ -2,38 +2,79 @@
 import 'package:equatable/equatable.dart';
 import 'dart:math' as math;
 
+import 'package:geolocator/geolocator.dart';
+
 /// Point de tracking GPS avec timestamp
-class TrackingPoint extends Equatable {
+// lib/features/navigation/domain/models/navigation_models.dart (partie TrackingPoint)
+
+class TrackingPoint {
   final double latitude;
   final double longitude;
-  final double altitude;
-  final double speed; // m/s
-  final double accuracy;
+  final double? altitude;
+  final double? speed;
+  final double? accuracy;
+  final double? heading;
   final DateTime timestamp;
+  final double? bearing;
+  final double? distance;
 
   const TrackingPoint({
     required this.latitude,
     required this.longitude,
-    required this.altitude,
-    required this.speed,
-    required this.accuracy,
+    this.altitude,
+    this.speed,
+    this.accuracy,
+    this.heading,
     required this.timestamp,
+    this.bearing,
+    this.distance,
   });
 
-  @override
-  List<Object?> get props => [
-    latitude,
-    longitude,
-    altitude,
-    speed,
-    accuracy,
-    timestamp,
-  ];
+  /// Créer à partir d'une position GPS
+  factory TrackingPoint.fromPosition(Position position) {
+    return TrackingPoint(
+      latitude: position.latitude,
+      longitude: position.longitude,
+      altitude: position.altitude,
+      speed: position.speed,
+      accuracy: position.accuracy,
+      heading: position.heading,
+      timestamp: DateTime.now(),
+    );
+  }
 
-  /// Convertir en liste de coordonnées pour affichage
+  /// 🆕 COPIER AVEC NOUVELLES VALEURS CALCULÉES
+  TrackingPoint copyWithCalculated({
+    double? bearing,
+    double? distance,
+  }) {
+    return TrackingPoint(
+      latitude: latitude,
+      longitude: longitude,
+      altitude: altitude,
+      speed: speed,
+      accuracy: accuracy,
+      heading: heading,
+      timestamp: timestamp,
+      bearing: bearing ?? this.bearing,
+      distance: distance ?? this.distance,
+    );
+  }
+
+  // 🔧 CORRECTION: Ajouter getter coordinates
   List<double> get coordinates => [longitude, latitude];
 
-  /// Distance en mètres depuis un autre point
+  /// 🆕 CALCULER DISTANCE VERS UN AUTRE POINT
+  double distanceTo(TrackingPoint other) {
+    return Geolocator.distanceBetween(
+      latitude,
+      longitude,
+      other.latitude,
+      other.longitude,
+    );
+  }
+
+  /// 🆕 MÉTHODE distanceFrom - Distance vers un autre point
   double distanceFrom(TrackingPoint other) {
     return calculateDistance(
       latitude,
@@ -43,22 +84,95 @@ class TrackingPoint extends Equatable {
     );
   }
 
-  /// Calcul de distance Haversine
-  static double calculateDistance(double lat1, double lon1, double lat2, double lon2) {
-    const double R = 6371000; // Rayon de la Terre en mètres
-    final double dLat = _toRadians(lat2 - lat1);
-    final double dLon = _toRadians(lon2 - lon1);
-    
-    final double a = math.sin(dLat / 2) * math.sin(dLat / 2) +
-        math.cos(_toRadians(lat1)) * math.cos(_toRadians(lat2)) *
-        math.sin(dLon / 2) * math.sin(dLon / 2);
+  /// 🆕 MÉTHODE calculateDistance statique - Calcul distance entre coordonnées
+  static double calculateDistance(double lat1, double lng1, double lat2, double lng2) {
+    const double earthRadius = 6371000; // Rayon de la Terre en mètres
+    const double degreesToRadians = math.pi / 180.0;
+
+    final double lat1Rad = lat1 * degreesToRadians;
+    final double lat2Rad = lat2 * degreesToRadians;
+    final double deltaLatRad = (lat2 - lat1) * degreesToRadians;
+    final double deltaLngRad = (lng2 - lng1) * degreesToRadians;
+
+    final double a = math.sin(deltaLatRad / 2) * math.sin(deltaLatRad / 2) +
+        math.cos(lat1Rad) * math.cos(lat2Rad) *
+        math.sin(deltaLngRad / 2) * math.sin(deltaLngRad / 2);
     
     final double c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a));
     
-    return R * c;
+    return earthRadius * c; // Distance en mètres
   }
 
-  static double _toRadians(double degree) => degree * math.pi / 180;
+  /// 🆕 CALCULER BEARING VERS UN AUTRE POINT
+  double bearingTo(TrackingPoint other) {
+    const double degreesToRadians = math.pi / 180.0;
+    const double radiansToDegrees = 180.0 / math.pi;
+
+    final double lat1Rad = latitude * degreesToRadians;
+    final double lat2Rad = other.latitude * degreesToRadians;
+    final double deltaLngRad = (other.longitude - longitude) * degreesToRadians;
+
+    final double y = math.sin(deltaLngRad) * math.cos(lat2Rad);
+    final double x = math.cos(lat1Rad) * math.sin(lat2Rad) -
+        math.sin(lat1Rad) * math.cos(lat2Rad) * math.cos(deltaLngRad);
+
+    final double bearingRad = math.atan2(y, x);
+    final double bearingDegrees = bearingRad * radiansToDegrees;
+
+    return (bearingDegrees + 360) % 360;
+  }
+
+  /// 🆕 VÉRIFIER SI POSITION VALIDE
+  bool get isValid {
+    return latitude >= -90 && 
+           latitude <= 90 && 
+           longitude >= -180 && 
+           longitude <= 180 &&
+           (accuracy == null || accuracy! <= 100); // Précision acceptable
+  }
+
+  /// 🆕 OBTENIR VITESSE EN KM/H
+  double get speedKmh => (speed ?? 0.0) * 3.6;
+
+  /// 🆕 OBTENIR HEADING PRÉFÉRÉ (GPS ou calculé)
+  double? getPreferredHeading(TrackingPoint? previousPoint) {
+    // Préférer heading GPS si disponible et fiable
+    if (heading != null && !heading!.isNaN && (speed ?? 0) > 1.0) {
+      return heading;
+    }
+    
+    // Sinon calculer depuis mouvement
+    if (previousPoint != null) {
+      return previousPoint.bearingTo(this);
+    }
+    
+    return null;
+  }
+
+  @override
+  String toString() {
+    return 'TrackingPoint(lat: ${latitude.toStringAsFixed(6)}, '
+           'lng: ${longitude.toStringAsFixed(6)}, '
+           'speed: ${(speed ?? 0).toStringAsFixed(1)} m/s, '
+           'accuracy: ${(accuracy ?? 0).toStringAsFixed(1)}m, '
+           'heading: ${heading?.toStringAsFixed(1)}°)';
+  }
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    return other is TrackingPoint &&
+           other.latitude == latitude &&
+           other.longitude == longitude &&
+           other.timestamp == timestamp;
+  }
+
+  @override
+  int get hashCode {
+    return latitude.hashCode ^ 
+           longitude.hashCode ^ 
+           timestamp.hashCode;
+  }
 }
 
 /// Métriques de navigation en temps réel
@@ -73,6 +187,7 @@ class NavigationMetrics extends Equatable {
   final double averagePaceSecPerKm;
   final Duration estimatedTimeRemaining;
   final double progressPercent;
+  final double remainingDistanceKm;
 
   const NavigationMetrics({
     required this.elapsedTime,
@@ -85,6 +200,7 @@ class NavigationMetrics extends Equatable {
     required this.averagePaceSecPerKm,
     required this.estimatedTimeRemaining,
     required this.progressPercent,
+    required this.remainingDistanceKm,
   });
 
   @override
@@ -99,6 +215,7 @@ class NavigationMetrics extends Equatable {
     averagePaceSecPerKm,
     estimatedTimeRemaining,
     progressPercent,
+    remainingDistanceKm,
   ];
 
   /// Métriques initiales (zéro)
@@ -113,6 +230,7 @@ class NavigationMetrics extends Equatable {
     averagePaceSecPerKm: 0.0,
     estimatedTimeRemaining: Duration.zero,
     progressPercent: 0.0,
+    remainingDistanceKm: 0,
   );
 
   /// Formatage du temps écoulé
@@ -174,6 +292,7 @@ class NavigationSession extends Equatable {
   final NavigationStatus status;
   final DateTime startTime;
   final DateTime? endTime;
+  final double targetDistanceKm;
 
   const NavigationSession({
     required this.id,
@@ -183,6 +302,7 @@ class NavigationSession extends Equatable {
     required this.status,
     required this.startTime,
     this.endTime,
+    required this.targetDistanceKm,
   });
 
   @override
@@ -207,6 +327,7 @@ class NavigationSession extends Equatable {
       metrics: NavigationMetrics.zero,
       status: NavigationStatus.idle,
       startTime: DateTime.now(),
+      targetDistanceKm: _polylineDistanceKm(originalRoute),
     );
   }
 
@@ -219,6 +340,7 @@ class NavigationSession extends Equatable {
     NavigationStatus? status,
     DateTime? startTime,
     DateTime? endTime,
+    double? targetDistanceKm,
   }) {
     return NavigationSession(
       id: id ?? this.id,
@@ -228,7 +350,21 @@ class NavigationSession extends Equatable {
       status: status ?? this.status,
       startTime: startTime ?? this.startTime,
       endTime: endTime ?? this.endTime,
+      targetDistanceKm: targetDistanceKm ?? this.targetDistanceKm
     );
+  }
+
+  // --- calcule la distance d'une polyline en km ---
+  static double _polylineDistanceKm(List<List<double>> coords) {
+    if (coords.length < 2) return 0;
+    double m = 0;
+    for (var i = 1; i < coords.length; i++) {
+      m += TrackingPoint.calculateDistance(
+        coords[i - 1][1], coords[i - 1][0],   // lat, lon
+        coords[i][1],     coords[i][0],
+      );
+    }
+    return m / 1000.0;
   }
 
   /// Coordonnées du tracé utilisateur pour affichage

@@ -1,4 +1,3 @@
-// lib/features/navigation/presentation/blocs/navigation/navigation_state.dart
 import 'package:equatable/equatable.dart';
 import 'package:runaway/features/navigation/domain/models/navigation_models.dart';
 

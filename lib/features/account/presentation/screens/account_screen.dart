@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hugeicons/hugeicons.dart';
-import 'package:progressive_blur/progressive_blur.dart';
 import 'package:runaway/config/colors.dart';
 import 'package:runaway/config/extensions.dart';
 import 'package:runaway/core/widgets/ask_registration.dart';
@@ -461,52 +460,34 @@ class _BlurryPageState extends State<BlurryPage> {
   Widget build(BuildContext context) {
     return Stack(
       children: [
-        ProgressiveBlurWidget(
-          sigma: _isCutByTop ? 100.0 : 0,
-          linearGradientBlur: const LinearGradientBlur(
-            values: [1, 0], // 0 - no blur, 1 - full blur
-            stops: [0.0, 0.4],
-            start: Alignment.topCenter,
-            end: Alignment.center,
-          ),
-          child: Stack(
-            alignment: Alignment.bottomCenter,
-            children: [
-              ProgressiveBlurWidget(
-                sigma: 50.0,
-                linearGradientBlur: const LinearGradientBlur(
-                  values: [0, 1], // 0 - no blur, 1 - full blur
-                  stops: [0.5, 0.9],
-                  start: Alignment.center,
-                  end: Alignment.bottomCenter,
-                ),
-                child: Padding(
-                  padding: widget.padding ?? EdgeInsets.zero,
-                  child: ListView(
-                    padding: widget.contentPadding,
-                    controller: _scrollController,
-                    children: widget.children
+        Stack(
+          alignment: Alignment.bottomCenter,
+          children: [
+            Padding(
+              padding: widget.padding ?? EdgeInsets.zero,
+              child: ListView(
+                padding: widget.contentPadding,
+                controller: _scrollController,
+                children: widget.children
+              ),
+            ),
+          
+            IgnorePointer(
+              ignoring: true,
+              child: Container(
+                height: MediaQuery.of(context).size.height / 3,
+                decoration: BoxDecoration(
+                  gradient: SmoothGradient(
+                    from: widget.color?.withValues(alpha: 0) ?? AppColorsDark.background.withValues(alpha: 0),
+                    to: widget.color ?? AppColorsDark.background,
+                    curve: Curves.linear,
+                    begin: Alignment.center,
+                    end: Alignment.bottomCenter,
                   ),
                 ),
               ),
-            
-              IgnorePointer(
-                ignoring: true,
-                child: Container(
-                  height: MediaQuery.of(context).size.height / 3,
-                  decoration: BoxDecoration(
-                    gradient: SmoothGradient(
-                      from: widget.color?.withValues(alpha: 0) ?? AppColorsDark.background.withValues(alpha: 0),
-                      to: widget.color ?? AppColorsDark.background,
-                      curve: Curves.linear,
-                      begin: Alignment.center,
-                      end: Alignment.bottomCenter,
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
         AnimatedOpacity(
           opacity: _isCutByTop ? 1.0 : 0.0,
