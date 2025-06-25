@@ -39,7 +39,8 @@ class ExportFormatDialog extends StatelessWidget {
                   color: Colors.white38,
                 ),
               ),
-              SizedBox(height: 20),
+
+              20.h,
           
               ...RouteExportFormat.values.map(
                 (format) => _buildFormatOption(context, format, () {
@@ -90,56 +91,48 @@ class ExportFormatDialog extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12.0),
       child: SquircleContainer(
+        onTap: onTap,
         radius: 40,
         color: Colors.white10,
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(12),
-          child: Container(
-            padding: EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(12),
+        padding: EdgeInsets.all(12),
+        child: Row(
+          children: [
+            SquircleContainer(
+              padding: EdgeInsets.all(8),
+              radius: 18,
+              color: color.withValues(alpha: 0.1),
+              child: Icon(icon, color: color, size: 30),
             ),
-            child: Row(
-              children: [
-                SquircleContainer(
-                  padding: EdgeInsets.all(8),
-                  radius: 18,
-                  color: color.withValues(alpha: 0.1),
-                  child: Icon(icon, color: color, size: 30),
-                ),
-                SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        format.displayName,
-                        style: context.bodyMedium?.copyWith(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      SizedBox(height: 4),
-                      Text(
-                        format.description,
-                        style: context.bodySmall?.copyWith(
-                          fontSize: 14,
-                          color: Colors.white38,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ],
+            SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    format.displayName,
+                    style: context.bodyMedium?.copyWith(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
-                ),
-                Icon(
-                  HugeIcons.strokeRoundedArrowRight01,
-                  color: Colors.grey[400],
-                  size: 20,
-                ),
-              ],
+                  SizedBox(height: 4),
+                  Text(
+                    format.description,
+                    style: context.bodySmall?.copyWith(
+                      fontSize: 14,
+                      color: Colors.white38,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
+            Icon(
+              HugeIcons.strokeRoundedArrowRight01,
+              color: Colors.grey[400],
+              size: 20,
+            ),
+          ],
         ),
       ),
     );

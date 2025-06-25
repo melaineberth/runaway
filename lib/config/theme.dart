@@ -22,31 +22,31 @@ ThemeData getAppTheme(Brightness brightness) {
       headlineLarge: TextStyle(
         fontSize: 32,
         fontWeight: FontWeight.bold,
-        color: isDark ? AppColorsDark.textPrimary : AppColors.textPrimary,
+        color: Colors.white,
       ),
       titleLarge: TextStyle(
         fontSize: 24,
         fontWeight: FontWeight.w600,
-        color: isDark ? AppColorsDark.textPrimary : AppColors.textPrimary,
+        color: Colors.white,
       ),
       bodyLarge: TextStyle(
         fontSize: 35,
         fontWeight: FontWeight.w600,
         letterSpacing: -0.3,
         height: 1.2,
-        color: isDark ? AppColorsDark.textPrimary : AppColors.textPrimary,
+        color: Colors.white,
       ),
       bodyMedium: TextStyle(
         fontSize: 20,
         fontWeight: FontWeight.w600,
         letterSpacing: -0.3,
-        color: isDark ? AppColorsDark.textPrimary : AppColors.textPrimary,
+        color: Colors.white,
       ),
       bodySmall: TextStyle(
         fontSize: 17,
         fontWeight: FontWeight.w600,
         letterSpacing: -0.3,
-        color: isDark ? AppColorsDark.textPrimary : AppColors.textPrimary,
+        color: Colors.white,
       ),
     ),
     appBarTheme: AppBarTheme(

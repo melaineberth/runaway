@@ -14,6 +14,8 @@ class AuthTextField extends StatefulWidget {
   final int? maxLength;
   final Widget? suffixIcon;
   final TextCapitalization? textCapitalization;
+  final int? maxLines;
+  final String? suffixText;
   
   const AuthTextField({
     super.key,
@@ -27,6 +29,8 @@ class AuthTextField extends StatefulWidget {
     this.maxLength,
     this.suffixIcon,
     this.textCapitalization,
+    this.maxLines = 1,
+    this.suffixText,
   });
 
   @override
@@ -69,6 +73,7 @@ class _AuthTextFieldState extends State<AuthTextField> {
                 hintText: widget.hint,
                 border: InputBorder.none,
                 suffixIcon: widget.suffixIcon,
+                suffixText: widget.suffixText,
                 hintStyle: context.bodySmall?.copyWith(
                   color: widget.enabled ? Colors.white30 : Colors.white12,
                 ),
@@ -77,6 +82,7 @@ class _AuthTextFieldState extends State<AuthTextField> {
                   fontSize: 12,
                 ),
               ),
+              maxLines: widget.maxLines,
             ),
           ),
           if (widget.obscureText)

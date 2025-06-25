@@ -8,6 +8,8 @@ import 'package:runaway/config/environment_config.dart';
 import 'package:runaway/config/router.dart';
 import 'package:runaway/config/theme.dart';
 import 'package:runaway/core/services/app_initialization_service.dart';
+import 'package:runaway/features/activity/data/repositories/activity_repository.dart';
+import 'package:runaway/features/activity/presentation/blocs/activity_bloc.dart';
 import 'package:runaway/features/auth/data/repositories/auth_repository.dart';
 import 'package:runaway/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:runaway/features/auth/presentation/bloc/auth_event.dart';
@@ -89,6 +91,13 @@ class RunAway extends StatelessWidget {
         
         BlocProvider(
           create: (_) => RouteGenerationBloc(
+            routesRepository: RoutesRepository(),
+          ),
+        ),
+
+        BlocProvider<ActivityBloc>(
+          create: (context) => ActivityBloc(
+            activityRepository: ActivityRepository(),
             routesRepository: RoutesRepository(),
           ),
         ),

@@ -26,7 +26,7 @@ class NavigationScreen extends StatefulWidget {
 
 class _NavigationScreenState extends State<NavigationScreen> {
   Timer? _timer;
-  int _elapsedSeconds = 0;
+  final int _elapsedSeconds = 0;
   StreamSubscription<gl.Position>? _posSub;
   final List<gl.Position> _positions = [];
   double _distanceMeters = 0;

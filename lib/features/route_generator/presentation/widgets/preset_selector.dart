@@ -85,7 +85,7 @@ class PresetSelector extends StatelessWidget {
                 onDelete: () => onFavoriteDeleted(index),
               ),
             );
-          }).toList(),
+          }),
         ],
       ],
     );

@@ -13,6 +13,7 @@ class IconBtn extends StatelessWidget {
   final double? radius;
   final double? padding;
   final BoxBorder? border;
+  final TextStyle? textStyle;
 
   const IconBtn({
     super.key, 
@@ -26,6 +27,7 @@ class IconBtn extends StatelessWidget {
     this.radius,
     this.padding,
     this.border,
+    this.textStyle,
   });
 
   @override
@@ -64,7 +66,7 @@ class IconBtn extends StatelessWidget {
                 padding: const EdgeInsets.only(right: 3.0),
                 child: Text(
                   label!, 
-                  style: context.bodySmall?.copyWith(
+                  style: textStyle ?? context.bodySmall?.copyWith(
                     color: labelColor ?? Colors.white,
                   ),
                 ),

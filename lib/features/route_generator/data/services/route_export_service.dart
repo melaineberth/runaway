@@ -65,7 +65,7 @@ class RouteExportService {
     // Métadonnées
     buffer.writeln('  <metadata>');
     buffer.writeln('    <name>$routeName</name>');
-    buffer.writeln('    <desc>Parcours ${activityType} de ${distanceKm.toStringAsFixed(1)}km généré par Runaway</desc>');
+    buffer.writeln('    <desc>Parcours $activityType de ${distanceKm.toStringAsFixed(1)}km généré par Runaway</desc>');
     buffer.writeln('    <time>${dateFormat.format(now)}</time>');
     buffer.writeln('  </metadata>');
     
@@ -127,7 +127,7 @@ class RouteExportService {
     buffer.writeln('<kml xmlns="http://www.opengis.net/kml/2.2">');
     buffer.writeln('  <Document>');
     buffer.writeln('    <name>$routeName</name>');
-    buffer.writeln('    <description>Parcours ${activityType} de ${distanceKm.toStringAsFixed(1)}km</description>');
+    buffer.writeln('    <description>Parcours $activityType de ${distanceKm.toStringAsFixed(1)}km</description>');
     
     // Style de la ligne
     buffer.writeln('    <Style id="routeStyle">');

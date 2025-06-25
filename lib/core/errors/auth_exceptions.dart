@@ -1,5 +1,3 @@
-// lib/features/auth/data/exceptions/auth_exceptions.dart
-
 import 'package:runaway/core/errors/auth_exceptions.dart';
 
 export 'package:runaway/core/errors/api_exceptions.dart';
@@ -87,7 +85,7 @@ class AuthExceptionHandler {
       );
     }
     
-    // Erreurs de session
+    // Erreurs de session - CORRECTION ICI
     if (errorMessage.contains('jwt') || 
         errorMessage.contains('token') ||
         errorMessage.contains('session')) {
@@ -119,7 +117,7 @@ class AuthExceptionHandler {
       );
     }
     
-    // Erreur générique
+    // Erreur générique - OBLIGATOIRE
     return AuthException(
       'Une erreur d\'authentification s\'est produite',
       code: 'UNKNOWN_AUTH_ERROR',

@@ -164,7 +164,7 @@ class ScreenshotService {
 
     } catch (e) {
       print('❌ Erreur ajout parcours: $e');
-      throw e;
+      rethrow;
     }
   }
 
@@ -418,7 +418,7 @@ class ScreenshotService {
       originalImage.dispose();
       croppedImage.dispose();
       
-      print('✅ Logo Mapbox retiré par recadrage (${originalHeight} -> ${newHeight}px)');
+      print('✅ Logo Mapbox retiré par recadrage ($originalHeight -> ${newHeight}px)');
       return croppedBytes;
       
     } catch (e) {

@@ -134,7 +134,7 @@ class ReverseGeocodingService {
     // Arrondir à 3 décimales (~100m de précision) pour le cache
     final lat = (latitude * 1000).round() / 1000;
     final lon = (longitude * 1000).round() / 1000;
-    return '${_cachePrefix}${lat}_$lon';
+    return '$_cachePrefix${lat}_$lon';
   }
 
   /// Récupère une localisation depuis le cache

@@ -52,7 +52,7 @@ class MapStateService {
   Future<void> saveCameraState(mp.MapboxMap mapboxMap) async {
     try {
       _savedCameraState = await mapboxMap.getCameraState();
-      print('📸 État caméra sauvegardé: ${_savedCameraState?.center?.coordinates}');
+      print('📸 État caméra sauvegardé: ${_savedCameraState?.center.coordinates}');
     } catch (e) {
       print('❌ Erreur sauvegarde état caméra: $e');
     }

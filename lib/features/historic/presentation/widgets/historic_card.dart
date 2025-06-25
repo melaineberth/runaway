@@ -467,9 +467,9 @@ class _HistoricCardState extends State<HistoricCard> {
           5.w,
           Text(
             text,
-            style: TextStyle(
-              fontSize: 13,
-              color: color ?? Colors.white,
+            style: context.bodySmall?.copyWith(
+              fontSize: 14,
+              color:Colors.white,
               fontWeight: FontWeight.w500,
             ),
           ),
