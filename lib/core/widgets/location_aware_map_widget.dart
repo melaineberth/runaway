@@ -49,12 +49,12 @@ class _LocationAwareMapWidgetState extends State<LocationAwareMapWidget>
 
   void _initializeAnimations() {
     _fadeController = AnimationController(
-      duration: const Duration(milliseconds: 800),
+      duration: const Duration(milliseconds: 600), // Plus rapide
       vsync: this,
     );
     
     _pulseController = AnimationController(
-      duration: const Duration(milliseconds: 1500),
+      duration: const Duration(milliseconds: 1200), // Plus fluide
       vsync: this,
     );
 
@@ -67,7 +67,7 @@ class _LocationAwareMapWidgetState extends State<LocationAwareMapWidget>
     ));
 
     _pulseAnimation = Tween<double>(
-      begin: 0.3,
+      begin: 0.4,
       end: 1.0,
     ).animate(CurvedAnimation(
       parent: _pulseController,
@@ -81,7 +81,7 @@ class _LocationAwareMapWidgetState extends State<LocationAwareMapWidget>
   /// Initialise la géolocalisation avant d'afficher la carte
   Future<void> _initializeLocation() async {
     try {
-      print('🌍 Pré-chargement de la géolocalisation...');
+      print('🌍 LocationAwareMapWidget: Initialisation géolocalisation...');
       
       // Si on doit restaurer depuis le cache et qu'on a une position valide
       if (widget.restoreFromCache && LocationPreloadService.instance.hasValidPosition) {
@@ -91,15 +91,16 @@ class _LocationAwareMapWidgetState extends State<LocationAwareMapWidget>
         return;
       }
 
-      // Charger la position via le service
-      final position = await LocationPreloadService.instance.initializeLocation();
-      _initialPosition = position;
+      // Charger la position via le service (avec timeout court pour UX fluide)
+      final position = await LocationPreloadService.instance.initializeLocation()
+          .timeout(Duration(seconds: 5)); // Timeout plus court pour UX
       
-      print('✅ Géolocalisation pré-chargée: ${position.latitude}, ${position.longitude}');
+      _initialPosition = position;
+      print('✅ Géolocalisation chargée: ${position.latitude}, ${position.longitude}');
       _showMapWithPosition();
       
     } catch (e) {
-      print('❌ Erreur pré-chargement géolocalisation: $e');
+      print('❌ Erreur géolocalisation: $e');
       setState(() {
         _locationError = true;
         _errorMessage = _getErrorMessage(e);
@@ -107,7 +108,7 @@ class _LocationAwareMapWidgetState extends State<LocationAwareMapWidget>
     }
   }
 
-  /// Affiche la carte avec la position obtenue
+  /// Affiche la carte avec la position obtenue (transition fluide)
   void _showMapWithPosition() {
     if (!mounted) return;
     
@@ -121,10 +122,13 @@ class _LocationAwareMapWidgetState extends State<LocationAwareMapWidget>
 
   /// Convertit les erreurs en messages utilisateur
   String _getErrorMessage(dynamic error) {
-    if (error is LocationException) {
-      return error.message;
+    if (error.toString().contains('LocationException')) {
+      return 'Localisation indisponible';
     }
-    return 'Impossible d\'obtenir votre position';
+    if (error.toString().contains('timeout')) {
+      return 'Localisation trop lente';
+    }
+    return 'Erreur de localisation';
   }
 
   @override
@@ -138,7 +142,7 @@ class _LocationAwareMapWidgetState extends State<LocationAwareMapWidget>
   Widget build(BuildContext context) {
     return Stack(
       children: [
-        // Carte (affichée seulement quand la position est prête)
+        // 🗺️ CARTE (affichée seulement quand la position est prête)
         if (!_isLoadingLocation && _initialPosition != null)
           FadeTransition(
             opacity: _fadeAnimation,
@@ -160,19 +164,19 @@ class _LocationAwareMapWidgetState extends State<LocationAwareMapWidget>
             ),
           ),
 
-        // Loader de géolocalisation
+        // 🔄 LOADER DE GÉOLOCALISATION (style Apple Maps)
         if (_isLoadingLocation)
-          _buildLocationLoader(),
+          _buildAppleMapsLoader(),
 
-        // Écran d'erreur
+        // ❌ ÉCRAN D'ERREUR
         if (_locationError)
           _buildErrorState(),
       ],
     );
   }
 
-  /// Loader élégant pendant le chargement de la géolocalisation
-  Widget _buildLocationLoader() {
+  /// 🔄 Loader élégant style Apple Maps
+  Widget _buildAppleMapsLoader() {
     return Container(
       width: double.infinity,
       height: double.infinity,
@@ -181,8 +185,8 @@ class _LocationAwareMapWidgetState extends State<LocationAwareMapWidget>
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
           colors: [
-            Color(0xFF1a1a1a),
-            Color(0xFF0d1117),
+            Color(0xFF1a1a1a), // Sombre en haut
+            Color(0xFF2d2d2d), // Légèrement plus clair en bas
           ],
         ),
       ),
@@ -190,63 +194,66 @@ class _LocationAwareMapWidgetState extends State<LocationAwareMapWidget>
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // Animation de localisation
+            // Indicateur de géolocalisation animé
             AnimatedBuilder(
               animation: _pulseAnimation,
               builder: (context, child) {
-                return Transform.scale(
-                  scale: _pulseAnimation.value,
-                  child: Container(
-                    width: 120,
-                    height: 120,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: Colors.blue.withOpacity(0.2),
-                      border: Border.all(
-                        color: Colors.blue.withOpacity(0.5),
-                        width: 2,
-                      ),
+                return Container(
+                  width: 80,
+                  height: 80,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Colors.blue.withOpacity(0.2),
+                    border: Border.all(
+                      color: Colors.blue.withOpacity(_pulseAnimation.value),
+                      width: 2,
                     ),
-                    child: Icon(
-                      HugeIcons.strokeRoundedLocationShare02,
-                      size: 50,
-                      color: Colors.blue,
+                  ),
+                  child: Center(
+                    child: Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: Colors.blue,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.blue.withOpacity(0.3),
+                            blurRadius: 10,
+                            spreadRadius: 2,
+                          ),
+                        ],
+                      ),
+                      child: Icon(
+                        HugeIcons.strokeRoundedLocation01,
+                        color: Colors.white,
+                        size: 20,
+                      ),
                     ),
                   ),
                 );
               },
             ),
             
-            32.h,
+            SizedBox(height: 24),
             
             // Texte de chargement
             Text(
-              'Localisation en cours...',
-              style: context.bodyLarge?.copyWith(
-                color: Colors.white,
-                fontSize: 20,
-                fontWeight: FontWeight.w600,
+              'Localisation...',
+              style: TextStyle(
+                color: Colors.white.withOpacity(0.8),
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
               ),
             ),
             
-            16.h,
+            SizedBox(height: 8),
             
             Text(
               'Recherche de votre position',
-              style: context.bodyMedium?.copyWith(
-                color: Colors.white60,
-                fontSize: 16,
-              ),
-            ),
-            
-            32.h,
-            
-            // Indicateur de progression
-            SizedBox(
-              width: 200,
-              child: LinearProgressIndicator(
-                backgroundColor: Colors.white12,
-                valueColor: AlwaysStoppedAnimation<Color>(Colors.blue),
+              style: TextStyle(
+                color: Colors.white.withOpacity(0.5),
+                fontSize: 13,
               ),
             ),
           ],
@@ -255,7 +262,7 @@ class _LocationAwareMapWidgetState extends State<LocationAwareMapWidget>
     );
   }
 
-  /// Écran d'erreur avec options de retry
+  /// ❌ État d'erreur avec possibilité de retry
   Widget _buildErrorState() {
     return Container(
       width: double.infinity,
@@ -266,136 +273,54 @@ class _LocationAwareMapWidgetState extends State<LocationAwareMapWidget>
           end: Alignment.bottomCenter,
           colors: [
             Color(0xFF1a1a1a),
-            Color(0xFF0d1117),
+            Color(0xFF2d2d2d),
           ],
         ),
       ),
       child: Center(
-        child: Padding(
-          padding: EdgeInsets.all(32),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              // Icône d'erreur
-              Container(
-                width: 100,
-                height: 100,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: Colors.red.withOpacity(0.1),
-                  border: Border.all(
-                    color: Colors.red.withOpacity(0.3),
-                    width: 2,
-                  ),
-                ),
-                child: Icon(
-                  HugeIcons.strokeRoundedAlert02,
-                  size: 50,
-                  color: Colors.red,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              HugeIcons.solidSharpLocation01,
+              color: Colors.red,
+              size: 48,
+            ),
+            
+            SizedBox(height: 16),
+            
+            Text(
+              _errorMessage ?? 'Erreur de localisation',
+              style: TextStyle(
+                color: Colors.white.withOpacity(0.8),
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            
+            SizedBox(height: 24),
+            
+            ElevatedButton(
+              onPressed: () {
+                setState(() {
+                  _locationError = false;
+                  _isLoadingLocation = true;
+                });
+                _initializeLocation();
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.blue,
+                foregroundColor: Colors.white,
+                padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
                 ),
               ),
-              
-              32.h,
-              
-              // Message d'erreur
-              Text(
-                'Erreur de localisation',
-                style: context.bodyLarge?.copyWith(
-                  color: Colors.white,
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              
-              16.h,
-              
-              Text(
-                _errorMessage ?? 'Impossible d\'obtenir votre position',
-                style: context.bodyMedium?.copyWith(
-                  color: Colors.white70,
-                  fontSize: 16,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              
-              48.h,
-              
-              // Boutons d'action
-              Column(
-                children: [
-                  // Bouton retry
-                  SizedBox(
-                    width: 200,
-                    child: ElevatedButton.icon(
-                      onPressed: _retryLocation,
-                      icon: Icon(HugeIcons.strokeRoundedRefresh),
-                      label: Text('Réessayer'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.blue,
-                        foregroundColor: Colors.white,
-                        padding: EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                    ),
-                  ),
-                  
-                  16.h,
-                  
-                  // Bouton continuer sans localisation
-                  SizedBox(
-                    width: 200,
-                    child: TextButton.icon(
-                      onPressed: _continueWithoutLocation,
-                      icon: Icon(HugeIcons.strokeRoundedArrowRight01),
-                      label: Text('Continuer sans GPS'),
-                      style: TextButton.styleFrom(
-                        foregroundColor: Colors.white60,
-                        padding: EdgeInsets.symmetric(vertical: 16),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
+              child: Text('Réessayer'),
+            ),
+          ],
         ),
       ),
     );
-  }
-
-  /// Réessaye d'obtenir la localisation
-  void _retryLocation() {
-    setState(() {
-      _isLoadingLocation = true;
-      _locationError = false;
-      _errorMessage = null;
-    });
-    
-    // Recommencer l'animation de pulse
-    _pulseController.repeat(reverse: true);
-    
-    _initializeLocation();
-  }
-
-  /// Continue sans localisation (utilise position par défaut)
-  void _continueWithoutLocation() {
-    // Utiliser Paris comme position par défaut
-    _initialPosition = gl.Position(
-      latitude: 48.8566,
-      longitude: 2.3522,
-      timestamp: DateTime.now(),
-      accuracy: 100.0,
-      altitude: 0.0,
-      altitudeAccuracy: 0.0,
-      heading: 0.0,
-      headingAccuracy: 0.0,
-      speed: 0.0,
-      speedAccuracy: 0.0,
-    );
-    
-    print('🔄 Utilisation position par défaut: Paris');
-    _showMapWithPosition();
   }
 }

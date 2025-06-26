@@ -221,9 +221,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
 
   Future<void> _startLocationTrackingWhenMapReady() async {
     try {
-      // Attendre que la carte soit prête
+      // La carte est déjà prête car on vient de _onMapCreated
       if (mapboxMap == null) {
-        print('⏳ Attente de l\'initialisation de la carte...');
+        print('❌ Erreur: mapboxMap est null');
         return;
       }
 
@@ -1044,9 +1044,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
   Future<void> _onMapCreated(mp.MapboxMap mapboxMap) async {
     this.mapboxMap = mapboxMap;
     
-    print('🗺️ === INITIALISATION DE LA CARTE ===');
+    print('🗺️ === CARTE CRÉÉE - POSITION DÉJÀ DÉFINIE ===');
     print('🗺️ Première initialisation: ${!_mapStateService.isMapInitialized}');
-    print('🗺️ Caméra déjà définie: ${_mapStateService.hasInitialCameraBeenSet}');
 
     // Configuration de base
     await _setupMapboxSettings();
@@ -1070,43 +1069,68 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
   Future<void> _performInitialSetup() async {
     print('🆕 Configuration initiale de la carte');
     
-    // Attendre la position utilisateur si elle n'est pas encore disponible
-    if (_userLatitude == null || _userLongitude == null) {
-      print('⏳ Attente de la position utilisateur...');
-      // La position sera gérée par _initializeLocationTracking
-      return;
-    }
+    // 🎯 La position est déjà définie par LocationAwareMapWidget !
+    // On récupère juste la position pour nos variables locales
+    await _syncPositionFromLocationService();
     
-    // Centrer sur la position utilisateur avec animation
-    await _centerOnUserLocation(animate: true);
-    _mapStateService.markInitialCameraAsSet();
+    // Démarrer le tracking en temps réel
+    await _startLocationTrackingWhenMapReady();
+    
+    // Définir le mode de suivi initial
+    setState(() {
+      _trackingMode = TrackingMode.userTracking;
+    });
+    _mapStateService.saveTrackingMode(_trackingMode);
+
+    print('✅ Configuration initiale terminée');
+  }
+
+  /// 🆕 Synchroniser notre position depuis le service de géolocalisation
+  Future<void> _syncPositionFromLocationService() async {
+    try {
+      final position = LocationPreloadService.instance.lastKnownPosition;
+      if (position != null) {
+        setState(() {
+          _userLatitude = position.latitude;
+          _userLongitude = position.longitude;
+          _selectedLatitude = position.latitude;
+          _selectedLongitude = position.longitude;
+        });
+        
+        // Sauvegarder dans le service
+        _mapStateService.saveUserPosition(position.latitude, position.longitude);
+        _mapStateService.saveSelectedPosition(position.latitude, position.longitude);
+        
+        print('✅ Position synchronisée: ${position.latitude}, ${position.longitude}');
+      }
+    } catch (e) {
+      print('⚠️ Erreur synchronisation position: $e');
+    }
   }
 
   /// 🔄 Restauration de l'état (retour)
   Future<void> _restoreMapState() async {
     print('🔄 Restauration de l\'état de la carte');
     
-    // 1️⃣ Restaurer la caméra (sans animation pour instantané)
-    if (_mapStateService.hasInitialCameraBeenSet) {
-      await _mapStateService.restoreCameraState(mapboxMap!, animate: false);
-    } else if (_userLatitude != null && _userLongitude != null) {
-      await _centerOnUserLocation(animate: false);
-    }
+    // Restaurer l'état depuis le service
+    _restoreStateFromService();
     
-    // 2️⃣ Restaurer les marqueurs
+    // Restaurer les marqueurs si nécessaire
     if (_mapStateService.hasActiveMarker && 
-        _mapStateService.markerLatitude != null && 
-        _mapStateService.markerLongitude != null) {
-      
-      print('📌 Restauration du marqueur à: (${_mapStateService.markerLatitude}, ${_mapStateService.markerLongitude})');
-      await _restoreMarker(_mapStateService.markerLongitude!, _mapStateService.markerLatitude!);
+        _selectedLatitude != null && 
+        _selectedLongitude != null) {
+      await _placeMarkerWithLottie(_selectedLongitude!, _selectedLatitude!);
     }
     
-    // 3️⃣ Restaurer le parcours
+    // Restaurer la route si elle existe
     if (generatedRouteCoordinates != null) {
-      print('🛣️ Restauration du parcours avec ${generatedRouteCoordinates!.length} points');
       await _displayRouteOnMap(generatedRouteCoordinates!);
     }
+    
+    // Redémarrer le tracking de position
+    await _startLocationTrackingWhenMapReady();
+    
+    print('✅ État de la carte restauré');
   }
 
   /// 📌 Restaurer un marqueur existant (sans animation Lottie)
