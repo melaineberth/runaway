@@ -1,7 +1,7 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../data/repositories/activity_repository.dart';
 import '../../../route_generator/data/repositories/routes_repository.dart';
-import '../../../route_generator/domain/models/saved_route.dart';
+// import '../../../route_generator/domain/models/saved_route.dart';
 import 'activity_event.dart';
 import 'activity_state.dart';
 
@@ -42,8 +42,8 @@ class ActivityBloc extends Bloc<ActivityEvent, ActivityState> {
       final records = await _activityRepository.getPersonalRecords();
       
       // Mettre à jour les objectifs avec les parcours actuels
-      await _activityRepository.updateGoalsProgress(routes);
-      final updatedGoals = await _activityRepository.getPersonalGoals();
+      // await _activityRepository.updateGoalsProgress(routes);
+      // final updatedGoals = await _activityRepository.getPersonalGoals();
       
       // Calculer les stats périodiques (par défaut mensuel)
       final periodStats = await _activityRepository.getPeriodStats(
@@ -55,7 +55,7 @@ class ActivityBloc extends Bloc<ActivityEvent, ActivityState> {
         generalStats: generalStats,
         typeStats: typeStats,
         periodStats: periodStats,
-        goals: updatedGoals,
+        goals: goals,
         records: records,
         currentPeriod: PeriodType.monthly,
       ));

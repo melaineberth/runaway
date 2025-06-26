@@ -36,11 +36,15 @@ class ZoneAnalysisRequested extends RouteGenerationEvent {
 /// Événement pour générer un parcours avec les paramètres
 class RouteGenerationRequested extends RouteGenerationEvent {
   final RouteParameters parameters;
+  final MapboxMap? mapboxMap; // 🆕 Ajouter pour sauvegarde automatique
 
-  const RouteGenerationRequested(this.parameters);
+  const RouteGenerationRequested(
+    this.parameters, {
+    this.mapboxMap,
+  });
 
   @override
-  List<Object?> get props => [parameters];
+  List<Object?> get props => [parameters, mapboxMap];
 }
 
 /// 🆕 Sauvegarde de parcours avec capture de screenshot optionnelle

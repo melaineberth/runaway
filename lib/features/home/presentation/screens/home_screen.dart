@@ -13,7 +13,6 @@ import 'package:geolocator/geolocator.dart' as gl;
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart';
 import 'package:runaway/config/colors.dart';
 import 'package:runaway/config/extensions.dart';
-import 'package:runaway/core/widgets/loading_overlay.dart';
 import 'package:runaway/core/widgets/top_snackbar.dart';
 import 'package:runaway/features/home/data/services/map_state_service.dart';
 import 'package:runaway/features/home/domain/enums/tracking_mode.dart';
@@ -21,14 +20,11 @@ import 'package:runaway/features/home/presentation/widgets/export_format_dialog.
 import 'package:runaway/features/home/presentation/widgets/route_info_card.dart';
 import 'package:runaway/features/navigation/presentation/screens/live_navigation_screen.dart';
 import 'package:runaway/features/route_generator/data/services/route_export_service.dart';
-import 'package:runaway/features/route_generator/domain/models/route_parameters.dart';
 import 'package:runaway/features/route_generator/presentation/blocs/route_generation/route_generation_bloc.dart';
 import 'package:runaway/features/route_generator/presentation/blocs/route_generation/route_generation_event.dart';
 import 'package:runaway/features/route_generator/presentation/blocs/route_generation/route_generation_state.dart';
-import 'package:smooth_gradient/smooth_gradient.dart';
 import 'package:top_snackbar_flutter/top_snack_bar.dart';
 import '../../../route_generator/presentation/screens/route_parameter.dart' as gen;
-import 'package:supabase_flutter/supabase_flutter.dart' as sb;
 import '../../../../core/widgets/icon_btn.dart';
 import '../blocs/route_parameters_bloc.dart';
 import '../blocs/route_parameters_event.dart';
@@ -89,7 +85,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
   bool isNavigationMode = false;
   bool isNavigationCameraActive = false;
   bool _isInNavigationMode = false;
-  bool _isLoading = false;
+
   bool _hasAutoSaved = false;
 
   @override
@@ -198,108 +194,31 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
 
   // Gestion des changements d'état
   void _handleRouteGenerationStateChange(RouteGenerationState state) async {
-    
-    // 🆕 Cas 1: Parcours chargé depuis l'historique
+    // Cas 1: Historique
     if (state.hasGeneratedRoute && state.isLoadedFromHistory) {
-      print('📂 Parcours chargé depuis l\'historique - pas de sauvegarde automatique');
-      
       setState(() {
         generatedRouteCoordinates = state.generatedRoute;
         routeMetadata = state.routeMetadata;
-        // Pas de changement de _hasAutoSaved car c'est un parcours existant
       });
-
-      // 💾 Sauvegarder le nouveau parcours
       _mapStateService.saveGeneratedRoute(state.generatedRoute, state.routeMetadata, _hasAutoSaved);
-      
-      // Afficher la route sur la carte
       await _displayRouteOnMap(state.generatedRoute!);
-            
-      return; // 🔑 IMPORTANT : Sortir ici pour éviter la double sauvegarde
-    }
-    
-    // 🆕 Cas 2: Nouveau parcours généré (pas depuis l'historique)
-    if (state.isNewlyGenerated && !_hasAutoSaved) {
-      print('🆕 Nouveau parcours généré - sauvegarde automatique');
-      
-      // AJOUTER : Sauvegarder le mode de tracking avant génération
-      _trackingModeBeforeGeneration = _trackingMode;
-
-      // Route générée avec succès
-      setState(() {
-        generatedRouteCoordinates = state.generatedRoute;
-        routeMetadata = state.routeMetadata;
-        _hasAutoSaved = true; // 🔧 FIX : Marquer comme sauvegardé
-      });
-      
-      // DEBUG : Afficher les données reçues
-      print('🔍 DEBUG routeMetadata keys: ${routeMetadata?.keys}');
-      print('🔍 DEBUG distance calculée: ${_getGeneratedRouteDistance()}km');
-
-      // 💾 Sauvegarder le nouveau parcours
-      _mapStateService.saveGeneratedRoute(state.generatedRoute, state.routeMetadata, _hasAutoSaved);
-      
-      // Afficher la route sur la carte
-      await _displayRouteOnMap(state.generatedRoute!);
-      
-      // 🆕 AUTO-SAUVEGARDE : Sauvegarder automatiquement le parcours généré
-      await _autoSaveGeneratedRoute(state);
-            
-    } else if (state.errorMessage != null) {
-      // Erreur lors de la génération ou du chargement
-      _showRouteGenerationError(state.errorMessage!);
-      // 🔧 FIX : Reset du flag en cas d'erreur
-      _hasAutoSaved = false;
-    }
-  }
-
-  Future<void> _autoSaveGeneratedRoute(RouteGenerationState state) async {
-    // 1️⃣  Annuler si l’utilisateur n’est pas connecté
-    if (sb.Supabase.instance.client.auth.currentUser == null) {
-      print('🚫 Auto-save annulé : aucun utilisateur connecté');
-      _hasAutoSaved = false; // permet une nouvelle tentative si besoin
-      return; // on s’arrête là
-    }
-
-    // 2️⃣  Procédure normale (inchangée)
-    if (!state.hasGeneratedRoute || state.usedParameters == null) {
-      print('⚠️ Pas de sauvegarde automatique: parcours non nouveau ou paramètres manquants');
       return;
     }
-
-    try {
-
-      // Utiliser la vraie distance générée au lieu de la distance demandée
-      final realDistance = _getGeneratedRouteDistance();
-      final routeName = _generateAutoRouteName(state.usedParameters!, realDistance);
-      
-      // 🆕 Sauvegarder via le RouteGenerationBloc avec la GlobalKey pour la screenshot
-      context.read<RouteGenerationBloc>().add(
-        GeneratedRouteSaved(
-          routeName,
-          map: mapboxMap!,
-        ),
-      );
-
-      print('✅ Parcours auto-sauvegardé avec screenshot: $routeName (distance réelle: ${realDistance.toStringAsFixed(1)}km)');
-
-      setState(() {
-        _isLoading = false;
-      });
-
-    } catch (e) {
-      print('❌ Erreur auto-sauvegarde: $e');
-      // Ne pas afficher d'erreur à l'utilisateur pour une sauvegarde automatique
-    }
-  }
-
-  // Génération du nom avec vraie distance
-  String _generateAutoRouteName(RouteParameters parameters, double realDistanceKm) {
-    final now = DateTime.now();
-    final timeString = '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
-    final dateString = '${now.day}/${now.month}';
     
-    return '${parameters.activityType.title} ${realDistanceKm.toStringAsFixed(0)}km - $timeString ($dateString)';
+    // Cas 2: Nouveau parcours (déjà sauvegardé automatiquement)
+    if (state.isNewlyGenerated && !state.isGeneratingRoute) {
+      setState(() {
+        generatedRouteCoordinates = state.generatedRoute;
+        routeMetadata = state.routeMetadata;
+        _hasAutoSaved = true;
+      });
+      _mapStateService.saveGeneratedRoute(state.generatedRoute, state.routeMetadata, _hasAutoSaved);
+      await _displayRouteOnMap(state.generatedRoute!);
+      // 🚫 PLUS BESOIN : await _autoSaveGeneratedRoute(state);
+    } else if (state.errorMessage != null) {
+      _showRouteGenerationError(state.errorMessage!);
+      _hasAutoSaved = false;
+    }
   }
 
   // Calcul de la distance réelle du parcours généré
@@ -1373,27 +1292,27 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
 
   // Gestionnaire de génération de route
   void _handleGenerateRoute() {
-    // 🔧 FIX : Reset du flag avant nouvelle génération
     setState(() {
       _hasAutoSaved = false;
-      _isLoading = true;
     });
 
     final parametersState = context.read<RouteParametersBloc>().state;
     final parameters = parametersState.parameters;
 
-    // Vérifier la validité des paramètres
     if (!parameters.isValid) {
       _showRouteGenerationError('Paramètres invalides');
       return;
     }
 
-    // Déclencher la génération via le RouteGenerationBloc
+    // 🆕 Passer mapboxMap pour la sauvegarde automatique
     context.read<RouteGenerationBloc>().add(
-      RouteGenerationRequested(parameters),
+      RouteGenerationRequested(
+        parameters,
+        mapboxMap: mapboxMap,
+      ),
     );
 
-    print('🚀 Génération de route demandée: ${parameters.distanceKm}km, ${parameters.activityType.name}');
+    print('🚀 Génération demandée: ${parameters.distanceKm}km, ${parameters.activityType.name}');
   }
 
   void _showExportDialog() {
@@ -1520,36 +1439,38 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
 
                       40.h,
 
-                      Padding(
-                        padding: const EdgeInsets.only(right: 15.0),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.end,
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          children: [
-                            Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                // Bouton retour position utilisateur
-                                IconBtn(
-                                  padding: 12.0,
-                                  icon: _trackingMode == TrackingMode.userTracking
-                                      ? HugeIcons.solidRoundedLocationShare02
-                                      : HugeIcons.strokeRoundedLocationShare02,
-                                  onPressed: _activateUserTracking,
-                                  iconColor: _trackingMode == TrackingMode.userTracking
-                                      ? AppColors.primary
-                                      : Colors.white,
-                                ),
-                                10.h,
-                                // Bouton générateur
-                                IconBtn(
-                                  padding: 12.0,
-                                  icon: HugeIcons.strokeRoundedAiMagic,
-                                  onPressed: openGenerator,
-                                ),
-                              ],
-                            ),
-                          ],
+                      Expanded(
+                        child: Padding(
+                          padding: const EdgeInsets.only(right: 15.0),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.end,
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  // Bouton retour position utilisateur
+                                  IconBtn(
+                                    padding: 15.0,
+                                    icon: _trackingMode == TrackingMode.userTracking
+                                        ? HugeIcons.solidRoundedLocationShare02
+                                        : HugeIcons.strokeRoundedLocationShare02,
+                                    onPressed: _activateUserTracking,
+                                    iconColor: _trackingMode == TrackingMode.userTracking
+                                        ? AppColors.primary
+                                        : Colors.white,
+                                  ),
+                                  10.h,
+                                  // Bouton générateur
+                                  IconBtn(
+                                    padding: 15.0,
+                                    icon: HugeIcons.strokeRoundedAiMagic,
+                                    onPressed: openGenerator,
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     ],
@@ -1558,10 +1479,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
               ),
             ),
 
-          if (_isLoading) LoadingOverlay(),
+          // if (_isLoading) LoadingOverlay(),
 
           // RouteInfoCard (masqué en mode navigation)
-          if (generatedRouteCoordinates != null && routeMetadata != null && !isNavigationMode & !_isInNavigationMode && !_isLoading)
+          if (generatedRouteCoordinates != null && routeMetadata != null && !isNavigationMode & !_isInNavigationMode)
             Positioned(
               bottom: MediaQuery.of(context).padding.bottom + 20,
               left: 15,

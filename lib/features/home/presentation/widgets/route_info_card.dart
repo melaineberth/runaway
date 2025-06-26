@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:runaway/config/colors.dart';
 import 'package:runaway/config/extensions.dart';
-import 'package:runaway/core/widgets/icon_btn.dart';
 import 'package:runaway/core/widgets/squircle_container.dart';
 
 /// Widget pour afficher les informations de la route générée
@@ -31,7 +30,7 @@ class RouteInfoCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return SquircleContainer(
       padding: EdgeInsets.all(_padding),
-      color: Colors.white,
+      color: Colors.black,
       radius: _innerRadius.outerRadius(_padding),
       boxShadow: [
         BoxShadow(
@@ -48,12 +47,16 @@ class RouteInfoCard extends StatelessWidget {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              IconBtn(
-                icon: HugeIcons.solidRoundedRouteBlock,
-                iconColor: AppColors.primary,
-                iconSize: 30,
-                radius: 12,
-                backgroundColor: AppColors.primary.withAlpha(30),
+              SquircleContainer(
+                radius: 25,
+                color: AppColors.primary.withValues(alpha: 0.3),
+                child: Padding(
+                  padding: const EdgeInsets.all(20.0),
+                  child: Icon(
+                    HugeIcons.solidRoundedRouteBlock, 
+                    color: AppColors.primary,
+                  ),
+                ),
               ),
               12.w,
               Expanded(
@@ -62,9 +65,7 @@ class RouteInfoCard extends StatelessWidget {
                   children: [
                     Text(
                       context.l10n.pathGenerated,
-                      style: context.bodySmall?.copyWith(
-                        color: Colors.black,
-                      ),
+                      style: context.bodySmall,
                     ),
                     4.h,
                     Row(
@@ -143,7 +144,7 @@ class _InfoChip extends StatelessWidget {
       padding: EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
         border: Border.all(
-          color: Colors.black38,
+          color: Colors.white38,
           width: 1.5,
         ),
         borderRadius: BorderRadius.circular(20),
@@ -154,14 +155,14 @@ class _InfoChip extends StatelessWidget {
           HugeIcon(
             icon: icon,
             size: 16,
-            color: Colors.black38,
+            color: Colors.white38,
           ),
           6.w,
           Text(
             label,
             style: context.bodySmall?.copyWith(
               fontSize: 14,
-              color: Colors.black38,
+              color: Colors.white38,
             ),
           ),
         ],
@@ -195,20 +196,20 @@ class _ActionButton extends StatelessWidget {
         radius: radius,
         color: isPrimary 
             ? AppColors.primary 
-            : Colors.grey.shade100,
+            : Colors.white10,
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             HugeIcon(
               icon: icon,
               size: 20,
-              color: isPrimary ? Colors.white : Colors.grey.shade700,
+              color: isPrimary ? Colors.white : Colors.white,
             ),
             8.w,
             Text(
               label,
               style: context.bodySmall?.copyWith(
-                color: isPrimary ? Colors.white : Colors.grey.shade700,
+                color: isPrimary ? Colors.white : Colors.white,
                 fontWeight: FontWeight.w600,
               ),
             ),
