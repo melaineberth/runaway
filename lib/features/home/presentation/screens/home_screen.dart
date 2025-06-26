@@ -14,6 +14,7 @@ import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart';
 import 'package:runaway/config/colors.dart';
 import 'package:runaway/config/extensions.dart';
 import 'package:runaway/core/services/location_preload_service.dart';
+import 'package:runaway/core/widgets/location_aware_map_widget.dart';
 import 'package:runaway/core/widgets/top_snackbar.dart';
 import 'package:runaway/features/home/data/services/map_state_service.dart';
 import 'package:runaway/features/home/domain/enums/tracking_mode.dart';
@@ -1498,10 +1499,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
           SizedBox(
             width: MediaQuery.of(context).size.width,
             height: MediaQuery.of(context).size.height,
-            child: mp.MapWidget(
-              key: ValueKey("mapWidget"),
-              onMapCreated: _onMapCreated,
+            child: LocationAwareMapWidget(
+              key: ValueKey("locationAwareMapWidget"),
               styleUri: MapboxStyles.DARK,
+              onMapCreated: _onMapCreated,
+              mapKey: ValueKey("mapWidget"),
+              restoreFromCache: _mapStateService.isMapInitialized,
             ),
           ),
 

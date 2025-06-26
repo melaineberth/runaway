@@ -7,7 +7,7 @@ class LocationPreloadService {
   static LocationPreloadService get instance => _instance ??= LocationPreloadService._();
   LocationPreloadService._();
 
-  // Cache de la dernière position connue
+  // Cache de la dernière position connue (NOTRE cache, pas celui du système)
   gl.Position? _lastKnownPosition;
   DateTime? _lastPositionUpdate;
   
@@ -15,9 +15,9 @@ class LocationPreloadService {
   Completer<gl.Position>? _initializationCompleter;
   bool _isInitialized = false;
   
-  // Timeout optimisé pour UX rapide
-  static const Duration _locationTimeout = Duration(seconds: 4); // Plus court
-  static const Duration _cacheExpiration = Duration(minutes: 3); // Plus court pour fraîcheur
+  // Timeout et cache
+  static const Duration _locationTimeout = Duration(seconds: 8); // Timeout suffisant
+  static const Duration _cacheExpiration = Duration(minutes: 2); // Cache court
 
   /// Getters pour vérifier l'état
   bool get hasValidPosition => _lastKnownPosition != null && _isPositionCacheValid();
@@ -25,11 +25,11 @@ class LocationPreloadService {
 
   /// Initialise le service et pré-charge la position
   Future<gl.Position> initializeLocation() async {
-    print('🌍 === INITIALISATION GÉOLOCALISATION RAPIDE ===');
+    print('🌍 === INITIALISATION GÉOLOCALISATION ACTUELLE ===');
     
-    // STRATÉGIE 1: Cache valide - Retour immédiat
+    // STRATÉGIE 1: Notre cache valide - Retour immédiat
     if (_isInitialized && _lastKnownPosition != null && _isPositionCacheValid()) {
-      print('⚡ Cache valide - Position immédiate: ${_formatPosition(_lastKnownPosition!)}');
+      print('⚡ NOTRE cache valide - Position immédiate: ${_formatPosition(_lastKnownPosition!)}');
       return _lastKnownPosition!;
     }
 
@@ -39,16 +39,16 @@ class LocationPreloadService {
       return await _initializationCompleter!.future;
     }
 
-    // STRATÉGIE 3: Nouvelle initialisation rapide
+    // STRATÉGIE 3: Nouvelle géolocalisation FRAÎCHE
     _initializationCompleter = Completer<gl.Position>();
     
     try {
-      // Approche multi-étapes pour UX optimale
-      final position = await _getFastLocation();
+      // Obtenir position actuelle (pas de cache système)
+      final position = await _getFreshLocation();
       
       _updatePosition(position);
       _initializationCompleter!.complete(position);
-      print('✅ Position obtenue rapidement');
+      print('✅ Position fraîche obtenue et mise en cache');
       return position;
       
     } catch (e) {
@@ -60,22 +60,17 @@ class LocationPreloadService {
     }
   }
 
-  /// 🚀 Stratégie rapide pour obtenir la position
-  Future<gl.Position> _getFastLocation() async {
-    print('🚀 Stratégie rapide de géolocalisation...');
+  /// 🎯 Obtenir une position FRAÎCHE (pas de cache système douteux)
+  Future<gl.Position> _getFreshLocation() async {
+    print('🎯 Obtention de la position ACTUELLE (pas de cache système)...');
     
-    // 1. Vérifier les permissions (rapide)
+    // 1. Vérifier les permissions
     await _checkAndRequestPermissions();
     
-    // 2. Essayer position système en cache (très rapide)
-    final cachedPosition = await _tryGetLastKnownPosition();
-    if (cachedPosition != null && _isRecentPosition(cachedPosition)) {
-      print('⚡ Position système récente utilisée');
-      return cachedPosition;
-    }
-    
-    // 3. Position actuelle avec timeout court (pour UX)
+    // 2. FORCER une géolocalisation fraîche
     try {
+      print('📍 Demande de position actuelle...');
+      
       final currentPosition = await gl.Geolocator.getCurrentPosition(
         locationSettings: gl.LocationSettings(
           accuracy: gl.LocationAccuracy.high,
@@ -83,34 +78,50 @@ class LocationPreloadService {
         ),
       ).timeout(_locationTimeout);
       
-      print('🎯 Position fraîche obtenue');
+      print('✅ Position actuelle obtenue: ${_formatPosition(currentPosition)}');
+      print('📅 Timestamp: ${currentPosition.timestamp}');
+      
       return currentPosition;
       
     } catch (e) {
-      // 4. Fallback: utiliser position cache même si vieille
-      if (cachedPosition != null) {
-        print('⚠️ Fallback sur position cache');
-        return cachedPosition;
+      print('❌ Erreur getCurrentPosition: $e');
+      
+      // 3. Fallback: essayer lastKnownPosition SEULEMENT si vraiment récente
+      final fallbackPosition = await _tryRecentFallback();
+      if (fallbackPosition != null) {
+        return fallbackPosition;
       }
       
-      throw LocationException('Impossible d\'obtenir la position');
+      throw LocationException('Impossible d\'obtenir la position actuelle');
     }
   }
 
-  /// Vérifie si une position est récente (moins de 5 minutes)
-  bool _isRecentPosition(gl.Position position) {
-    final now = DateTime.now();
-    final positionTime = position.timestamp;
-    final age = now.difference(positionTime);
-    return age.inMinutes < 5;
-  }
-
-  /// Essaie d'obtenir la dernière position connue du système
-  Future<gl.Position?> _tryGetLastKnownPosition() async {
+  /// 🚨 Fallback: Position système SEULEMENT si très récente (< 1 minute)
+  Future<gl.Position?> _tryRecentFallback() async {
     try {
-      return await gl.Geolocator.getLastKnownPosition();
+      print('🚨 Tentative de fallback avec position système...');
+      
+      final lastPosition = await gl.Geolocator.getLastKnownPosition();
+      if (lastPosition == null) {
+        print('❌ Aucune position système disponible');
+        return null;
+      }
+      
+      final age = DateTime.now().difference(lastPosition.timestamp);
+      print('📅 Position système datée de: ${lastPosition.timestamp}');
+      print('⏰ Âge: ${age.inMinutes} minutes');
+      
+      // TRÈS STRICT: Seulement si moins d'1 minute
+      if (age.inMinutes < 1) {
+        print('✅ Position système acceptable (< 1 min): ${_formatPosition(lastPosition)}');
+        return lastPosition;
+      } else {
+        print('❌ Position système trop ancienne (${age.inMinutes} min), rejetée');
+        return null;
+      }
+      
     } catch (e) {
-      print('⚠️ Pas de position système en cache');
+      print('❌ Erreur fallback position système: $e');
       return null;
     }
   }
@@ -133,6 +144,8 @@ class LocationPreloadService {
     if (permission == gl.LocationPermission.deniedForever) {
       throw LocationException('Permission de localisation refusée définitivement');
     }
+    
+    print('✅ Permissions de géolocalisation OK');
   }
 
   /// Met à jour la position en cache
@@ -140,21 +153,28 @@ class LocationPreloadService {
     _lastKnownPosition = position;
     _lastPositionUpdate = DateTime.now();
     _isInitialized = true;
-    print('💾 Position mise à jour en cache: ${_formatPosition(position)}');
+    print('💾 Position mise à jour en NOTRE cache: ${_formatPosition(position)}');
+    print('💾 Sauvegardé à: $_lastPositionUpdate');
   }
 
-  /// Vérifie si la position en cache est encore valide
+  /// Vérifie si NOTRE position en cache est encore valide
   bool _isPositionCacheValid() {
-    if (_lastPositionUpdate == null) return false;
+    if (_lastPositionUpdate == null) {
+      print('❌ Pas de timestamp de cache');
+      return false;
+    }
     
     final now = DateTime.now();
     final age = now.difference(_lastPositionUpdate!);
-    return age < _cacheExpiration;
+    final isValid = age < _cacheExpiration;
+    
+    print('🕒 Âge de notre cache: ${age.inMinutes} minutes (valide: $isValid)');
+    return isValid;
   }
 
   /// Formate une position pour les logs
   String _formatPosition(gl.Position position) {
-    return '${position.latitude.toStringAsFixed(4)}, ${position.longitude.toStringAsFixed(4)}';
+    return '${position.latitude.toStringAsFixed(6)}, ${position.longitude.toStringAsFixed(6)}';
   }
 
   /// Nettoie le cache (pour tests ou reset)
@@ -164,6 +184,13 @@ class LocationPreloadService {
     _isInitialized = false;
     _initializationCompleter = null;
     print('🧹 Cache de géolocalisation nettoyé');
+  }
+
+  /// 🛠️ Méthode de debug pour forcer une nouvelle géolocalisation
+  Future<gl.Position> forceRefresh() async {
+    print('🛠️ Force refresh demandé - suppression du cache');
+    clearCache();
+    return await initializeLocation();
   }
 }
 

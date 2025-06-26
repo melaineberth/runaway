@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -301,19 +302,15 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
             decoration: BoxDecoration(
               color: HSLColor.fromColor(color).withLightness(0.8).toColor(),
               shape: BoxShape.circle,
-              image: avatarUrl != null 
-                  ? DecorationImage(
-                      image: NetworkImage(avatarUrl),
-                      fit: BoxFit.cover,
-                      onError: (error, stackTrace) {
-                        // En cas d'erreur de chargement de l'image
-                        print('Erreur chargement avatar: $error');
-                      },
-                    )
-                  : null,
             ),
-            child: avatarUrl == null
-                ? Center(
+            child: avatarUrl != null
+                ? CachedNetworkImage(
+                    imageUrl: avatarUrl,
+                    progressIndicatorBuilder: (context, url, downloadProgress) => 
+                            CircularProgressIndicator(value: downloadProgress.progress),
+                    errorWidget: (context, url, error) => Icon(Icons.error),
+                  )
+                : Center(
                     child: Text(
                       initials,
                       style: TextStyle(
@@ -322,8 +319,7 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
                         color: color,
                       ),
                     ),
-                  )
-                : null,
+                  ),
           ),
 
           20.h,
