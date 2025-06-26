@@ -6,16 +6,15 @@ import 'package:runaway/core/blocs/app_data/app_data_bloc.dart';
 import 'package:runaway/core/blocs/app_data/app_data_event.dart';
 import 'package:runaway/core/blocs/app_data/app_data_state.dart';
 import 'package:runaway/core/widgets/ask_registration.dart';
+import 'package:runaway/core/widgets/blurry_page.dart';
 import 'package:runaway/core/widgets/squircle_container.dart';
 import 'package:runaway/core/widgets/top_snackbar.dart';
-import 'package:runaway/features/account/presentation/screens/account_screen.dart';
 import 'package:runaway/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:runaway/features/auth/presentation/bloc/auth_state.dart';
 import 'package:runaway/features/historic/presentation/widgets/shimmer_historic_card.dart';
 import 'package:runaway/features/route_generator/domain/models/saved_route.dart';
 import 'package:runaway/features/route_generator/presentation/blocs/route_generation/route_generation_bloc.dart';
 import 'package:runaway/features/route_generator/presentation/blocs/route_generation/route_generation_event.dart';
-import 'package:runaway/features/route_generator/presentation/blocs/route_generation/route_generation_state.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:top_snackbar_flutter/top_snack_bar.dart';
 
@@ -44,9 +43,7 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
   final List<Animation<double>> _scaleAnimations = [];
   
   // ⏱️ Gestion du loading minimum
-  DateTime? _loadingStartTime;
-  bool _isCurrentlyLoading = false;
-  bool _shouldShowLoading = false;
+  final bool _shouldShowLoading = false;
   
   @override
   void initState() {
@@ -121,90 +118,6 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
         ),
       );
     }
-  }
-
-  /// 🔄 Configure les animations décalées selon le nombre de routes
-  void _setupStaggeredAnimations(int routeCount) {
-    _slideAnimations.clear();
-    _scaleAnimations.clear();
-    
-    for (int i = 0; i < routeCount; i++) {
-      final startTime = i * 0.1; // Délai de 100ms entre chaque carte
-      final endTime = startTime + 0.4; // Animation sur 400ms
-      
-      // Animation de slide depuis le bas
-      final slideAnimation = Tween<double>(begin: 50.0, end: 0.0).animate(
-        CurvedAnimation(
-          parent: _staggerController,
-          curve: Interval(startTime, endTime.clamp(0.0, 1.0), curve: Curves.easeOutCubic),
-        ),
-      );
-      
-      // Animation de scale avec effet bounce
-      final scaleAnimation = Tween<double>(begin: 0.8, end: 1.0).animate(
-        CurvedAnimation(
-          parent: _staggerController,
-          curve: Interval(startTime, endTime.clamp(0.0, 1.0), curve: Curves.easeOutBack),
-        ),
-      );
-      
-      _slideAnimations.add(slideAnimation);
-      _scaleAnimations.add(scaleAnimation);
-    }
-  }
-
-  /// ⏱️ Gère le loading minimum et lance les animations
-  Future<void> _handleLoadingTransition(bool isLoading, List<SavedRoute> routes) async {
-    if (isLoading && !_isCurrentlyLoading) {
-      // Début du chargement
-      _loadingStartTime = DateTime.now();
-      _isCurrentlyLoading = true;
-      _shouldShowLoading = true;
-      _resetAnimations();
-      
-    } else if (!isLoading && _isCurrentlyLoading) {
-      // Fin du chargement - vérifier le délai minimum
-      _isCurrentlyLoading = false;
-      
-      if (_loadingStartTime != null) {
-        final elapsed = DateTime.now().difference(_loadingStartTime!);
-        final remaining = widget.minimumLoadingDuration - elapsed;
-        
-        if (remaining.inMilliseconds > 0) {
-          // Attendre le délai minimum
-          print('⏱️ Attente délai minimum: ${remaining.inMilliseconds}ms');
-          await Future.delayed(remaining);
-        }
-      }
-      
-      // Maintenant on peut afficher le contenu chargé
-      if (mounted) {
-        setState(() {
-          _shouldShowLoading = false;
-        });
-        
-        if (routes.isNotEmpty) {
-          _setupStaggeredAnimations(routes.length);
-          _startLoadedAnimations();
-        }
-      }
-    }
-  }
-
-  /// 🚀 Lance les animations de chargement terminé
-  void _startLoadedAnimations() {
-    Future.delayed(const Duration(milliseconds: 150), () {
-      if (mounted) {
-        _fadeController.forward();
-        _staggerController.forward();
-      }
-    });
-  }
-
-  /// 🔄 Reset les animations pour un nouveau chargement
-  void _resetAnimations() {
-    _fadeController.reset();
-    _staggerController.reset();
   }
 
   @override
@@ -318,35 +231,67 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
 
     return Scaffold(
       extendBodyBehindAppBar: true,
-      appBar: AppBar(
-        centerTitle: true,
-        forceMaterialTransparency: true,
-        backgroundColor: Colors.transparent,
-        title: Text(
+      appBar: _buildAppBar(isLoading),
+      body: Padding(
+        padding: EdgeInsets.fromLTRB(20.0, kTextTabBarHeight * 3, 20.0, 0.0),
+        child: Column(
+          children: [
+            // Stats card avec animation si plus d'un parcours
+            AnimatedBuilder(
+              animation: _fadeAnimation,
+              builder: (context, child) {
+                return Opacity(
+                  opacity: _fadeAnimation.value,
+                  child: Transform.translate(
+                    offset: Offset(0, 20 * (1 - _fadeAnimation.value)),
+                    child: _buildStatsCard(routes),
+                  ),
+                );
+              },
+            ),
+            Expanded(
+              child: RefreshIndicator(
+                onRefresh: () async {
+                  _refreshData();
+                },
+                child: BlurryPage(
+                  contentPadding: EdgeInsets.only(top: 20.0, bottom: 40.0),
+                  children: [
+                    _buildAnimatedRoutesList(routes),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  PreferredSizeWidget _buildAppBar(bool isLoading) {
+    return AppBar(
+      centerTitle: true,
+      forceMaterialTransparency: true,
+      backgroundColor: Colors.transparent,
+      title: FadeTransition(
+        opacity: _fadeAnimation,
+        child: Text(
           "Historique",
           style: context.bodySmall?.copyWith(color: Colors.white),
         ),
-        actions: [
-          IconButton(
+      ),
+      actions: [
+        FadeTransition(
+        opacity: _fadeAnimation,
+          child: IconButton(
             onPressed: (isLoading) ? null : _syncData,
             icon: Icon(
               HugeIcons.strokeRoundedCloudUpload, 
               color: (isLoading) ? Colors.white54 : Colors.white,
             ),
           ),
-        ],
-      ),
-      body: RefreshIndicator(
-        onRefresh: () async {
-          _refreshData();
-        },
-        child: BlurryPage(
-          padding: EdgeInsets.all(20.0),
-          children: [
-            _buildAnimatedRoutesList(routes),
-          ],
         ),
-      ),
+      ],
     );
   }
 
@@ -392,25 +337,9 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
     final sortedRoutes = routes.sortByCreationDate();
     
     return Column(
+      mainAxisSize: MainAxisSize.min,
       key: const ValueKey('loaded'),
       children: [
-        // Stats card avec animation si plus d'un parcours
-        if (routes.length > 1) ...[
-          AnimatedBuilder(
-            animation: _fadeAnimation,
-            builder: (context, child) {
-              return Opacity(
-                opacity: _fadeAnimation.value,
-                child: Transform.translate(
-                  offset: Offset(0, 20 * (1 - _fadeAnimation.value)),
-                  child: _buildStatsCard(routes),
-                ),
-              );
-            },
-          ),
-          20.h,
-        ],
-        
         // Parcours avec animations décalées
         ...sortedRoutes.asMap().entries.map((entry) {
           final index = entry.key;
@@ -662,6 +591,16 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
           // Utilisateur connecté : afficher les parcours
           return BlocBuilder<AppDataBloc, AppDataState>(
             builder: (context, appDataState) {
+              // Si les données sont vides
+              if (!appDataState.hasHistoricData) {
+                return _buildEmptyView();
+              }
+
+              // Si erreur de chargement
+              if (appDataState.lastError != null && !appDataState.hasHistoricData) {
+                return _buildErrorView(appDataState.lastError!);
+              }
+
               return _buildMainView(appDataState);
             },
           );

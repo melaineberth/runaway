@@ -179,10 +179,12 @@ class GoalsSection extends StatelessWidget {
                 color: Colors.white30,
               ),
             ),
+            4.h,
             Text(
               'Appuyez sur + pour en créer un',
               style: context.bodySmall?.copyWith(
                 color: Colors.white30,
+                fontSize: 14,
               ),
             ),
           ],

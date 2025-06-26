@@ -212,7 +212,7 @@ class _HistoricCardState extends State<HistoricCard> {
                       SquircleContainer(
                         onTap: widget.onDelete,
                         radius: innerRadius,
-                        color: Colors.red.withValues(alpha: 0.3),
+                        color: Colors.red.withValues(alpha: 0.2),
                         padding: EdgeInsets.all(15.0),
                         child: Icon(
                           HugeIcons.solidRoundedDelete02,

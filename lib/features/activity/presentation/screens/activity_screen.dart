@@ -3,10 +3,12 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:runaway/core/blocs/app_data/app_data_bloc.dart';
+import 'package:runaway/core/blocs/app_data/app_data_event.dart';
 import 'package:runaway/core/blocs/app_data/app_data_state.dart';
+import 'package:runaway/core/widgets/blurry_page.dart';
 import 'package:runaway/core/widgets/squircle_container.dart';
-import 'package:runaway/features/account/presentation/screens/account_screen.dart';
 import 'package:runaway/features/activity/data/repositories/activity_repository.dart';
+import 'package:runaway/features/activity/presentation/widgets/goal_templates_dialog.dart';
 import 'package:top_snackbar_flutter/top_snack_bar.dart';
 import '../../../../config/extensions.dart';
 import '../../../../core/widgets/ask_registration.dart';
@@ -21,7 +23,6 @@ import '../widgets/stats_overview_card.dart';
 import '../widgets/activity_type_stats_card.dart';
 import '../widgets/goals_section.dart';
 import '../widgets/records_section.dart';
-import '../widgets/progress_charts.dart';
 import '../widgets/add_goal_dialog.dart';
 
 class ActivityScreen extends StatefulWidget {
@@ -81,13 +82,21 @@ class _ActivityScreenState extends State<ActivityScreen> with TickerProviderStat
           context.go('/home');
         }
       },
-      child: BlocBuilder<AppDataBloc, AppDataState>(
-        builder: (context, appDataState) {
-          return Scaffold(
-            extendBodyBehindAppBar: true,
-            extendBody: true,
-            appBar: _buildAppBar(),
-            body: _buildBody(appDataState),
+      child: BlocBuilder<AuthBloc, AuthState>(
+        builder: (_, authState) {
+          // ✅ Vérifier d'abord l'authentification
+          if (authState is! Authenticated) {
+            return AskRegistration();
+          }
+
+          // ✅ Utiliser EXCLUSIVEMENT AppDataBloc
+          return BlocBuilder<AppDataBloc, AppDataState>(
+            builder: (context, appDataState) {
+              return Scaffold(
+                appBar: _buildAppBar(),
+                body: _buildBody(appDataState),
+              );
+            },
           );
         },
       ),
@@ -95,13 +104,20 @@ class _ActivityScreenState extends State<ActivityScreen> with TickerProviderStat
   }
 
   Widget _buildBody(AppDataState appDataState) {
-    // Si les données ne sont pas encore chargées
+    // Débogage : afficher l'état des données
+    print('🔍 ActivityScreen - État des données:');
+    print('   - isLoading: ${appDataState.isLoading}');
+    print('   - isDataLoaded: ${appDataState.isDataLoaded}');
+    print('   - hasActivityData: ${appDataState.hasActivityData}');
+    print('   - lastError: ${appDataState.lastError}');
+    
+    // Si les données ne sont pas encore chargées ET qu'on charge
     if (!appDataState.isDataLoaded && appDataState.isLoading) {
       return _buildLoadingState();
     }
 
     // Si erreur de chargement
-    if (appDataState.lastError != null) {
+    if (appDataState.lastError != null && !appDataState.hasActivityData) {
       return _buildErrorState(appDataState.lastError!);
     }
 
@@ -110,7 +126,16 @@ class _ActivityScreenState extends State<ActivityScreen> with TickerProviderStat
       return _buildScrollableContent(appDataState);
     }
 
-    // État initial - données non encore disponibles
+    // État initial - déclencher le chargement si nécessaire
+    if (!appDataState.isDataLoaded && !appDataState.isLoading) {
+      print('📊 Déclenchement du pré-chargement depuis ActivityScreen');
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        context.read<AppDataBloc>().add(const AppDataPreloadRequested());
+      });
+      return _buildLoadingState();
+    }
+
+    // Fallback
     return _buildInitialState();
   }
 
@@ -155,7 +180,7 @@ class _ActivityScreenState extends State<ActivityScreen> with TickerProviderStat
                 child: Row(
                   children: [
                     Icon(HugeIcons.strokeRoundedDownload01, color: Colors.white, size: 20),
-                    8.w,
+                    SizedBox(width: 8),
                     Text('Exporter les données', style: TextStyle(color: Colors.white)),
                   ],
                 ),
@@ -165,7 +190,7 @@ class _ActivityScreenState extends State<ActivityScreen> with TickerProviderStat
                 child: Row(
                   children: [
                     Icon(HugeIcons.strokeRoundedRefresh, color: Colors.orange, size: 20),
-                    8.w,
+                    SizedBox(width: 8),
                     Text('Réinitialiser objectifs', style: TextStyle(color: Colors.orange)),
                   ],
                 ),
@@ -302,7 +327,9 @@ class _ActivityScreenState extends State<ActivityScreen> with TickerProviderStat
   }
 
   Widget _buildScrollableContent(AppDataState appDataState) {
-    // Créer un état ActivityLoaded virtuel à partir des données pré-chargées
+    print('✅ Affichage du contenu avec les données pré-chargées');
+    
+    // ✅ Créer un état ActivityLoaded virtuel à partir des données pré-chargées
     final virtualState = ActivityLoaded(
       generalStats: appDataState.activityStats!,
       typeStats: appDataState.activityTypeStats ?? [],
@@ -314,47 +341,87 @@ class _ActivityScreenState extends State<ActivityScreen> with TickerProviderStat
     );
 
     return BlurryPage(
-      padding: EdgeInsets.all(20.0),
-      children: [        
+      padding: EdgeInsets.symmetric(horizontal: 20.0),
+      children: [      
+        20.h,
+          
         // Vue d'ensemble
-        StatsOverviewCard(stats: virtualState.generalStats),
-        
-        40.h,
-        
-        // Graphiques de progression
-        ProgressChartsSection(
-          periodStats: virtualState.periodStats,
-          currentPeriod: virtualState.currentPeriod,
-          onPeriodChanged: (period) {
-            context.read<ActivityBloc>().add(ActivityPeriodChanged(period));
-          },
+        AnimatedBuilder(
+          animation: _fadeAnimation,
+          builder: (context, child) {
+            return Opacity(
+              opacity: _fadeAnimation.value,
+              child: Transform.translate(
+                offset: Offset(0, 20 * (1 - _fadeAnimation.value)),
+                child: StatsOverviewCard(
+                  stats: virtualState.generalStats,
+                ),
+              ),
+            );
+          }
         ),
         
         40.h,
         
         // Statistiques par activité
-        ActivityTypeStatsCard(
-          stats: virtualState.typeStats,
-          selectedType: virtualState.selectedActivityFilter,
-          onTypeSelected: (type) {
-            context.read<ActivityBloc>().add(ActivityFilterChanged(type));
-          },
+        AnimatedBuilder(
+          animation: _fadeAnimation,
+          builder: (context, child) {
+            return Opacity(
+              opacity: _fadeAnimation.value,
+              child: Transform.translate(
+                offset: Offset(0, 20 * (1 - _fadeAnimation.value)),
+                child: ActivityTypeStatsCard(
+                  stats: virtualState.typeStats,
+                  selectedType: virtualState.selectedActivityFilter,
+                  onTypeSelected: (type) {
+                    // Pour l'instant, on garde simple - on pourrait améliorer plus tard
+                    print('🏃 Filtrage par type demandé: $type');
+                  },
+                ),
+              ),
+            );
+          }
         ),
         
         40.h,
         
         // Objectifs personnels
-        GoalsSection(
-          goals: virtualState.goals,
-          onAddGoal: _showAddGoalOptions,
-          onEditGoal: _editGoal,
-          onDeleteGoal: _deleteGoal,
+        AnimatedBuilder(
+          animation: _fadeAnimation,
+          builder: (context, child) {
+            return Opacity(
+              opacity: _fadeAnimation.value,
+              child: Transform.translate(
+                offset: Offset(0, 20 * (1 - _fadeAnimation.value)),
+                child: GoalsSection(
+                  goals: virtualState.goals,
+                  onAddGoal: _showAddGoalOptions,
+                  onEditGoal: _editGoal,
+                  onDeleteGoal: _deleteGoal,
+                ),
+              ),
+            );
+          }
         ),
         
         40.h,
         
         // Records personnels
-        RecordsSection(records: virtualState.records),
+        AnimatedBuilder(
+          animation: _fadeAnimation,
+          builder: (context, child) {
+            return Opacity(
+              opacity: _fadeAnimation.value,
+              child: Transform.translate(
+                offset: Offset(0, 20 * (1 - _fadeAnimation.value)),
+                child: RecordsSection(
+                  records: virtualState.records,
+                ),
+              ),
+            );
+          }
+        ),
         
         50.h,
       ],
@@ -362,7 +429,8 @@ class _ActivityScreenState extends State<ActivityScreen> with TickerProviderStat
   }
 
   void _refreshData() {
-    context.read<ActivityBloc>().add(ActivityStatsRequested());
+    print('🔄 Rafraîchissement des données d\'activité demandé depuis ActivityScreen');
+    context.read<AppDataBloc>().add(const ActivityDataRefreshRequested());
   }
 
   void _handleMenuSelection(String value) {
@@ -415,8 +483,15 @@ class _ActivityScreenState extends State<ActivityScreen> with TickerProviderStat
               subtitle: 'Choisir parmi des objectifs pré-définis',
               color: Colors.green,
               onTap: () {
-                Navigator.pop(context);
-                _showAddGoalDialog();
+                showModalBottomSheet(
+                  useRootNavigator: true,
+                  isScrollControlled: true,
+                  isDismissible: true,
+                  enableDrag: false,
+                  context: context,
+                  backgroundColor: Colors.black,
+                  builder: (context) => GoalTemplatesDialog(),
+                );
               },
             ),
           ],

@@ -74,24 +74,27 @@ class RunAway extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiBlocProvider(
       providers: [
-        // 🆕 AppDataBloc - DOIT être créé en premier pour les dépendances
+        // 🆕 AppDataBloc - DOIT être créé EN PREMIER
         BlocProvider<AppDataBloc>(
           create: (context) {
+            print('🔧 Création du AppDataBloc...');
             final appDataBloc = AppDataBloc(
               activityRepository: ActivityRepository(),
               routesRepository: RoutesRepository(),
             );
             
-            // Initialiser le service avec ce BLoC
+            // ✅ Initialiser le service IMMÉDIATEMENT après création du BLoC
             AppDataInitializationService.initialize(appDataBloc);
+            print('✅ AppDataInitializationService initialisé');
             
             return appDataBloc;
           },
         ),
         
-        // AuthBloc - IMPORTANT: doit être après AppDataBloc
+        // AuthBloc - créé APRÈS AppDataBloc pour éviter les problèmes d'ordre
         BlocProvider(
           create: (context) {
+            print('🔧 Création du AuthBloc...');
             final authBloc = AuthBloc(AuthRepository());
             // Déclencher l'initialisation de l'authentification
             authBloc.add(AppStarted());

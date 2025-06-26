@@ -1,6 +1,9 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:runaway/config/colors.dart';
+import 'package:runaway/core/widgets/icon_btn.dart';
 import 'package:runaway/features/home/domain/models/nav_item_model.dart';
 
 class MainScaffold extends StatelessWidget {
@@ -17,26 +20,37 @@ class MainScaffold extends StatelessWidget {
       extendBody: true,
       body: child,
       bottomNavigationBar: SafeArea(
-        child: Container(
-          height: 56,
-          padding: EdgeInsets.symmetric(horizontal: 40),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: List.generate(bottomNavItems.length, (index) {
-              final item = bottomNavItems[index];
-              final bool isSelected = index == selectedIndex;
-              return GestureDetector(
-                onTap: () {
-                  // on change la route
-                  context.go(item.route);
-                },
-                child: Icon(
-                  isSelected ? item.activeIcon : item.inactiveIcon,
-                  color: isSelected ? AppColors.primary : Colors.white60,
-                  size: 28,
+        child: Padding(
+          padding: EdgeInsets.symmetric(horizontal: 80),
+          child: ClipRRect(
+            borderRadius: BorderRadiusGeometry.circular(100),
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 30, sigmaY: 30),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.4),
+                  borderRadius: BorderRadius.circular(100),
                 ),
-              );
-            }),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: List.generate(
+                    bottomNavItems.length, 
+                    (index) {
+                      final item = bottomNavItems[index];
+                      final bool isSelected = index == selectedIndex;
+                      return IconBtn(
+                        onPressed: () => context.go(item.route),
+                        icon: isSelected ? item.activeIcon : item.inactiveIcon,
+                        iconColor: isSelected ? AppColors.primary : Colors.white60,
+                        padding: 20,
+                        backgroundColor: Colors.transparent,
+                      );
+                    },
+                  ),
+                ),
+              ),
+            ),
           ),
         ),
       ),

@@ -1499,24 +1499,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
           if (_showLottieMarker && _lottieMarkerLat != null && _lottieMarkerLng != null)
             _buildLottieMarker(),
 
-          if (!isNavigationMode) // Masquer en mode navigation
-            IgnorePointer(
-              ignoring: true,
-              child: Container(
-                height: MediaQuery.of(context).size.height / 3.5,
-                decoration: BoxDecoration(
-                  gradient: SmoothGradient(
-                    from: Colors.black.withValues(alpha: 0),
-                    to: Colors.black,
-                    curve: Curves.linear,
-                    steps: 25,
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                  ),
-                ),
-              ),
-            ),
-
             // Interface normale (masquée en mode navigation OU navigation live)
             if (!isNavigationMode && !_isInNavigationMode)
             Padding(
@@ -1526,7 +1508,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
                 height: MediaQuery.of(context).size.height,
                 child: SafeArea(
                   child: Column(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 15.0),
@@ -1537,38 +1518,38 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
                         ),
                       ),
 
-                      Expanded(
-                        child: Padding(
-                          padding: const EdgeInsets.only(right: 15.0),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.end,
-                            crossAxisAlignment: CrossAxisAlignment.end,
-                            children: [
-                              Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  // Bouton retour position utilisateur
-                                  IconBtn(
-                                    padding: 12.0,
-                                    icon: _trackingMode == TrackingMode.userTracking
-                                        ? HugeIcons.solidRoundedLocationShare02
-                                        : HugeIcons.strokeRoundedLocationShare02,
-                                    onPressed: _activateUserTracking,
-                                    iconColor: _trackingMode == TrackingMode.userTracking
-                                        ? AppColors.primary
-                                        : Colors.white,
-                                  ),
-                                  15.h,
-                                  // Bouton générateur
-                                  IconBtn(
-                                    padding: 12.0,
-                                    icon: HugeIcons.strokeRoundedAiMagic,
-                                    onPressed: openGenerator,
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
+                      40.h,
+
+                      Padding(
+                        padding: const EdgeInsets.only(right: 15.0),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                // Bouton retour position utilisateur
+                                IconBtn(
+                                  padding: 12.0,
+                                  icon: _trackingMode == TrackingMode.userTracking
+                                      ? HugeIcons.solidRoundedLocationShare02
+                                      : HugeIcons.strokeRoundedLocationShare02,
+                                  onPressed: _activateUserTracking,
+                                  iconColor: _trackingMode == TrackingMode.userTracking
+                                      ? AppColors.primary
+                                      : Colors.white,
+                                ),
+                                10.h,
+                                // Bouton générateur
+                                IconBtn(
+                                  padding: 12.0,
+                                  icon: HugeIcons.strokeRoundedAiMagic,
+                                  onPressed: openGenerator,
+                                ),
+                              ],
+                            ),
+                          ],
                         ),
                       ),
                     ],

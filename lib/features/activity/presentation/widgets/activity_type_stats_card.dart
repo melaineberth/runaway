@@ -38,18 +38,25 @@ class ActivityTypeStatsCard extends StatelessWidget {
           ],
         ),
         15.h,
-        SquircleContainer(
-          radius: 50.0,
-          padding: const EdgeInsets.all(10),
-          color: Colors.white10,
-          child: Column(
-            children: [
-              if (filteredStats.isEmpty)
-                _buildEmptyState(context)
-              else
-                ...filteredStats.map((stat) => _buildActivityStatRow(context, stat)),          
-            ],
-          ),
+        Column(
+          children: [
+            if (filteredStats.isEmpty)
+              _buildEmptyState(context)
+            else
+            ...filteredStats.asMap().entries.map((entry) {
+                final i = entry.key;
+                final stat = entry.value;
+
+                return Padding(
+                  // on enlève le bas uniquement sur le dernier
+                  padding: EdgeInsets.only(
+                    bottom: i == filteredStats.length - 1 ? 0 : 8,
+                  ),
+                  child: _buildActivityStatRow(context, stat),
+                );
+              },
+            ),         
+          ],
         ),
       ],
     );
@@ -76,80 +83,90 @@ class ActivityTypeStatsCard extends StatelessWidget {
   }
 
   Widget _buildActivityStatRow(BuildContext context, ActivityTypeStats stat) {
-    return Row(
-      children: [
-        SquircleContainer(
-          radius: 30.0,
-          padding: const EdgeInsets.all(20),
-          color: AppColors.primary,
-          child: Icon(
-            stat.activityType.icon,
-            color: Colors.white,
-            size: 30,
-          ),
-        ),
-        12.w,
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                stat.activityType.title,
-                style: context.bodyMedium?.copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              Text(
-                '${stat.totalRoutes} parcours',
-                style: context.bodySmall?.copyWith(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                  color: Colors.white54,
-                ),
-              ),
-            ],
-          ),
-        ),
-        Text.rich(
-          TextSpan(
-            text: stat.bestSpeedKmh.toStringAsFixed(1),
-            style: context.bodyMedium?.copyWith(
-              fontWeight: FontWeight.w700,
+    return SquircleContainer(
+      radius: 50.0,
+      padding: const EdgeInsets.all(10),
+      color: Colors.white10,
+      child: Row(
+        children: [
+          SquircleContainer(
+            radius: 30.0,
+            padding: const EdgeInsets.all(20),
+            color: AppColors.primary,
+            child: Icon(
+              stat.activityType.icon,
+              color: Colors.white,
+              size: 30,
             ),
-            children: <InlineSpan>[
-              TextSpan(
-                text: " km/h",
-                style: context.bodySmall?.copyWith(
-                  fontSize: 15,
+          ),
+          12.w,
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  stat.activityType.title,
+                  style: context.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
-              )
-            ]
-          )
-        ),
-        10.w,
-      ],
+                Text(
+                  '${stat.totalRoutes} parcours',
+                  style: context.bodySmall?.copyWith(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.white54,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Text.rich(
+            TextSpan(
+              text: stat.bestSpeedKmh.toStringAsFixed(1),
+              style: context.bodyMedium?.copyWith(
+                fontWeight: FontWeight.w700,
+              ),
+              children: <InlineSpan>[
+                TextSpan(
+                  text: " km/h",
+                  style: context.bodySmall?.copyWith(
+                    fontSize: 15,
+                  ),
+                )
+              ]
+            )
+          ),
+          10.w,
+        ],
+      ),
     );
   }
 
   Widget _buildEmptyState(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(20.0),
-        child: Column(
-          children: [
-            Icon(
-              HugeIcons.strokeRoundedActivity01,
-              size: 48,
-              color: Colors.white30,
-            ),
-            8.h,
-            Text(
-              'Aucune donnée pour ce filtre',
-              style: context.bodySmall?.copyWith(
+    return SquircleContainer(
+      radius: 50.0,
+      padding: const EdgeInsets.all(20),
+      color: Colors.white10,
+      child: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(20.0),
+          child: Column(
+            children: [
+              Icon(
+                HugeIcons.strokeRoundedActivity01,
+                size: 48,
                 color: Colors.white30,
               ),
-            ),
-          ],
+              8.h,
+              Text(
+                'Aucune donnée pour ce filtre',
+                style: context.bodySmall?.copyWith(
+                  color: Colors.white30,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

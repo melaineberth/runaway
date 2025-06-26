@@ -264,32 +264,34 @@ class _ProgressChartsSectionState extends State<ProgressChartsSection> {
 
   Widget _buildEmptyState() {
     return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            HugeIcons.strokeRoundedChartLineData02,
-            size: 48,
-            color: Colors.white30,
-          ),
-          8.h,
-          Text(
-            'Pas encore de données',
-            style: TextStyle(
-              color: Colors.white60,
-              fontSize: 14,
+      child: Padding(
+        padding: const EdgeInsets.all(20.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              HugeIcons.strokeRoundedChartLineData02,
+              size: 48,
+              color: Colors.white30,
             ),
-          ),
-          4.h,
-          Text(
-            'Complétez des parcours pour voir votre progression',
-            style: TextStyle(
-              color: Colors.white38,
-              fontSize: 12,
+            8.h,
+            Text(
+              'Pas encore de données',
+              style: context.bodySmall?.copyWith(
+                color: Colors.white30,
+              ),
             ),
-            textAlign: TextAlign.center,
-          ),
-        ],
+            4.h,
+            Text(
+              'Complétez des parcours pour voir votre progression',
+              style: context.bodySmall?.copyWith(
+                color: Colors.white30,
+                fontSize: 14,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
       ),
     );
   }

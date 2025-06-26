@@ -1,9 +1,12 @@
+// lib/core/blocs/app_data/app_data_bloc.dart
+
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:runaway/core/blocs/app_data/app_data_event.dart';
-import 'package:runaway/core/blocs/app_data/app_data_state.dart';
 import 'package:runaway/features/activity/data/repositories/activity_repository.dart';
 import 'package:runaway/features/route_generator/data/repositories/routes_repository.dart';
+import 'package:runaway/features/activity/domain/models/activity_stats.dart';
 import 'package:runaway/features/route_generator/domain/models/saved_route.dart';
+import 'app_data_event.dart';
+import 'app_data_state.dart';
 
 /// BLoC principal pour orchestrer le pré-chargement et la gestion des données de l'application
 class AppDataBloc extends Bloc<AppDataEvent, AppDataState> {
@@ -54,7 +57,7 @@ class AppDataBloc extends Bloc<AppDataEvent, AppDataState> {
 
       final results = await Future.wait(futures, eagerError: false);
       
-      final activityData = results[0] as Map<String, dynamic>?;
+      final activityData = results[0] as ActivityDataResult?;
       final historicData = results[1] as List<SavedRoute>?;
 
       // Mettre à jour le cache
@@ -64,11 +67,11 @@ class AppDataBloc extends Bloc<AppDataEvent, AppDataState> {
         isLoading: false,
         isDataLoaded: true,
         // Données d'activité
-        activityStats: activityData?['generalStats'],
-        activityTypeStats: activityData?['typeStats'],
-        periodStats: activityData?['periodStats'],
-        personalGoals: activityData?['goals'],
-        personalRecords: activityData?['records'],
+        activityStats: activityData?.generalStats,
+        activityTypeStats: activityData?.typeStats,
+        periodStats: activityData?.periodStats,
+        personalGoals: activityData?.goals,
+        personalRecords: activityData?.records,
         // Données d'historique
         savedRoutes: historicData ?? [],
         lastCacheUpdate: _lastCacheUpdate,
@@ -86,7 +89,7 @@ class AppDataBloc extends Bloc<AppDataEvent, AppDataState> {
   }
 
   /// Charge les données d'activité
-  Future<Map<String, dynamic>?> _loadActivityData() async {
+  Future<ActivityDataResult?> _loadActivityData() async {
     try {
       print('📊 Chargement des données d\'activité...');
       
@@ -102,13 +105,13 @@ class AppDataBloc extends Bloc<AppDataEvent, AppDataState> {
         _activityRepository.getPersonalRecords(),
       ]);
 
-      return {
-        'generalStats': statsFutures[0],
-        'typeStats': statsFutures[1],
-        'periodStats': statsFutures[2],
-        'goals': statsFutures[3],
-        'records': statsFutures[4],
-      };
+      return ActivityDataResult(
+        generalStats: statsFutures[0] as ActivityStats,
+        typeStats: statsFutures[1] as List<ActivityTypeStats>,
+        periodStats: statsFutures[2] as List<PeriodStats>,
+        goals: statsFutures[3] as List<PersonalGoal>,
+        records: statsFutures[4] as List<PersonalRecord>,
+      );
       
     } catch (e) {
       print('❌ Erreur chargement données activité: $e');
@@ -148,11 +151,11 @@ class AppDataBloc extends Bloc<AppDataEvent, AppDataState> {
       final activityData = await _loadActivityData();
       if (activityData != null) {
         emit(state.copyWith(
-          activityStats: activityData['generalStats'],
-          activityTypeStats: activityData['typeStats'],
-          periodStats: activityData['periodStats'],
-          personalGoals: activityData['goals'],
-          personalRecords: activityData['records'],
+          activityStats: activityData.generalStats,
+          activityTypeStats: activityData.typeStats,
+          periodStats: activityData.periodStats,
+          personalGoals: activityData.goals,
+          personalRecords: activityData.records,
           lastCacheUpdate: DateTime.now(),
         ));
       }
@@ -207,4 +210,21 @@ class AppDataBloc extends Bloc<AppDataEvent, AppDataState> {
   bool get isDataReady => state.isDataLoaded && _isCacheValid();
   bool get hasActivityData => state.activityStats != null;
   bool get hasHistoricData => state.savedRoutes.isNotEmpty;
+}
+
+/// Structure pour retourner les données d'activité
+class ActivityDataResult {
+  final ActivityStats generalStats;
+  final List<ActivityTypeStats> typeStats;
+  final List<PeriodStats> periodStats;
+  final List<PersonalGoal> goals;
+  final List<PersonalRecord> records;
+
+  ActivityDataResult({
+    required this.generalStats,
+    required this.typeStats,
+    required this.periodStats,
+    required this.goals,
+    required this.records,
+  });
 }
