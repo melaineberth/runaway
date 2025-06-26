@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:runaway/config/extensions.dart';
+import 'package:runaway/core/blocs/app_data/app_data_bloc.dart';
+import 'package:runaway/core/blocs/app_data/app_data_event.dart';
+import 'package:runaway/core/blocs/app_data/app_data_state.dart';
 import 'package:runaway/core/widgets/ask_registration.dart';
 import 'package:runaway/core/widgets/squircle_container.dart';
 import 'package:runaway/core/widgets/top_snackbar.dart';
@@ -49,14 +52,26 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
   void initState() {
     super.initState();
     _initializeAnimations();
-    // Charger les parcours sauvegardés au démarrage
-    _loadSavedRoutes();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkDataAndRefreshIfNeeded();
+    });  
+  }
+
+  void _checkDataAndRefreshIfNeeded() {
+    final appDataState = context.read<AppDataBloc>().state;
+    
+    // Si les données ne sont pas fraîches, déclencher un refresh
+    if (!appDataState.isCacheValid && !appDataState.isLoading) {
+      print('📚 Données d\'historique pas fraîches, refresh...');
+      context.read<AppDataBloc>().add(const HistoricDataRefreshRequested());
+    }
   }
 
   /// 🎬 Initialise les contrôleurs d'animation
   void _initializeAnimations() {
     _fadeController = AnimationController(
-      duration: const Duration(milliseconds: 300),
+      duration: const Duration(milliseconds: 800),
       vsync: this,
     );
     
@@ -64,10 +79,48 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
       duration: const Duration(milliseconds: 1200),
       vsync: this,
     );
-    
-    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _fadeController, curve: Curves.easeOut),
-    );
+
+    _fadeAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(
+      parent: _fadeController,
+      curve: Curves.easeOut,
+    ));
+
+    _fadeController.forward();
+    _staggerController.forward();
+  }
+
+  void _updateAnimationsForRoutes(List<SavedRoute> routes) {
+    _slideAnimations.clear();
+    _scaleAnimations.clear();
+
+    for (int i = 0; i < routes.length; i++) {
+      final slideInterval = Interval(
+        (i * 0.1).clamp(0.0, 1.0),
+        ((i * 0.1) + 0.3).clamp(0.0, 1.0),
+        curve: Curves.easeOutBack,
+      );
+
+      final scaleInterval = Interval(
+        (i * 0.05).clamp(0.0, 1.0),
+        ((i * 0.05) + 0.4).clamp(0.0, 1.0),
+        curve: Curves.elasticOut,
+      );
+
+      _slideAnimations.add(
+        Tween<double>(begin: 50.0, end: 0.0).animate(
+          CurvedAnimation(parent: _staggerController, curve: slideInterval),
+        ),
+      );
+
+      _scaleAnimations.add(
+        Tween<double>(begin: 0.8, end: 1.0).animate(
+          CurvedAnimation(parent: _staggerController, curve: scaleInterval),
+        ),
+      );
+    }
   }
 
   /// 🔄 Configure les animations décalées selon le nombre de routes
@@ -254,7 +307,15 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
   }
 
   /// 🎭 Interface principale avec animations intégrées
-  Widget _buildMainView(List<SavedRoute> routes, bool isDataLoading) {
+  Widget _buildMainView(AppDataState appDataState) {
+    final routes = appDataState.savedRoutes;
+    final isLoading = appDataState.isLoading;
+
+    // Mettre à jour les animations en fonction du nombre de routes
+    if (routes.isNotEmpty) {
+      _updateAnimationsForRoutes(routes);
+    }
+
     return Scaffold(
       extendBodyBehindAppBar: true,
       appBar: AppBar(
@@ -267,18 +328,18 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
         ),
         actions: [
           IconButton(
-            onPressed: (_shouldShowLoading || isDataLoading) ? null : () {
-              context.read<RouteGenerationBloc>().add(SyncPendingRoutesRequested());
-            },
+            onPressed: (isLoading) ? null : _syncData,
             icon: Icon(
               HugeIcons.strokeRoundedCloudUpload, 
-              color: (_shouldShowLoading || isDataLoading) ? Colors.white54 : Colors.white,
+              color: (isLoading) ? Colors.white54 : Colors.white,
             ),
           ),
         ],
       ),
       body: RefreshIndicator(
-        onRefresh: _loadSavedRoutes,
+        onRefresh: () async {
+          _refreshData();
+        },
         child: BlurryPage(
           padding: EdgeInsets.all(20.0),
           children: [
@@ -599,27 +660,31 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
           }
 
           // Utilisateur connecté : afficher les parcours
-          return BlocBuilder<RouteGenerationBloc, RouteGenerationState>(
-            builder: (context, routeState) {
-              // Gestion du loading minimum
-              _handleLoadingTransition(routeState.isAnalyzingZone, routeState.savedRoutes);
-
-              // Erreur de chargement
-              if (routeState.errorMessage != null) {
-                return _buildErrorView(routeState.errorMessage!);
-              }
-
-              // Aucun parcours ET pas de chargement
-              if (routeState.savedRoutes.isEmpty && !_shouldShowLoading) {
-                return _buildEmptyView();
-              }
-
-              // Interface principale avec animations
-              return _buildMainView(routeState.savedRoutes, routeState.isAnalyzingZone);
+          return BlocBuilder<AppDataBloc, AppDataState>(
+            builder: (context, appDataState) {
+              return _buildMainView(appDataState);
             },
           );
         },
       ),
     );
+  }
+
+  // Actions
+  void _refreshData() {
+    print('🔄 Rafraîchissement de l\'historique demandé');
+    context.read<AppDataBloc>().add(const HistoricDataRefreshRequested());
+  }
+
+  void _syncData() {
+    print('☁️ Synchronisation des données demandée');
+    context.read<RouteGenerationBloc>().add(SyncPendingRoutesRequested());
+    
+    // Ensuite rafraîchir les données
+    Future.delayed(Duration(seconds: 2), () {
+      if (mounted) {
+        context.read<AppDataBloc>().add(const HistoricDataRefreshRequested());
+      }
+    });
   }
 }

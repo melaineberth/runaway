@@ -1,19 +1,18 @@
-// lib/features/activity/presentation/screens/activity_screen.dart
-
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hugeicons/hugeicons.dart';
+import 'package:runaway/core/blocs/app_data/app_data_bloc.dart';
+import 'package:runaway/core/blocs/app_data/app_data_state.dart';
 import 'package:runaway/core/widgets/squircle_container.dart';
 import 'package:runaway/features/account/presentation/screens/account_screen.dart';
+import 'package:runaway/features/activity/data/repositories/activity_repository.dart';
 import 'package:top_snackbar_flutter/top_snack_bar.dart';
 import '../../../../config/extensions.dart';
 import '../../../../core/widgets/ask_registration.dart';
-import '../../../../core/widgets/loading_overlay.dart';
 import '../../../../core/widgets/top_snackbar.dart';
 import '../../../auth/presentation/bloc/auth_bloc.dart';
 import '../../../auth/presentation/bloc/auth_state.dart';
-import '../../../route_generator/domain/models/activity_type.dart';
 import '../../domain/models/activity_stats.dart';
 import '../blocs/activity_bloc.dart';
 import '../blocs/activity_event.dart';
@@ -24,7 +23,6 @@ import '../widgets/goals_section.dart';
 import '../widgets/records_section.dart';
 import '../widgets/progress_charts.dart';
 import '../widgets/add_goal_dialog.dart';
-import '../widgets/goal_templates_dialog.dart';
 
 class ActivityScreen extends StatefulWidget {
   const ActivityScreen({super.key});
@@ -41,12 +39,7 @@ class _ActivityScreenState extends State<ActivityScreen> with TickerProviderStat
   @override
   void initState() {
     super.initState();
-    _initializeAnimations();
-    
-    // Charger les statistiques au démarrage
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<ActivityBloc>().add(ActivityStatsRequested());
-    });
+    _initializeAnimations();    
   }
 
   void _initializeAnimations() {
@@ -88,38 +81,37 @@ class _ActivityScreenState extends State<ActivityScreen> with TickerProviderStat
           context.go('/home');
         }
       },
-      child: BlocBuilder<AuthBloc, AuthState>(
-        builder: (_, authState) {
-          if (authState is! Authenticated) {
-            return AskRegistration();
-          }
-
+      child: BlocBuilder<AppDataBloc, AppDataState>(
+        builder: (context, appDataState) {
           return Scaffold(
             extendBodyBehindAppBar: true,
             extendBody: true,
             appBar: _buildAppBar(),
-            body: BlocConsumer<ActivityBloc, ActivityState>(
-              listener: _handleStateChanges,
-              builder: (context, state) {
-                if (state is ActivityLoading) {
-                  return _buildLoadingState();
-                }
-                
-                if (state is ActivityError) {
-                  return _buildErrorState(state.message);
-                }
-                
-                if (state is ActivityLoaded) {
-                  return _buildScrollableContent(state);
-                }
-
-                return _buildInitialState();
-              },
-            ),
+            body: _buildBody(appDataState),
           );
         },
       ),
     );
+  }
+
+  Widget _buildBody(AppDataState appDataState) {
+    // Si les données ne sont pas encore chargées
+    if (!appDataState.isDataLoaded && appDataState.isLoading) {
+      return _buildLoadingState();
+    }
+
+    // Si erreur de chargement
+    if (appDataState.lastError != null) {
+      return _buildErrorState(appDataState.lastError!);
+    }
+
+    // Si les données sont disponibles
+    if (appDataState.hasActivityData) {
+      return _buildScrollableContent(appDataState);
+    }
+
+    // État initial - données non encore disponibles
+    return _buildInitialState();
   }
 
   PreferredSizeWidget _buildAppBar() {
@@ -309,19 +301,30 @@ class _ActivityScreenState extends State<ActivityScreen> with TickerProviderStat
     );
   }
 
-  Widget _buildScrollableContent(ActivityLoaded state) {
+  Widget _buildScrollableContent(AppDataState appDataState) {
+    // Créer un état ActivityLoaded virtuel à partir des données pré-chargées
+    final virtualState = ActivityLoaded(
+      generalStats: appDataState.activityStats!,
+      typeStats: appDataState.activityTypeStats ?? [],
+      periodStats: appDataState.periodStats ?? [],
+      goals: appDataState.personalGoals ?? [],
+      records: appDataState.personalRecords ?? [],
+      currentPeriod: PeriodType.monthly, // Valeur par défaut
+      selectedActivityFilter: null,
+    );
+
     return BlurryPage(
       padding: EdgeInsets.all(20.0),
       children: [        
         // Vue d'ensemble
-        StatsOverviewCard(stats: state.generalStats),
+        StatsOverviewCard(stats: virtualState.generalStats),
         
         40.h,
         
         // Graphiques de progression
         ProgressChartsSection(
-          periodStats: state.periodStats,
-          currentPeriod: state.currentPeriod,
+          periodStats: virtualState.periodStats,
+          currentPeriod: virtualState.currentPeriod,
           onPeriodChanged: (period) {
             context.read<ActivityBloc>().add(ActivityPeriodChanged(period));
           },
@@ -331,8 +334,8 @@ class _ActivityScreenState extends State<ActivityScreen> with TickerProviderStat
         
         // Statistiques par activité
         ActivityTypeStatsCard(
-          stats: state.typeStats,
-          selectedType: state.selectedActivityFilter,
+          stats: virtualState.typeStats,
+          selectedType: virtualState.selectedActivityFilter,
           onTypeSelected: (type) {
             context.read<ActivityBloc>().add(ActivityFilterChanged(type));
           },
@@ -342,7 +345,7 @@ class _ActivityScreenState extends State<ActivityScreen> with TickerProviderStat
         
         // Objectifs personnels
         GoalsSection(
-          goals: state.goals,
+          goals: virtualState.goals,
           onAddGoal: _showAddGoalOptions,
           onEditGoal: _editGoal,
           onDeleteGoal: _deleteGoal,
@@ -351,17 +354,11 @@ class _ActivityScreenState extends State<ActivityScreen> with TickerProviderStat
         40.h,
         
         // Records personnels
-        RecordsSection(records: state.records),
+        RecordsSection(records: virtualState.records),
         
         50.h,
       ],
     );
-  }
-
-  void _handleStateChanges(BuildContext context, ActivityState state) {
-    if (state is ActivityError) {
-      _showErrorSnackbar(state.message);
-    }
   }
 
   void _refreshData() {
@@ -593,14 +590,4 @@ class _ActivityScreenState extends State<ActivityScreen> with TickerProviderStat
     );
   }
 
-  void _showErrorSnackbar(String message) {
-    showTopSnackBar(
-      Overlay.of(context),
-      TopSnackBar(
-        title: message,
-        icon: HugeIcons.solidRoundedAlert02,
-        color: Colors.red,
-      ),
-    );
-  }
 }

@@ -7,7 +7,10 @@ import 'package:path_provider/path_provider.dart';
 import 'package:runaway/config/environment_config.dart';
 import 'package:runaway/config/router.dart';
 import 'package:runaway/config/theme.dart';
+import 'package:runaway/core/blocs/app_data/app_data_bloc.dart';
+import 'package:runaway/core/services/app_data_initialization_service.dart';
 import 'package:runaway/core/services/app_initialization_service.dart';
+import 'package:runaway/core/widgets/auth_data_listener.dart';
 import 'package:runaway/features/activity/data/repositories/activity_repository.dart';
 import 'package:runaway/features/activity/presentation/blocs/activity_bloc.dart';
 import 'package:runaway/features/auth/data/repositories/auth_repository.dart';
@@ -41,7 +44,6 @@ void main() async {
     );
     print('✅ HydratedBloc storage initialisé');
 
-    
     // Initialiser Supabase
     await Supabase.initialize(
       url: dotenv.get('SUPABASE_URL'),
@@ -49,7 +51,7 @@ void main() async {
     );
     print('✅ Supabase initialisé');
     
-    // 🆕 Initialiser les services de l'application
+    // Initialiser les services de l'application
     await AppInitializationService.initialize();
 
     // Configurer Mapbox
@@ -72,7 +74,22 @@ class RunAway extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiBlocProvider(
       providers: [
-        // AuthBloc - IMPORTANT: doit être en premier pour les dépendances
+        // 🆕 AppDataBloc - DOIT être créé en premier pour les dépendances
+        BlocProvider<AppDataBloc>(
+          create: (context) {
+            final appDataBloc = AppDataBloc(
+              activityRepository: ActivityRepository(),
+              routesRepository: RoutesRepository(),
+            );
+            
+            // Initialiser le service avec ce BLoC
+            AppDataInitializationService.initialize(appDataBloc);
+            
+            return appDataBloc;
+          },
+        ),
+        
+        // AuthBloc - IMPORTANT: doit être après AppDataBloc
         BlocProvider(
           create: (context) {
             final authBloc = AuthBloc(AuthRepository());
@@ -95,6 +112,7 @@ class RunAway extends StatelessWidget {
           ),
         ),
 
+        // ActivityBloc - maintenant moins critique car les données sont pré-chargées
         BlocProvider<ActivityBloc>(
           create: (context) => ActivityBloc(
             activityRepository: ActivityRepository(),
@@ -102,30 +120,30 @@ class RunAway extends StatelessWidget {
           ),
         ),
       ],
-      child: MaterialApp.router(
-        title: 'RunAway - Générateur de Parcours',
-        debugShowCheckedModeBanner: false,
-        routerConfig: router,
-        theme: getAppTheme(Brightness.light),
-        darkTheme: getAppTheme(Brightness.dark),
-        themeMode: ThemeMode.dark, // Force le thème sombre pour votre design
-        localizationsDelegates: const [
-          AppLocalizations.delegate,
-          GlobalMaterialLocalizations.delegate,
-          GlobalWidgetsLocalizations.delegate,
-          GlobalCupertinoLocalizations.delegate,
-        ],
-        supportedLocales: const [
-          Locale('en'),
-        ],
-        // Configuration globale
-        builder: (context, child) {
-          return MediaQuery(
-            // Empêcher le scaling des polices système
-            data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(1.0)),
-            child: child ?? Container(),
-          );
-        },
+      child: AuthDataListener(
+        child: MaterialApp.router(
+          title: 'RunAway - Générateur de Parcours',
+          debugShowCheckedModeBanner: false,
+          routerConfig: router,
+          theme: getAppTheme(Brightness.light),
+          darkTheme: getAppTheme(Brightness.dark),
+          themeMode: ThemeMode.dark,
+          localizationsDelegates: const [
+            AppLocalizations.delegate,
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          supportedLocales: const [
+            Locale('en'),
+          ],
+          builder: (context, child) {
+            return MediaQuery(
+              data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(1.0)),
+              child: child ?? Container(),
+            );
+          },
+        ),
       ),
     );
   }

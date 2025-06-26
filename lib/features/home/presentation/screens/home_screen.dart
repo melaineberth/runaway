@@ -89,7 +89,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
   bool isNavigationMode = false;
   bool isNavigationCameraActive = false;
   bool _isInNavigationMode = false;
-
+  bool _isLoading = false;
   bool _hasAutoSaved = false;
 
   @override
@@ -268,6 +268,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
     }
 
     try {
+
       // Utiliser la vraie distance générée au lieu de la distance demandée
       final realDistance = _getGeneratedRouteDistance();
       final routeName = _generateAutoRouteName(state.usedParameters!, realDistance);
@@ -281,6 +282,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
       );
 
       print('✅ Parcours auto-sauvegardé avec screenshot: $routeName (distance réelle: ${realDistance.toStringAsFixed(1)}km)');
+
+      setState(() {
+        _isLoading = false;
+      });
 
     } catch (e) {
       print('❌ Erreur auto-sauvegarde: $e');
@@ -1369,7 +1374,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
   // Gestionnaire de génération de route
   void _handleGenerateRoute() {
     // 🔧 FIX : Reset du flag avant nouvelle génération
-    _hasAutoSaved = false;
+    setState(() {
+      _hasAutoSaved = false;
+      _isLoading = true;
+    });
 
     final parametersState = context.read<RouteParametersBloc>().state;
     final parameters = parametersState.parameters;
@@ -1569,10 +1577,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
               ),
             ),
 
-          if (isGenerateEnabled) LoadingOverlay(),
+          if (_isLoading) LoadingOverlay(),
 
           // RouteInfoCard (masqué en mode navigation)
-          if (generatedRouteCoordinates != null && routeMetadata != null && !isNavigationMode & !_isInNavigationMode)
+          if (generatedRouteCoordinates != null && routeMetadata != null && !isNavigationMode & !_isInNavigationMode && !_isLoading)
             Positioned(
               bottom: MediaQuery.of(context).padding.bottom + 20,
               left: 15,
