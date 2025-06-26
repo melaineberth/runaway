@@ -13,6 +13,7 @@ import 'package:geolocator/geolocator.dart' as gl;
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart';
 import 'package:runaway/config/colors.dart';
 import 'package:runaway/config/extensions.dart';
+import 'package:runaway/core/services/location_preload_service.dart';
 import 'package:runaway/core/widgets/top_snackbar.dart';
 import 'package:runaway/features/home/data/services/map_state_service.dart';
 import 'package:runaway/features/home/domain/enums/tracking_mode.dart';
@@ -95,7 +96,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
 
     _initializeAnimationControllers();
     _restoreStateFromService();
-    _initializeLocationTracking();
+
+    _preloadLocationInBackground();
+
     _setupRouteGenerationListener();
   }
 
@@ -148,6 +151,30 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
     print('✅ État restauré: positions=${_userLatitude != null}, mode=$_trackingMode, route=${generatedRouteCoordinates != null}');
   }
 
+  /// 🆕 Pré-charge la géolocalisation en arrière-plan (sans démarrer le tracking)
+  Future<void> _preloadLocationInBackground() async {
+    try {
+      print('🌍 Pré-chargement de la géolocalisation en arrière-plan...');
+      final position = await LocationPreloadService.instance.initializeLocation();
+      
+      // Mettre à jour les variables locales
+      _userLatitude = position.latitude;
+      _userLongitude = position.longitude;
+      
+      // Si on n'a pas de position sélectionnée, utiliser la position utilisateur
+      if (_selectedLatitude == null || _selectedLongitude == null) {
+        _selectedLatitude = position.latitude;
+        _selectedLongitude = position.longitude;
+      }
+      
+      print('✅ Géolocalisation pré-chargée en arrière-plan');
+      
+    } catch (e) {
+      print('⚠️ Erreur pré-chargement géolocalisation: $e');
+      // Continuer sans géolocalisation
+    }
+  }
+
   /// 💾 Sauvegarder l'état dans le service
   void _saveStateToService() {
     print('💾 Sauvegarde de l\'état dans le service...');
@@ -190,6 +217,71 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
         _handleRouteGenerationStateChange(state);
       }
     });
+  }
+
+  Future<void> _startLocationTrackingWhenMapReady() async {
+    try {
+      // Attendre que la carte soit prête
+      if (mapboxMap == null) {
+        print('⏳ Attente de l\'initialisation de la carte...');
+        return;
+      }
+
+      print('🗺️ Démarrage du tracking de position...');
+      
+      const locationSettings = gl.LocationSettings(
+        accuracy: gl.LocationAccuracy.high,
+        distanceFilter: 1,
+      );
+
+      _positionStream = gl.Geolocator.getPositionStream(
+        locationSettings: locationSettings,
+      ).listen(
+        _onLocationUpdate,
+        onError: (e) {
+          print('❌ Erreur stream position: $e');
+        },
+      );
+
+      print('✅ Stream de position démarré');
+      
+    } catch (e) {
+      print('❌ Erreur démarrage tracking: $e');
+    }
+  }
+
+  void _onLocationUpdate(gl.Position position) {
+    // Logique existante conservée
+    if (!mounted) return;
+    
+    final newLat = position.latitude;
+    final newLng = position.longitude;
+    
+    // Éviter les mises à jour redondantes
+    if (_userLatitude == newLat && _userLongitude == newLng) return;
+    
+    setState(() {
+      _userLatitude = newLat;
+      _userLongitude = newLng;
+    });
+
+    // Mettre à jour la position sélectionnée si on est en mode user tracking
+    if (_trackingMode == TrackingMode.userTracking) {
+      setState(() {
+        _selectedLatitude = newLat;
+        _selectedLongitude = newLng;
+      });
+      
+      // Centrer la caméra sur la nouvelle position
+      _centerOnUserLocation(animate: false);
+    }
+
+    // Mettre à jour le BLoC
+    if (mounted) {
+      context.read<RouteParametersBloc>().add(
+        StartLocationUpdated(longitude: newLng, latitude: newLat),
+      );
+    }
   }
 
   // Gestion des changements d'état
@@ -394,31 +486,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
       // Fallback : affichage direct
       await _displayRouteDirectly(coordinates);
     }
-  }
-
-  // Animation smooth vers le point de départ
-  Future<void> _animateToRouteStart(List<List<double>> coordinates) async {
-    if (mapboxMap == null || coordinates.isEmpty) return;
-
-    final startCoord = coordinates.first;
-    
-    await mapboxMap!.flyTo(
-      mp.CameraOptions(
-        center: mp.Point(
-          coordinates: mp.Position(startCoord[0], startCoord[1]),
-        ),
-        zoom: 15.0, // Zoom intermédiaire
-        pitch: 0,
-        bearing: 0,
-      ),
-      mp.MapAnimationOptions(
-        duration: 1200, // 1.2 secondes
-        startDelay: 0,
-      ),
-    );
-
-    // Attendre la fin de l'animation
-    await Future.delayed(Duration(milliseconds: 1300));
   }
 
   // Dessiner le tracé progressivement 

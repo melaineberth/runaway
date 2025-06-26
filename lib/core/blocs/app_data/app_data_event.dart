@@ -27,6 +27,39 @@ class HistoricDataRefreshRequested extends AppDataEvent {
   const HistoricDataRefreshRequested();
 }
 
+/// 🆕 Événement déclenché automatiquement lors d'ajout de route
+class RouteAddedDataSync extends AppDataEvent {
+  final String routeId;
+  final String routeName;
+
+  const RouteAddedDataSync({
+    required this.routeId,
+    required this.routeName,
+  });
+
+  @override
+  List<Object?> get props => [routeId, routeName];
+}
+
+/// 🆕 Événement déclenché automatiquement lors de suppression de route
+class RouteDeletedDataSync extends AppDataEvent {
+  final String routeId;
+  final String routeName;
+
+  const RouteDeletedDataSync({
+    required this.routeId,
+    required this.routeName,
+  });
+
+  @override
+  List<Object?> get props => [routeId, routeName];
+}
+
+/// 🆕 Synchronisation forcée avec bypass du cache
+class ForceDataSyncRequested extends AppDataEvent {
+  const ForceDataSyncRequested();
+}
+
 /// Demande la suppression du cache
 class AppDataClearRequested extends AppDataEvent {
   const AppDataClearRequested();

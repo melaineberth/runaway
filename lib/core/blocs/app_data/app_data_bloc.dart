@@ -1,5 +1,3 @@
-// lib/core/blocs/app_data/app_data_bloc.dart
-
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:runaway/features/activity/data/repositories/activity_repository.dart';
 import 'package:runaway/features/route_generator/data/repositories/routes_repository.dart';
@@ -16,6 +14,8 @@ class AppDataBloc extends Bloc<AppDataEvent, AppDataState> {
   // Cache avec expiration (30 minutes par défaut)
   static const Duration _cacheExpiration = Duration(minutes: 30);
   DateTime? _lastCacheUpdate;
+  DateTime? _lastActivityUpdate;
+  DateTime? _lastHistoricUpdate;
 
   AppDataBloc({
     required ActivityRepository activityRepository,
@@ -28,6 +28,11 @@ class AppDataBloc extends Bloc<AppDataEvent, AppDataState> {
     on<AppDataClearRequested>(_onClearRequested);
     on<ActivityDataRefreshRequested>(_onActivityDataRefresh);
     on<HistoricDataRefreshRequested>(_onHistoricDataRefresh);
+    
+    // 🆕 Nouveaux événements pour la synchronisation automatique
+    on<RouteAddedDataSync>(_onRouteAddedSync);
+    on<RouteDeletedDataSync>(_onRouteDeletedSync);
+    on<ForceDataSyncRequested>(_onForceDataSync);
   }
 
   /// Pré-charge toutes les données nécessaires
@@ -62,6 +67,8 @@ class AppDataBloc extends Bloc<AppDataEvent, AppDataState> {
 
       // Mettre à jour le cache
       _lastCacheUpdate = DateTime.now();
+      _lastActivityUpdate = _lastCacheUpdate;
+      _lastHistoricUpdate = _lastCacheUpdate;
 
       emit(state.copyWith(
         isLoading: false,
@@ -84,6 +91,101 @@ class AppDataBloc extends Bloc<AppDataEvent, AppDataState> {
       emit(state.copyWith(
         isLoading: false,
         lastError: 'Erreur lors du chargement: ${e.toString()}',
+      ));
+    }
+  }
+
+  /// 🆕 Synchronisation lors d'ajout de route
+  Future<void> _onRouteAddedSync(
+    RouteAddedDataSync event,
+    Emitter<AppDataState> emit,
+  ) async {
+    print('➕ Synchronisation automatique - Route ajoutée: ${event.routeName}');
+    
+    // Mise à jour complète car l'ajout d'une route affecte les statistiques
+    await _performIncrementalSync(emit, fullRefresh: true);
+  }
+
+  /// 🆕 Synchronisation lors de suppression de route
+  Future<void> _onRouteDeletedSync(
+    RouteDeletedDataSync event,
+    Emitter<AppDataState> emit,
+  ) async {
+    print('➖ Synchronisation automatique - Route supprimée: ${event.routeName}');
+    
+    // Mise à jour complète car la suppression d'une route affecte les statistiques
+    await _performIncrementalSync(emit, fullRefresh: true);
+  }
+
+  /// 🆕 Synchronisation forcée
+  Future<void> _onForceDataSync(
+    ForceDataSyncRequested event,
+    Emitter<AppDataState> emit,
+  ) async {
+    print('🔄 Synchronisation forcée des données');
+    
+    // Forcer le rechargement complet en ignorant le cache
+    _lastCacheUpdate = null;
+    add(const AppDataPreloadRequested());
+  }
+
+  /// 🆕 Synchronisation incrémentale intelligente
+  Future<void> _performIncrementalSync(
+    Emitter<AppDataState> emit, {
+    bool fullRefresh = false,
+  }) async {
+    try {
+      if (fullRefresh) {
+        // Mise à jour complète (activité + historique)
+        print('🔄 Synchronisation complète...');
+        
+        emit(state.copyWith(isLoading: true));
+        
+        final futures = await Future.wait([
+          _loadActivityData(),
+          _loadHistoricData(),
+        ]);
+        
+        final activityData = futures[0] as ActivityDataResult?;
+        final historicData = futures[1] as List<SavedRoute>?;
+        
+        final now = DateTime.now();
+        _lastCacheUpdate = now;
+        _lastActivityUpdate = now;
+        _lastHistoricUpdate = now;
+        
+        emit(state.copyWith(
+          isLoading: false,
+          activityStats: activityData?.generalStats,
+          activityTypeStats: activityData?.typeStats,
+          periodStats: activityData?.periodStats,
+          personalGoals: activityData?.goals,
+          personalRecords: activityData?.records,
+          savedRoutes: historicData ?? [],
+          lastCacheUpdate: _lastCacheUpdate,
+        ));
+        
+        print('✅ Synchronisation complète terminée');
+      } else {
+        // Mise à jour de l'historique uniquement
+        print('🔄 Synchronisation historique...');
+        
+        final historicData = await _loadHistoricData();
+        if (historicData != null) {
+          _lastHistoricUpdate = DateTime.now();
+          emit(state.copyWith(
+            savedRoutes: historicData,
+            lastCacheUpdate: _lastHistoricUpdate,
+          ));
+        }
+        
+        print('✅ Synchronisation historique terminée');
+      }
+    } catch (e) {
+      print('❌ Erreur synchronisation: $e');
+      emit(state.copyWith(
+        isLoading: false,
+        lastError: 'Erreur synchronisation: ${e.toString()}',
       ));
     }
   }
@@ -150,13 +252,14 @@ class AppDataBloc extends Bloc<AppDataEvent, AppDataState> {
       
       final activityData = await _loadActivityData();
       if (activityData != null) {
+        _lastActivityUpdate = DateTime.now();
         emit(state.copyWith(
           activityStats: activityData.generalStats,
           activityTypeStats: activityData.typeStats,
           periodStats: activityData.periodStats,
           personalGoals: activityData.goals,
           personalRecords: activityData.records,
-          lastCacheUpdate: DateTime.now(),
+          lastCacheUpdate: _lastActivityUpdate,
         ));
       }
     } catch (e) {
@@ -174,16 +277,11 @@ class AppDataBloc extends Bloc<AppDataEvent, AppDataState> {
       
       final historicData = await _loadHistoricData();
       if (historicData != null) {
-        print('✅ ${historicData.length} parcours chargés, émission du nouvel état');
-        
+        _lastHistoricUpdate = DateTime.now();
         emit(state.copyWith(
           savedRoutes: historicData,
-          lastCacheUpdate: DateTime.now(),
+          lastCacheUpdate: _lastHistoricUpdate,
         ));
-        
-        print('✅ AppDataState mis à jour avec ${historicData.length} parcours');
-      } else {
-        print('❌ Aucune donnée historique reçue');
       }
     } catch (e) {
       print('❌ Erreur rafraîchissement historique: $e');
@@ -197,6 +295,8 @@ class AppDataBloc extends Bloc<AppDataEvent, AppDataState> {
   ) async {
     print('🗑️ Nettoyage du cache des données');
     _lastCacheUpdate = null;
+    _lastActivityUpdate = null;
+    _lastHistoricUpdate = null;
     emit(const AppDataState());
   }
 
@@ -216,6 +316,10 @@ class AppDataBloc extends Bloc<AppDataEvent, AppDataState> {
   bool get isDataReady => state.isDataLoaded && _isCacheValid();
   bool get hasActivityData => state.activityStats != null;
   bool get hasHistoricData => state.savedRoutes.isNotEmpty;
+  
+  /// 🆕 Getters pour les timestamps des différentes parties
+  DateTime? get lastActivityUpdate => _lastActivityUpdate;
+  DateTime? get lastHistoricUpdate => _lastHistoricUpdate;
 }
 
 /// Structure pour retourner les données d'activité

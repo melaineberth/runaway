@@ -1,5 +1,6 @@
 import 'package:runaway/core/services/reverse_geocoding_service.dart';
 import 'package:runaway/core/services/app_data_initialization_service.dart';
+import 'package:runaway/core/services/location_preload_service.dart';
 
 /// Service pour initialiser les différents composants de l'application au démarrage
 class AppInitializationService {
@@ -8,13 +9,37 @@ class AppInitializationService {
   static Future<void> initialize() async {
     print('🚀 Initialisation des services de l\'application...');
       
+    // Démarrer le pré-chargement de géolocalisation immédiatement en parallèle
+    final locationFuture = _initializeLocationService();
+    
     // Nettoyer le cache de géocodage expiré
     await _cleanupReverseGeocodingCache();
     
-    // Initialiser d'autres services si nécessaire
+    // Initialiser d'autres services
     await _initializeOtherServices();
     
+    // Attendre que la géolocalisation soit prête (ne bloque pas si elle échoue)
+    await locationFuture;
+    
     print('✅ Initialisation des services terminée');
+  }
+
+  /// 🆕 Initialise le service de géolocalisation en arrière-plan
+  static Future<void> _initializeLocationService() async {
+    try {
+      print('🌍 Démarrage du pré-chargement de géolocalisation...');
+      
+      // Démarrer le pré-chargement en arrière-plan (non bloquant)
+      LocationPreloadService.instance.initializeLocation().then((position) {
+        print('✅ Géolocalisation pré-chargée au démarrage: ${position.latitude}, ${position.longitude}');
+      }).catchError((e) {
+        print('⚠️ Pré-chargement géolocalisation échoué (non bloquant): $e');
+      });
+      
+    } catch (e) {
+      print('⚠️ Erreur initialisation service géolocalisation: $e');
+      // Non bloquant - l'app peut continuer
+    }
   }
 
   /// Initialise le pré-chargement des données une fois l'authentification prête
@@ -50,7 +75,6 @@ class AppInitializationService {
     
     // Vérifier Supabase
     try {
-      // Test basique de connectivité Supabase
       print('✅ Supabase accessible');
     } catch (e) {
       print('⚠️ Problème avec Supabase: $e');
@@ -63,6 +87,25 @@ class AppInitializationService {
       allHealthy = false;
     }
     
+    // Vérifier le service de géolocalisation
+    if (!LocationPreloadService.instance.isInitialized) {
+      print('⚠️ Service de géolocalisation non initialisé');
+      // Ne pas marquer comme unhealthy car c'est non bloquant
+    }
+    
     return allHealthy;
+  }
+
+  /// 🆕 Obtient le statut des services
+  static Map<String, dynamic> getServicesStatus() {
+    return {
+      'locationService': {
+        'initialized': LocationPreloadService.instance.isInitialized,
+        'hasPosition': LocationPreloadService.instance.hasValidPosition,
+      },
+      'dataService': {
+        'initialized': AppDataInitializationService.isInitialized,
+      },
+    };
   }
 }

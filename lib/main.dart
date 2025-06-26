@@ -10,6 +10,7 @@ import 'package:runaway/config/theme.dart';
 import 'package:runaway/core/blocs/app_data/app_data_bloc.dart';
 import 'package:runaway/core/services/app_data_initialization_service.dart';
 import 'package:runaway/core/services/app_initialization_service.dart';
+import 'package:runaway/core/services/route_data_sync_wrapper.dart';
 import 'package:runaway/core/widgets/auth_data_listener.dart';
 import 'package:runaway/features/activity/data/repositories/activity_repository.dart';
 import 'package:runaway/features/activity/presentation/blocs/activity_bloc.dart';
@@ -51,7 +52,7 @@ void main() async {
     );
     print('✅ Supabase initialisé');
     
-    // Initialiser les services de l'application
+    // ✅ NOUVEAU: Initialiser les services avec pré-chargement de géolocalisation
     await AppInitializationService.initialize();
 
     // Configurer Mapbox
@@ -74,7 +75,7 @@ class RunAway extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiBlocProvider(
       providers: [
-        // 🆕 AppDataBloc - DOIT être créé EN PREMIER
+        // AppDataBloc - DOIT être créé EN PREMIER
         BlocProvider<AppDataBloc>(
           create: (context) {
             print('🔧 Création du AppDataBloc...');
@@ -83,7 +84,7 @@ class RunAway extends StatelessWidget {
               routesRepository: RoutesRepository(),
             );
             
-            // ✅ Initialiser le service IMMÉDIATEMENT après création du BLoC
+            // Initialiser le service IMMÉDIATEMENT après création du BLoC
             AppDataInitializationService.initialize(appDataBloc);
             print('✅ AppDataInitializationService initialisé');
             
@@ -91,7 +92,7 @@ class RunAway extends StatelessWidget {
           },
         ),
         
-        // AuthBloc - créé APRÈS AppDataBloc pour éviter les problèmes d'ordre
+        // AuthBloc - créé APRÈS AppDataBloc
         BlocProvider(
           create: (context) {
             print('🔧 Création du AuthBloc...');
@@ -109,13 +110,17 @@ class RunAway extends StatelessWidget {
           ),
         ),
         
+        // RouteGenerationBloc - IMPORTANT pour la synchronisation
         BlocProvider(
-          create: (_) => RouteGenerationBloc(
-            routesRepository: RoutesRepository(),
-          ),
+          create: (_) {
+            print('🔧 Création du RouteGenerationBloc...');
+            return RouteGenerationBloc(
+              routesRepository: RoutesRepository(),
+            );
+          },
         ),
 
-        // ActivityBloc - maintenant moins critique car les données sont pré-chargées
+        // ActivityBloc - maintenant moins critique
         BlocProvider<ActivityBloc>(
           create: (context) => ActivityBloc(
             activityRepository: ActivityRepository(),
@@ -124,28 +129,30 @@ class RunAway extends StatelessWidget {
         ),
       ],
       child: AuthDataListener(
-        child: MaterialApp.router(
-          title: 'RunAway - Générateur de Parcours',
-          debugShowCheckedModeBanner: false,
-          routerConfig: router,
-          theme: getAppTheme(Brightness.light),
-          darkTheme: getAppTheme(Brightness.dark),
-          themeMode: ThemeMode.dark,
-          localizationsDelegates: const [
-            AppLocalizations.delegate,
-            GlobalMaterialLocalizations.delegate,
-            GlobalWidgetsLocalizations.delegate,
-            GlobalCupertinoLocalizations.delegate,
-          ],
-          supportedLocales: const [
-            Locale('en'),
-          ],
-          builder: (context, child) {
-            return MediaQuery(
-              data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(1.0)),
-              child: child ?? Container(),
-            );
-          },
+        child: RouteDataSyncWrapper(
+          child: MaterialApp.router(
+            title: 'RunAway - Générateur de Parcours',
+            debugShowCheckedModeBanner: false,
+            routerConfig: router,
+            theme: getAppTheme(Brightness.light),
+            darkTheme: getAppTheme(Brightness.dark),
+            themeMode: ThemeMode.dark,
+            localizationsDelegates: const [
+              AppLocalizations.delegate,
+              GlobalMaterialLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+            ],
+            supportedLocales: const [
+              Locale('en'),
+            ],
+            builder: (context, child) {
+              return MediaQuery(
+                data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(1.0)),
+                child: child ?? Container(),
+              );
+            },
+          ),
         ),
       ),
     );
