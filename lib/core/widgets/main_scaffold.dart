@@ -23,7 +23,7 @@ class MainScaffold extends StatelessWidget {
     return BlocBuilder<RouteGenerationBloc, RouteGenerationState>(
       builder: (context, routeState) {
         // 🔑 LoadingOverlay affiché pendant génération OU analyse
-        final bool shouldShowLoading = routeState.isGeneratingRoute || routeState.isAnalyzingZone;
+        final bool shouldShowLoading = routeState.isGeneratingRoute;
         
         return Stack(
           children: [

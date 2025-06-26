@@ -306,13 +306,15 @@ class RouteGenerationBloc extends HydratedBloc<RouteGenerationEvent, RouteGenera
       );
 
       // 3. 🔄 Mettre à jour la liste des parcours sauvegardés
-      final updatedRoutes = List<SavedRoute>.from(state.savedRoutes)
-        ..add(savedRoute);
+      final updatedRoutes = List<SavedRoute>.from(state.savedRoutes)..add(savedRoute);
 
+      // 🆕 StateId unique pour détecter les changements
+      final saveId = DateTime.now().millisecondsSinceEpoch.toString();
       emit(state.copyWith(
         isGeneratingRoute: false,
         savedRoutes: updatedRoutes,
         errorMessage: null,
+        stateId: '$saveId-save', // 🎯 CLÉ : Identifiant de sauvegarde
       ));
 
       print('✅ Parcours sauvegardé avec succès: ${savedRoute.name} (${savedRoute.formattedDistance})');
@@ -360,21 +362,20 @@ class RouteGenerationBloc extends HydratedBloc<RouteGenerationEvent, RouteGenera
   ) async {
     try {
       await _routesRepository.deleteRoute(event.routeId);
-
       final updatedRoutes = state.savedRoutes
           .where((r) => r.id != event.routeId)
           .toList();
 
+      // 🆕 AJOUTER stateId unique pour détecter les changements
+      final deleteId = DateTime.now().millisecondsSinceEpoch.toString();
       emit(state.copyWith(
         savedRoutes: updatedRoutes,
+        stateId: '$deleteId-delete', // 🎯 CLÉ : Identifiant de suppression
       ));
 
       print('✅ Parcours supprimé: ${event.routeId}');
-
     } catch (e) {
-      emit(state.copyWith(
-        errorMessage: 'Erreur lors de la suppression: $e',
-      ));
+      emit(state.copyWith(errorMessage: 'Erreur lors de la suppression: $e'));
     }
   }
 
@@ -458,19 +459,18 @@ class RouteGenerationBloc extends HydratedBloc<RouteGenerationEvent, RouteGenera
   ) async {
     try {
       emit(state.copyWith(isAnalyzingZone: true));
-
       await _routesRepository.syncPendingRoutes();
-      
-      // Recharger les parcours après sync
       final routes = await _routesRepository.getUserRoutes();
 
+      // 🆕 AJOUTER stateId unique pour détecter les changements
+      final syncId = DateTime.now().millisecondsSinceEpoch.toString();
       emit(state.copyWith(
         isAnalyzingZone: false,
         savedRoutes: routes,
+        stateId: '$syncId-sync', // 🎯 CLÉ : Identifiant de synchronisation
       ));
 
       print('✅ Synchronisation terminée');
-
     } catch (e) {
       emit(state.copyWith(
         isAnalyzingZone: false,

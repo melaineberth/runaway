@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:runaway/config/colors.dart';
 import 'package:runaway/config/extensions.dart';
 import 'package:runaway/core/blocs/app_data/app_data_bloc.dart';
 import 'package:runaway/core/blocs/app_data/app_data_event.dart';
@@ -16,6 +17,7 @@ import 'package:runaway/features/route_generator/domain/models/saved_route.dart'
 import 'package:runaway/features/route_generator/presentation/blocs/route_generation/route_generation_bloc.dart';
 import 'package:runaway/features/route_generator/presentation/blocs/route_generation/route_generation_event.dart';
 import 'package:hugeicons/hugeicons.dart';
+import 'package:runaway/features/route_generator/presentation/blocs/route_generation/route_generation_state.dart';
 import 'package:top_snackbar_flutter/top_snack_bar.dart';
 
 import '../widgets/historic_card.dart';
@@ -44,6 +46,9 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
   
   // ⏱️ Gestion du loading minimum
   final bool _shouldShowLoading = false;
+
+  // 🆕 Variable pour tracker les changements de parcours
+  String? _lastRouteStateId;
   
   @override
   void initState() {
@@ -268,7 +273,7 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
     );
   }
 
-  PreferredSizeWidget _buildAppBar(bool isLoading) {
+  PreferredSizeWidget _buildAppBar(bool isLoading, {Widget? child}) {
     return AppBar(
       centerTitle: true,
       forceMaterialTransparency: true,
@@ -283,7 +288,7 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
       actions: [
         FadeTransition(
         opacity: _fadeAnimation,
-          child: IconButton(
+          child: child ?? IconButton(
             onPressed: (isLoading) ? null : _syncData,
             icon: Icon(
               HugeIcons.strokeRoundedCloudUpload, 
@@ -440,39 +445,38 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
   }
 
   /// Interface vide (aucun parcours)
-  Widget _buildEmptyView() {
+  Widget _buildEmptyView(AppDataState appDataState) {
+    final isLoading = appDataState.isLoading;
+
     return Scaffold(
       extendBodyBehindAppBar: true,
-      appBar: AppBar(
-        forceMaterialTransparency: true,
-        backgroundColor: Colors.transparent,
-        title: Text(
-          "Historique",
-          style: context.bodySmall?.copyWith(color: Colors.white),
+      appBar: _buildAppBar(
+        isLoading,
+        child: IconButton(
+          onPressed: _loadSavedRoutes,
+          icon: Icon(HugeIcons.strokeRoundedRefresh, color: Colors.white),
         ),
-        actions: [
-          IconButton(
-            onPressed: _loadSavedRoutes,
-            icon: Icon(HugeIcons.strokeRoundedRefresh, color: Colors.white),
-          ),
-        ],
       ),
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              HugeIcons.strokeRoundedRoute01,
-              size: 64,
-              color: Colors.white54,
+            SquircleContainer(              
+              color: AppColors.primary.withValues(alpha: 0.3),
+              padding: EdgeInsets.all(30.0),
+              child: Icon(
+                HugeIcons.strokeRoundedRoute01,
+                size: 64,
+                color: AppColors.primary,
+              ),
             ),
-            16.h,
+            30.h,
             Text(
               'Aucun parcours sauvegardé',
               style: context.bodyLarge?.copyWith(
                 color: Colors.white,
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
+                fontSize: 25,
+                fontWeight: FontWeight.w700,
               ),
             ),
             8.h,
@@ -480,7 +484,12 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
               padding: EdgeInsets.symmetric(horizontal: 40),
               child: Text(
                 'Générez votre premier parcours depuis l\'accueil pour le voir apparaître ici',
-                style: context.bodyMedium?.copyWith(color: Colors.white70),
+                style: context.bodyMedium?.copyWith(
+                  color: Colors.white54,
+                  fontWeight: FontWeight.w500,
+                  fontSize: 17,
+                  height: 1.3,
+                ),
                 textAlign: TextAlign.center,
               ),
             ),
@@ -577,36 +586,52 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
     return BlocListener<AuthBloc, AuthState>(
       listener: (context, authState) {
         if (authState is Unauthenticated) {
-          // L'utilisateur s'est déconnecté, rediriger vers l'accueil
           context.go('/home');
         }
       },
       child: BlocBuilder<AuthBloc, AuthState>(
         builder: (_, authState) {
-          // Utilisateur non connecté
           if (authState is! Authenticated) {
             return _buildUnauthenticatedView();
           }
 
-          // Utilisateur connecté : afficher les parcours
-          return BlocBuilder<AppDataBloc, AppDataState>(
-            builder: (context, appDataState) {
-              // Si les données sont vides
-              if (!appDataState.hasHistoricData) {
-                return _buildEmptyView();
+          // 🆕 SOLUTION : BlocListener pour écouter RouteGenerationBloc
+          return BlocListener<RouteGenerationBloc, RouteGenerationState>(
+            listener: (context, routeState) {
+              // Détecter les changements significatifs
+              if (_lastRouteStateId != null && 
+                  _lastRouteStateId != routeState.stateId &&
+                  mounted) {
+                
+                if (_shouldRefreshHistoric(routeState)) {
+                  print('🔄 Changement détecté (${routeState.stateId}) - Rafraîchissement historique');
+                  context.read<AppDataBloc>().add(const HistoricDataRefreshRequested());
+                }
               }
-
-              // Si erreur de chargement
-              if (appDataState.lastError != null && !appDataState.hasHistoricData) {
-                return _buildErrorView(appDataState.lastError!);
-              }
-
-              return _buildMainView(appDataState);
+              _lastRouteStateId = routeState.stateId;
             },
+            child: BlocBuilder<AppDataBloc, AppDataState>(
+              builder: (context, appDataState) {
+                if (!appDataState.hasHistoricData) {
+                  return _buildEmptyView(appDataState);
+                }
+                if (appDataState.lastError != null && !appDataState.hasHistoricData) {
+                  return _buildErrorView(appDataState.lastError!);
+                }
+                return _buildMainView(appDataState);
+              },
+            ),
           );
         },
       ),
     );
+  }
+
+  // Détermine si un rafraîchissement est nécessaire
+  bool _shouldRefreshHistoric(RouteGenerationState routeState) {
+    return routeState.stateId.contains('delete') ||  // Suppression
+           routeState.stateId.contains('save') ||    // Nouvelle sauvegarde
+           routeState.stateId.contains('sync');      // Synchronisation
   }
 
   // Actions
