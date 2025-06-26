@@ -48,7 +48,7 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
   final bool _shouldShowLoading = false;
 
   // 🆕 Variable pour tracker les changements de parcours
-  String? _lastRouteStateId;
+  List<SavedRoute> _lastKnownRoutes = [];
   
   @override
   void initState() {
@@ -56,18 +56,8 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
     _initializeAnimations();
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _checkDataAndRefreshIfNeeded();
+      _loadSavedRoutes();
     });  
-  }
-
-  void _checkDataAndRefreshIfNeeded() {
-    final appDataState = context.read<AppDataBloc>().state;
-    
-    // Si les données ne sont pas fraîches, déclencher un refresh
-    if (!appDataState.isCacheValid && !appDataState.isLoading) {
-      print('📚 Données d\'historique pas fraîches, refresh...');
-      context.read<AppDataBloc>().add(const HistoricDataRefreshRequested());
-    }
   }
 
   /// 🎬 Initialise les contrôleurs d'animation
@@ -133,9 +123,9 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
   }
 
   /// Charge les parcours sauvegardés
-  Future<void> _loadSavedRoutes() async {
-    print('📂 Rechargement des parcours sauvegardés...');
-    context.read<RouteGenerationBloc>().add(SavedRoutesRequested());
+  void _loadSavedRoutes() {
+    print('🔄 Chargement manuel des parcours');
+    context.read<AppDataBloc>().add(const HistoricDataRefreshRequested());
   }
 
   /// 🧭 Navigation vers le parcours sélectionné - Chargement dans HomeScreen
@@ -581,7 +571,7 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
     );
   }
 
-  @override
+@override
   Widget build(BuildContext context) {
     return BlocListener<AuthBloc, AuthState>(
       listener: (context, authState) {
@@ -595,23 +585,24 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
             return _buildUnauthenticatedView();
           }
 
-          // 🆕 SOLUTION : BlocListener pour écouter RouteGenerationBloc
+          // 🆕 SOLUTION SIMPLE : Surveiller RouteGenerationBloc.savedRoutes
           return BlocListener<RouteGenerationBloc, RouteGenerationState>(
             listener: (context, routeState) {
-              // Détecter les changements significatifs
-              if (_lastRouteStateId != null && 
-                  _lastRouteStateId != routeState.stateId &&
-                  mounted) {
+              // Comparer le nombre de routes pour détecter les changements
+              if (_lastKnownRoutes.length != routeState.savedRoutes.length) {
+                print('🔄 Changement détecté: ${_lastKnownRoutes.length} -> ${routeState.savedRoutes.length} parcours');
                 
-                if (_shouldRefreshHistoric(routeState)) {
-                  print('🔄 Changement détecté (${routeState.stateId}) - Rafraîchissement historique');
-                  context.read<AppDataBloc>().add(const HistoricDataRefreshRequested());
-                }
+                // Déclencher un rafraîchissement immédiat de l'AppDataBloc
+                context.read<AppDataBloc>().add(const HistoricDataRefreshRequested());
+                
+                // Mettre à jour le tracker
+                _lastKnownRoutes = List.from(routeState.savedRoutes);
               }
-              _lastRouteStateId = routeState.stateId;
             },
             child: BlocBuilder<AppDataBloc, AppDataState>(
               builder: (context, appDataState) {
+                print('🔍 HistoricScreen - État AppData: hasData=${appDataState.hasHistoricData}, routes=${appDataState.savedRoutes.length}');
+                
                 if (!appDataState.hasHistoricData) {
                   return _buildEmptyView(appDataState);
                 }
@@ -625,13 +616,6 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
         },
       ),
     );
-  }
-
-  // Détermine si un rafraîchissement est nécessaire
-  bool _shouldRefreshHistoric(RouteGenerationState routeState) {
-    return routeState.stateId.contains('delete') ||  // Suppression
-           routeState.stateId.contains('save') ||    // Nouvelle sauvegarde
-           routeState.stateId.contains('sync');      // Synchronisation
   }
 
   // Actions

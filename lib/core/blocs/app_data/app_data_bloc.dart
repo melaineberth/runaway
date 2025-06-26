@@ -174,10 +174,16 @@ class AppDataBloc extends Bloc<AppDataEvent, AppDataState> {
       
       final historicData = await _loadHistoricData();
       if (historicData != null) {
+        print('✅ ${historicData.length} parcours chargés, émission du nouvel état');
+        
         emit(state.copyWith(
           savedRoutes: historicData,
           lastCacheUpdate: DateTime.now(),
         ));
+        
+        print('✅ AppDataState mis à jour avec ${historicData.length} parcours');
+      } else {
+        print('❌ Aucune donnée historique reçue');
       }
     } catch (e) {
       print('❌ Erreur rafraîchissement historique: $e');

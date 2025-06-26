@@ -378,10 +378,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
     try {
       print('🎬 Début animation d\'affichage de route...');
 
-      // ÉTAPE 1 : Animation vers le point de départ
-      await _animateToRouteStart(coordinates);
+      // // ÉTAPE 1 : Animation vers le point de départ
+      // await _animateToRouteStart(coordinates);
 
-      // ÉTAPE 2 : Afficher progressivement le tracé
+      // // ÉTAPE 2 : Afficher progressivement le tracé
       await _drawRouteProgressively(coordinates);
 
       // ÉTAPE 3 : Animation finale pour montrer toute la route
