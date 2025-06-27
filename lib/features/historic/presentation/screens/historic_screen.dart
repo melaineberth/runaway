@@ -106,10 +106,8 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
   void _updateUICache(List<SavedRoute> routes, {required String source}) {
     if (!mounted) return;
     
-    setState(() {
-      _uiRoutes = List.from(routes);
-      _lastUIUpdate = DateTime.now();
-    });
+    _uiRoutes = List.from(routes);
+    _lastUIUpdate = DateTime.now();
     
     print('✅ Cache UI mis à jour depuis $source (${routes.length} routes)');
   }

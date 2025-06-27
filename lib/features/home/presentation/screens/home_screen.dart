@@ -95,6 +95,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
 
   bool _hasAutoSaved = false;
 
+  // Variable dans la classe _HomeScreenState
+  bool _isSaveDialogOpen = false;
+
   @override
   void initState() {
     super.initState();
@@ -435,6 +438,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
 
   /// 🆕 Gestion de la sauvegarde manuelle
   void _handleSaveRoute() {
+    // 🔧 Éviter les appels multiples
+    if (_isSaveDialogOpen) {
+      print('⚠️ Dialogue de sauvegarde déjà ouvert');
+      return;
+    }
+
     // Vérifier qu'un parcours est généré
     if (generatedRouteCoordinates == null || routeMetadata == null) {
       showTopSnackBar(
@@ -447,10 +456,35 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
       return;
     }
 
+    // Vérifier si déjà en cours de sauvegarde
+    if (_isSavingRoute) {
+      showTopSnackBar(
+        Overlay.of(context),
+        TopSnackBar(
+          title: 'Sauvegarde en cours...',
+          icon: HugeIcons.strokeRoundedLoading03,
+          color: Colors.orange,
+        ),
+      );
+      return;
+    }
+
     // Vérifier que l'utilisateur est connecté
-    final currentUser = sb.Supabase.instance.client.auth.currentUser;
-    if (currentUser == null) {
-      _showLoginRequiredDialog();
+    try {
+      final currentUser = sb.Supabase.instance.client.auth.currentUser;
+      if (currentUser == null) {
+        _showLoginRequiredDialog();
+        return;
+      }
+    } catch (e) {
+      print('❌ Erreur vérification auth: $e');
+      showTopSnackBar(
+        Overlay.of(context),
+        TopSnackBar(
+          title: 'Erreur de connexion',
+          icon: HugeIcons.solidRoundedAlert02,
+        ),
+      );
       return;
     }
 
@@ -460,6 +494,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
 
   /// 🆕 Dialogue pour demander le nom de sauvegarde
   void _showSaveRouteDialog() {
+    _isSaveDialogOpen = true; // 🔧 Marquer le dialogue comme ouvert
+
     final TextEditingController nameController = TextEditingController();
     
     // Générer un nom par défaut
@@ -471,14 +507,43 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
     
     nameController.text = defaultName;
 
-    showModalSheet(
+    showModalBottomSheet<String>(
       context: context,
-      child: Padding(
-        padding: EdgeInsets.all(20),
+      useRootNavigator: true, // 🔧 CRUCIAL: Utiliser root navigator pour éviter les conflits GoRouter
+      isScrollControlled: true,
+      isDismissible: true,
+      enableDrag: true,
+      backgroundColor: Colors.transparent,
+      builder: (BuildContext dialogContext) => Container(
+        decoration: BoxDecoration(
+          color: Colors.grey.shade900,
+          borderRadius: BorderRadius.only(
+            topLeft: Radius.circular(20),
+            topRight: Radius.circular(20),
+          ),
+        ),
+        padding: EdgeInsets.only(
+          top: 20,
+          left: 20,
+          right: 20,
+          bottom: MediaQuery.of(dialogContext).viewInsets.bottom + 20, // 🔧 Gestion clavier
+        ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            // Indicateur de glissement
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.white38,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            16.h,
             Text(
               'Sauvegarder le parcours',
               style: context.titleLarge?.copyWith(
@@ -510,13 +575,20 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
               ),
               maxLength: 50,
               autofocus: true,
+              onSubmitted: (value) {
+                // 🔧 Permettre validation par Entrée
+                final routeName = value.trim();
+                if (routeName.isNotEmpty) {
+                  Navigator.pop(dialogContext, routeName); // 🔧 Retourner le nom
+                }
+              },
             ),
             20.h,
             Row(
               children: [
                 Expanded(
                   child: TextButton(
-                    onPressed: () => Navigator.of(context).pop(),
+                    onPressed: () => Navigator.pop(dialogContext), // 🔧 Utiliser dialogContext
                     child: Text(
                       'Annuler',
                       style: TextStyle(color: Colors.white70),
@@ -529,18 +601,17 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
                     onPressed: () {
                       final routeName = nameController.text.trim();
                       if (routeName.isEmpty) {
-                        showTopSnackBar(
-                          Overlay.of(context),
-                          TopSnackBar(
-                            title: 'Veuillez saisir un nom',
-                            icon: HugeIcons.solidRoundedAlert02,
+                        // 🔧 Afficher erreur sans fermer le dialogue
+                        ScaffoldMessenger.of(dialogContext).showSnackBar(
+                          SnackBar(
+                            content: Text('Veuillez saisir un nom'),
+                            backgroundColor: Colors.red,
                           ),
                         );
                         return;
                       }
                       
-                      Navigator.of(context).pop();
-                      _performSaveRoute(routeName);
+                      Navigator.pop(dialogContext, routeName); // 🔧 Retourner le nom
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.primary,
@@ -554,11 +625,25 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
           ],
         ),
       ),
-    );
+    ).then((String? routeName) {
+      // 🔧 Libérer les ressources et marquer le dialogue comme fermé
+      nameController.dispose();
+      _isSaveDialogOpen = false;
+      
+      if (routeName != null && routeName.isNotEmpty) {
+        _performSaveRoute(routeName);
+      }
+    }).catchError((error) {
+      // 🔧 Gérer les erreurs et s'assurer que le flag est reseté
+      print('❌ Erreur dialogue sauvegarde: $error');
+      _isSaveDialogOpen = false;
+      nameController.dispose();
+    });
   }
 
   /// 🆕 Exécution de la sauvegarde
   void _performSaveRoute(String routeName) {
+    // Vérifications finales
     if (mapboxMap == null) {
       showTopSnackBar(
         Overlay.of(context),
@@ -567,6 +652,24 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
           icon: HugeIcons.solidRoundedAlert02,
         ),
       );
+      return;
+    }
+
+    if (generatedRouteCoordinates == null) {
+      showTopSnackBar(
+        Overlay.of(context),
+        TopSnackBar(
+          title: 'Aucun parcours à sauvegarder',
+          icon: HugeIcons.solidRoundedAlert02,
+        ),
+      );
+      return;
+    }
+
+    // Vérifier qu'on n'est pas déjà en train de sauvegarder
+    final currentState = context.read<RouteGenerationBloc>().state;
+    if (currentState.isGeneratingRoute && currentState.hasGeneratedRoute) {
+      print('⚠️ Sauvegarde déjà en cours, ignoré');
       return;
     }
 
@@ -579,13 +682,24 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
     );
 
     print('🚀 Sauvegarde manuelle démarrée: $routeName');
+    
+    // Afficher feedback immédiat
+    showTopSnackBar(
+      Overlay.of(context),
+      TopSnackBar(
+        title: 'Sauvegarde en cours...',
+        icon: HugeIcons.strokeRoundedLoading03,
+        color: Colors.blue,
+      ),
+    );
   }
 
   /// 🆕 Dialogue pour demander la connexion
   void _showLoginRequiredDialog() {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      useRootNavigator: true, // 🔧 Utiliser root navigator
+      builder: (BuildContext dialogContext) => AlertDialog(
         backgroundColor: Colors.black,
         title: Text(
           'Connexion requise',
@@ -597,7 +711,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.of(context).pop(),
+            onPressed: () => Navigator.pop(dialogContext), // 🔧 Utiliser dialogContext
             child: Text(
               'Annuler',
               style: TextStyle(color: Colors.white70),
@@ -605,8 +719,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
           ),
           ElevatedButton(
             onPressed: () {
-              Navigator.of(context).pop();
-              context.go('/profile'); // Aller vers la page de profil/connexion
+              Navigator.pop(dialogContext); // 🔧 Fermer le dialogue d'abord
+              context.go('/profile'); // 🔧 Puis naviguer
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.primary,
@@ -1777,31 +1891,42 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
   @override
   Widget build(BuildContext context) {
     return BlocListener<RouteGenerationBloc, RouteGenerationState>(
-      // 🆕 Écouter les changements d'état pour la sauvegarde
+      // 🆕 Écouter les changements d'état pour la sauvegarde avec protection
       listener: (context, state) {
+        // 🔧 Vérifier que le widget est encore monté
+        if (!mounted) return;
+        
         // Gérer les messages de sauvegarde
         if (state.stateId.contains('success') && 
             !state.stateId.contains('no-auto-save') && 
             !state.isLoadedFromHistory) {
           // Sauvegarde manuelle réussie
-          showTopSnackBar(
-            Overlay.of(context),
-            TopSnackBar(
-              title: 'Parcours sauvegardé',
-              icon: HugeIcons.solidRoundedCheckmarkCircle02,
-              color: Colors.green,
-            ),
-          );
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) {
+              showTopSnackBar(
+                Overlay.of(context),
+                TopSnackBar(
+                  title: 'Parcours sauvegardé',
+                  icon: HugeIcons.solidRoundedCheckmarkCircle02,
+                  color: Colors.green,
+                ),
+              );
+            }
+          });
         } else if (state.stateId.contains('save-error')) {
           // Erreur de sauvegarde
-          showTopSnackBar(
-            Overlay.of(context),
-            TopSnackBar(
-              title: 'Erreur de sauvegarde',
-              icon: HugeIcons.solidRoundedAlert02,
-              color: Colors.red,
-            ),
-          );
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) {
+              showTopSnackBar(
+                Overlay.of(context),
+                TopSnackBar(
+                  title: state.errorMessage ?? 'Erreur de sauvegarde',
+                  icon: HugeIcons.solidRoundedAlert02,
+                  color: Colors.red,
+                ),
+              );
+            }
+          });
         }
       },
       child: Scaffold(
@@ -1957,10 +2082,15 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
 
   // 🆕 Également ajouter une méthode pour vérifier si la sauvegarde est en cours
   bool get _isSavingRoute {
-    final routeState = context.watch<RouteGenerationBloc>().state;
-    return routeState.isGeneratingRoute && 
-          routeState.hasGeneratedRoute && 
-          !routeState.isLoadedFromHistory;
+    try {
+      final routeState = context.read<RouteGenerationBloc>().state;
+      return routeState.isGeneratingRoute && 
+            routeState.hasGeneratedRoute && 
+            !routeState.isLoadedFromHistory;
+    } catch (e) {
+      // En cas d'erreur, considérer qu'on ne sauvegarde pas
+      return false;
+    }
   }
 
   Widget _buildLottieMarker() {
