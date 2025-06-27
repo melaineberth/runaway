@@ -10,7 +10,6 @@ import 'package:lottie/lottie.dart';
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart' as mp;
 import 'package:hugeicons/hugeicons.dart';
 import 'package:geolocator/geolocator.dart' as gl;
-import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart';
 import 'package:runaway/config/colors.dart';
 import 'package:runaway/config/extensions.dart';
 import 'package:runaway/core/services/location_preload_service.dart';
@@ -18,7 +17,9 @@ import 'package:runaway/core/widgets/location_aware_map_widget.dart';
 import 'package:runaway/core/widgets/top_snackbar.dart';
 import 'package:runaway/features/home/data/services/map_state_service.dart';
 import 'package:runaway/features/home/domain/enums/tracking_mode.dart';
+import 'package:runaway/features/home/domain/models/mapbox_style_constants.dart';
 import 'package:runaway/features/home/presentation/widgets/export_format_dialog.dart';
+import 'package:runaway/features/home/presentation/widgets/map_style_selector.dart';
 import 'package:runaway/features/home/presentation/widgets/route_info_card.dart';
 import 'package:runaway/features/navigation/presentation/screens/live_navigation_screen.dart';
 import 'package:runaway/features/route_generator/data/services/route_export_service.dart';
@@ -50,8 +51,14 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
   mp.PointAnnotationManager? markerPointManager;
   List<mp.PointAnnotation> locationMarkers = [];
 
+  // Style de carte
+  String _currentMapStyleId = 'outdoors';
+
   // === LOTTIE MARKER ===
   late final AnimationController _lottieController;
+  late AnimationController _fadeController;
+  late Animation<double> _fadeAnimation;
+
   bool _showLottieMarker = false; // 🆕 Contrôle l'affichage du Lottie
   double? _lottieMarkerLat; // 🆕 Position du marqueur Lottie
   double? _lottieMarkerLng; // 🆕 Position du marqueur Lottie
@@ -95,9 +102,14 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
     _initializeAnimationControllers();
     _restoreStateFromService();
 
+    // Restaurer le style depuis le service
+    _restoreMapStyleFromService();
+
     _preloadLocationInBackground();
 
     _setupRouteGenerationListener();
+
+    _initializeMapStyle();
   }
 
   @override
@@ -121,7 +133,44 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
     }
   }
 
+  /// 🎨 Initialiser le style de carte au démarrage
+  Future<void> _initializeMapStyle() async {
+    try {
+      // Charger le style depuis SharedPreferences
+      await _mapStateService.loadMapStyleFromPreferences();
+      
+      // Mettre à jour l'état local
+      setState(() {
+        _currentMapStyleId = _mapStateService.selectedMapStyleId;
+      });
+      
+      print('🎨 Style de carte initialisé: $_currentMapStyleId');
+      
+    } catch (e) {
+      print('❌ Erreur initialisation style: $e');
+      // En cas d'erreur, utiliser le style par défaut
+      setState(() {
+        _currentMapStyleId = MapboxStyleConstants.getDefaultStyleId();
+      });
+    }
+  }
+
   void _initializeAnimationControllers() {
+    _fadeController = AnimationController(
+      duration: const Duration(milliseconds: 800),
+      vsync: this,
+    );
+
+    _fadeAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(
+      parent: _fadeController,
+      curve: Curves.easeOut,
+    ));
+
+    _fadeController.forward();
+
     _lottieController = AnimationController(
       duration: const Duration(milliseconds: 800),
       vsync: this,
@@ -140,6 +189,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
     
     // Restaurer le mode de tracking
     _trackingMode = _mapStateService.trackingMode;
+
+    // Restaurer le style de carte
+    _currentMapStyleId = _mapStateService.selectedMapStyleId;
     
     // Restaurer le parcours
     generatedRouteCoordinates = _mapStateService.generatedRouteCoordinates;
@@ -185,6 +237,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
     if (_selectedLatitude != null && _selectedLongitude != null) {
       _mapStateService.saveSelectedPosition(_selectedLatitude!, _selectedLongitude!);
     }
+
+    // Sauvegarder le style de carte
+    _mapStateService.saveMapStyleId(_currentMapStyleId);
     
     // Sauvegarder le mode de tracking
     _mapStateService.saveTrackingMode(_trackingMode);
@@ -1363,7 +1418,56 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
     }
   }
 
+  /// 🎨 Changement de style de carte
+  Future<void> _onMapStyleSelected(String styleId) async {
+    if (styleId == _currentMapStyleId || mapboxMap == null) return;
+
+    try {
+      print('🎨 Changement de style vers: $styleId');
+      
+      // Sauvegarder le nouvel ID de style
+      setState(() {
+        _currentMapStyleId = styleId;
+      });
+      
+      // Sauvegarder dans le service
+      _mapStateService.saveMapStyleId(styleId);
+      
+      // Obtenir l'URI du nouveau style
+      final newStyle = MapboxStyleConstants.getStyleById(styleId);
+      
+      // Changer le style de la carte
+      await mapboxMap!.style.setStyleURI(newStyle.uri);
+      
+      // Feedback haptique
+      HapticFeedback.lightImpact();
+      
+      print('✅ Style de carte mis à jour: ${newStyle.name}');
+      
+    } catch (e) {
+      print('❌ Erreur changement de style: $e');
+    }
+  }
+
+  /// 🔄 Restaurer le style depuis le service
+  void _restoreMapStyleFromService() {
+    _currentMapStyleId = _mapStateService.selectedMapStyleId;
+    print('🎨 Style restauré depuis le service: $_currentMapStyleId');
+  }
+
   // === INTERFACE UTILISATEUR ===
+  /// 🎨 Ouvrir le sélecteur de style de carte
+  void _openMapStyleSelector() {
+    showModalSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      child: MapStyleSelector(
+        currentStyleId: _currentMapStyleId,
+        onStyleSelected: _onMapStyleSelected,
+      ),
+    );
+  }
+  
   void openGenerator() {
     showModalSheet(
       context: context, 
@@ -1475,7 +1579,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
   @override
   void dispose() {
     _saveStateToService();
-    
+
+    _fadeController.dispose();
     _positionStream?.cancel();
     _lottieController.dispose();
     WidgetsBinding.instance.removeObserver(this);
@@ -1496,7 +1601,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
             height: MediaQuery.of(context).size.height,
             child: LocationAwareMapWidget(
               key: ValueKey("locationAwareMapWidget"),
-              styleUri: MapboxStyles.OUTDOORS,
+              styleUri: _mapStateService.getCurrentStyleUri(),
               onMapCreated: _onMapCreated,
               mapKey: ValueKey("mapWidget"),
               restoreFromCache: _mapStateService.isMapInitialized,
@@ -1543,7 +1648,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
                                   IconBtn(
                                     padding: 15.0,
                                     icon: HugeIcons.strokeRoundedMaterialAndTexture,
-                                    onPressed: () {},
+                                    onPressed: _openMapStyleSelector,
                                   ),
 
                                   // Bouton retour position utilisateur
@@ -1581,39 +1686,50 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
           // RouteInfoCard (masqué en mode navigation)
           if (generatedRouteCoordinates != null && routeMetadata != null && !isNavigationMode & !_isInNavigationMode)
             Positioned(
-              bottom: MediaQuery.of(context).padding.bottom + 20,
+              top: kToolbarHeight * 1.5,
               left: 15,
               right: 15,
-              child: Container(
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(20),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.3),
-                      spreadRadius: 3,
-                      blurRadius: 15,
-                      offset: Offset(0, 5),
+              child: AnimatedBuilder(
+              animation: _fadeAnimation,
+              builder: (context, child) {
+                return Opacity(
+                  opacity: _fadeAnimation.value,
+                    child: Transform.translate(
+                    offset: Offset(0, 20 * (1 - _fadeAnimation.value)),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(20),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.3),
+                              spreadRadius: 3,
+                              blurRadius: 15,
+                              offset: Offset(0, 5),
+                            ),
+                          ],
+                        ),
+                        child: RouteInfoCard(
+                          distance: _getGeneratedRouteDistance(), // MODIFICATION : Vraie distance
+                          isLoop: routeMetadata!['is_loop'] as bool? ?? true,
+                          waypointCount: routeMetadata!['points_count'] as int? ?? generatedRouteCoordinates!.length,
+                          onClear: _clearGeneratedRoute, // MODIFICATION : Vraie fonction onClear
+                          onNavigate: () {
+                            if (generatedRouteCoordinates != null && routeMetadata != null) {
+                              final args = LiveNavigationArgs(
+                                route: generatedRouteCoordinates!,
+                                targetDistanceKm: _getGeneratedRouteDistance(),
+                                routeName: 'Parcours ${DateTime.now().day}/${DateTime.now().month}',
+                              );
+                              
+                              context.push('/live-navigation', extra: args);
+                            }
+                          },
+                          onShare: _showExportDialog,
+                        ),
+                      ),
                     ),
-                  ],
-                ),
-                child: RouteInfoCard(
-                  distance: _getGeneratedRouteDistance(), // MODIFICATION : Vraie distance
-                  isLoop: routeMetadata!['is_loop'] as bool? ?? true,
-                  waypointCount: routeMetadata!['points_count'] as int? ?? generatedRouteCoordinates!.length,
-                  onClear: _clearGeneratedRoute, // MODIFICATION : Vraie fonction onClear
-                  onNavigate: () {
-                    if (generatedRouteCoordinates != null && routeMetadata != null) {
-                      final args = LiveNavigationArgs(
-                        route: generatedRouteCoordinates!,
-                        targetDistanceKm: _getGeneratedRouteDistance(),
-                        routeName: 'Parcours ${DateTime.now().day}/${DateTime.now().month}',
-                      );
-                      
-                      context.push('/live-navigation', extra: args);
-                    }
-                  },
-                  onShare: _showExportDialog,
-                ),
+                  );
+                }
               ),
             ),
         ],

@@ -187,24 +187,18 @@ class ActivityTypeStatsCard extends StatelessWidget {
                 color: Colors.white,
               ),
             ),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                    'Choisissez le type d\'activité :',
-                    style: context.bodySmall?.copyWith(
-                      color: Colors.white38,
-                    ),
-                  ),
-                  
-                  20.h,
-          
-                _buildFilterOption(context, null, 'Toutes les activités'),
-                ...ActivityType.values.map(
-                  (type) => _buildFilterOption(context, type, type.title),
+            Text(
+                'Choisissez le type d\'activité :',
+                style: context.bodySmall?.copyWith(
+                  color: Colors.white38,
                 ),
-              ],
+              ),
+              
+              20.h,
+                      
+            _buildFilterOption(context, null, 'Toutes les activités'),
+            ...ActivityType.values.map(
+              (type) => _buildFilterOption(context, type, type.title),
             ),
           ],
         ),

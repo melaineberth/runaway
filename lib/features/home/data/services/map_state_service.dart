@@ -1,12 +1,17 @@
 import 'dart:async';
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart' as mp;
 import 'package:runaway/features/home/domain/enums/tracking_mode.dart';
+import 'package:runaway/features/home/domain/models/mapbox_style_constants.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 /// 🗺️ Service singleton pour la persistance de l'état de la carte
 class MapStateService {
   static final MapStateService _instance = MapStateService._internal();
   factory MapStateService() => _instance;
   MapStateService._internal();
+
+  // Clés pour SharedPreferences
+  static const String _mapStyleKey = 'map_style_id';
 
   // === ÉTAT DE LA CARTE ===
   bool _isMapInitialized = false;
@@ -32,7 +37,10 @@ class MapStateService {
   double? _markerLatitude;
   double? _markerLongitude;
 
-  // Getters
+  // === STYLE DE CARTE === (NOUVEAU)
+  String _selectedMapStyleId = MapboxStyleConstants.getDefaultStyleId();
+
+  // Getters existants
   bool get isMapInitialized => _isMapInitialized;
   bool get hasInitialCameraBeenSet => _hasInitialCameraBeenSet;
   mp.CameraState? get savedCameraState => _savedCameraState;
@@ -47,6 +55,55 @@ class MapStateService {
   bool get hasActiveMarker => _hasActiveMarker;
   double? get markerLatitude => _markerLatitude;
   double? get markerLongitude => _markerLongitude;
+
+  // === NOUVEAUX GETTERS POUR LE STYLE ===
+  String get selectedMapStyleId => _selectedMapStyleId;
+
+  /// 🎨 Obtenir l'URI du style actuel
+  String getCurrentStyleUri() {
+    final style = MapboxStyleConstants.getStyleById(_selectedMapStyleId);
+    return style.uri;
+  }
+
+  /// 🎨 Sauvegarder le style de carte sélectionné avec persistance
+  Future<void> saveMapStyleId(String styleId) async {
+    _selectedMapStyleId = styleId;
+    print('🎨 Style de carte sauvegardé: $styleId');
+    
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_mapStyleKey, styleId);
+      print('🎨 Style persisté dans SharedPreferences');
+    } catch (e) {
+      print('❌ Erreur sauvegarde style dans SharedPreferences: $e');
+    }
+  }
+
+  /// 🎨 Charger le style depuis la persistance
+  Future<void> loadMapStyleFromPreferences() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final savedStyleId = prefs.getString(_mapStyleKey);
+      
+      if (savedStyleId != null) {
+        // Vérifier que le style existe toujours
+        try {
+          MapboxStyleConstants.getStyleById(savedStyleId);
+          _selectedMapStyleId = savedStyleId;
+          print('🎨 Style chargé depuis SharedPreferences: $savedStyleId');
+        } catch (e) {
+          print('⚠️ Style inexistant dans SharedPreferences, utilisation du défaut');
+          _selectedMapStyleId = MapboxStyleConstants.getDefaultStyleId();
+        }
+      } else {
+        print('🎨 Aucun style sauvegardé, utilisation du défaut');
+        _selectedMapStyleId = MapboxStyleConstants.getDefaultStyleId();
+      }
+    } catch (e) {
+      print('❌ Erreur chargement style depuis SharedPreferences: $e');
+      _selectedMapStyleId = MapboxStyleConstants.getDefaultStyleId();
+    }
+  }
 
   /// 📸 Sauvegarder l'état de la caméra
   Future<void> saveCameraState(mp.MapboxMap mapboxMap) async {
@@ -146,7 +203,8 @@ class MapStateService {
     _hasActiveMarker = false;
     _markerLatitude = null;
     _markerLongitude = null;
-    print('🧹 État de la carte nettoyé');
+    // Le style de carte n'est PAS réinitialisé lors du clearState pour conserver les préférences utilisateur
+    print('🧹 État de la carte nettoyé (style conservé)');
   }
 
   /// 🔄 Réinitialiser seulement les marqueurs et parcours

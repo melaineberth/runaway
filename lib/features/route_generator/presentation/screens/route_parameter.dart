@@ -1,8 +1,4 @@
-import 'dart:io';
-
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hugeicons/hugeicons.dart';
@@ -10,6 +6,7 @@ import 'package:runaway/config/colors.dart';
 import 'package:runaway/config/extensions.dart';
 import 'package:runaway/core/widgets/blurry_page.dart';
 import 'package:runaway/core/widgets/icon_btn.dart';
+import 'package:runaway/core/widgets/modal_sheet.dart';
 
 import '../../../home/presentation/blocs/route_parameters_bloc.dart';
 import '../../../home/presentation/blocs/route_parameters_event.dart';
@@ -37,25 +34,10 @@ class RouteParameterScreen extends StatefulWidget {
   State<RouteParameterScreen> createState() => _RouteParameterScreenState();
 }
 
-class _RouteParameterScreenState extends State<RouteParameterScreen> with SingleTickerProviderStateMixin {
-  late final ScrollController _scrollController;
-  bool _isCutByTop = false; // au lancement, le début est sous la modal
-
-  double _deviceCornerRadius = 0.0;
-
-  final double _outerPadding = 10.0;      
-
+class _RouteParameterScreenState extends State<RouteParameterScreen> {
   @override
   void initState() {
     super.initState();
-
-    // 1️⃣ on interroge le natif une seule fois
-    getDeviceCornerRadius().then((r) {
-      setState(() => _deviceCornerRadius = r);
-    });
-
-    _scrollController = ScrollController()
-      ..addListener(_handleScroll);
 
     context.read<RouteParametersBloc>().add(
       StartLocationUpdated(
@@ -65,119 +47,84 @@ class _RouteParameterScreenState extends State<RouteParameterScreen> with Single
     );
   }
 
-  void _handleScroll() {
-    final cut = _scrollController.offset > 0;
-    if (cut != _isCutByTop) setState(() => _isCutByTop = cut);
-  }
-
-  @override
-  void dispose() {
-    _scrollController.dispose();
-    super.dispose();
-  }
-
   @override
   Widget build(BuildContext context) {
-    // Inner R = max(0, Outer – Padding)
-    final double innerRadius =
-      (_deviceCornerRadius - _outerPadding).clamp(0.0, double.infinity);
-
-    return Padding(
-      padding: EdgeInsets.all(_outerPadding),
-      child: Container(
-        height: MediaQuery.of(context).size.height * 0.6,
-        decoration: BoxDecoration(
-          color: Colors.black,
-          borderRadius: BorderRadius.only(
-            topLeft: Radius.circular(innerRadius / 1.5),
-            topRight: Radius.circular(innerRadius / 1.5),
-            bottomLeft: Radius.circular(innerRadius),
-            bottomRight: Radius.circular(innerRadius),
-          ),
-        ),
-        child: BlocBuilder<RouteParametersBloc, RouteParametersState>(
-          builder: (context, state) {
-            return Stack(
-              children: [
-                ClipRRect(
-                  borderRadius: BorderRadius.only(
-                  topLeft: Radius.circular(innerRadius / 1.5),
-                  topRight: Radius.circular(innerRadius / 1.5),
-                  bottomLeft: Radius.circular(innerRadius),
-                  bottomRight: Radius.circular(innerRadius),
-                ),
-                  child: BlurryPage(
-                    color: Colors.black,
-                    contentPadding: const EdgeInsets.fromLTRB(30, 30, 30, kBottomNavigationBarHeight * 2.5),
-                    children: [
-                      // Activité
-                      ActivitySelector(
-                        selectedActivity: state.parameters.activityType,
-                        onActivitySelected: (type) {
-                          context.read<RouteParametersBloc>().add(ActivityTypeChanged(type));
-                        },
-                      ),
-                      30.h,
-                        
-                      // Terrain
-                      TerrainSelector(
-                        selectedTerrain: state.parameters.terrainType,
-                        onTerrainSelected: (terrain) {
-                          context.read<RouteParametersBloc>().add(TerrainTypeChanged(terrain));
-                        },
-                      ),
-                      30.h,
-                        
-                      // Densité urbaine
-                      UrbanDensitySelector(
-                        selectedDensity: state.parameters.urbanDensity,
-                        onDensitySelected: (density) {
-                          context.read<RouteParametersBloc>().add(UrbanDensityChanged(density));
-                        },
-                      ),
-                      30.h,
-                        
-                      // Distance
-                      ParameterSlider(
-                        title: context.l10n.distance,
-                        value: state.parameters.distanceKm,
-                        min: state.parameters.activityType.minDistance,
-                        max: state.parameters.activityType.maxDistance,
-                        unit: "km",
-                        icon: HugeIcons.strokeRoundedRoute03,
-                        onChanged: (value) {
-                          context.read<RouteParametersBloc>().add(DistanceChanged(value));
-                        },
-                      ),
-                      30.h,
-                    
-                      // Dénivelé
-                      ParameterSlider(
-                        title: context.l10n.elevation,
-                        value: state.parameters.elevationGain,
-                        min: 0,
-                        max: state.parameters.distanceKm * state.parameters.terrainType.maxElevationGain,
-                        unit: "m",
-                        icon: HugeIcons.strokeRoundedMountain,
-                        onChanged:  (value) {
-                          context.read<RouteParametersBloc>().add(ElevationGainChanged(value));
-                        },
-                      ),
-                      30.h,
-                        
-                      // Options avancées
-                      _buildAdvancedOptions(state),
-                    ],
+    return ModalSheet(
+      height: MediaQuery.of(context).size.height * 0.6,
+      child: BlocBuilder<RouteParametersBloc, RouteParametersState>(
+        builder: (context, state) {
+          return Stack(
+            children: [
+              BlurryPage(
+                color: Colors.black,
+                contentPadding: const EdgeInsets.fromLTRB(30, 30, 30, kBottomNavigationBarHeight * 2.5),
+                children: [
+                  // Activité
+                  ActivitySelector(
+                    selectedActivity: state.parameters.activityType,
+                    onActivitySelected: (type) {
+                      context.read<RouteParametersBloc>().add(ActivityTypeChanged(type));
+                    },
                   ),
-                ),
-                Align(
-                  alignment: Alignment.bottomCenter,
-                  child: _buildSaveButton(),
-                ),
-              ],
-            );
-          }
-        ),
+                  30.h,
+                    
+                  // Terrain
+                  TerrainSelector(
+                    selectedTerrain: state.parameters.terrainType,
+                    onTerrainSelected: (terrain) {
+                      context.read<RouteParametersBloc>().add(TerrainTypeChanged(terrain));
+                    },
+                  ),
+                  30.h,
+                    
+                  // Densité urbaine
+                  UrbanDensitySelector(
+                    selectedDensity: state.parameters.urbanDensity,
+                    onDensitySelected: (density) {
+                      context.read<RouteParametersBloc>().add(UrbanDensityChanged(density));
+                    },
+                  ),
+                  30.h,
+                    
+                  // Distance
+                  ParameterSlider(
+                    title: context.l10n.distance,
+                    value: state.parameters.distanceKm,
+                    min: state.parameters.activityType.minDistance,
+                    max: state.parameters.activityType.maxDistance,
+                    unit: "km",
+                    icon: HugeIcons.strokeRoundedRoute03,
+                    onChanged: (value) {
+                      context.read<RouteParametersBloc>().add(DistanceChanged(value));
+                    },
+                  ),
+                  30.h,
+                
+                  // Dénivelé
+                  ParameterSlider(
+                    title: context.l10n.elevation,
+                    value: state.parameters.elevationGain,
+                    min: 0,
+                    max: state.parameters.distanceKm * state.parameters.terrainType.maxElevationGain,
+                    unit: "m",
+                    icon: HugeIcons.strokeRoundedMountain,
+                    onChanged:  (value) {
+                      context.read<RouteParametersBloc>().add(ElevationGainChanged(value));
+                    },
+                  ),
+                  30.h,
+                    
+                  // Options avancées
+                  _buildAdvancedOptions(state),
+                ],
+              ),
+              Align(
+                alignment: Alignment.bottomCenter,
+                child: _buildSaveButton(),
+              ),
+            ],
+          );
+        }
       ),
     );
   }
