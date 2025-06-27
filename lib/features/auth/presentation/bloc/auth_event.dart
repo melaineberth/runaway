@@ -38,3 +38,17 @@ class GoogleSignInRequested extends AuthEvent {}
 
 class AppleSignInRequested extends AuthEvent {}
 
+class UpdateProfileRequested extends AuthEvent {
+  final String? fullName;
+  final String? username;
+  final File? avatar;
+  
+  UpdateProfileRequested({
+    this.fullName,
+    this.username,
+    this.avatar,
+  });
+  
+  @override
+  List<Object?> get props => [fullName, username, avatar];
+}

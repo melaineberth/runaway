@@ -9,7 +9,6 @@ import 'package:runaway/core/blocs/app_data/app_data_state.dart';
 import 'package:runaway/core/widgets/ask_registration.dart';
 import 'package:runaway/core/widgets/blurry_page.dart';
 import 'package:runaway/core/widgets/squircle_container.dart';
-import 'package:runaway/core/widgets/top_snackbar.dart';
 import 'package:runaway/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:runaway/features/auth/presentation/bloc/auth_state.dart';
 import 'package:runaway/features/historic/presentation/widgets/shimmer_historic_card.dart';
@@ -18,7 +17,6 @@ import 'package:runaway/features/route_generator/presentation/blocs/route_genera
 import 'package:runaway/features/route_generator/presentation/blocs/route_generation/route_generation_event.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:runaway/features/route_generator/presentation/blocs/route_generation/route_generation_state.dart';
-import 'package:top_snackbar_flutter/top_snack_bar.dart';
 
 import '../widgets/historic_card.dart';
 
@@ -49,8 +47,13 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
   // ⏱️ Gestion du loading minimum
   final bool _shouldShowLoading = false;
 
-  // 🆕 Variable pour tracker les changements de parcours
-  List<SavedRoute> _lastKnownRoutes = [];
+  // ✅ Cache local optimisé pour l'UI
+  List<SavedRoute> _uiRoutes = [];
+  bool _hasPendingSync = false;
+  DateTime? _lastUIUpdate;
+  
+  // 🛡️ Protection contre les doublons de sync
+  bool _isSyncInProgress = false;
   
   @override
   void initState() {
@@ -58,8 +61,8 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
     _initializeAnimations();
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _loadSavedRoutes();
-    });  
+      _initializeCache();
+    }); 
   }
 
   /// 🎬 Initialise les contrôleurs d'animation
@@ -84,6 +87,31 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
 
     _fadeController.forward();
     _staggerController.forward();
+  }
+
+  /// 🚀 Initialise le cache UI avec les données existantes
+  void _initializeCache() {
+    final routeBloc = context.read<RouteGenerationBloc>();
+    final appDataBloc = context.read<AppDataBloc>();
+    
+    // Prioriser RouteGenerationBloc (plus frais)
+    if (routeBloc.state.savedRoutes.isNotEmpty) {
+      _updateUICache(routeBloc.state.savedRoutes, source: 'RouteGeneration');
+    } else if (appDataBloc.state.hasHistoricData) {
+      _updateUICache(appDataBloc.state.savedRoutes, source: 'AppData');
+    }
+  }
+
+  /// ✅ Met à jour le cache UI de manière thread-safe
+  void _updateUICache(List<SavedRoute> routes, {required String source}) {
+    if (!mounted) return;
+    
+    setState(() {
+      _uiRoutes = List.from(routes);
+      _lastUIUpdate = DateTime.now();
+    });
+    
+    print('✅ Cache UI mis à jour depuis $source (${routes.length} routes)');
   }
 
   void _updateAnimationsForRoutes(List<SavedRoute> routes) {
@@ -170,60 +198,95 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
     print('🧭 === FIN NAVIGATION VERS PARCOURS ===');
   }
 
+   /// ⏰ Vérifie si le cache UI est encore frais (5 minutes)
+  bool _isUICacheFresh() {
+    if (_lastUIUpdate == null) return false;
+    return DateTime.now().difference(_lastUIUpdate!) < const Duration(minutes: 5);
+  }
+
   /// Suppression d'un parcours avec confirmation
-  void _deleteRoute(SavedRoute route) {
-    print('🗑️ Demande de suppression: ${route.name} (${route.id})');
-    
-    showDialog(
+  Future<void> _deleteRoute(SavedRoute route) async {
+    try {
+      // ✅ CORRECTION: s'assurer que le dialog retourne un bool
+      final confirmed = await _showDeleteConfirmationDialog(route.name);
+      if (confirmed != true) return; // Protection contre null
+      
+      print('🗑️ Suppression optimisée: ${route.name}');
+      
+      // 1. ✅ Mise à jour UI immédiate (optimistic update)
+      setState(() {
+        _uiRoutes = _uiRoutes.where((r) => r.id != route.id).toList();
+        _lastUIUpdate = DateTime.now();
+        _hasPendingSync = true;
+      });
+      
+      // 2. 🔄 Suppression effective en arrière-plan
+      context.read<RouteGenerationBloc>().add(SavedRouteDeleted(route.id));
+      
+      // 3. 🎉 Notification utilisateur
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Parcours "${route.name}" supprimé'),
+            backgroundColor: Colors.green,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+      
+    } catch (e) {
+      print('❌ Erreur suppression: $e');
+      
+      // ❌ Rollback en cas d'erreur
+      if (mounted) {
+        final currentRoutes = context.read<RouteGenerationBloc>().state.savedRoutes;
+        _updateUICache(currentRoutes, source: 'Rollback');
+        
+        setState(() {
+          _hasPendingSync = false;
+        });
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erreur lors de la suppression: ${e.toString()}'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    }
+  }
+
+  Future<bool> _showDeleteConfirmationDialog(String routeName) async {
+    final result = await showDialog<bool>(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        backgroundColor: Colors.black,
-        title: Text(
-          'Supprimer le parcours',
-          style: context.titleMedium?.copyWith(color: Colors.white),
-        ),
-        content: Text(
-          'Êtes-vous sûr de vouloir supprimer "${route.name}" ?\n\nCette action est irréversible.',
-          style: context.bodyMedium?.copyWith(color: Colors.white70),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.of(dialogContext).pop();
-              print('❌ Suppression annulée par l\'utilisateur');
-            },
-            child: Text(
-              'Annuler', 
-              style: TextStyle(color: Colors.white70),
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Confirmer la suppression'),
+          content: Text('Voulez-vous vraiment supprimer le parcours "$routeName" ?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false), // ✅ Retourner false
+              child: const Text('Annuler'),
             ),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.of(dialogContext).pop();
-              
-              print('🗑️ Suppression confirmée - envoi de SavedRouteDeleted');
-              context.read<RouteGenerationBloc>().add(SavedRouteDeleted(route.id));
-              
-              // Afficher un feedback
-              showTopSnackBar(
-                Overlay.of(context),
-                TopSnackBar(
-                  title: 'Parcours supprimé',
-                  icon: HugeIcons.solidRoundedDelete02,
-                  color: Colors.red,
-                ),
-              );
-              print('✅ Notification suppression affichée');
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
-              foregroundColor: Colors.white,
+            ElevatedButton(
+              onPressed: () {
+                Navigator.of(context).pop(true); // ✅ Retourner true
+                print('🗑️ Suppression confirmée - envoi de SavedRouteDeleted');
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red,
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('Supprimer'),
             ),
-            child: Text('Supprimer'),
-          ),
-        ],
-      ),
+          ],
+        );
+      },
     );
+    
+    // ✅ Protection: retourner false si result est null
+    return result ?? false;
   }
 
   /// Interface pour les utilisateurs non connectés
@@ -232,9 +295,9 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
   }
 
   /// 🎭 Interface principale avec animations intégrées
-  Widget _buildMainView(AppDataState appDataState) {
-    final routes = appDataState.savedRoutes;
+  Widget _buildMainView(AppDataState appDataState, List<SavedRoute> routes) {
     final isLoading = appDataState.isLoading;
+    final hasBackground = _hasPendingSync && !isLoading;
 
     // Mettre à jour les animations en fonction du nombre de routes
     if (routes.isNotEmpty) {
@@ -243,7 +306,7 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
 
     return Scaffold(
       extendBodyBehindAppBar: true,
-      appBar: _buildAppBar(isLoading),
+      appBar: _buildAppBar(isLoading, pendingSync: hasBackground),
       body: Padding(
         padding: EdgeInsets.fromLTRB(20.0, kTextTabBarHeight * 3, 20.0, 0.0),
         child: Column(
@@ -280,18 +343,28 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
     );
   }
 
-  PreferredSizeWidget _buildAppBar(bool isLoading, {Widget? child}) {
+  PreferredSizeWidget _buildAppBar(bool isLoading, {bool pendingSync = false}) {
     return AppBar(
       centerTitle: true,
       forceMaterialTransparency: true,
       backgroundColor: Colors.transparent,
-      title: FadeTransition(
-        opacity: _fadeAnimation,
-        child: Text(
-          "Historique",
-          style: context.bodySmall?.copyWith(color: Colors.white),
-        ),
+      title: Text(
+        "Historique",
+        style: context.bodySmall?.copyWith(color: Colors.white),
       ),
+      actions: [
+        if (pendingSync) ...[
+          const SizedBox(width: 8),
+          Container(
+            width: 8,
+            height: 8,
+            decoration: const BoxDecoration(
+              color: Colors.orange,
+              shape: BoxShape.circle,
+            ),
+          ),
+        ],
+      ],
     );
   }
 
@@ -450,10 +523,10 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
       extendBodyBehindAppBar: true,
       appBar: _buildAppBar(
         isLoading,
-        child: IconButton(
-          onPressed: _loadSavedRoutes,
-          icon: Icon(HugeIcons.strokeRoundedRefresh, color: Colors.white),
-        ),
+        // child: IconButton(
+        //   onPressed: _loadSavedRoutes,
+        //   icon: Icon(HugeIcons.strokeRoundedRefresh, color: Colors.white),
+        // ),
       ),
       body: Center(
         child: Column(
@@ -579,9 +652,23 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
     );
   }
 
-  void _refreshData() {
-    print('🔄 Rafraîchissement de l\'historique demandé');
-    context.read<AppDataBloc>().add(const HistoricDataRefreshRequested());
+  void _refreshData() async {
+    print('🔄 Refresh manuel optimisé');
+    
+    // Réinitialiser les verrous
+    _isSyncInProgress = false;
+    
+    setState(() {
+      _hasPendingSync = true;
+    });
+    
+    // Déclencher les updates en parallèle
+    final context = this.context;
+    context.read<RouteGenerationBloc>().add(const SavedRoutesRequested());
+    context.read<AppDataBloc>().add(const AppDataRefreshRequested());
+    
+    // Petite pause pour l'animation
+    await Future.delayed(const Duration(milliseconds: 800));
   }
 
   void _syncData() {
@@ -596,50 +683,147 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
     });
   }
 
+  // 🚀 LOGIQUE UI-FIRST : Mise à jour immédiate depuis RouteGenerationBloc
+  void _onRouteStateChanged(BuildContext context, RouteGenerationState routeState) {
+    final newRoutes = routeState.savedRoutes;
+    final oldCount = _uiRoutes.length;
+    final newCount = newRoutes.length;
+    
+    // ✅ ÉTAPE 1: Mise à jour IMMÉDIATE de l'UI
+    if (_shouldUpdateUI(newRoutes)) {
+      _updateUICache(newRoutes, source: 'RouteGeneration');
+      
+      // 🎭 Mettre à jour les animations
+      if (newRoutes.isNotEmpty) {
+        _updateAnimationsForRoutes(newRoutes);
+      }
+      
+      print('🎯 UI mise à jour immédiatement: $oldCount -> $newCount routes');
+    }
+    
+    // ✅ ÉTAPE 2: Synchronisation EN ARRIÈRE-PLAN (protégée contre les doublons)
+    if (oldCount != newCount && !_isSyncInProgress) {
+      _triggerBackgroundSync(context, oldCount, newCount);
+    }
+  }
+
+  // 🔄 Synchronisation intelligente en arrière-plan
+  void _triggerBackgroundSync(BuildContext context, int oldCount, int newCount) {
+    _isSyncInProgress = true;
+    
+    setState(() {
+      _hasPendingSync = true;
+    });
+    
+    // Utiliser Future.delayed pour ne pas bloquer l'UI
+    Future.delayed(const Duration(milliseconds: 100), () {
+      if (!mounted) return;
+      
+      print('🔄 Sync arrière-plan protégée ($oldCount -> $newCount)');
+      
+      if (newCount > oldCount) {
+        // Route ajoutée - sync statistiques seulement
+        context.read<AppDataBloc>().add(const ActivityDataRefreshRequested());
+        print('➕ Sync statistiques (route ajoutée)');
+      } else if (newCount < oldCount) {
+        // Route supprimée - sync historique seulement (pas complète)
+        context.read<AppDataBloc>().add(const HistoricDataRefreshRequested());
+        print('➖ Sync historique (route supprimée)');
+      }
+      
+      // Libérer le verrou après un délai
+      Future.delayed(const Duration(seconds: 2), () {
+        _isSyncInProgress = false;
+      });
+    });
+  }
+
+  // 📊 Gestion des changements d'AppDataBloc
+  void _onAppDataChanged(AppDataState appDataState) {
+    // Marquer la sync comme terminée
+    if (_hasPendingSync && !appDataState.isLoading) {
+      setState(() {
+        _hasPendingSync = false;
+      });
+      print('✅ Synchronisation arrière-plan terminée');
+    }
+  }
+
+  // 🎯 Détermine les meilleures données à utiliser pour l'UI
+  List<SavedRoute> _getEffectiveRoutes(AppDataState appDataState) {
+    // Priorité : cache UI frais > données AppData > vide
+    if (_uiRoutes.isNotEmpty && _isUICacheFresh()) {
+      return _uiRoutes;
+    }
+    
+    if (appDataState.hasHistoricData) {
+      // Initialiser avec les données d'AppData si cache UI vide
+      if (_uiRoutes.isEmpty) {
+        _updateUICache(appDataState.savedRoutes, source: 'AppData-Init');
+      }
+      return _uiRoutes.isNotEmpty ? _uiRoutes : appDataState.savedRoutes;
+    }
+    
+    return _uiRoutes;
+  }
+
+  // 🔍 Vérifie si le contenu des routes a changé (pas seulement la longueur)
+  bool _shouldUpdateUI(List<SavedRoute> newRoutes) {
+    if (_uiRoutes.length != newRoutes.length) return true;
+    
+    // Vérification rapide des IDs
+    for (int i = 0; i < _uiRoutes.length; i++) {
+      if (i >= newRoutes.length || _uiRoutes[i].id != newRoutes[i].id) {
+        return true;
+      }
+    }
+    
+    return false;
+  }
+
   @override
   Widget build(BuildContext context) {
-    return BlocListener<AuthBloc, AuthState>(
-      listener: (context, authState) {
-        if (authState is Unauthenticated) {
-          context.go('/home');
+    return BlocBuilder<AuthBloc, AuthState>(
+      builder: (context, authState) {
+        if (authState is! Authenticated) {
+          return _buildUnauthenticatedView();
         }
-      },
-      child: BlocBuilder<AuthBloc, AuthState>(
-        builder: (_, authState) {
-          if (authState is! Authenticated) {
-            return _buildUnauthenticatedView();
-          }
 
-          // Surveiller RouteGenerationBloc.savedRoutes
-          return BlocListener<RouteGenerationBloc, RouteGenerationState>(
-            listener: (context, routeState) {
-              // Comparer le nombre de routes pour détecter les changements
-              if (_lastKnownRoutes.length != routeState.savedRoutes.length) {
-                print('🔄 Changement détecté: ${_lastKnownRoutes.length} -> ${routeState.savedRoutes.length} parcours');
-                
-                // Déclencher un rafraîchissement immédiat de l'AppDataBloc
-                context.read<AppDataBloc>().add(const HistoricDataRefreshRequested());
-                
-                // Mettre à jour le tracker
-                _lastKnownRoutes = List.from(routeState.savedRoutes);
-              }
-            },
-            child: BlocBuilder<AppDataBloc, AppDataState>(
-              builder: (context, appDataState) {
-                print('🔍 HistoricScreen - État AppData: hasData=${appDataState.hasHistoricData}, routes=${appDataState.savedRoutes.length}');
-                
-                if (!appDataState.hasHistoricData) {
-                  return _buildEmptyView(appDataState);
-                }
-                if (appDataState.lastError != null && !appDataState.hasHistoricData) {
-                  return _buildErrorView(appDataState.lastError!);
-                }
-                return _buildMainView(appDataState);
+        // 🚀 Architecture UI-First optimisée
+        return MultiBlocListener(
+          listeners: [
+            // 1. ✅ Écoute PRIORITAIRE de RouteGenerationBloc pour UI immédiate
+            BlocListener<RouteGenerationBloc, RouteGenerationState>(
+              listener: (context, routeState) {
+                _onRouteStateChanged(context, routeState);
               },
             ),
-          );
-        },
-      ),
+            
+            // 2. 📊 Écoute d'AppDataBloc pour synchronisation terminée
+            BlocListener<AppDataBloc, AppDataState>(
+              listener: (context, appDataState) {
+                _onAppDataChanged(appDataState);
+              },
+            ),
+          ],
+          child: BlocBuilder<AppDataBloc, AppDataState>(
+            builder: (context, appDataState) {
+              // 🎯 Utiliser les données UI optimales
+              final effectiveRoutes = _getEffectiveRoutes(appDataState);
+              
+              if (effectiveRoutes.isEmpty && !_hasPendingSync) {
+                return _buildEmptyView(appDataState);
+              }
+              
+              if (appDataState.lastError != null && effectiveRoutes.isEmpty) {
+                return _buildErrorView(appDataState.lastError!);
+              }
+              
+              return _buildMainView(appDataState, effectiveRoutes);
+            },
+          ),
+        );
+      },
     );
   }
 }

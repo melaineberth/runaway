@@ -20,6 +20,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     on<GoogleSignInRequested>(_onGoogleSignIn);
     on<AppleSignInRequested>(_onAppleSignIn);
     on<LogOutRequested>(_onLogout);
+    on<UpdateProfileRequested>(_onUpdateProfile);
 
     // handlers internes
     on<_InternalProfileLoaded>((e, emit) => emit(Authenticated(e.profile)));
@@ -57,6 +58,42 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         }
       }
     });
+  }
+
+  // Ajouter cette méthode dans la classe AuthBloc :
+  Future<void> _onUpdateProfile(UpdateProfileRequested event, Emitter<AuthState> emit) async {
+    if (state is! Authenticated) return;
+    
+    final currentState = state as Authenticated;
+    emit(AuthLoading());
+
+    final user = (state is ProfileIncomplete)
+        ? (state as ProfileIncomplete).user
+        : supabase.Supabase.instance.client.auth.currentUser;
+
+    if (user == null) return emit(AuthError('Session expirée'));
+    
+    try {
+      print('📝 Début mise à jour profil');
+      
+      final updatedProfile = await _repo.updateProfile(
+        userId: user.id,
+        fullName: event.fullName,
+        username: event.username,
+        avatar: event.avatar,
+      );
+      
+      print('✅ Profil mis à jour avec succès');
+      emit(Authenticated(updatedProfile!));
+      
+    } catch (err) {
+      print('❌ Erreur mise à jour profil: $err');
+      emit(AuthError(err.toString()));
+      // Retourner à l'état précédent après l'erreur
+      Future.delayed(const Duration(seconds: 2), () {
+        emit(Authenticated(currentState.profile));
+      });
+    }
   }
 
   Future<void> _onStart(AppStarted e, Emitter<AuthState> emit) async {

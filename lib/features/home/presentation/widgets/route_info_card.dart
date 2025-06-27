@@ -12,6 +12,8 @@ class RouteInfoCard extends StatelessWidget {
   final VoidCallback onClear;
   final VoidCallback onNavigate;
   final VoidCallback onShare;
+  final VoidCallback onSave; // 🆕 Nouveau callback de sauvegarde
+  final bool isSaving; // 🆕 État de sauvegarde en cours
 
   const RouteInfoCard({
     super.key,
@@ -21,6 +23,8 @@ class RouteInfoCard extends StatelessWidget {
     required this.onClear,
     required this.onNavigate,
     required this.onShare,
+    required this.onSave, // 🆕 Requis
+    this.isSaving = false, // 🆕 Par défaut false
   });
 
   static const _innerRadius = 35.0;
@@ -112,7 +116,23 @@ class RouteInfoCard extends StatelessWidget {
                   isPrimary: true,
                 ),
               ),
+
               12.w,
+
+              // 🆕 Bouton Sauvegarde
+              _ActionButton(
+                radius: _innerRadius,
+                icon: isSaving 
+                    ? HugeIcons.strokeRoundedLoading03 
+                    : HugeIcons.strokeRoundedLoading03,
+                label: isSaving ? 'Sauvegarde...' : 'Sauvegarder',
+                onTap: isSaving ? () {} : onSave, // Désactiver pendant sauvegarde
+                isPrimary: false,
+                isLoading: isSaving,
+              ),
+
+              12.w,
+
               _ActionButton(
                 radius: _innerRadius,
                 icon: HugeIcons.strokeRoundedShare08,
@@ -178,6 +198,7 @@ class _ActionButton extends StatelessWidget {
   final VoidCallback onTap;
   final bool isPrimary;
   final double radius;
+  final bool isLoading; // 🆕 Indicateur de chargement
 
   const _ActionButton({
     required this.icon,
@@ -185,34 +206,53 @@ class _ActionButton extends StatelessWidget {
     required this.onTap,
     required this.isPrimary,
     required this.radius,
+    this.isLoading = false, // 🆕 Par défaut false
   });
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: onTap,
+      onTap: isLoading ? null : onTap, // 🆕 Désactiver si loading
       child: SquircleContainer(
         padding: EdgeInsets.symmetric(vertical: 12.0, horizontal: 15.0),
         radius: radius,
         color: isPrimary 
             ? AppColors.primary 
-            : Colors.white10,
+            : Colors.white.withValues(alpha: isLoading ? 0.05 : 0.1), // 🆕 Style différent si loading
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            HugeIcon(
-              icon: icon,
-              size: 20,
-              color: isPrimary ? Colors.white : Colors.white,
-            ),
-            8.w,
-            Text(
-              label,
-              style: context.bodySmall?.copyWith(
-                color: isPrimary ? Colors.white : Colors.white,
-                fontWeight: FontWeight.w600,
+            // 🆕 Animation de rotation pour l'icône loading
+            isLoading
+                ? SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation<Color>(
+                        isPrimary ? Colors.black : Colors.white54,
+                      ),
+                    ),
+                  )
+                : HugeIcon(
+                    icon: icon,
+                    size: 16,
+                    color: isPrimary ? Colors.black : Colors.white,
+                  ),
+            if (label.isNotEmpty) ...[
+              6.w,
+              Text(
+                label,
+                style: context.bodySmall?.copyWith(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: isPrimary 
+                      ? Colors.black 
+                      : (isLoading ? Colors.white54 : Colors.white),
+                ),
               ),
-            ),
+            ],
+
           ],
         ),
       ),

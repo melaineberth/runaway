@@ -53,21 +53,21 @@ dependencies:
   fl_chart: ^1.0.0
   cached_network_image: ^3.4.1
   pull_down_button: ^0.10.2
-  flutter_launcher_icons: ^0.14.4
   cupertino_rounded_corners: ^2.1.1
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-
-  # The "flutter_lints" package below contains a set of recommended lints to
-  # encourage good coding practices. The lint set provided by the package is
-  # activated in the `analysis_options.yaml` file located at the root of your
-  # package. See that file for information about deactivating specific lint
-  # rules and activating additional ones.
+  flutter_launcher_icons: ^0.14.4
   flutter_lints: ^5.0.0
   bloc_test: ^10.0.0
   mocktail: ^1.0.4
+
+flutter_icons:
+  android: true 
+  ios: true
+  image_path: "assets/img/icon.png"
+
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec

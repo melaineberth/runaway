@@ -17,6 +17,9 @@ class RouteDataSyncService {
   bool _isInitialized = false;
   int _syncCount = 0;
 
+  static const Duration _debounceDelay = Duration(milliseconds: 300);
+  Timer? _debounceTimer;
+
   /// Initialise le service avec les BLoCs nécessaires
   void initialize({
     required RouteGenerationBloc routeGenerationBloc,
@@ -49,27 +52,61 @@ class RouteDataSyncService {
   void _onRouteStateChanged(RouteGenerationState routeState) {
     final currentRoutes = routeState.savedRoutes;
     
-    // Comparer avec les routes précédemment connues
-    if (_hasRoutesChanged(currentRoutes)) {
-      final previousCount = _lastKnownRoutes.length;
-      final currentCount = currentRoutes.length;
-      
-      _syncCount++;
-      print('🔄 === SYNCHRONISATION #$_syncCount ===');
-      print('📊 Avant: $previousCount routes');
-      print('📊 Après: $currentCount routes');
-      
-      // Déterminer le type de changement et les routes affectées
-      final changeAnalysis = _analyzeChanges(currentRoutes);
-      _logChangeDetails(changeAnalysis);
-      
-      // Déclencher la mise à jour des données avec les détails
-      _triggerDataRefreshWithDetails(changeAnalysis);
-      
-      // Mettre à jour le cache local
-      _lastKnownRoutes = List.from(currentRoutes);
-      
-      print('✅ === FIN SYNCHRONISATION #$_syncCount ===');
+    // Annuler le timer précédent pour éviter les appels multiples
+    _debounceTimer?.cancel();
+    
+    // Debouncing pour éviter les sync trop fréquentes
+    _debounceTimer = Timer(_debounceDelay, () {
+      _processRouteChange(currentRoutes);
+    });
+  }
+
+  void _processRouteChange(List<SavedRoute> currentRoutes) {
+    if (!_hasRoutesChanged(currentRoutes)) return;
+    
+    final changeAnalysis = _analyzeChanges(currentRoutes);
+    _logChangeDetails(changeAnalysis);
+    
+    // 🎯 Synchronisation intelligente selon le type de changement
+    _triggerIntelligentSync(changeAnalysis);
+    
+    _lastKnownRoutes = List.from(currentRoutes);
+  }
+
+  /// 🧠 Synchronisation intelligente selon le contexte
+  void _triggerIntelligentSync(RouteChangeAnalysis analysis) {
+    if (_appDataBloc == null) return;
+
+    switch (analysis.changeType) {
+      case RouteChangeType.added:
+        // Route ajoutée : sync seulement les stats (plus rapide)
+        for (final route in analysis.addedRoutes) {
+          _appDataBloc!.add(RouteAddedDataSync(
+            routeId: route.id,
+            routeName: route.name,
+          ));
+        }
+        break;
+        
+      case RouteChangeType.deleted:
+        // Route supprimée : sync complète (nécessaire)
+        for (final route in analysis.deletedRoutes) {
+          _appDataBloc!.add(RouteDeletedDataSync(
+            routeId: route.id,
+            routeName: route.name,
+          ));
+        }
+        break;
+        
+      case RouteChangeType.mixed:
+        // Changements mixtes : sync complète
+        _appDataBloc!.add(const ForceDataSyncRequested());
+        break;
+        
+      case RouteChangeType.modified:
+        // Modifications mineures : sync historique seulement
+        _appDataBloc!.add(const HistoricDataRefreshRequested());
+        break;
     }
   }
 
@@ -142,46 +179,6 @@ class RouteDataSyncService {
     }
   }
 
-  /// Déclenche la mise à jour des données avec détails
-  void _triggerDataRefreshWithDetails(RouteChangeAnalysis analysis) {
-    if (_appDataBloc == null) {
-      print('❌ AppDataBloc non disponible pour la mise à jour');
-      return;
-    }
-
-    switch (analysis.changeType) {
-      case RouteChangeType.added:
-        for (final route in analysis.addedRoutes) {
-          print('🔄 Notification ajout: ${route.name}');
-          _appDataBloc!.add(RouteAddedDataSync(
-            routeId: route.id,
-            routeName: route.name,
-          ));
-        }
-        break;
-        
-      case RouteChangeType.deleted:
-        for (final route in analysis.deletedRoutes) {
-          print('🔄 Notification suppression: ${route.name}');
-          _appDataBloc!.add(RouteDeletedDataSync(
-            routeId: route.id,
-            routeName: route.name,
-          ));
-        }
-        break;
-        
-      case RouteChangeType.mixed:
-        print('🔄 Mise à jour complète (changements mixtes)');
-        _appDataBloc!.add(const AppDataRefreshRequested());
-        break;
-        
-      case RouteChangeType.modified:
-        print('🔄 Mise à jour de l\'historique uniquement');
-        _appDataBloc!.add(const HistoricDataRefreshRequested());
-        break;
-    }
-  }
-
   /// Déclenche manuellement une synchronisation
   void forceSyncData() {
     if (_appDataBloc == null) {
@@ -207,6 +204,7 @@ class RouteDataSyncService {
   /// Nettoie les ressources
   void dispose() {
     print('🗑️ Nettoyage RouteDataSyncService ($_syncCount synchronisations effectuées)');
+    _debounceTimer?.cancel();
     _routeSubscription?.cancel();
     _routeSubscription = null;
     _appDataBloc = null;

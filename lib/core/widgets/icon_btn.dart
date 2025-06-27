@@ -4,6 +4,7 @@ import 'package:runaway/config/extensions.dart';
 
 class IconBtn extends StatelessWidget {
   final dynamic icon;
+  final dynamic trailling;
   final double? iconSize;
   final Color? iconColor;
   final Color? backgroundColor;
@@ -18,6 +19,7 @@ class IconBtn extends StatelessWidget {
   const IconBtn({
     super.key, 
     this.icon, 
+    this.trailling, 
     this.iconSize, 
     this.backgroundColor,
     this.labelColor,
@@ -61,9 +63,9 @@ class IconBtn extends StatelessWidget {
               ),
             ],
             if (label != null && label!.isNotEmpty) ...[
-              10.w,
+              if (icon != null) 10.w,
               Padding(
-                padding: const EdgeInsets.only(right: 3.0),
+                padding: EdgeInsets.only(right: icon != null ? padding == 0 ? 0.0 : 3.0 : 0.0, left: trailling != null ? padding == 0 ? 0.0 : 5.0 : 0.0),
                 child: Text(
                   label!, 
                   style: textStyle ?? context.bodySmall?.copyWith(
@@ -71,7 +73,15 @@ class IconBtn extends StatelessWidget {
                   ),
                 ),
               ),
-            ]
+              if (trailling != null) 10.w else if (padding == 0) 0.w,
+            ],
+            if (trailling != null) ...[
+              HugeIcon(
+                icon: trailling, 
+                size: iconSize ?? 28, 
+                color: iconColor ?? Colors.white,
+              ),
+            ],
           ],
         ),
       ),

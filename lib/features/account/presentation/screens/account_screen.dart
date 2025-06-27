@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'dart:ui';
 
 import 'package:cached_network_image/cached_network_image.dart';
@@ -5,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hugeicons/hugeicons.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:runaway/config/colors.dart';
 import 'package:runaway/config/extensions.dart';
 import 'package:runaway/core/widgets/ask_registration.dart';
@@ -24,8 +26,6 @@ class AccountScreen extends StatefulWidget {
 
 class _AccountScreenState extends State<AccountScreen> with TickerProviderStateMixin {
   late AnimationController _fadeController;
-  late OverlayState overlayState;
-  late OverlayEntry _overlayEntry;
 
   @override
   void initState() {
@@ -49,51 +49,44 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
     super.dispose();
   }
 
-  void showOverlay(BuildContext context, String avatarUrl) {
-    overlayState = Overlay.of(context);
-
-    _overlayEntry = OverlayEntry(
-      builder: (_) => Stack(
-        children: [
-          // 1️⃣ zone cliquable pleine page
-          Positioned.fill(
-            child: GestureDetector(
-              // capte même les taps sur surface « vide »
-              behavior: HitTestBehavior.translucent,
-              onTap: () => _overlayEntry.remove(),
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 30, sigmaY: 30),
-                child: Container(
-                  color: Colors.white.withValues(alpha: 0.3),
-                ),
-              ),
-            ),
+  // Dans la classe _AccountScreenState, ajouter cette méthode :
+  Future<void> _pickAndUpdateAvatar(BuildContext context) async {
+    try {
+      final ImagePicker picker = ImagePicker();
+      final XFile? pickedFile = await picker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 512,
+        maxHeight: 512,
+        imageQuality: 80,
+      );
+      
+      if (pickedFile != null && context.mounted) {
+        final File avatarFile = File(pickedFile.path);
+        
+        // Déclencher la mise à jour du profil avec la nouvelle photo
+        context.read<AuthBloc>().add(
+          UpdateProfileRequested(avatar: avatarFile),
+        );
+                
+        // Afficher un message de confirmation
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Mise à jour de la photo en cours...'),
+            backgroundColor: Colors.orange,
           ),
-
-          // 2️⃣ la photo au-dessus → ne ferme pas l’overlay
-          Center(
-            child: SizedBox(
-            width: 260,
-            height: 260,
-            child: ClipRRect(
-              borderRadius: BorderRadiusGeometry.circular(500.0),
-                child: Hero(
-                  tag: avatarUrl,
-                  child: CachedNetworkImage(
-                    imageUrl: avatarUrl,
-                    fit: BoxFit.cover,
-                    progressIndicatorBuilder: (context, url, downloadProgress) => CircularProgressIndicator(value: downloadProgress.progress),
-                    errorWidget: (context, url, error) => Icon(Icons.error),
-                  ),
-                ),
-              ),
-            ),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erreur lors de la sélection: $e'),
+            backgroundColor: Colors.red,
           ),
-        ],
-      ),
-    );
-
-    overlayState.insert(_overlayEntry);
+        );
+        print(e.toString());
+      }
+    }
   }
 
   @override
@@ -150,84 +143,86 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
               children: [
                 _buildSettingCategory(
                   context,
-                  title: "Dashboard",
+                  title: "Preferences",
                   children: [
                     _buildSettingTile(
                       context,
-                      label: "Insurance",
-                      icon: HugeIcons.strokeRoundedAirdrop,
-                      child: IconButton(
-                        padding: EdgeInsets.zero,
+                      label: "Language",
+                      icon: HugeIcons.strokeRoundedLanguageSkill,
+                      child: IconBtn(
+                        padding: 0.0,
+                        backgroundColor: Colors.transparent,
+                        label: "English",
                         onPressed: () {}, 
-                        icon: Icon(
-                          HugeIcons.strokeStandardArrowRight01, 
-                          color: Colors.white38,
-                        ),
+                        iconSize: 19,
+                        labelColor: Colors.white54,
+                        iconColor: Colors.white54,
+                        trailling: HugeIcons.strokeStandardArrowRight01,
                       ),
                     ),
-                    20.h,
                     _buildSettingTile(
                       context,
-                      label: "Cryptocurency",
-                      icon: HugeIcons.strokeRoundedAirdrop,
-                      child: IconButton(
-                        padding: EdgeInsets.zero,
+                      label: "Notifications",
+                      icon: HugeIcons.strokeRoundedNotification02,
+                      child: IconBtn(
+                        padding: 0.0,
+                        backgroundColor: Colors.transparent,
+                        label: "Enabled",
                         onPressed: () {}, 
-                        icon: Icon(
-                          HugeIcons.strokeStandardArrowRight01, 
-                          color: Colors.white38,
-                        ),
+                        iconSize: 19,
+                        labelColor: Colors.white54,
+                        iconColor: Colors.white54,
+                        trailling: HugeIcons.strokeStandardArrowRight01,
                       ),
                     ),
-                    20.h,
                     _buildSettingTile(
                       context,
-                      label: "Trading",
-                      icon: HugeIcons.strokeRoundedAirdrop,
-                      child: IconButton(
+                      label: "Theme",
+                      icon: HugeIcons.strokeRoundedPaintBoard,
+                      child: IconBtn(
+                        padding: 0.0,
+                        backgroundColor: Colors.transparent,
+                        label: "Light",
                         onPressed: () {}, 
-                        padding: EdgeInsets.zero,
-                        icon: Icon(
-                          HugeIcons.strokeStandardArrowRight01, 
-                          color: Colors.white38,
-                        ),
+                        iconSize: 19,
+                        labelColor: Colors.white54,
+                        iconColor: Colors.white54,
+                        trailling: HugeIcons.strokeStandardArrowRight01,
                       ),
                     ),
                   ]
                 ),
-    
-                50.h,
-    
-                _buildSettingCategory(
-                  context,
-                  title: "Notifications",
-                  children: [
-                    _buildSettingTile(
-                      context,
-                      label: "Push notifications",
-                      icon: HugeIcons.strokeRoundedNotificationSquare,
-                      child: Switch(
-                        value: true, 
-                        onChanged: (value) {
-                          // TODO: Implémenter la gestion des notifications push
-                        },
-                      )
-                    ),
-                    20.h,
-                    _buildSettingTile(
-                      context,
-                      label: "Email notifications",
-                      icon: HugeIcons.strokeRoundedMail01,
-                      child: Switch(
-                        value: true,
-                        padding: EdgeInsets.zero, 
-                        onChanged: (value) {
-                          // TODO: Implémenter la gestion des notifications email
-                        },
-                      )
-                    ),
-                  ]
-                ),
+        
+                // _buildSettingCategory(
+                //   context,
+                //   title: "Notifications",
+                //   children: [
+                //     _buildSettingTile(
+                //       context,
+                //       label: "Push notifications",
+                //       icon: HugeIcons.strokeRoundedNotificationSquare,
+                //       child: Switch(
+                //         value: true, 
+                //         onChanged: (value) {
+                //           // TODO: Implémenter la gestion des notifications push
+                //         },
+                //       )
+                //     ),
+                //     20.h,
+                //     _buildSettingTile(
+                //       context,
+                //       label: "Email notifications",
+                //       icon: HugeIcons.strokeRoundedMail01,
+                //       child: Switch(
+                //         value: true,
+                //         padding: EdgeInsets.zero, 
+                //         onChanged: (value) {
+                //           // TODO: Implémenter la gestion des notifications email
+                //         },
+                //       )
+                //     ),
+                //   ]
+                // ),
     
                 50.h,
     
@@ -237,53 +232,30 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
                   children: [
                     _buildSettingTile(
                       context,
-                      label: "Edit Profile",
-                      icon: HugeIcons.strokeRoundedUserEdit01,
-                      child: IconButton(
-                        onPressed: () {
-                          // TODO: Naviguer vers l'écran d'édition de profil
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text('Édition du profil - À implémenter'),
-                              backgroundColor: Colors.orange,
-                            ),
-                          );
-                        }, 
-                        padding: EdgeInsets.zero,
-                        icon: Icon(
-                          HugeIcons.strokeStandardArrowRight01, 
-                          color: Colors.white38,
-                        ),
-                      ),
-                    ),
-                    20.h,
-                    _buildSettingTile(
-                      context,
                       label: "Disconnect",
                       icon: HugeIcons.strokeRoundedLogoutSquare02,
-                      child: IconButton(
+                      child: IconBtn(
+                        padding: 0.0,
+                        backgroundColor: Colors.transparent,
                         onPressed: () => _showLogoutDialog(context), 
-                        padding: EdgeInsets.zero,
-                        icon: Icon(
-                          HugeIcons.strokeStandardArrowRight01, 
-                          color: Colors.white38,
-                        ),
+                        iconSize: 19,
+                        iconColor: Colors.white54,
+                        trailling: HugeIcons.strokeStandardArrowRight01,
                       ),
                     ),
-                    20.h,
                     _buildSettingTile(
                       context,
-                      label: "Delete Account",
+                      label: "Delete profile",
                       icon: HugeIcons.strokeRoundedDelete02,
                       iconColor: Colors.red,
                       labelColor: Colors.red,
-                      child: IconButton(
+                      child: IconBtn(
+                        padding: 0.0,
+                        backgroundColor: Colors.transparent,
                         onPressed: () => _showDeleteAccountDialog(context), 
-                        padding: EdgeInsets.zero,
-                        icon: Icon(
-                          HugeIcons.strokeStandardArrowRight01, 
-                          color: Colors.white38,
-                        ),
+                        iconSize: 19,
+                        iconColor: Colors.red,
+                        trailling: HugeIcons.strokeStandardArrowRight01,
                       ),
                     ),
                   ]
@@ -302,9 +274,17 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(title, style: context.bodyMedium?.copyWith(color: Colors.white, fontWeight: FontWeight.w700)),
+        Text(
+          title, 
+          style: context.bodyMedium?.copyWith(
+            fontSize: 18,
+            color: Colors.white54, 
+            fontWeight: FontWeight.w600,
+          ),
+        ),
         15.h,
         Column(
+          spacing: 20.0,
           mainAxisSize: MainAxisSize.min,
           children: children,
         )
@@ -318,7 +298,13 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
       children: [
         Row(
           children: [
-            Icon(icon, color: iconColor),
+            IconBtn(
+              icon: icon,
+              iconSize: 25.0, 
+              iconColor: iconColor,
+              padding: 12.0,
+              backgroundColor: Colors.white10,
+            ),
             15.w,
             Text(label, style: context.bodySmall?.copyWith(color: labelColor)),
           ],
@@ -337,8 +323,13 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
         reverseTransitionDuration: const Duration(milliseconds: 200),
 
         // ─── le « child » reçoit l'animation ───
-        pageBuilder: (_, Animation<double> animation, __) =>
-            _AvatarViewer(url: url, animation: animation),
+        pageBuilder: (_, Animation<double> animation, __) {
+          return _AvatarViewer(
+            url: url, 
+            animation: animation, 
+            onTap: () => _pickAndUpdateAvatar(context),
+          );
+        },
       ),
     );
   }
@@ -402,21 +393,48 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
                   ),
           ),
 
+          8.h,
+
+          Column(
+            children: [
+              Text(
+                name,
+                style: ctx.bodyMedium?.copyWith(
+                  fontSize: 25,
+                  color: Colors.white,
+                ),
+              ),
+              Text(
+                username,
+                style: ctx.bodySmall?.copyWith(
+                  fontWeight: FontWeight.w500,
+                  color: Colors.white38,
+                ),
+              ),
+            ],
+          ),
+
           20.h,
-          Text(
-            name,
-            style: ctx.bodyMedium?.copyWith(
-              fontWeight: FontWeight.w700,
-              color: Colors.white,
-            ),
-          ),
-          Text(
-            username,
-            style: ctx.bodySmall?.copyWith(
+
+          IconBtn(
+            padding: 10,
+            trailling: HugeIcons.strokeStandardArrowRight01,
+            iconSize: 19,
+            label: "Edit profile",
+            textStyle: ctx.bodySmall?.copyWith(
               fontWeight: FontWeight.w500,
-              color: Colors.white38,
             ),
-          ),
+            backgroundColor: AppColors.primary,
+            onPressed: () {
+              // TODO: Naviguer vers l'écran d'édition de profil
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Édition du profil - À implémenter'),
+                  backgroundColor: Colors.orange,
+                ),
+              );
+            }, 
+          )
         ],
       ),
     );
@@ -539,8 +557,9 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
 class _AvatarViewer extends StatelessWidget {
   final String url;
   final Animation<double> animation;
+  final VoidCallback? onTap;
 
-  const _AvatarViewer({required this.url, required this.animation});
+  const _AvatarViewer({required this.url, required this.animation, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -596,6 +615,7 @@ class _AvatarViewer extends StatelessWidget {
                 child: FadeTransition(
                   opacity: animation,
                   child: IconBtn(
+                    onPressed: onTap,
                     label: "Edit the photo",
                     icon: HugeIcons.strokeRoundedImage02,
                   ),

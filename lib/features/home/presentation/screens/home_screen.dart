@@ -8,6 +8,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lottie/lottie.dart';
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart' as mp;
+import 'package:supabase_flutter/supabase_flutter.dart' as sb;
 import 'package:hugeicons/hugeicons.dart';
 import 'package:geolocator/geolocator.dart' as gl;
 import 'package:runaway/config/colors.dart';
@@ -430,6 +431,192 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
 
   double _toRadians(double degree) {
     return degree * math.pi / 180;
+  }
+
+  /// 🆕 Gestion de la sauvegarde manuelle
+  void _handleSaveRoute() {
+    // Vérifier qu'un parcours est généré
+    if (generatedRouteCoordinates == null || routeMetadata == null) {
+      showTopSnackBar(
+        Overlay.of(context),
+        TopSnackBar(
+          title: 'Aucun parcours à sauvegarder',
+          icon: HugeIcons.solidRoundedAlert02,
+        ),
+      );
+      return;
+    }
+
+    // Vérifier que l'utilisateur est connecté
+    final currentUser = sb.Supabase.instance.client.auth.currentUser;
+    if (currentUser == null) {
+      _showLoginRequiredDialog();
+      return;
+    }
+
+    // Afficher le dialogue de sauvegarde
+    _showSaveRouteDialog();
+  }
+
+  /// 🆕 Dialogue pour demander le nom de sauvegarde
+  void _showSaveRouteDialog() {
+    final TextEditingController nameController = TextEditingController();
+    
+    // Générer un nom par défaut
+    final parameters = context.read<RouteParametersBloc>().state.parameters;
+    final now = DateTime.now();
+    final timeString = '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
+    final dateString = '${now.day}/${now.month}';
+    final defaultName = '${parameters.activityType.title} ${_getGeneratedRouteDistance().toStringAsFixed(0)}km - $timeString ($dateString)';
+    
+    nameController.text = defaultName;
+
+    showModalSheet(
+      context: context,
+      child: Padding(
+        padding: EdgeInsets.all(20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              'Sauvegarder le parcours',
+              style: context.titleLarge?.copyWith(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            16.h,
+            Text(
+              'Donnez un nom à votre parcours :',
+              style: context.bodyMedium?.copyWith(color: Colors.white70),
+            ),
+            12.h,
+            TextField(
+              controller: nameController,
+              style: context.bodyMedium?.copyWith(color: Colors.white),
+              decoration: InputDecoration(
+                hintText: 'Nom du parcours',
+                hintStyle: TextStyle(color: Colors.white54),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: Colors.white38),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: AppColors.primary),
+                ),
+              ),
+              maxLength: 50,
+              autofocus: true,
+            ),
+            20.h,
+            Row(
+              children: [
+                Expanded(
+                  child: TextButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    child: Text(
+                      'Annuler',
+                      style: TextStyle(color: Colors.white70),
+                    ),
+                  ),
+                ),
+                12.w,
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: () {
+                      final routeName = nameController.text.trim();
+                      if (routeName.isEmpty) {
+                        showTopSnackBar(
+                          Overlay.of(context),
+                          TopSnackBar(
+                            title: 'Veuillez saisir un nom',
+                            icon: HugeIcons.solidRoundedAlert02,
+                          ),
+                        );
+                        return;
+                      }
+                      
+                      Navigator.of(context).pop();
+                      _performSaveRoute(routeName);
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: Colors.black,
+                    ),
+                    child: Text('Sauvegarder'),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// 🆕 Exécution de la sauvegarde
+  void _performSaveRoute(String routeName) {
+    if (mapboxMap == null) {
+      showTopSnackBar(
+        Overlay.of(context),
+        TopSnackBar(
+          title: 'Carte non disponible',
+          icon: HugeIcons.solidRoundedAlert02,
+        ),
+      );
+      return;
+    }
+
+    // Envoyer l'événement de sauvegarde au bloc
+    context.read<RouteGenerationBloc>().add(
+      GeneratedRouteSaved(
+        routeName,
+        map: mapboxMap!,
+      ),
+    );
+
+    print('🚀 Sauvegarde manuelle démarrée: $routeName');
+  }
+
+  /// 🆕 Dialogue pour demander la connexion
+  void _showLoginRequiredDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: Colors.black,
+        title: Text(
+          'Connexion requise',
+          style: context.titleMedium?.copyWith(color: Colors.white),
+        ),
+        content: Text(
+          'Vous devez être connecté pour sauvegarder vos parcours.',
+          style: context.bodyMedium?.copyWith(color: Colors.white70),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text(
+              'Annuler',
+              style: TextStyle(color: Colors.white70),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              context.go('/profile'); // Aller vers la page de profil/connexion
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              foregroundColor: Colors.black,
+            ),
+            child: Text('Se connecter'),
+          ),
+        ],
+      ),
+    );
   }
 
   // Fonction onClear pour supprimer le parcours et revenir à l'état précédent
@@ -1589,102 +1776,130 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
   
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      extendBody: true,
-      resizeToAvoidBottomInset: false,
-      body: Stack(
-        alignment: Alignment.bottomCenter,
-        children: [
-          // Carte
-          SizedBox(
-            width: MediaQuery.of(context).size.width,
-            height: MediaQuery.of(context).size.height,
-            child: LocationAwareMapWidget(
-              key: ValueKey("locationAwareMapWidget"),
-              styleUri: _mapStateService.getCurrentStyleUri(),
-              onMapCreated: _onMapCreated,
-              mapKey: ValueKey("mapWidget"),
-              restoreFromCache: _mapStateService.isMapInitialized,
+    return BlocListener<RouteGenerationBloc, RouteGenerationState>(
+      // 🆕 Écouter les changements d'état pour la sauvegarde
+      listener: (context, state) {
+        // Gérer les messages de sauvegarde
+        if (state.stateId.contains('success') && 
+            !state.stateId.contains('no-auto-save') && 
+            !state.isLoadedFromHistory) {
+          // Sauvegarde manuelle réussie
+          showTopSnackBar(
+            Overlay.of(context),
+            TopSnackBar(
+              title: 'Parcours sauvegardé',
+              icon: HugeIcons.solidRoundedCheckmarkCircle02,
+              color: Colors.green,
             ),
-          ),
-
-          // 🆕 MARQUEUR LOTTIE ANIMÉ
-          if (_showLottieMarker && _lottieMarkerLat != null && _lottieMarkerLng != null)
-            _buildLottieMarker(),
-
-            // Interface normale (masquée en mode navigation OU navigation live)
-            if (!isNavigationMode && !_isInNavigationMode)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 30.0),
-              child: SizedBox(
-                width: MediaQuery.of(context).size.width,
-                height: MediaQuery.of(context).size.height,
-                child: SafeArea(
-                  child: Column(
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 15.0),
-                        child: LocationSearchBar(
-                          onLocationSelected: _onLocationSelected,
-                          userLongitude: _userLongitude,
-                          userLatitude: _userLatitude,
-                        ),
-                      ),
-
-                      40.h,
-
-                      Expanded(
-                        child: Padding(
-                          padding: const EdgeInsets.only(right: 15.0),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.end,
-                            crossAxisAlignment: CrossAxisAlignment.end,
-                            children: [
-                              Column(
-                                spacing: 12.0,
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  // Map style
-                                  IconBtn(
-                                    padding: 15.0,
-                                    icon: HugeIcons.strokeRoundedMaterialAndTexture,
-                                    onPressed: _openMapStyleSelector,
-                                  ),
-
-                                  // Bouton retour position utilisateur
-                                  IconBtn(
-                                    padding: 15.0,
-                                    icon: _trackingMode == TrackingMode.userTracking
-                                        ? HugeIcons.solidRoundedLocationShare02
-                                        : HugeIcons.strokeRoundedLocationShare02,
-                                    onPressed: _activateUserTracking,
-                                    iconColor: _trackingMode == TrackingMode.userTracking
-                                        ? AppColors.primary
-                                        : Colors.white,
-                                  ),
-                                  
-                                  // Bouton générateur
-                                  IconBtn(
-                                    padding: 15.0,
-                                    icon: HugeIcons.strokeRoundedAiMagic,
-                                    onPressed: openGenerator,
-                                  ),
-                                ],
-                              ),
-                            ],
+          );
+        } else if (state.stateId.contains('save-error')) {
+          // Erreur de sauvegarde
+          showTopSnackBar(
+            Overlay.of(context),
+            TopSnackBar(
+              title: 'Erreur de sauvegarde',
+              icon: HugeIcons.solidRoundedAlert02,
+              color: Colors.red,
+            ),
+          );
+        }
+      },
+      child: Scaffold(
+        extendBody: true,
+        resizeToAvoidBottomInset: false,
+        body: Stack(
+          alignment: Alignment.bottomCenter,
+          children: [
+            // Carte
+            SizedBox(
+              width: MediaQuery.of(context).size.width,
+              height: MediaQuery.of(context).size.height,
+              child: LocationAwareMapWidget(
+                key: ValueKey("locationAwareMapWidget"),
+                styleUri: _mapStateService.getCurrentStyleUri(),
+                onMapCreated: _onMapCreated,
+                mapKey: ValueKey("mapWidget"),
+                restoreFromCache: _mapStateService.isMapInitialized,
+              ),
+            ),
+      
+            // 🆕 MARQUEUR LOTTIE ANIMÉ
+            if (_showLottieMarker && _lottieMarkerLat != null && _lottieMarkerLng != null)
+              _buildLottieMarker(),
+      
+              // Interface normale (masquée en mode navigation OU navigation live)
+              if (!isNavigationMode && !_isInNavigationMode)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 30.0),
+                child: SizedBox(
+                  width: MediaQuery.of(context).size.width,
+                  height: MediaQuery.of(context).size.height,
+                  child: SafeArea(
+                    child: Column(
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 15.0),
+                          child: LocationSearchBar(
+                            onLocationSelected: _onLocationSelected,
+                            userLongitude: _userLongitude,
+                            userLatitude: _userLatitude,
                           ),
                         ),
-                      ),
-                    ],
+      
+                        40.h,
+      
+                        Expanded(
+                          child: Padding(
+                            padding: const EdgeInsets.only(right: 15.0),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.end,
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              children: [
+                                Column(
+                                  spacing: 12.0,
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    // Map style
+                                    IconBtn(
+                                      padding: 15.0,
+                                      icon: HugeIcons.strokeRoundedMaterialAndTexture,
+                                      onPressed: _openMapStyleSelector,
+                                    ),
+      
+                                    // Bouton retour position utilisateur
+                                    IconBtn(
+                                      padding: 15.0,
+                                      icon: _trackingMode == TrackingMode.userTracking
+                                          ? HugeIcons.solidRoundedLocationShare02
+                                          : HugeIcons.strokeRoundedLocationShare02,
+                                      onPressed: _activateUserTracking,
+                                      iconColor: _trackingMode == TrackingMode.userTracking
+                                          ? AppColors.primary
+                                          : Colors.white,
+                                    ),
+                                    
+                                    // Bouton générateur
+                                    IconBtn(
+                                      padding: 15.0,
+                                      icon: HugeIcons.strokeRoundedAiMagic,
+                                      onPressed: openGenerator,
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
-            ),
-
-          // if (_isLoading) LoadingOverlay(),
-
-          // RouteInfoCard (masqué en mode navigation)
-          if (generatedRouteCoordinates != null && routeMetadata != null && !isNavigationMode & !_isInNavigationMode)
+      
+            // if (_isLoading) LoadingOverlay(),
+      
+            // RouteInfoCard (masqué en mode navigation)
+            if (generatedRouteCoordinates != null && routeMetadata != null && !isNavigationMode & !_isInNavigationMode)
             Positioned(
               top: kToolbarHeight * 1.5,
               left: 15,
@@ -1724,6 +1939,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
                               context.push('/live-navigation', extra: args);
                             }
                           },
+                          onSave: _handleSaveRoute, // 🆕 Nouveau callback
+                          isSaving: _isSavingRoute, // 🆕 État de sauvegarde
                           onShare: _showExportDialog,
                         ),
                       ),
@@ -1732,9 +1949,18 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
                 }
               ),
             ),
-        ],
+          ],
+        ),
       ),
     );
+  }
+
+  // 🆕 Également ajouter une méthode pour vérifier si la sauvegarde est en cours
+  bool get _isSavingRoute {
+    final routeState = context.watch<RouteGenerationBloc>().state;
+    return routeState.isGeneratingRoute && 
+          routeState.hasGeneratedRoute && 
+          !routeState.isLoadedFromHistory;
   }
 
   Widget _buildLottieMarker() {

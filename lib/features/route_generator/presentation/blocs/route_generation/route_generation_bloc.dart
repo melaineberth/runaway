@@ -1,13 +1,11 @@
 
 import 'dart:math' as math;
 import 'package:hydrated_bloc/hydrated_bloc.dart';
-import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart';
 import 'package:runaway/core/services/screenshot_service.dart';
-import 'package:runaway/features/route_generator/domain/models/route_parameters.dart';
 import 'package:runaway/features/route_generator/domain/models/saved_route.dart';
 import '../../../data/repositories/routes_repository.dart';
 import '../../../data/services/graphhopper_api_service.dart';
-import 'package:supabase_flutter/supabase_flutter.dart' as sb;
+
 import 'route_generation_event.dart';
 import 'route_generation_state.dart';
 
@@ -101,75 +99,38 @@ class RouteGenerationBloc extends HydratedBloc<RouteGenerationEvent, RouteGenera
     Emitter<RouteGenerationState> emit,
   ) async {
     final generationId = DateTime.now().millisecondsSinceEpoch.toString();
-    print('🚀 === DÉBUT GÉNÉRATION PARCOURS (ID: $generationId) ===');
-    
+    print('🚀 === DÉBUT GÉNÉRATION (ID: $generationId) ===');
+
     emit(state.copyWith(
-      isGeneratingRoute: true, // 🔑 Démarre le loading
+      isGeneratingRoute: true,
       errorMessage: null,
-      isLoadedFromHistory: false,
-      stateId: generationId,
-      generatedRoute: null,
-      usedParameters: null,
-      routeMetadata: null,
-      routeInstructions: null,
+      stateId: '$generationId-start',
     ));
 
     try {
-      // 1. GÉNÉRATION
-      print('🛣️ Génération de parcours via API GraphHopper...');
-      final result = await GraphHopperApiService.generateRoute(
-        parameters: event.parameters,
-      );
+      final result = await GraphHopperApiService.generateRoute(parameters: event.parameters);
 
-      final routeCoordinates = result.coordinatesForUI;
-      if (routeCoordinates.isEmpty) {
-        emit(state.copyWith(
-          isGeneratingRoute: false,
-          errorMessage: 'Impossible de générer un parcours avec ces paramètres',
-          stateId: '$generationId-error',
-        ));
-        return;
-      }
+      print('✅ Génération réussie: ${result.coordinates.length} points, ${result.distanceKm}km');
 
-      final completeMetadata = {
-        'distanceKm': result.distanceKm,
-        'distance': (result.distanceKm * 1000).round(),
-        'durationMinutes': result.durationMinutes,
-        'elevationGain': result.elevationGain,
-        'points_count': routeCoordinates.length,
-        'is_loop': event.parameters.isLoop,
-        ...result.metadata,
-        'generatedAt': DateTime.now().toIso8601String(),
-        'parameters': event.parameters.toJson(),
-      };
-
-      // 🔑 IMPORTANT : MAINTENIR isGeneratingRoute = true
       emit(state.copyWith(
-        isGeneratingRoute: true, // ← Ne pas passer à false
-        generatedRoute: routeCoordinates,
+        isGeneratingRoute: false, // 🔑 FIN du loading - PAS de sauvegarde automatique
+        generatedRoute: result.coordinates,
         usedParameters: event.parameters,
-        routeMetadata: completeMetadata,
+        routeMetadata: {
+          'distanceKm': result.distanceKm,
+          'distance': (result.distanceKm * 1000).round(),
+          'durationMinutes': result.durationMinutes,
+          'points_count': result.coordinates.length,
+          'is_loop': event.parameters.isLoop,
+        },
         routeInstructions: result.instructions,
+        isLoadedFromHistory: false, // 🔧 Nouveau parcours généré
         errorMessage: null,
-        isLoadedFromHistory: false,
-        stateId: '$generationId-generated',
+        stateId: '$generationId-success-no-auto-save', // 🆕 Indiquer pas de sauvegarde auto
       ));
 
-      print('✅ Route générée: ${routeCoordinates.length} points, ${result.distanceKm.toStringAsFixed(1)}km');
-
-      // 2. SAUVEGARDE AUTOMATIQUE
-      if (sb.Supabase.instance.client.auth.currentUser != null) {
-        print('💾 Démarrage sauvegarde automatique...');
-        
-        final routeName = _generateAutoRouteName(event.parameters, result.distanceKm);
-        await _performAutoSave(routeName, event.mapboxMap, emit, generationId);
-      } else {
-        print('🚫 Pas de sauvegarde - utilisateur non connecté');
-        emit(state.copyWith(
-          isGeneratingRoute: false, // ← Fin du loading
-          stateId: '$generationId-success-no-save',
-        ));
-      }
+      print('✅ === FIN GÉNÉRATION (SUCCESS: $generationId-success-no-auto-save) ===');
+      print('ℹ️ Parcours généré mais non sauvegardé automatiquement');
 
     } catch (e) {
       print('❌ Erreur génération: $e');
@@ -179,75 +140,6 @@ class RouteGenerationBloc extends HydratedBloc<RouteGenerationEvent, RouteGenera
         stateId: '$generationId-exception',
       ));
     }
-  }
-
-  Future<void> _performAutoSave(
-    String routeName, 
-    MapboxMap? mapboxMap,
-    Emitter<RouteGenerationState> emit,
-    String generationId,
-  ) async {
-    try {
-      print('🚀 Début sauvegarde avec screenshot: $routeName');
-
-      // 1. Screenshot
-      String? screenshotUrl;
-      if (mapboxMap != null) {
-        try {
-          screenshotUrl = await ScreenshotService.captureAndUploadMapSnapshot(
-            liveMap: mapboxMap,
-            routeCoords: state.generatedRoute!,
-            routeId: 'temp_${DateTime.now().millisecondsSinceEpoch}',
-            userId: 'temp_user',
-          );
-          print('✅ Screenshot capturé: $screenshotUrl');
-        } catch (e) {
-          print('❌ Erreur screenshot: $e');
-          screenshotUrl = null;
-        }
-      }
-
-      // 2. Sauvegarde
-      final actualDistanceKm = state.routeMetadata?['distanceKm'] as double? ?? 
-          _calculateRouteDistance(state.generatedRoute!);
-      
-      final savedRoute = await _routesRepository.saveRoute(
-        name: routeName,
-        parameters: state.usedParameters!,
-        coordinates: state.generatedRoute!,
-        actualDistance: actualDistanceKm,
-        estimatedDuration: state.routeMetadata?['durationMinutes'] as int?,
-        imageUrl: screenshotUrl,
-      );
-
-      // 3. Finaliser
-      final updatedRoutes = List<SavedRoute>.from(state.savedRoutes)..add(savedRoute);
-
-      emit(state.copyWith(
-        isGeneratingRoute: false, // 🔑 FIN du loading
-        savedRoutes: updatedRoutes,
-        errorMessage: null,
-        stateId: '$generationId-success',
-      ));
-
-      print('✅ Parcours sauvegardé: ${savedRoute.name}');
-      print('🖼️ Image: ${savedRoute.hasImage ? "✅ Capturée" : "❌ Aucune"}');
-
-    } catch (e) {
-      print('❌ Erreur sauvegarde: $e');
-      emit(state.copyWith(
-        isGeneratingRoute: false,
-        errorMessage: 'Erreur lors de la sauvegarde: $e',
-        stateId: '$generationId-save-error',
-      ));
-    }
-  }
-
-  String _generateAutoRouteName(RouteParameters parameters, double realDistanceKm) {
-    final now = DateTime.now();
-    final timeString = '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
-    final dateString = '${now.day}/${now.month}';
-    return '${parameters.activityType.title} ${realDistanceKm.toStringAsFixed(0)}km - $timeString ($dateString)';
   }
 
   /// 🆕 Sauvegarde du parcours via RoutesRepository

@@ -48,14 +48,17 @@ class _MapStyleSelectorState extends State<MapStyleSelector> {
           children: [
             Text(
               "Type de carte",
-              style: context.bodyMedium?.copyWith(
+              style: context.bodySmall?.copyWith(
                 color: Colors.white,
               ),
             ),
+            3.h,
             Text(
               'Choisissez votre style',
               style: context.bodySmall?.copyWith(
-                color: Colors.white38,
+                color: Colors.grey.shade500,
+                fontSize: 15,
+                fontWeight: FontWeight.w500
               ),
             ),
             20.h,
