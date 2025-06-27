@@ -1367,6 +1367,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
   void openGenerator() {
     showModalSheet(
       context: context, 
+      backgroundColor: Colors.transparent,
       child: BlocProvider.value(
         value: context.read<RouteParametersBloc>(),
         child: BlocProvider.value(
@@ -1495,7 +1496,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
             height: MediaQuery.of(context).size.height,
             child: LocationAwareMapWidget(
               key: ValueKey("locationAwareMapWidget"),
-              styleUri: MapboxStyles.DARK,
+              styleUri: MapboxStyles.OUTDOORS,
               onMapCreated: _onMapCreated,
               mapKey: ValueKey("mapWidget"),
               restoreFromCache: _mapStateService.isMapInitialized,
@@ -1535,8 +1536,16 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
                             crossAxisAlignment: CrossAxisAlignment.end,
                             children: [
                               Column(
+                                spacing: 12.0,
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
+                                  // Map style
+                                  IconBtn(
+                                    padding: 15.0,
+                                    icon: HugeIcons.strokeRoundedMaterialAndTexture,
+                                    onPressed: () {},
+                                  ),
+
                                   // Bouton retour position utilisateur
                                   IconBtn(
                                     padding: 15.0,
@@ -1548,7 +1557,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
                                         ? AppColors.primary
                                         : Colors.white,
                                   ),
-                                  15.h,
+                                  
                                   // Bouton générateur
                                   IconBtn(
                                     padding: 15.0,

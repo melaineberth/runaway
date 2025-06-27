@@ -53,6 +53,8 @@ dependencies:
   fl_chart: ^1.0.0
   cached_network_image: ^3.4.1
   pull_down_button: ^0.10.2
+  flutter_launcher_icons: ^0.14.4
+  cupertino_rounded_corners: ^2.1.1
 
 dev_dependencies:
   flutter_test:

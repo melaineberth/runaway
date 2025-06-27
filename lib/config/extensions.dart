@@ -1,5 +1,43 @@
+import 'dart:io';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:runaway/l10n/app_localizations.dart';
+
+  final _channel = const MethodChannel('corner_radius');
+
+  Future<double> getDeviceCornerRadius() async {
+    if (kDebugMode) debugPrint('[CR] ▶︎ Demande du rayon…');
+
+    // 1️⃣ plateforme non prise en charge
+    if (!Platform.isAndroid && !Platform.isIOS) {
+      if (kDebugMode) debugPrint('[CR] ⛔️ Desktop / Web – retourne 0');
+      return 0;
+    }
+
+    try {
+      final radius = await _channel.invokeMethod<double>('getCornerRadius');
+
+      if (kDebugMode) {
+        debugPrint('[CR] ✔︎ Réponse native = ${radius ?? 'null'}');
+      }
+
+      return radius ?? 0;
+    } on PlatformException catch (e, s) {
+      if (kDebugMode) {
+        debugPrint('[CR] 💥 PlatformException : ${e.message}');
+        debugPrint('[CR] Stack :\n$s');
+      }
+      return 0;
+    } catch (e, s) {
+      if (kDebugMode) {
+        debugPrint('[CR] 🔥 Erreur inconnue : $e');
+        debugPrint('[CR] Stack :\n$s');
+      }
+      return 0;
+    }
+  }
 
 extension SpacingExtension on num {
   SizedBox get h => SizedBox(height: toDouble());
@@ -58,14 +96,14 @@ extension L10nExtension on BuildContext {
   AppLocalizations get l10n => AppLocalizations.of(this)!;
 }
 
-void showModalSheet({required BuildContext context, required Widget child}) {
+void showModalSheet({required BuildContext context, required Widget child, Color backgroundColor = Colors.black}) {
     showModalBottomSheet(
       useRootNavigator: true,
       isScrollControlled: true,
       isDismissible: true,
       enableDrag: false,
       context: context,
-      backgroundColor: Colors.black,
+      backgroundColor: backgroundColor,
       clipBehavior: Clip.antiAliasWithSaveLayer,
       builder: (modalCtx) {
         return child;
