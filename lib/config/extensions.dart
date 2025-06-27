@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:runaway/features/route_generator/domain/models/route_parameters.dart';
 import 'package:runaway/l10n/app_localizations.dart';
 
   final _channel = const MethodChannel('corner_radius');
@@ -110,3 +111,12 @@ void showModalSheet({required BuildContext context, required Widget child, Color
       },
     );
   }
+
+  String generateAutoRouteName(RouteParameters p, double distanceKm) {
+  final now        = DateTime.now();
+  final timeString = '${now.hour.toString().padLeft(2, '0')}:'
+                     '${now.minute.toString().padLeft(2, '0')}';
+  final dateString = '${now.day}/${now.month}';
+  return '${p.activityType.title} '
+         '${distanceKm.toStringAsFixed(0)}km - $timeString ($dateString)';
+}

@@ -6,6 +6,7 @@ import 'package:runaway/core/widgets/squircle_container.dart';
 
 /// Widget pour afficher les informations de la route générée
 class RouteInfoCard extends StatelessWidget {
+  final String routeName;           // <-- nouveau
   final double distance;
   final bool isLoop;
   final int waypointCount;
@@ -17,6 +18,7 @@ class RouteInfoCard extends StatelessWidget {
 
   const RouteInfoCard({
     super.key,
+    required this.routeName,
     required this.distance,
     required this.isLoop,
     required this.waypointCount,
@@ -68,7 +70,7 @@ class RouteInfoCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      context.l10n.pathGenerated,
+                      routeName,
                       style: context.bodySmall,
                     ),
                     4.h,
@@ -103,44 +105,45 @@ class RouteInfoCard extends StatelessWidget {
           ),
           
           16.h,
-          
+
           // Boutons d'action
           Row(
             children: [
+              // 🆕 Bouton Sauvegarde
               Expanded(
                 child: _ActionButton(
                   radius: _innerRadius,
-                  icon: HugeIcons.solidRoundedNavigation03,
-                  label: context.l10n.start,
-                  onTap: onNavigate,
-                  isPrimary: true,
+                  icon: isSaving 
+                      ? HugeIcons.strokeRoundedLoading03 
+                      : HugeIcons.solidRoundedLocationStar01,
+                  label: isSaving ? 'Sauvegarde...' : 'Save',
+                  onTap: isSaving ? () {} : onSave, // Désactiver pendant sauvegarde
+                  isPrimary: false,
+                  isLoading: isSaving,
                 ),
               ),
 
               12.w,
 
-              // 🆕 Bouton Sauvegarde
-              _ActionButton(
-                radius: _innerRadius,
-                icon: isSaving 
-                    ? HugeIcons.strokeRoundedLoading03 
-                    : HugeIcons.strokeRoundedLoading03,
-                label: isSaving ? 'Sauvegarde...' : 'Sauvegarder',
-                onTap: isSaving ? () {} : onSave, // Désactiver pendant sauvegarde
-                isPrimary: false,
-                isLoading: isSaving,
-              ),
-
-              12.w,
-
-              _ActionButton(
-                radius: _innerRadius,
-                icon: HugeIcons.strokeRoundedShare08,
-                label: context.l10n.share,
-                onTap: onShare,
-                isPrimary: false,
+              Expanded(
+                child: _ActionButton(
+                  radius: _innerRadius,
+                  icon: HugeIcons.solidRoundedDownloadCircle01,
+                  label: "Download",
+                  onTap: onShare,
+                  isPrimary: false,
+                ),
               ),
             ],
+          ),
+
+          12.h,
+          _ActionButton(
+            radius: _innerRadius,
+            icon: HugeIcons.solidRoundedFlag02,
+            label: context.l10n.start,
+            onTap: onNavigate,
+            isPrimary: true,
           ),
         ],
       ),
@@ -214,7 +217,7 @@ class _ActionButton extends StatelessWidget {
     return GestureDetector(
       onTap: isLoading ? null : onTap, // 🆕 Désactiver si loading
       child: SquircleContainer(
-        padding: EdgeInsets.symmetric(vertical: 12.0, horizontal: 15.0),
+        padding: EdgeInsets.symmetric(vertical: 15.0, horizontal: 15.0),
         radius: radius,
         color: isPrimary 
             ? AppColors.primary 
@@ -236,15 +239,15 @@ class _ActionButton extends StatelessWidget {
                   )
                 : HugeIcon(
                     icon: icon,
-                    size: 16,
+                    size: 20,
                     color: isPrimary ? Colors.black : Colors.white,
                   ),
             if (label.isNotEmpty) ...[
-              6.w,
+              10.w,
               Text(
                 label,
                 style: context.bodySmall?.copyWith(
-                  fontSize: 14,
+                  fontSize: 17,
                   fontWeight: FontWeight.w600,
                   color: isPrimary 
                       ? Colors.black 

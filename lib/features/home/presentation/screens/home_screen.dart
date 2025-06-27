@@ -8,6 +8,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lottie/lottie.dart';
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart' as mp;
+import 'package:runaway/core/widgets/modal_sheet.dart';
+import 'package:runaway/features/auth/presentation/widgets/auth_text_field.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' as sb;
 import 'package:hugeicons/hugeicons.dart';
 import 'package:geolocator/geolocator.dart' as gl;
@@ -438,6 +440,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
 
   /// 🆕 Gestion de la sauvegarde manuelle
   void _handleSaveRoute() {
+    final overlay = Overlay.of(context, rootOverlay: true);
+    
     // 🔧 Éviter les appels multiples
     if (_isSaveDialogOpen) {
       print('⚠️ Dialogue de sauvegarde déjà ouvert');
@@ -447,7 +451,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
     // Vérifier qu'un parcours est généré
     if (generatedRouteCoordinates == null || routeMetadata == null) {
       showTopSnackBar(
-        Overlay.of(context),
+        overlay,
         TopSnackBar(
           title: 'Aucun parcours à sauvegarder',
           icon: HugeIcons.solidRoundedAlert02,
@@ -459,7 +463,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
     // Vérifier si déjà en cours de sauvegarde
     if (_isSavingRoute) {
       showTopSnackBar(
-        Overlay.of(context),
+        overlay,
         TopSnackBar(
           title: 'Sauvegarde en cours...',
           icon: HugeIcons.strokeRoundedLoading03,
@@ -479,7 +483,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
     } catch (e) {
       print('❌ Erreur vérification auth: $e');
       showTopSnackBar(
-        Overlay.of(context),
+        overlay,
         TopSnackBar(
           title: 'Erreur de connexion',
           icon: HugeIcons.solidRoundedAlert02,
@@ -492,161 +496,37 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
     _showSaveRouteDialog();
   }
 
-  /// 🆕 Dialogue pour demander le nom de sauvegarde
-  void _showSaveRouteDialog() {
-    _isSaveDialogOpen = true; // 🔧 Marquer le dialogue comme ouvert
+  Future<void> _showSaveRouteDialog() async {
+    if (_isSaveDialogOpen) return;
+    _isSaveDialogOpen = true;
 
-    final TextEditingController nameController = TextEditingController();
-    
-    // Générer un nom par défaut
-    final parameters = context.read<RouteParametersBloc>().state.parameters;
-    final now = DateTime.now();
-    final timeString = '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
-    final dateString = '${now.day}/${now.month}';
-    final defaultName = '${parameters.activityType.title} ${_getGeneratedRouteDistance().toStringAsFixed(0)}km - $timeString ($dateString)';
-    
-    nameController.text = defaultName;
+    final defaultName = generateAutoRouteName(
+                            context.read<RouteParametersBloc>().state.parameters,
+                            _getGeneratedRouteDistance(),
+                          );
 
-    showModalBottomSheet<String>(
+    final routeName = await showModalBottomSheet<String>(
       context: context,
-      useRootNavigator: true, // 🔧 CRUCIAL: Utiliser root navigator pour éviter les conflits GoRouter
+      useRootNavigator: true,
       isScrollControlled: true,
-      isDismissible: true,
-      enableDrag: true,
       backgroundColor: Colors.transparent,
-      builder: (BuildContext dialogContext) => Container(
-        decoration: BoxDecoration(
-          color: Colors.grey.shade900,
-          borderRadius: BorderRadius.only(
-            topLeft: Radius.circular(20),
-            topRight: Radius.circular(20),
-          ),
-        ),
-        padding: EdgeInsets.only(
-          top: 20,
-          left: 20,
-          right: 20,
-          bottom: MediaQuery.of(dialogContext).viewInsets.bottom + 20, // 🔧 Gestion clavier
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // Indicateur de glissement
-            Center(
-              child: Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Colors.white38,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-            ),
-            16.h,
-            Text(
-              'Sauvegarder le parcours',
-              style: context.titleLarge?.copyWith(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            16.h,
-            Text(
-              'Donnez un nom à votre parcours :',
-              style: context.bodyMedium?.copyWith(color: Colors.white70),
-            ),
-            12.h,
-            TextField(
-              controller: nameController,
-              style: context.bodyMedium?.copyWith(color: Colors.white),
-              decoration: InputDecoration(
-                hintText: 'Nom du parcours',
-                hintStyle: TextStyle(color: Colors.white54),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: Colors.white38),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: AppColors.primary),
-                ),
-              ),
-              maxLength: 50,
-              autofocus: true,
-              onSubmitted: (value) {
-                // 🔧 Permettre validation par Entrée
-                final routeName = value.trim();
-                if (routeName.isNotEmpty) {
-                  Navigator.pop(dialogContext, routeName); // 🔧 Retourner le nom
-                }
-              },
-            ),
-            20.h,
-            Row(
-              children: [
-                Expanded(
-                  child: TextButton(
-                    onPressed: () => Navigator.pop(dialogContext), // 🔧 Utiliser dialogContext
-                    child: Text(
-                      'Annuler',
-                      style: TextStyle(color: Colors.white70),
-                    ),
-                  ),
-                ),
-                12.w,
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: () {
-                      final routeName = nameController.text.trim();
-                      if (routeName.isEmpty) {
-                        // 🔧 Afficher erreur sans fermer le dialogue
-                        ScaffoldMessenger.of(dialogContext).showSnackBar(
-                          SnackBar(
-                            content: Text('Veuillez saisir un nom'),
-                            backgroundColor: Colors.red,
-                          ),
-                        );
-                        return;
-                      }
-                      
-                      Navigator.pop(dialogContext, routeName); // 🔧 Retourner le nom
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      foregroundColor: Colors.black,
-                    ),
-                    child: Text('Sauvegarder'),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    ).then((String? routeName) {
-      // 🔧 Libérer les ressources et marquer le dialogue comme fermé
-      nameController.dispose();
-      _isSaveDialogOpen = false;
-      
-      if (routeName != null && routeName.isNotEmpty) {
-        _performSaveRoute(routeName);
-      }
-    }).catchError((error) {
-      // 🔧 Gérer les erreurs et s'assurer que le flag est reseté
-      print('❌ Erreur dialogue sauvegarde: $error');
-      _isSaveDialogOpen = false;
-      nameController.dispose();
-    });
-  }
+      builder: (_) => SaveRouteSheet(initialValue: defaultName),
+    );
 
+    _isSaveDialogOpen = false;
+
+    if (!mounted || routeName == null || routeName.isEmpty) return;
+    _performSaveRoute(routeName);
+  }
+  
   /// 🆕 Exécution de la sauvegarde
   void _performSaveRoute(String routeName) {
+    final overlay = Overlay.of(context, rootOverlay: true);
+
     // Vérifications finales
     if (mapboxMap == null) {
       showTopSnackBar(
-        Overlay.of(context),
+        overlay,
         TopSnackBar(
           title: 'Carte non disponible',
           icon: HugeIcons.solidRoundedAlert02,
@@ -657,7 +537,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
 
     if (generatedRouteCoordinates == null) {
       showTopSnackBar(
-        Overlay.of(context),
+        overlay,
         TopSnackBar(
           title: 'Aucun parcours à sauvegarder',
           icon: HugeIcons.solidRoundedAlert02,
@@ -685,7 +565,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
     
     // Afficher feedback immédiat
     showTopSnackBar(
-      Overlay.of(context),
+      overlay,
       TopSnackBar(
         title: 'Sauvegarde en cours...',
         icon: HugeIcons.strokeRoundedLoading03,
@@ -2049,6 +1929,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
                           ],
                         ),
                         child: RouteInfoCard(
+                          routeName : generateAutoRouteName(
+                            context.read<RouteParametersBloc>().state.parameters,
+                            _getGeneratedRouteDistance(),
+                          ),
                           distance: _getGeneratedRouteDistance(), // MODIFICATION : Vraie distance
                           isLoop: routeMetadata!['is_loop'] as bool? ?? true,
                           waypointCount: routeMetadata!['points_count'] as int? ?? generatedRouteCoordinates!.length,
@@ -2125,6 +2009,91 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
           ),
         );
       },
+    );
+  }
+}
+
+class SaveRouteSheet extends StatefulWidget {
+  final String initialValue;                // <-- seulement la valeur
+  const SaveRouteSheet({required this.initialValue, super.key});
+
+  @override
+  State<SaveRouteSheet> createState() => _SaveRouteSheetState();
+}
+
+class _SaveRouteSheetState extends State<SaveRouteSheet> {
+  late final TextEditingController _ctl;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctl = TextEditingController(text: widget.initialValue);
+  }
+
+  @override
+  void dispose() {
+    _ctl.dispose();                         // <-- libéré au bon moment
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ModalSheet(
+      child: Padding(
+        padding: const EdgeInsets.all(30),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              "Choisissez un nom",
+              style: context.bodySmall?.copyWith(
+                color: Colors.white,
+              ),
+            ),
+            20.h,
+            AuthTextField(
+              controller: _ctl,
+              hint: 'Nom du parcours',
+              maxLines: 1,
+            ),
+
+            20.h,
+            
+            Row(
+              children: [
+                Expanded(
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: IconBtn(
+                      label: "Annuler",
+                      backgroundColor: Colors.white10,
+                      labelColor: Colors.white,
+                      onPressed: () => context.pop(),
+                    ),
+                  ),
+                ),
+                12.w,
+                Expanded(
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: IconBtn(
+                      label: "Sauvegarder",
+                      backgroundColor: AppColors.primary,
+                      labelColor: Colors.black,
+                      onPressed: () {
+                        final name = _ctl.text.trim();
+                        if (name.isEmpty) return;
+                        context.pop(name);
+                      },
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
