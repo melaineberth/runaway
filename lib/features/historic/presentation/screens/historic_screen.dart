@@ -1,6 +1,8 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:pull_down_button/pull_down_button.dart';
 import 'package:runaway/config/colors.dart';
 import 'package:runaway/config/extensions.dart';
 import 'package:runaway/core/blocs/app_data/app_data_bloc.dart';
@@ -36,6 +38,8 @@ class HistoricScreen extends StatefulWidget {
 }
 
 class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStateMixin {
+  bool isEditMode = true;
+
   // 🎭 Animation Controllers
   late AnimationController _fadeController;
   late AnimationController _staggerController;
@@ -120,6 +124,21 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
     _fadeController.dispose();
     _staggerController.dispose();
     super.dispose();
+  }
+
+  void _toggleEditMode() {
+    if (isEditMode == true) {
+      setState(() {
+        isEditMode = false;
+      });
+      print("Enable edit mode");
+    } else {
+      setState(() {
+        isEditMode = true;
+      });
+      
+      print("Disable edit mode");
+    }
   }
 
   /// Charge les parcours sauvegardés
@@ -275,18 +294,6 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
           style: context.bodySmall?.copyWith(color: Colors.white),
         ),
       ),
-      actions: [
-        FadeTransition(
-        opacity: _fadeAnimation,
-          child: child ?? IconButton(
-            onPressed: (isLoading) ? null : _syncData,
-            icon: Icon(
-              HugeIcons.strokeRoundedCloudUpload, 
-              color: (isLoading) ? Colors.white54 : Colors.white,
-            ),
-          ),
-        ),
-      ],
     );
   }
 
@@ -363,8 +370,11 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
                       ),
                       child: HistoricCard(
                         route: route,
+                        isEdit: isEditMode,
                         onTap: () => _navigateToRoute(route),
                         onDelete: () => _deleteRoute(route),
+                        onSync: routes == routes.unsyncedRoutes ? _syncData : null,
+                        onRename: _toggleEditMode,
                       ),
                     ),
                   ),
@@ -571,7 +581,24 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
     );
   }
 
-@override
+  void _refreshData() {
+    print('🔄 Rafraîchissement de l\'historique demandé');
+    context.read<AppDataBloc>().add(const HistoricDataRefreshRequested());
+  }
+
+  void _syncData() {
+    print('☁️ Synchronisation des données demandée');
+    context.read<RouteGenerationBloc>().add(SyncPendingRoutesRequested());
+    
+    // Ensuite rafraîchir les données
+    Future.delayed(Duration(seconds: 2), () {
+      if (mounted) {
+        context.read<AppDataBloc>().add(const HistoricDataRefreshRequested());
+      }
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     return BlocListener<AuthBloc, AuthState>(
       listener: (context, authState) {
@@ -585,7 +612,7 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
             return _buildUnauthenticatedView();
           }
 
-          // 🆕 SOLUTION SIMPLE : Surveiller RouteGenerationBloc.savedRoutes
+          // Surveiller RouteGenerationBloc.savedRoutes
           return BlocListener<RouteGenerationBloc, RouteGenerationState>(
             listener: (context, routeState) {
               // Comparer le nombre de routes pour détecter les changements
@@ -617,22 +644,32 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
       ),
     );
   }
+}
 
-  // Actions
-  void _refreshData() {
-    print('🔄 Rafraîchissement de l\'historique demandé');
-    context.read<AppDataBloc>().add(const HistoricDataRefreshRequested());
-  }
+class Item extends StatelessWidget {
+  const Item({
+    super.key,
+    this.color = Colors.blue,
+    required this.child,
+    this.padding = const EdgeInsets.all(14),
+  });
 
-  void _syncData() {
-    print('☁️ Synchronisation des données demandée');
-    context.read<RouteGenerationBloc>().add(SyncPendingRoutesRequested());
-    
-    // Ensuite rafraîchir les données
-    Future.delayed(Duration(seconds: 2), () {
-      if (mounted) {
-        context.read<AppDataBloc>().add(const HistoricDataRefreshRequested());
-      }
-    });
+  final EdgeInsets padding;
+  final Color color;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: padding,
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: DefaultTextStyle(
+        style: const TextStyle(color: Colors.white),
+        child: child,
+      ),
+    );
   }
 }

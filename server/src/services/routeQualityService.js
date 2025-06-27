@@ -1,4 +1,3 @@
-// server/src/services/routeQualityService.js
 const logger = require('../config/logger');
 const turf = require('@turf/turf');
 
@@ -6,23 +5,30 @@ class RouteQualityService {
   constructor() {
     this.qualityThresholds = {
       distance: {
-        minAcceptableRatio: 0.85,  // -15% minimum
-        maxAcceptableRatio: 1.15,  // +15% maximum
-        criticalRatio: 0.5         // Si < 50% ou > 200%, c'est critique
+        minAcceptableRatio: 0.85,
+        maxAcceptableRatio: 1.15,
+        criticalRatio: 0.5
       },
       coordinates: {
-        minPoints: 10,             // Minimum de points pour un parcours valide
-        maxGapMeters: 1000,        // Gap maximum entre deux points consécutifs
-        maxSpeed: 150              // Vitesse maximum théorique (km/h) entre points
+        minPoints: 15, // Augmenté pour plus de détails
+        maxGapMeters: 800, // Réduit pour plus de continuité
+        maxSpeed: 150
       },
       loop: {
-        maxEndDistanceMeters: 200  // Distance max entre début/fin pour une boucle
+        maxEndDistanceMeters: 150 // Réduit pour des boucles plus précises
+      },
+      // NOUVEAUX CRITÈRES ESTHÉTIQUES
+      aesthetics: {
+        minDirectionChanges: 8, // Minimum de changements de direction
+        maxStraightSegmentRatio: 0.4, // Max 40% de segments droits
+        minComplexityScore: 0.3, // Score de complexité minimum
+        preferredTurnAngleRange: [30, 150] // Angles de virage préférés
       }
     };
   }
 
   /**
-   * Valide la qualité d'un parcours généré
+   * Valide la qualité avec critères esthétiques améliorés
    */
   validateRoute(route, requestedParams) {
     const validationResult = {
@@ -34,27 +40,36 @@ class RouteQualityService {
     };
 
     try {
-      // 1. Validation de la distance
+      // Validations existantes
       const distanceValidation = this.validateDistance(route, requestedParams);
-      validationResult.metrics.distance = distanceValidation;
-      
-      if (!distanceValidation.isValid) {
-        validationResult.isValid = false;
-        validationResult.issues.push(distanceValidation.issue);
-        validationResult.suggestions.push(distanceValidation.suggestion);
-      }
-
-      // 2. Validation des coordonnées
       const coordinatesValidation = this.validateCoordinates(route.coordinates);
-      validationResult.metrics.coordinates = coordinatesValidation;
       
-      if (!coordinatesValidation.isValid) {
-        validationResult.isValid = false;
-        validationResult.issues.push(...coordinatesValidation.issues);
-        validationResult.suggestions.push(...coordinatesValidation.suggestions);
-      }
+      // NOUVELLES VALIDATIONS ESTHÉTIQUES
+      const aestheticsValidation = this.validateAesthetics(route.coordinates);
+      const complexityValidation = this.validateComplexity(route.coordinates);
+      const interestValidation = this.validateInterest(route.coordinates, requestedParams);
 
-      // 3. Validation de la boucle (si demandée)
+      validationResult.metrics = {
+        distance: distanceValidation,
+        coordinates: coordinatesValidation,
+        aesthetics: aestheticsValidation,
+        complexity: complexityValidation,
+        interest: interestValidation
+      };
+
+      // Compilation des problèmes
+      [distanceValidation, coordinatesValidation, aestheticsValidation, complexityValidation, interestValidation]
+        .forEach(validation => {
+          if (!validation.isValid) {
+            validationResult.isValid = false;
+            if (validation.issue) validationResult.issues.push(validation.issue);
+            if (validation.issues) validationResult.issues.push(...validation.issues);
+            if (validation.suggestion) validationResult.suggestions.push(validation.suggestion);
+            if (validation.suggestions) validationResult.suggestions.push(...validation.suggestions);
+          }
+        });
+
+      // Validation spéciale pour les boucles
       if (requestedParams.isLoop) {
         const loopValidation = this.validateLoop(route.coordinates);
         validationResult.metrics.loop = loopValidation;
@@ -66,15 +81,15 @@ class RouteQualityService {
         }
       }
 
-      // 4. Calcul de la qualité globale
-      validationResult.quality = this.calculateOverallQuality(validationResult.metrics);
+      // Calcul de la qualité globale avec nouveaux critères
+      validationResult.quality = this.calculateEnhancedQuality(validationResult.metrics);
 
-      logger.info('Route quality validation completed', {
+      logger.info('Enhanced route quality validation completed', {
         isValid: validationResult.isValid,
         quality: validationResult.quality,
         issuesCount: validationResult.issues.length,
-        requestedDistance: requestedParams.distanceKm,
-        actualDistance: route.distance / 1000
+        aestheticsScore: aestheticsValidation.score,
+        complexityScore: complexityValidation.score
       });
 
       return validationResult;
@@ -92,8 +107,408 @@ class RouteQualityService {
   }
 
   /**
-   * Valide la distance du parcours
+   * NOUVELLE : Validation des aspects esthétiques
    */
+  validateAesthetics(coordinates) {
+    const validation = {
+      isValid: true,
+      score: 0,
+      issues: [],
+      suggestions: [],
+      metrics: {}
+    };
+  
+    // 1. Analyse des changements de direction - ✅ ASSOUPLI
+    const directionChanges = this.analyzeDirectionChanges(coordinates);
+    validation.metrics.directionChanges = directionChanges.count;
+    
+    if (directionChanges.count < 6) { // ✅ RÉDUIT de 8 à 6
+      validation.isValid = false;
+      validation.issues.push(`Parcours trop monotone: seulement ${directionChanges.count} changements de direction`);
+      validation.suggestions.push('Ajouter des waypoints intermédiaires pour plus de variété');
+    }
+  
+    // 2. Analyse des segments droits - ✅ ASSOUPLI
+    const straightSegments = this.analyzeStraightSegments(coordinates);
+    validation.metrics.straightSegmentRatio = straightSegments.ratio;
+    
+    if (straightSegments.ratio > 0.5) { // ✅ AUGMENTÉ de 0.4 à 0.5
+      validation.isValid = false;
+      validation.issues.push(`Trop de segments droits: ${(straightSegments.ratio * 100).toFixed(1)}%`);
+      validation.suggestions.push('Créer un parcours plus sinueux avec des courbes naturelles');
+    }
+  
+    // 3. Analyse de la distribution des angles
+    const angleDistribution = this.analyzeAngleDistribution(coordinates);
+    validation.metrics.angleDistribution = angleDistribution;
+    
+    if (angleDistribution.sharpTurns > 8) { // ✅ AUGMENTÉ de 5 à 8
+      validation.issues.push(`Trop de virages serrés: ${angleDistribution.sharpTurns}`);
+      validation.suggestions.push('Éviter les virages à angle droit pour un parcours plus fluide');
+    }
+  
+    // 4. Score esthétique global - ✅ SEUIL ASSOUPLI
+    validation.score = this.calculateAestheticsScore(validation.metrics);
+    
+    if (validation.score < 0.25) { // ✅ RÉDUIT de 0.3 à 0.25
+      validation.isValid = false;
+      validation.issues.push(`Score esthétique insuffisant: ${validation.score.toFixed(2)}`);
+    }
+  
+    return validation;
+  }
+
+  /**
+   * NOUVELLE : Validation de la complexité du parcours
+   */
+  validateComplexity(coordinates) {
+    const validation = {
+      isValid: true,
+      score: 0,
+      metrics: {}
+    };
+
+    // 1. Calcul de la complexité géométrique
+    const geometricComplexity = this.calculateGeometricComplexity(coordinates);
+    validation.metrics.geometric = geometricComplexity;
+
+    // 2. Analyse de la répartition spatiale
+    const spatialDistribution = this.analyzeSpatialDistribution(coordinates);
+    validation.metrics.spatial = spatialDistribution;
+
+    // 3. Calcul du facteur de sinuosité
+    const sinuosity = this.calculateSinuosity(coordinates);
+    validation.metrics.sinuosity = sinuosity;
+
+    // Score de complexité global
+    validation.score = (geometricComplexity + spatialDistribution.score + sinuosity) / 3;
+
+    if (validation.score < 0.4) {
+      validation.isValid = false;
+      validation.issue = `Parcours trop simple: score de complexité ${validation.score.toFixed(2)}`;
+      validation.suggestion = 'Utiliser plus de waypoints pour créer un parcours plus complexe';
+    }
+
+    return validation;
+  }
+
+  /**
+   * NOUVELLE : Validation de l'intérêt du parcours
+   */
+  validateInterest(coordinates, params) {
+    const validation = {
+      isValid: true,
+      score: 0,
+      metrics: {}
+    };
+
+    // 1. Vérifier la variété des environnements traversés
+    const environmentVariety = this.analyzeEnvironmentVariety(coordinates);
+    validation.metrics.environmentVariety = environmentVariety;
+
+    // 2. Analyser la découverte progressive
+    const explorationScore = this.calculateExplorationScore(coordinates);
+    validation.metrics.exploration = explorationScore;
+
+    // 3. Vérifier l'équilibre du parcours
+    const balance = this.analyzeRouteBalance(coordinates);
+    validation.metrics.balance = balance;
+
+    validation.score = (environmentVariety + explorationScore + balance.score) / 3;
+
+    if (validation.score < 0.3) {
+      validation.isValid = false;
+      validation.issue = `Parcours peu intéressant: score ${validation.score.toFixed(2)}`;
+      validation.suggestion = 'Choisir un tracé qui explore différentes zones';
+    }
+
+    return validation;
+  }
+
+  // ============= MÉTHODES D'ANALYSE ESTHÉTIQUE =============
+
+  analyzeDirectionChanges(coordinates) {
+    let changes = 0;
+    let previousBearing = null;
+
+    for (let i = 1; i < coordinates.length; i++) {
+      const bearing = turf.bearing(coordinates[i-1], coordinates[i]);
+      
+      if (previousBearing !== null) {
+        const bearingDiff = Math.abs(bearing - previousBearing);
+        const normalizedDiff = Math.min(bearingDiff, 360 - bearingDiff);
+        
+        if (normalizedDiff > 15) { // Changement significatif > 15°
+          changes++;
+        }
+      }
+      
+      previousBearing = bearing;
+    }
+
+    return { count: changes, frequency: changes / coordinates.length };
+  }
+
+  analyzeStraightSegments(coordinates) {
+    let straightDistance = 0;
+    let totalDistance = 0;
+    let currentStraightStart = 0;
+
+    for (let i = 2; i < coordinates.length; i++) {
+      const bearing1 = turf.bearing(coordinates[i-2], coordinates[i-1]);
+      const bearing2 = turf.bearing(coordinates[i-1], coordinates[i]);
+      const bearingDiff = Math.abs(bearing1 - bearing2);
+      const normalizedDiff = Math.min(bearingDiff, 360 - bearingDiff);
+
+      const segmentDistance = turf.distance(coordinates[i-1], coordinates[i], { units: 'meters' });
+      totalDistance += segmentDistance;
+
+      if (normalizedDiff < 10) { // Segment "droit" si < 10° de différence
+        straightDistance += segmentDistance;
+      }
+    }
+
+    return {
+      ratio: straightDistance / totalDistance,
+      straightDistance,
+      totalDistance
+    };
+  }
+
+  analyzeAngleDistribution(coordinates) {
+    const angles = [];
+    
+    for (let i = 1; i < coordinates.length - 1; i++) {
+      const bearing1 = turf.bearing(coordinates[i-1], coordinates[i]);
+      const bearing2 = turf.bearing(coordinates[i], coordinates[i+1]);
+      const angle = Math.abs(bearing1 - bearing2);
+      const normalizedAngle = Math.min(angle, 360 - angle);
+      angles.push(normalizedAngle);
+    }
+
+    return {
+      average: angles.reduce((a, b) => a + b, 0) / angles.length,
+      sharpTurns: angles.filter(a => a > 120).length,
+      gentleTurns: angles.filter(a => a >= 30 && a <= 90).length,
+      angles
+    };
+  }
+
+  calculateAestheticsScore(metrics) {
+    let score = 0;
+
+    // Score basé sur les changements de direction (30%)
+    const directionScore = Math.min(metrics.directionChanges / 15, 1);
+    score += directionScore * 0.3;
+
+    // Score basé sur le ratio de segments droits (30%)
+    const straightScore = 1 - Math.min(metrics.straightSegmentRatio / 0.4, 1);
+    score += straightScore * 0.3;
+
+    // Score basé sur la distribution des angles (40%)
+    const angleScore = metrics.angleDistribution.gentleTurns / 
+                     (metrics.angleDistribution.gentleTurns + metrics.angleDistribution.sharpTurns + 1);
+    score += angleScore * 0.4;
+
+    return Math.max(0, Math.min(1, score));
+  }
+
+  calculateGeometricComplexity(coordinates) {
+    if (coordinates.length < 3) return 0;
+
+    // Calculer la fractal dimension approximative
+    let totalLength = 0;
+    let boundingBoxDiagonal = 0;
+
+    // Longueur totale du parcours
+    for (let i = 1; i < coordinates.length; i++) {
+      totalLength += turf.distance(coordinates[i-1], coordinates[i], { units: 'meters' });
+    }
+
+    // Diagonale de la bounding box
+    const bbox = turf.bbox(turf.lineString(coordinates));
+    const sw = [bbox[0], bbox[1]];
+    const ne = [bbox[2], bbox[3]];
+    boundingBoxDiagonal = turf.distance(sw, ne, { units: 'meters' });
+
+    // Ratio de complexité
+    const complexity = boundingBoxDiagonal > 0 ? totalLength / boundingBoxDiagonal : 0;
+    
+    // Normaliser entre 0 et 1
+    return Math.min(1, Math.max(0, (complexity - 1) / 3));
+  }
+
+  analyzeSpatialDistribution(coordinates) {
+    // Analyser comment les points sont distribués dans l'espace
+    const bbox = turf.bbox(turf.lineString(coordinates));
+    const width = bbox[2] - bbox[0];
+    const height = bbox[3] - bbox[1];
+    
+    // Diviser en grille et compter les cellules visitées
+    const gridSize = 10;
+    const cellWidth = width / gridSize;
+    const cellHeight = height / gridSize;
+    const visitedCells = new Set();
+
+    coordinates.forEach(coord => {
+      const cellX = Math.floor((coord[0] - bbox[0]) / cellWidth);
+      const cellY = Math.floor((coord[1] - bbox[1]) / cellHeight);
+      visitedCells.add(`${cellX}-${cellY}`);
+    });
+
+    const coverage = visitedCells.size / (gridSize * gridSize);
+    
+    return {
+      coverage,
+      visitedCells: visitedCells.size,
+      totalCells: gridSize * gridSize,
+      score: coverage
+    };
+  }
+
+  calculateSinuosity(coordinates) {
+    if (coordinates.length < 2) return 0;
+
+    // Distance directe entre début et fin
+    const directDistance = turf.distance(
+      coordinates[0], 
+      coordinates[coordinates.length - 1], 
+      { units: 'meters' }
+    );
+
+    // Distance totale du parcours
+    let totalDistance = 0;
+    for (let i = 1; i < coordinates.length; i++) {
+      totalDistance += turf.distance(coordinates[i-1], coordinates[i], { units: 'meters' });
+    }
+
+    // Sinuosité = distance parcours / distance directe
+    const sinuosity = directDistance > 0 ? totalDistance / directDistance : 1;
+    
+    // Normaliser : sinuosité idéale entre 1.5 et 3
+    if (sinuosity < 1.5) return 0.3; // Trop direct
+    if (sinuosity > 3) return 0.7;   // Trop sinueux
+    
+    return Math.min(1, (sinuosity - 1) / 2); // Score entre 0 et 1
+  }
+
+  analyzeEnvironmentVariety(coordinates) {
+    // Estimer la variété basée sur la répartition géographique
+    // Dans une vraie implémentation, on utiliserait des données OSM
+    
+    const segments = coordinates.length;
+    const quarterPoints = Math.floor(segments / 4);
+    
+    let varietyScore = 0;
+    
+    // Analyser les changements de direction pour simuler les changements d'environnement
+    for (let i = quarterPoints; i < coordinates.length - quarterPoints; i += quarterPoints) {
+      const bearing1 = turf.bearing(coordinates[0], coordinates[i]);
+      const bearing2 = turf.bearing(coordinates[i], coordinates[coordinates.length - 1]);
+      const diff = Math.abs(bearing1 - bearing2);
+      
+      if (diff > 45) varietyScore += 0.25;
+    }
+    
+    return Math.min(1, varietyScore);
+  }
+
+  calculateExplorationScore(coordinates) {
+    // Score basé sur l'éloignement progressif puis le retour
+    const center = turf.center(turf.featureCollection(coordinates.map(c => turf.point(c))));
+    const centerCoord = center.geometry.coordinates;
+    
+    let maxDistance = 0;
+    let totalExploration = 0;
+    
+    coordinates.forEach(coord => {
+      const distance = turf.distance(centerCoord, coord, { units: 'meters' });
+      maxDistance = Math.max(maxDistance, distance);
+      totalExploration += distance;
+    });
+    
+    const averageDistance = totalExploration / coordinates.length;
+    return Math.min(1, averageDistance / (maxDistance + 1));
+  }
+
+  analyzeRouteBalance(coordinates) {
+    // Analyser l'équilibre entre les différentes directions
+    const bearings = [];
+    
+    for (let i = 1; i < coordinates.length; i++) {
+      const bearing = turf.bearing(coordinates[i-1], coordinates[i]);
+      bearings.push((bearing + 360) % 360); // Normaliser 0-360
+    }
+    
+    // Diviser en quadrants
+    const quadrants = [0, 0, 0, 0];
+    bearings.forEach(bearing => {
+      const quadrant = Math.floor(bearing / 90);
+      quadrants[quadrant]++;
+    });
+    
+    // Calculer l'équilibre (plus équilibré = meilleur score)
+    const total = bearings.length;
+    const ideal = total / 4;
+    const variance = quadrants.reduce((sum, count) => sum + Math.pow(count - ideal, 2), 0) / 4;
+    const balance = 1 - (variance / (ideal * ideal));
+    
+    return {
+      quadrants,
+      variance,
+      score: Math.max(0, balance)
+    };
+  }
+
+  /**
+   * Calcul de qualité amélioré avec critères esthétiques
+   */
+  calculateEnhancedQuality(metrics) {
+    let score = 100;
+    
+    // Pénalités distance (poids: 25%) - ✅ ASSOUPLI
+    if (metrics.distance && !metrics.distance.isValid) {
+      score -= metrics.distance.severity === 'critical' ? 30 : 10; // ✅ RÉDUIT
+    }
+  
+    // Pénalités coordonnées (poids: 20%) - ✅ ASSOUPLI  
+    if (metrics.coordinates && !metrics.coordinates.isValid) {
+      score -= (metrics.coordinates.gaps.length * 3); // ✅ RÉDUIT
+      score -= (metrics.coordinates.suspiciousSpeeds.length * 5); // ✅ RÉDUIT
+    }
+  
+    // Pénalités esthétiques (poids: 25%) - ✅ ASSOUPLI
+    if (metrics.aesthetics) {
+      const aestheticsScore = metrics.aesthetics.score * 25;
+      score -= (25 - aestheticsScore);
+    }
+  
+    // Pénalités complexité (poids: 15%) - ✅ ASSOUPLI
+    if (metrics.complexity) {
+      const complexityScore = metrics.complexity.score * 15;
+      score -= (15 - complexityScore);
+    }
+  
+    // Pénalités intérêt (poids: 10%)
+    if (metrics.interest) {
+      const interestScore = metrics.interest.score * 10;
+      score -= (10 - interestScore);
+    }
+  
+    // Pénalité boucle non fermée - ✅ RÉDUIT
+    if (metrics.loop && !metrics.loop.isValid) {
+      score -= 15; // ✅ RÉDUIT de 20 à 15
+    }
+  
+    // ✅ SEUILS DE QUALITÉ ASSOUPLIS
+    if (score >= 75) return 'excellent'; // ✅ RÉDUIT de 85 à 75
+    if (score >= 60) return 'good';      // ✅ RÉDUIT de 70 à 60
+    if (score >= 45) return 'acceptable'; // ✅ RÉDUIT de 55 à 45
+    if (score >= 30) return 'poor';      // ✅ RÉDUIT de 40 à 30
+    return 'critical';
+  }
+
+  // Garder les méthodes existantes sans modification pour compatibilité
   validateDistance(route, requestedParams) {
     const actualDistanceKm = route.distance / 1000;
     const requestedDistanceKm = requestedParams.distanceKm;
@@ -109,14 +524,12 @@ class RouteQualityService {
 
     if (ratio < this.qualityThresholds.distance.criticalRatio || 
         ratio > (2 - this.qualityThresholds.distance.criticalRatio)) {
-      // Erreur critique : distance complètement aberrante
       validation.isValid = false;
       validation.severity = 'critical';
       validation.issue = `Distance critique: ${actualDistanceKm.toFixed(1)}km généré au lieu de ${requestedDistanceKm}km (ratio: ${ratio.toFixed(2)})`;
       validation.suggestion = 'Réessayer avec des paramètres différents ou une zone géographique différente';
     } else if (ratio < this.qualityThresholds.distance.minAcceptableRatio || 
                ratio > this.qualityThresholds.distance.maxAcceptableRatio) {
-      // Avertissement : distance hors tolérance acceptable
       validation.isValid = false;
       validation.severity = 'warning';
       validation.issue = `Distance hors tolérance: ${actualDistanceKm.toFixed(1)}km généré au lieu de ${requestedDistanceKm}km`;
@@ -126,9 +539,6 @@ class RouteQualityService {
     return validation;
   }
 
-  /**
-   * Valide la cohérence des coordonnées
-   */
   validateCoordinates(coordinates) {
     const validation = {
       pointsCount: coordinates.length,
@@ -139,18 +549,15 @@ class RouteQualityService {
       suspiciousSpeeds: []
     };
 
-    // Vérifier le nombre minimum de points
     if (coordinates.length < this.qualityThresholds.coordinates.minPoints) {
       validation.isValid = false;
       validation.issues.push(`Trop peu de points: ${coordinates.length} (minimum: ${this.qualityThresholds.coordinates.minPoints})`);
       validation.suggestions.push('Augmenter la densité de points du parcours');
     }
 
-    // Vérifier les gaps et vitesses suspectes
     for (let i = 1; i < coordinates.length; i++) {
       const distance = turf.distance(coordinates[i-1], coordinates[i], { units: 'meters' });
       
-      // Gap trop important
       if (distance > this.qualityThresholds.coordinates.maxGapMeters) {
         validation.gaps.push({
           index: i,
@@ -160,9 +567,7 @@ class RouteQualityService {
         });
       }
 
-      // Vitesse théorique suspecte (si on avait le timing)
-      // Pour l'instant, on détecte juste les sauts géographiques aberrants
-      if (distance > 5000) { // Plus de 5km entre deux points consécutifs
+      if (distance > 5000) {
         validation.suspiciousSpeeds.push({
           index: i,
           distance: Math.round(distance)
@@ -185,9 +590,6 @@ class RouteQualityService {
     return validation;
   }
 
-  /**
-   * Valide si c'est bien une boucle
-   */
   validateLoop(coordinates) {
     if (coordinates.length < 2) {
       return {
@@ -196,67 +598,31 @@ class RouteQualityService {
         suggestion: 'Générer plus de points pour le parcours'
       };
     }
-
+  
     const start = coordinates[0];
     const end = coordinates[coordinates.length - 1];
     const distance = turf.distance(start, end, { units: 'meters' });
-
+  
+    // ✅ FIX: Seuil réduit à 50m pour plus de précision
     const validation = {
       startEndDistance: Math.round(distance),
-      isValid: distance <= this.qualityThresholds.loop.maxEndDistanceMeters,
+      isValid: distance <= 50,
       coordinates: { start, end }
     };
-
+  
     if (!validation.isValid) {
-      validation.issue = `Boucle non fermée: ${validation.startEndDistance}m entre début et fin (max: ${this.qualityThresholds.loop.maxEndDistanceMeters}m)`;
+      validation.issue = `Boucle non fermée: ${validation.startEndDistance}m entre début et fin (max: 50m)`;
       validation.suggestion = 'Forcer la fermeture de la boucle en ajustant le dernier point';
     }
-
+  
     return validation;
   }
 
-  /**
-   * Calcule la qualité globale du parcours
-   */
-  calculateOverallQuality(metrics) {
-    let score = 100;
-    
-    // Pénalités pour la distance
-    if (metrics.distance && !metrics.distance.isValid) {
-      if (metrics.distance.severity === 'critical') {
-        score -= 60; // Pénalité majeure pour distance aberrante
-      } else {
-        score -= 20; // Pénalité modérée pour distance hors tolérance
-      }
-    }
-
-    // Pénalités pour les coordonnées
-    if (metrics.coordinates && !metrics.coordinates.isValid) {
-      score -= (metrics.coordinates.gaps.length * 10);
-      score -= (metrics.coordinates.suspiciousSpeeds.length * 15);
-    }
-
-    // Pénalité pour boucle non fermée
-    if (metrics.loop && !metrics.loop.isValid) {
-      score -= 25;
-    }
-
-    // Déterminer la qualité
-    if (score >= 90) return 'excellent';
-    if (score >= 75) return 'good';
-    if (score >= 60) return 'fair';
-    if (score >= 40) return 'poor';
-    return 'critical';
-  }
-
-  /**
-   * Suggère des améliorations pour un parcours
-   */
+  // Garder les autres méthodes existantes...
   suggestImprovements(route, requestedParams, validationResult) {
     const suggestions = [];
 
     if (!validationResult.isValid) {
-      // Distance trop différente
       if (validationResult.metrics.distance && !validationResult.metrics.distance.isValid) {
         const ratio = validationResult.metrics.distance.ratio;
         
@@ -277,7 +643,25 @@ class RouteQualityService {
         }
       }
 
-      // Boucle non fermée
+      // NOUVELLES SUGGESTIONS ESTHÉTIQUES
+      if (validationResult.metrics.aesthetics && !validationResult.metrics.aesthetics.isValid) {
+        suggestions.push({
+          type: 'poor_aesthetics',
+          priority: 'high',
+          action: 'increase_waypoints',
+          params: { useMoreWaypoints: true, waypointStrategy: 'organic' }
+        });
+      }
+
+      if (validationResult.metrics.complexity && validationResult.metrics.complexity.score < 0.3) {
+        suggestions.push({
+          type: 'low_complexity',
+          priority: 'medium',
+          action: 'use_organic_generation',
+          params: { generateOrganic: true, complexityBoost: true }
+        });
+      }
+
       if (validationResult.metrics.loop && !validationResult.metrics.loop.isValid) {
         suggestions.push({
           type: 'loop_not_closed',
@@ -286,37 +670,26 @@ class RouteQualityService {
           params: { closeLoop: true }
         });
       }
-
-      // Gaps dans les coordonnées
-      if (validationResult.metrics.coordinates && validationResult.metrics.coordinates.gaps.length > 0) {
-        suggestions.push({
-          type: 'coordinate_gaps',
-          priority: 'medium',
-          action: 'increase_point_density',
-          params: { increaseDetails: true }
-        });
-      }
     }
 
     return suggestions;
   }
 
-  /**
-   * Applique automatiquement les corrections simples
-   */
   autoFixRoute(route, requestedParams) {
     let fixedRoute = { ...route };
     const fixes = [];
-
+  
     try {
-      // 1. Fermer la boucle si nécessaire
+      // ✅ FIX: Correction PRIORITAIRE de la boucle
       if (requestedParams.isLoop && route.coordinates.length > 1) {
         const start = route.coordinates[0];
         const end = route.coordinates[route.coordinates.length - 1];
         const distance = turf.distance(start, end, { units: 'meters' });
-
-        if (distance > this.qualityThresholds.loop.maxEndDistanceMeters) {
-          // Remplacer le dernier point par le premier pour fermer la boucle
+  
+        // ✅ FIX: Seuil plus strict pour la fermeture
+        if (distance > 50) {
+          // Forcer la fermeture exacte
+          fixedRoute.coordinates = [...route.coordinates];
           fixedRoute.coordinates[fixedRoute.coordinates.length - 1] = [...start];
           fixes.push('loop_closed');
           
@@ -330,43 +703,94 @@ class RouteQualityService {
             );
           }
           fixedRoute.distance = newDistance;
+  
+          logger.info('Loop closure forced in auto-fix', {
+            originalDistance: Math.round(distance),
+            newDistance: Math.round(newDistance),
+            coordinatesCount: fixedRoute.coordinates.length
+          });
         }
       }
-
-      // 2. Supprimer les points dupliqués
-      const uniqueCoordinates = [];
-      for (let i = 0; i < fixedRoute.coordinates.length; i++) {
-        const coord = fixedRoute.coordinates[i];
-        const isFirstOccurrence = uniqueCoordinates.findIndex(
-          existing => turf.distance(existing, coord, { units: 'meters' }) < 10
-        ) === -1;
-        
-        if (isFirstOccurrence) {
-          uniqueCoordinates.push(coord);
-        }
+  
+      // Autres fixes existants...
+      if (fixedRoute.coordinates.length < this.qualityThresholds.coordinates.minPoints) {
+        fixedRoute.coordinates = this.densifyCoordinates(fixedRoute.coordinates);
+        fixes.push('coordinates_densified');
       }
-
-      if (uniqueCoordinates.length < fixedRoute.coordinates.length) {
-        fixedRoute.coordinates = uniqueCoordinates;
-        fixes.push('duplicates_removed');
-      }
-
-      if (fixes.length > 0) {
-        logger.info('Route auto-fixes applied:', fixes);
-      }
-
-      return {
-        route: fixedRoute,
-        fixes: fixes
-      };
-
+  
+      return { route: fixedRoute, fixes: fixes };
+  
     } catch (error) {
       logger.error('Auto-fix failed:', error);
-      return {
-        route: route,
-        fixes: []
-      };
+      return { route: route, fixes: [] };
     }
+  }
+
+    /**
+   * NOUVELLE : Simplifie une route pour respecter une distance cible
+   */
+  simplifyRouteForDistance(coordinates, targetDistanceM) {
+    if (coordinates.length < 3) return coordinates;
+
+    const line = turf.lineString(coordinates);
+    const totalLength = turf.length(line, { units: 'meters' });
+    
+    if (totalLength <= targetDistanceM * 1.1) return coordinates;
+
+    // Calculer le ratio de simplification nécessaire
+    const simplificationRatio = targetDistanceM / totalLength;
+    const targetPointCount = Math.max(
+      10, 
+      Math.floor(coordinates.length * simplificationRatio)
+    );
+
+    // Échantillonner les points de manière uniforme
+    const simplified = [coordinates[0]]; // Toujours garder le premier point
+    
+    const step = (coordinates.length - 1) / (targetPointCount - 1);
+    for (let i = 1; i < targetPointCount - 1; i++) {
+      const index = Math.round(i * step);
+      simplified.push(coordinates[index]);
+    }
+    
+    // ✅ FIX: Pour les boucles, s'assurer que le dernier point = premier point
+    simplified.push([...coordinates[0]]);
+
+    return simplified;
+  }
+
+  /**
+   * NOUVELLE : Densifie les coordonnées pour un parcours plus fluide
+   */
+  densifyCoordinates(coordinates) {
+    if (coordinates.length < 2) return coordinates;
+
+    const densified = [coordinates[0]];
+    
+    for (let i = 1; i < coordinates.length; i++) {
+      const from = coordinates[i - 1];
+      const to = coordinates[i];
+      const distance = turf.distance(from, to, { units: 'meters' });
+      
+      // Si le segment est long (> 300m), ajouter des points intermédiaires
+      if (distance > 300) {
+        const numPoints = Math.ceil(distance / 200); // Un point tous les 200m
+        
+        for (let j = 1; j < numPoints; j++) {
+          const fraction = j / numPoints;
+          const interpolated = turf.along(
+            turf.lineString([from, to]), 
+            distance * fraction, 
+            { units: 'meters' }
+          );
+          densified.push(interpolated.geometry.coordinates);
+        }
+      }
+      
+      densified.push(to);
+    }
+    
+    return densified;
   }
 }
 

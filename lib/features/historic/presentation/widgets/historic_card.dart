@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:hugeicons/hugeicons.dart';
+import 'package:pull_down_button/pull_down_button.dart';
 import 'package:runaway/config/colors.dart';
 import 'package:runaway/config/extensions.dart';
 import 'package:runaway/core/widgets/squircle_container.dart';
@@ -8,14 +10,20 @@ import 'package:runaway/features/route_generator/domain/models/saved_route.dart'
 
 class HistoricCard extends StatefulWidget {
   final SavedRoute route;
+  final bool isEdit;
   final VoidCallback? onTap;
   final VoidCallback? onDelete;
+  final VoidCallback? onRename;
+  final VoidCallback? onSync;
 
   const HistoricCard({
     super.key,
     required this.route,
     this.onTap,
     this.onDelete,
+    this.onRename,
+    this.onSync,
+    required this.isEdit,
   });
 
   @override
@@ -23,6 +31,8 @@ class HistoricCard extends StatefulWidget {
 }
 
 class _HistoricCardState extends State<HistoricCard> {
+  late TextEditingController _nameController;
+  late FocusNode _focusNode;
   String? _locationName;
   bool _isImageLoading = true;
   bool _hasImageError = false;
@@ -31,6 +41,15 @@ class _HistoricCardState extends State<HistoricCard> {
   void initState() {
     super.initState();
     _loadLocationName();
+    _nameController = TextEditingController(text: widget.route.name);
+    _focusNode = FocusNode();
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _focusNode.dispose();
+    super.dispose();
   }
 
   /// 🆕 Charge le nom de la localisation via reverse geocoding
@@ -69,9 +88,10 @@ class _HistoricCardState extends State<HistoricCard> {
         padding: padding,
         color: Colors.white10,
         child: Column(
+          spacing: 20.0,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // 🖼️ Image générée ou visualisation de fallback
+            // Visualisation du parcours
             SizedBox(
               height: 250,
               width: imgSize,
@@ -82,146 +102,132 @@ class _HistoricCardState extends State<HistoricCard> {
                 child: _buildRouteVisualization(),
               ),
             ),
-            paddingValue.h,
-            
-            // Zone texte et bouton
-            Expanded(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Titre et informations
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Flexible(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                widget.route.name,
-                                overflow: TextOverflow.ellipsis,
-                                maxLines: 2,
-                                style: context.bodyMedium?.copyWith(
-                                  height: 1.3,
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.w700,
-                                  color: Colors.white,
-                                ),
-                              ),
-                              4.h,
-                              Text.rich(
-                                TextSpan(
-                                  text: '${_getLocationName()} • ',
-                                  children: <InlineSpan>[
-                                    TextSpan(
-                                      text: widget.route.timeAgo,
-                                      style: context.bodySmall?.copyWith(
-                                        height: 1.3,
-                                        fontSize: 15,
-                                        fontStyle: FontStyle.normal,
-                                        fontWeight: FontWeight.w500,
-                                        color: Colors.white38,
-                                      ),
-                                    )
-                                  ],
-                                  style: context.bodySmall?.copyWith(
-                                    height: 1.3,
-                                    fontSize: 15,
-                                    fontStyle: FontStyle.normal,
-                                    fontWeight: FontWeight.w500,
-                                    color: Colors.white38,
-                                  ),
-                                )
-                              ),
-                            ],
-                          ),
+        
+            // Titre et localisation
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '${_getLocationName()} • ${widget.route.timeAgo}',
+                  style: context.bodySmall?.copyWith(
+                    fontSize: 15,
+                    fontStyle: FontStyle.normal,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.white38,
+                  ),
+                ),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      child: EditableText(
+                        controller: _nameController,
+                        focusNode: _focusNode,
+                        style: context.bodyMedium!,
+                        cursorColor: AppColors.primary,
+                        backgroundCursorColor: AppColors.primary,
+                        readOnly: widget.isEdit,
+                      ),
+                    ),
+                    
+                    if (widget.isEdit)
+                    PullDownButton(
+                      itemBuilder: (context) => [
+                        PullDownMenuItem(
+                          icon: HugeIcons.solidRoundedTypeCursor,
+                          title: 'Rename',
+                          onTap: widget.onRename,
                         ),
-                        15.h,
-                        
-                        // Chips avec détails du parcours
-                        Wrap(
-                          spacing: 8.0,
-                          runSpacing: 8.0,
-                          children: [
-                            _buildDetailChip(
-                              icon: widget.route.parameters.activityType.icon,
-                              text: widget.route.parameters.activityType.title,
-                            ),
-                            _buildDetailChip(
-                              icon: HugeIcons.solidRoundedNavigator01,
-                              text: widget.route.formattedDistance,
-                            ),
-                            _buildDetailChip(
-                              icon: _getTerrainIcon(),
-                              text: widget.route.parameters.terrainType.title,
-                            ),
-                            _buildDetailChip(
-                              icon: _getUrbanDensityIcon(),
-                              text: widget.route.parameters.urbanDensity.title,
-                            ),
-                            if (widget.route.parameters.elevationGain > 0)
-                              _buildDetailChip(
-                                icon: HugeIcons.solidSharpMountain,
-                                text: '${widget.route.parameters.elevationGain.toStringAsFixed(0)}m',
-                              ),
-                            if (widget.route.parameters.isLoop)
-                              _buildDetailChip(
-                                icon: HugeIcons.solidRoundedRepeat,
-                                text: 'Boucle',
-                              ),
-                            if (widget.route.timesUsed > 0)
-                              _buildDetailChip(
-                                icon: HugeIcons.solidRoundedFavourite,
-                                text: '${widget.route.timesUsed}x',
-                                color: Colors.orange,
-                              ),
-                          ],
+                        PullDownMenuItem(
+                          icon: HugeIcons.strokeRoundedLayerSendToBack,
+                          title: 'Synchronize',
+                          onTap: widget.onSync,
+                        ),
+                        PullDownMenuItem(
+                          isDestructive: true,
+                          icon: HugeIcons.strokeRoundedDelete02,
+                          title: 'Delete',
+                          onTap: widget.onDelete,
                         ),
                       ],
-                    ),
-                  ),
-                  paddingValue.h,
-                  
-                  // Boutons d'action
-                  Row(
-                    children: [
-                      // Bouton principal "Suivre"
-                      Expanded(
-                        child: SquircleContainer(
-                          onTap: widget.onTap,
-                          radius: innerRadius,
-                          color: AppColors.primary,
-                          padding: EdgeInsets.symmetric(vertical: 15.0),
-                          child: Center(
-                            child: Text(
-                              "Suivre", 
-                              style: context.bodySmall?.copyWith(
-                                color: Colors.black,
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                      12.w,
-                      
-                      // Bouton supprimer
-                      SquircleContainer(
-                        onTap: widget.onDelete,
-                        radius: innerRadius,
-                        color: Colors.red.withValues(alpha: 0.2),
-                        padding: EdgeInsets.all(15.0),
+                      buttonBuilder: (context, showMenu) => GestureDetector(
+                        onTap: () {
+                          showMenu();
+                          HapticFeedback.mediumImpact();
+                        },
                         child: Icon(
-                          HugeIcons.solidRoundedDelete02,
-                          color: Colors.red,
+                          HugeIcons.strokeRoundedMoreHorizontalCircle02,
                         ),
                       ),
-                    ],
+                    )
+                    else 
+                    GestureDetector(
+                      onTap: widget.onRename,
+                      child: Icon(
+                        HugeIcons.solidRoundedTick02,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            
+            // Chips avec détails du parcours
+            Wrap(
+              spacing: 8.0,
+              runSpacing: 8.0,
+              children: [
+                _buildDetailChip(
+                  icon: widget.route.parameters.activityType.icon,
+                  text: widget.route.parameters.activityType.title,
+                ),
+                _buildDetailChip(
+                  icon: HugeIcons.solidRoundedNavigator01,
+                  text: widget.route.formattedDistance,
+                ),
+                _buildDetailChip(
+                  icon: _getTerrainIcon(),
+                  text: widget.route.parameters.terrainType.title,
+                ),
+                _buildDetailChip(
+                  icon: _getUrbanDensityIcon(),
+                  text: widget.route.parameters.urbanDensity.title,
+                ),
+                if (widget.route.parameters.elevationGain > 0)
+                  _buildDetailChip(
+                    icon: HugeIcons.solidSharpMountain,
+                    text: '${widget.route.parameters.elevationGain.toStringAsFixed(0)}m',
                   ),
-                ],
+                if (widget.route.parameters.isLoop)
+                  _buildDetailChip(
+                    icon: HugeIcons.solidRoundedRepeat,
+                    text: 'Boucle',
+                  ),
+                if (widget.route.timesUsed > 0)
+                  _buildDetailChip(
+                    icon: HugeIcons.solidRoundedFavourite,
+                    text: '${widget.route.timesUsed}x',
+                    color: Colors.orange,
+                  ),
+              ],
+            ),
+        
+            // Boutons d'action
+            SquircleContainer(
+              onTap: widget.onTap,
+              radius: innerRadius,
+              color: AppColors.primary,
+              padding: EdgeInsets.symmetric(vertical: 15.0),
+              child: Center(
+                child: Text(
+                  "Suivre", 
+                  style: context.bodySmall?.copyWith(
+                    color: Colors.black,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
               ),
             ),
           ],
@@ -230,7 +236,7 @@ class _HistoricCardState extends State<HistoricCard> {
     );
   }
 
-/// 🆕 Construit la visualisation de la route avec image ou fallback amélioré
+  /// 🆕 Construit la visualisation de la route avec image ou fallback amélioré
   Widget _buildRouteVisualization() {
     if (widget.route.hasImage) {
       return _buildRouteImage();
@@ -357,14 +363,7 @@ class _HistoricCardState extends State<HistoricCard> {
         borderRadius: BorderRadius.circular(30.0),
       ),
       child: Stack(
-        children: [
-          // Pattern de fond subtil
-          Positioned.fill(
-            child: CustomPaint(
-              painter: RoutePatternPainter(_getActivityColor()),
-            ),
-          ),
-          
+        children: [          
           // Contenu principal
           Center(
             child: Column(
@@ -436,8 +435,6 @@ class _HistoricCardState extends State<HistoricCard> {
         return HugeIcons.strokeRoundedRoute01;
     }
   }
-
-
 
   /// 🆕 Retourne le nom de la localisation (implémentation complète)
   String _getLocationName() {
@@ -515,31 +512,4 @@ class _HistoricCardState extends State<HistoricCard> {
         return HugeIcons.strokeRoundedLocation04;
     }
   }
-}
-
-/// 🆕 Painter pour créer un pattern de route stylisé
-class RoutePatternPainter extends CustomPainter {
-  final Color color;
-
-  RoutePatternPainter(this.color);
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = Colors.white.withValues(alpha: 0.1)
-      ..strokeWidth = 1.5
-      ..style = PaintingStyle.stroke;
-
-    // Dessiner des lignes diagonales subtiles
-    for (double i = -size.height; i < size.width + size.height; i += 20) {
-      canvas.drawLine(
-        Offset(i, 0),
-        Offset(i + size.height, size.height),
-        paint,
-      );
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

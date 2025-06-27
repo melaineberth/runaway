@@ -173,49 +173,42 @@ class ActivityTypeStatsCard extends StatelessWidget {
   }
 
   void _showFilterDialog(BuildContext context) {
-    showModalBottomSheet(
-      useRootNavigator: true,
-      isScrollControlled: true,
-      isDismissible: true,
-      enableDrag: false,
-      context: context,
-      backgroundColor: Colors.black,
-      builder: (context) {
-        return Padding(
-          padding: const EdgeInsets.all(30.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                'Filtrer par activité',
-                style: context.bodyMedium?.copyWith(
-                  color: Colors.white,
-                ),
+    showModalSheet(
+      context: context, 
+      child: Padding(
+        padding: const EdgeInsets.all(30.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'Filtrer par activité',
+              style: context.bodyMedium?.copyWith(
+                color: Colors.white,
               ),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                      'Choisissez le type d\'activité :',
-                      style: context.bodySmall?.copyWith(
-                        color: Colors.white38,
-                      ),
+            ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                    'Choisissez le type d\'activité :',
+                    style: context.bodySmall?.copyWith(
+                      color: Colors.white38,
                     ),
-                    
-                    20.h,
-            
-                  _buildFilterOption(context, null, 'Toutes les activités'),
-                  ...ActivityType.values.map(
-                    (type) => _buildFilterOption(context, type, type.title),
                   ),
-                ],
-              ),
-            ],
-          ),
-        );
-      },
+                  
+                  20.h,
+          
+                _buildFilterOption(context, null, 'Toutes les activités'),
+                ...ActivityType.values.map(
+                  (type) => _buildFilterOption(context, type, type.title),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
     );
   }
 

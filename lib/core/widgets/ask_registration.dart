@@ -14,16 +14,10 @@ class AskRegistration extends StatefulWidget {
 
 class _AskRegistrationState extends State<AskRegistration> {
   void _showAuthModal({required Widget child}) {
-    showModalBottomSheet(
+    showModalSheet(
       context: context, 
-      useRootNavigator: true,
-      enableDrag: false,
-      isDismissible: false,
-      isScrollControlled: true,
-      builder: (modalCtx) {
-        return child;
-      },
-    );    
+      child: child,
+    );
   }
   
   @override

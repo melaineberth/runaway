@@ -2,8 +2,11 @@ const Joi = require('joi');
 
 // Schémas de validation
 const routeParamsSchema = Joi.object({
-  startLatitude: Joi.number().min(-90).max(90).required(),
-  startLongitude: Joi.number().min(-180).max(180).required(),
+  // ✅ ACCEPTER LES DEUX FORMATS DE NOMS
+  startLatitude: Joi.number().min(-90).max(90),
+  startLongitude: Joi.number().min(-180).max(180),
+  startLat: Joi.number().min(-90).max(90),
+  startLon: Joi.number().min(-180).max(180),
   activityType: Joi.string().valid('running', 'cycling', 'walking').required(),
   distanceKm: Joi.number().min(0.5).max(200).required(),
   terrainType: Joi.string().valid('flat', 'mixed', 'hilly').default('mixed'),
@@ -13,6 +16,24 @@ const routeParamsSchema = Joi.object({
   avoidTraffic: Joi.boolean().default(true),
   preferScenic: Joi.boolean().default(true),
   searchRadius: Joi.number().min(1000).max(50000).optional()
+}).custom((value, helpers) => {
+  // ✅ VALIDATION CUSTOM : S'ASSURER QU'AU MOINS UNE FORME DE COORDONNÉES EST PRÉSENTE
+  const hasLatLng = value.startLatitude !== undefined && value.startLongitude !== undefined;
+  const hasLatLon = value.startLat !== undefined && value.startLon !== undefined;
+  
+  if (!hasLatLng && !hasLatLon) {
+    return helpers.error('any.custom', { 
+      message: 'startLatitude/startLongitude OR startLat/startLon required' 
+    });
+  }
+  
+  // Normaliser vers startLat/startLon
+  if (hasLatLng && !hasLatLon) {
+    value.startLat = value.startLatitude;
+    value.startLon = value.startLongitude;
+  }
+  
+  return value;
 });
 
 const analysisParamsSchema = Joi.object({

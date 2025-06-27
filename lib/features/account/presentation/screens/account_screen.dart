@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -7,6 +9,7 @@ import 'package:runaway/config/colors.dart';
 import 'package:runaway/config/extensions.dart';
 import 'package:runaway/core/widgets/ask_registration.dart';
 import 'package:runaway/core/widgets/blurry_page.dart';
+import 'package:runaway/core/widgets/icon_btn.dart';
 import 'package:runaway/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:runaway/features/auth/presentation/bloc/auth_event.dart';
 import 'package:runaway/features/auth/presentation/bloc/auth_state.dart';
@@ -21,7 +24,9 @@ class AccountScreen extends StatefulWidget {
 
 class _AccountScreenState extends State<AccountScreen> with TickerProviderStateMixin {
   late AnimationController _fadeController;
-  // late Animation<double> _fadeAnimation;
+  late OverlayState overlayState;
+  late OverlayEntry _overlayEntry;
+  late Animation<double> _fadeAnimation;
 
   @override
   void initState() {
@@ -35,13 +40,13 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
       vsync: this,
     );
 
-    // _fadeAnimation = Tween<double>(
-    //   begin: 0.0,
-    //   end: 1.0,
-    // ).animate(CurvedAnimation(
-    //   parent: _fadeController,
-    //   curve: Curves.easeOut,
-    // ));
+    _fadeAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(
+      parent: _fadeController,
+      curve: Curves.easeOut,
+    ));
 
     _fadeController.forward();
   }
@@ -50,6 +55,53 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
   void dispose() {
     _fadeController.dispose();
     super.dispose();
+  }
+
+  void showOverlay(BuildContext context, String avatarUrl) {
+    overlayState = Overlay.of(context);
+
+    _overlayEntry = OverlayEntry(
+      builder: (_) => Stack(
+        children: [
+          // 1️⃣ zone cliquable pleine page
+          Positioned.fill(
+            child: GestureDetector(
+              // capte même les taps sur surface « vide »
+              behavior: HitTestBehavior.translucent,
+              onTap: () => _overlayEntry.remove(),
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 30, sigmaY: 30),
+                child: Container(
+                  color: Colors.white.withValues(alpha: 0.3),
+                ),
+              ),
+            ),
+          ),
+
+          // 2️⃣ la photo au-dessus → ne ferme pas l’overlay
+          Center(
+            child: SizedBox(
+            width: 260,
+            height: 260,
+            child: ClipRRect(
+              borderRadius: BorderRadiusGeometry.circular(500.0),
+                child: Hero(
+                  tag: avatarUrl,
+                  child: CachedNetworkImage(
+                    imageUrl: avatarUrl,
+                    fit: BoxFit.cover,
+                    progressIndicatorBuilder: (context, url, downloadProgress) => CircularProgressIndicator(value: downloadProgress.progress),
+                    errorWidget: (context, url, error) => Icon(Icons.error),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    overlayState.insert(_overlayEntry);
   }
 
   @override
@@ -184,7 +236,7 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
                     ),
                   ]
                 ),
-
+    
                 50.h,
     
                 _buildSettingCategory(
@@ -244,7 +296,7 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
                     ),
                   ]
                 ),
-
+    
                 80.h,
               ],
             ),
@@ -284,6 +336,23 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
     );
   }
 
+  void _openAvatar(BuildContext context, String url) {
+    Navigator.of(context, rootNavigator: true).push(
+      PageRouteBuilder(
+        opaque: false,
+        barrierColor: Colors.black54,
+        transitionDuration: const Duration(milliseconds: 250),
+        reverseTransitionDuration: const Duration(milliseconds: 200),
+        pageBuilder: (_, __, ___) {
+          return _AvatarViewer(
+            url: url,
+            animation: _fadeAnimation, 
+          );
+        },
+      ),
+    );
+  }
+
   Widget _buildHeaderAccount({
     required BuildContext ctx, 
     required String name, 
@@ -304,12 +373,33 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
               shape: BoxShape.circle,
             ),
             child: avatarUrl != null
-                ? CachedNetworkImage(
-                    imageUrl: avatarUrl,
-                    progressIndicatorBuilder: (context, url, downloadProgress) => 
-                            CircularProgressIndicator(value: downloadProgress.progress),
-                    errorWidget: (context, url, error) => Icon(Icons.error),
-                  )
+                ? GestureDetector(
+                  onTap: () {
+                    // Show pop-up dialog
+                    _openAvatar(context, avatarUrl);
+                  },
+                  child: Hero(
+                    tag: avatarUrl,
+                  
+                    // ✅ 1. garder la forme ronde pendant l’attente
+                    placeholderBuilder: (_, __, child) => ClipOval(child: child),
+                  
+                    // ✅ 2. forcer aussi le shuttle à rester rond (push & pop)
+                    flightShuttleBuilder: (context, animation, direction, fromCtx, toCtx) {
+                      final shuttle = direction == HeroFlightDirection.push
+                          ? toCtx.widget   // agrandissement
+                          : fromCtx.widget; // réduction
+                      return ClipOval(child: shuttle);
+                    },
+                  
+                    child: ClipOval(          // <-- ou CircleAvatar, comme vous préférez
+                      child: CachedNetworkImage(
+                        imageUrl: avatarUrl,
+                        fit: BoxFit.cover,
+                      ),
+                    ),
+                  ),
+                )
                 : Center(
                     child: Text(
                       initials,
@@ -456,4 +546,77 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
   }
 }
 
+class _AvatarViewer extends StatelessWidget {
+  final String url;
+  final Animation<double> animation;
 
+  const _AvatarViewer({required this.url, required this.animation});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      extendBody: true,
+      backgroundColor: Colors.transparent,
+      body: Stack(
+        alignment: Alignment.bottomCenter,
+        children: [
+          // fond flouté / assombri
+          Positioned.fill(
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,     // capte toute la surface
+              onTap: () => Navigator.of(context).pop(),
+              child: FadeTransition(
+                opacity: animation,
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 30, sigmaY: 30),
+                  child: Container(color: Colors.white.withValues(alpha: 0.25)),
+                ),
+              ),
+            ),
+          ),
+    
+          // l’image agrandie (la destination du Hero)
+          Center(
+            child: SizedBox(
+              height: 280,
+              width: 280,
+              child: Hero(
+                tag: url, // même tag que la vignette
+                flightShuttleBuilder: _buildShuttle, // rendu custom
+                child: ClipOval(
+                  child: CachedNetworkImage(
+                    imageUrl: url,
+                    fit: BoxFit.cover,
+                  ),
+                ),
+              ),
+            ),
+          ),
+
+          Positioned(
+            bottom: 50,
+            child: FadeTransition(
+              opacity: animation,
+              child: IconBtn(
+                label: "Edit the photo",
+                icon: HugeIcons.strokeRoundedImage02,
+              ),
+            ),
+          )
+        ],
+      ),
+    );
+  }
+
+  // Personnaliser le rendu pendant le vol
+  Widget _buildShuttle(
+    BuildContext context,
+    Animation<double> animation,
+    HeroFlightDirection direction,
+    BuildContext fromHero,
+    BuildContext toHero,
+  ) {
+    return FadeTransition(opacity: animation, child: toHero.widget);
+  }
+}
+  

@@ -445,57 +445,51 @@ class _ActivityScreenState extends State<ActivityScreen> with TickerProviderStat
   }
 
   void _showAddGoalOptions() {
-    showModalBottomSheet(
-      useRootNavigator: true,
-      isScrollControlled: true,
-      isDismissible: true,
-      enableDrag: false,
-      context: context,
-      backgroundColor: Colors.black,
-      builder: (context) => Padding(
-        padding: const EdgeInsets.all(30.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              'Créer un objectif',
-              style: context.bodyMedium?.copyWith(
-                color: Colors.white,
-              ),
+    showModalSheet(
+      context: context, 
+      child: _buildGoalOptions(),
+    );
+  }
+
+  Widget _buildGoalOptions() {
+    return Padding(
+      padding: const EdgeInsets.all(30.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            'Créer un objectif',
+            style: context.bodyMedium?.copyWith(
+              color: Colors.white,
             ),
-            20.h,
-            _buildGoalOption(
-              context: context,
-              icon: HugeIcons.strokeRoundedAdd01,
-              title: 'Objectif personnalisé',
-              subtitle: 'Créer un objectif sur mesure',
-              color: Colors.blue,
-              onTap: () {
-                Navigator.pop(context);
-                _showAddGoalDialog();
-              },
-            ),
-            _buildGoalOption(
-              context: context,
-              icon: HugeIcons.strokeRoundedAdd01,
-              title: 'Modèles d\'objectifs',
-              subtitle: 'Choisir parmi des objectifs pré-définis',
-              color: Colors.green,
-              onTap: () {
-                showModalBottomSheet(
-                  useRootNavigator: true,
-                  isScrollControlled: true,
-                  isDismissible: true,
-                  enableDrag: false,
-                  context: context,
-                  backgroundColor: Colors.black,
-                  builder: (context) => GoalTemplatesDialog(),
-                );
-              },
-            ),
-          ],
-        ),
+          ),
+          20.h,
+          _buildGoalOption(
+            context: context,
+            icon: HugeIcons.strokeRoundedAdd01,
+            title: 'Objectif personnalisé',
+            subtitle: 'Créer un objectif sur mesure',
+            color: Colors.blue,
+            onTap: () {
+              Navigator.pop(context);
+              _showAddGoalDialog();
+            },
+          ),
+          _buildGoalOption(
+            context: context,
+            icon: HugeIcons.strokeRoundedAdd01,
+            title: 'Modèles d\'objectifs',
+            subtitle: 'Choisir parmi des objectifs pré-définis',
+            color: Colors.green,
+            onTap: () {
+              showModalSheet(
+                context: context, 
+                child: GoalTemplatesDialog(),
+              );
+            },
+          ),
+        ],
       ),
     );
   }

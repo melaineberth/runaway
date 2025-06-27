@@ -2,13 +2,22 @@ const logger = require('../config/logger');
 const { validateRouteParams } = require('../utils/validators');
 
 class RouteValidationMiddleware {
-  /**
+    /**
    * Middleware de validation et d'optimisation des paramètres de route
    */
   static validateAndOptimizeParams() {
     return (req, res, next) => {
       try {
         const startTime = Date.now();
+        
+        // ✅ NORMALISATION DES NOMS DE PROPRIÉTÉS
+        // Flutter envoie startLatitude/startLongitude, mais le service attend startLat/startLon
+        if (req.body.startLatitude !== undefined && req.body.startLat === undefined) {
+          req.body.startLat = req.body.startLatitude;
+        }
+        if (req.body.startLongitude !== undefined && req.body.startLon === undefined) {
+          req.body.startLon = req.body.startLongitude;
+        }
         
         // Validation de base avec Joi
         const baseValidation = validateRouteParams(req.body);
@@ -21,6 +30,10 @@ class RouteValidationMiddleware {
         }
 
         const params = baseValidation.value;
+
+        // ✅ S'ASSURER QUE LES PROPRIÉTÉS NORMALISÉES SONT DANS LES PARAMÈTRES VALIDÉS
+        params.startLat = params.startLatitude || params.startLat;
+        params.startLon = params.startLongitude || params.startLon;
 
         // Optimisation intelligente des paramètres
         const optimizedParams = this.optimizeParameters(params);

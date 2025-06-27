@@ -2,85 +2,142 @@ const express = require('express');
 const router = express.Router();
 const logger = require('../config/logger');
 const RouteValidationMiddleware = require('../middleware/routeValidationMiddleware');
+const GeographicAnalysisMiddleware = require('../middleware/geographicAnalysisMiddleware'); // NOUVEAU
 const routeQualityService = require('../services/routeQualityService');
-
-console.log('🔧 routes/index.js est en train de se charger...');
 
 // Contrôleurs
 const healthController = require('../controllers/healthController');
 const routeController = require('../controllers/routeController');
 
-console.log('🔧 Contrôleurs chargés:', {
-  healthController: !!healthController,
-  routeController: !!routeController,
-  generateSimpleRoute: typeof routeController.generateSimpleRoute
-});
-
 // Middlewares
 const { metricsMiddleware } = require('../services/metricsService');
 const RequestLogger = require('../middleware/requestLogger');
 
-console.log('🔧 Middlewares chargés');
-
 // ============= MIDDLEWARES GLOBAUX =============
-
-// Logging des requêtes
 router.use(RequestLogger.middleware());
-
-// Métriques
 router.use(metricsMiddleware);
 
-console.log('🔧 Middlewares globaux appliqués');
-
 // ============= ROUTES DE SANTÉ =============
-
-// Health checks
 router.get('/health', healthController.checkHealth);
 router.get('/status', healthController.getStatus);
 router.get('/readiness', healthController.checkReadiness);
 router.get('/liveness', healthController.checkLiveness);
-
-// GraphHopper specific health
 router.get('/graphhopper/limits', healthController.getGraphHopperLimits);
 router.post('/test/route', healthController.testRoute);
 
-console.log('🔧 Routes de santé ajoutées');
-
 // ============= ROUTES DE MÉTRIQUES =============
-
-// Métriques système
 router.get('/metrics', healthController.getMetrics);
 router.post('/metrics/reset', healthController.resetMetrics);
 
-console.log('🔧 Routes de métriques ajoutées');
+// ============= ROUTES DE GÉNÉRATION AMÉLIORÉES =============
 
-// ============= ROUTES DE GÉNÉRATION =============
-
-// ✅ FIX: Génération de parcours avec validation et optimisation complètes
+// ✅ ROUTE PRINCIPALE avec analyse géographique complète
 router.post('/routes/generate', 
+  // 1. Validation et optimisation de base
   RouteValidationMiddleware.validateAndOptimizeParams(),
+  
+  // 2. NOUVEAU : Analyse géographique et recommandations de stratégie
+  GeographicAnalysisMiddleware.analyzeGeographicContext(),
+  
+  // 3. Validation et optimisation des résultats
   RouteValidationMiddleware.validateGenerationResult(),
-  routeController.generateRoute // ✅ Appel direct sans wrapper inutile
+  
+  // 4. Génération avec toutes les améliorations
+  routeController.generateRoute
 );
 
-console.log('🔧 Route /routes/generate ajoutée');
+// ✅ NOUVELLE ROUTE : Analyse préalable de zone
+router.post('/routes/analyze-zone', async (req, res, next) => {
+  try {
+    const { latitude, longitude, distanceKm, activityType } = req.body;
+    
+    if (!latitude || !longitude) {
+      return res.status(400).json({
+        success: false,
+        error: 'Latitude et longitude requises'
+      });
+    }
 
-// ✅ ROUTE DE DEBUG SIMPLE (sans middlewares complexes)
-router.post('/routes/simple-test', (req, res) => {
-  console.log('🔧 Route de test /routes/simple-test appelée');
-  res.json({ 
-    success: true, 
-    message: 'Test route works',
-    body: req.body 
-  });
+    // Créer un objet de paramètres temporaire pour l'analyse
+    const tempParams = {
+      startLat: latitude,
+      startLon: longitude,
+      distanceKm: distanceKm || 5,
+      activityType: activityType || 'running'
+    };
+
+    // Utiliser le middleware géographique directement
+    const geoMiddleware = GeographicAnalysisMiddleware.analyzeGeographicContext();
+    
+    // Simuler l'exécution du middleware
+    req.body = tempParams;
+    await new Promise((resolve, reject) => {
+      geoMiddleware(req, res, (error) => {
+        if (error) reject(error);
+        else resolve();
+      });
+    });
+
+    res.json({
+      success: true,
+      analysis: req.geographicAnalysis,
+      recommendations: req.strategyRecommendations,
+      riskAssessment: {
+        level: req.geographicAnalysis.riskLevel,
+        factors: req.geographicAnalysis.problematicFactors,
+        mitigation: req.geographicAnalysis.constraints.map(c => c.mitigation)
+      },
+      qualityPrediction: {
+        expectedComplexity: req.geographicAnalysis.complexityRating,
+        routePotential: req.geographicAnalysis.routePotential,
+        recommendedStrategies: req.strategyRecommendations.slice(0, 3)
+      }
+    });
+
+  } catch (error) {
+    logger.error('Zone analysis failed:', error);
+    next(error);
+  }
 });
 
-console.log('🔧 Route de test /routes/simple-test ajoutée');
+// ✅ NOUVELLE ROUTE : Génération avec stratégie spécifique
+router.post('/routes/generate-with-strategy', 
+  RouteValidationMiddleware.validateAndOptimizeParams(),
+  GeographicAnalysisMiddleware.analyzeGeographicContext(),
+  async (req, res, next) => {
+    try {
+      const { strategy } = req.body;
+      
+      if (!strategy) {
+        return res.status(400).json({
+          success: false,
+          error: 'Stratégie requise'
+        });
+      }
 
-// ✅ ROUTE SIMPLE AVEC LOG DÉTAILLÉ
+      // Forcer l'utilisation de la stratégie spécifiée
+      req.validatedParams._forcedStrategy = strategy;
+      req.validatedParams._bypassStrategyRecommendations = true;
+
+      logger.info('Forced strategy generation', {
+        requestId: req.validatedParams.requestId,
+        forcedStrategy: strategy,
+        recommendedStrategies: req.strategyRecommendations.map(s => s.name)
+      });
+
+      // Continuer avec la génération normale
+      return routeController.generateRoute(req, res, next);
+
+    } catch (error) {
+      logger.error('Strategy-specific generation failed:', error);
+      next(error);
+    }
+  }
+);
+
+// ✅ ROUTE SIMPLE améliorée avec validation minimale
 router.post('/routes/simple', (req, res, next) => {
   console.log('🔧 Route /routes/simple interceptée, body:', req.body);
-  console.log('🔧 Appel de routeController.generateSimpleRoute...');
   
   if (typeof routeController.generateSimpleRoute !== 'function') {
     console.log('❌ generateSimpleRoute n\'est pas une fonction!');
@@ -93,7 +150,114 @@ router.post('/routes/simple', (req, res, next) => {
   routeController.generateSimpleRoute(req, res, next);
 });
 
-// Nouvelle route pour validation de qualité d'un parcours existant
+// ✅ NOUVELLE ROUTE : Comparaison de stratégies
+router.post('/routes/compare-strategies', 
+  RouteValidationMiddleware.validateAndOptimizeParams(),
+  GeographicAnalysisMiddleware.analyzeGeographicContext(),
+  async (req, res, next) => {
+    try {
+      const strategiesToTest = req.body.strategies || req.strategyRecommendations.slice(0, 3).map(s => s.name);
+      const results = [];
+
+      logger.info('Strategy comparison started', {
+        requestId: req.validatedParams.requestId,
+        strategiesToTest: strategiesToTest,
+        zoneType: req.geographicAnalysis.zoneType
+      });
+
+      for (const strategyName of strategiesToTest) {
+        try {
+          // Créer une copie des paramètres pour chaque test
+          const testParams = {
+            ...req.validatedParams,
+            _forcedStrategy: strategyName,
+            requestId: `compare_${strategyName}_${Date.now()}`
+          };
+
+          logger.info(`Testing strategy: ${strategyName}`);
+          
+          // Dans une implémentation complète, on appellerait vraiment le service
+          // Ici on simule pour la démonstration
+          const simulatedResult = {
+            strategy: strategyName,
+            success: true,
+            estimatedDistance: testParams.distanceKm * (0.9 + Math.random() * 0.2),
+            estimatedQuality: this.simulateQualityScore(strategyName, req.geographicAnalysis),
+            confidence: req.strategyRecommendations.find(s => s.name === strategyName)?.confidence || 0.5,
+            estimatedGenerationTime: Math.floor(Math.random() * 3000) + 1000
+          };
+
+          results.push(simulatedResult);
+          
+        } catch (error) {
+          results.push({
+            strategy: strategyName,
+            success: false,
+            error: error.message
+          });
+        }
+      }
+
+      // Trier par qualité estimée et confiance
+      results.sort((a, b) => {
+        if (a.success !== b.success) return b.success - a.success;
+        if (a.estimatedQuality !== b.estimatedQuality) return b.estimatedQuality - a.estimatedQuality;
+        return b.confidence - a.confidence;
+      });
+
+      res.json({
+        success: true,
+        comparison: {
+          zoneAnalysis: req.geographicAnalysis,
+          testedStrategies: results,
+          recommendation: results.find(r => r.success),
+          geoFactors: {
+            riskLevel: req.geographicAnalysis.riskLevel,
+            complexityRating: req.geographicAnalysis.complexityRating,
+            zoneType: req.geographicAnalysis.zoneType
+          }
+        },
+        timestamp: new Date().toISOString()
+      });
+
+    } catch (error) {
+      logger.error('Strategy comparison failed:', error);
+      next(error);
+    }
+  }
+);
+
+// Méthode utilitaire pour simuler le score de qualité
+router.simulateQualityScore = function(strategyName, geoAnalysis) {
+  const baseScores = {
+    'organic_natural': 0.8,
+    'organic_balanced': 0.7,
+    'controlled_multi_waypoint': 0.6,
+    'enhanced_traditional': 0.5,
+    'organic_conservative': 0.6
+  };
+
+  let score = baseScores[strategyName] || 0.5;
+
+  // Ajustements basés sur l'analyse géographique
+  if (geoAnalysis.riskLevel === 'high' && strategyName.includes('organic')) {
+    score += 0.1; // Les stratégies organiques sont meilleures en zone à risque
+  }
+
+  if (geoAnalysis.complexityRating < 0.3 && strategyName === 'organic_natural') {
+    score += 0.15; // Stratégie naturelle excellente pour zones simples
+  }
+
+  if (geoAnalysis.zoneType === 'urban_dense' && strategyName.includes('waypoint')) {
+    score += 0.05; // Multi-waypoints bon en ville dense
+  }
+
+  return Math.max(0.3, Math.min(1.0, score));
+};
+
+// ============= ROUTES D'ANALYSE QUALITÉ =============
+
+// Validation de qualité d'un parcours existant
 router.post('/routes/validate-quality', async (req, res, next) => {
   try {
     const { route, originalParams } = req.body;
@@ -112,7 +276,14 @@ router.post('/routes/validate-quality', async (req, res, next) => {
       success: true,
       validation: qualityValidation,
       suggestions,
-      canAutoFix: qualityValidation.issues.length > 0 && qualityValidation.quality !== 'critical'
+      canAutoFix: qualityValidation.issues.length > 0 && qualityValidation.quality !== 'critical',
+      qualityBreakdown: {
+        overall: qualityValidation.quality,
+        distance: qualityValidation.metrics.distance?.grade || 'unknown',
+        aesthetics: qualityValidation.metrics.aesthetics?.score || 0,
+        complexity: qualityValidation.metrics.complexity?.score || 0,
+        interest: qualityValidation.metrics.interest?.score || 0
+      }
     });
 
   } catch (error) {
@@ -121,7 +292,7 @@ router.post('/routes/validate-quality', async (req, res, next) => {
   }
 });
 
-// Nouvelle route pour appliquer des corrections automatiques
+// Application de corrections automatiques
 router.post('/routes/auto-fix', async (req, res, next) => {
   try {
     const { route, originalParams } = req.body;
@@ -141,7 +312,12 @@ router.post('/routes/auto-fix', async (req, res, next) => {
       fixedRoute,
       appliedFixes: fixes,
       validation: newValidation,
-      improvement: fixes.length > 0
+      improvement: fixes.length > 0,
+      qualityImprovement: {
+        before: route.metadata?.quality || 'unknown',
+        after: newValidation.quality,
+        improved: newValidation.quality !== route.metadata?.quality
+      }
     });
 
   } catch (error) {
@@ -150,30 +326,203 @@ router.post('/routes/auto-fix', async (req, res, next) => {
   }
 });
 
-console.log('🔧 Route /routes/simple ajoutée avec debug');
+// ============= ROUTES EXISTANTES CONSERVÉES =============
 
 // Génération d'alternatives
-router.post('/routes/alternative', 
-  routeController.generateAlternatives
-);
-
-// ============= ROUTES D'ANALYSE =============
+router.post('/routes/alternative', routeController.generateAlternatives);
 
 // Analyse d'un parcours existant
-router.post('/routes/analyze', 
-  routeController.analyzeRoute
-);
-
-// ============= ROUTES D'EXPORT =============
+router.post('/routes/analyze', routeController.analyzeRoute);
 
 // Export de parcours
-router.post('/routes/export/:format', 
-  routeController.exportRoute
-);
+router.post('/routes/export/:format', routeController.exportRoute);
 
-// ============= ROUTES D'ÉLÉVATION =============
+// ============= NOUVELLES ROUTES UTILITAIRES =============
 
-// Récupération d'élévation pour des points
+// Statistiques de qualité des parcours générés
+router.get('/routes/quality-stats', async (req, res, next) => {
+  try {
+    const { metricsService } = require('../services/metricsService');
+    const metrics = metricsService.getMetrics();
+    
+    const qualityStats = {
+      totalRoutes: metrics.routes.generated,
+      successRate: metrics.routes.generated > 0 ? 
+        ((metrics.routes.generated - metrics.routes.failed) / metrics.routes.generated * 100).toFixed(1) : 0,
+      averageDistance: metrics.routes.averageDistance,
+      qualityDistribution: {
+        excellent: 0, // Ces données seraient collectées dans une implémentation réelle
+        good: 0,
+        acceptable: 0,
+        poor: 0,
+        critical: 0
+      },
+      geographicBreakdown: {
+        // Simulation de données géographiques
+        urban_dense: Math.floor(metrics.routes.generated * 0.3),
+        urban_sparse: Math.floor(metrics.routes.generated * 0.25),
+        suburban: Math.floor(metrics.routes.generated * 0.25),
+        rural: Math.floor(metrics.routes.generated * 0.2)
+      }
+    };
+
+    res.json({
+      success: true,
+      stats: qualityStats,
+      timestamp: new Date().toISOString()
+    });
+
+  } catch (error) {
+    logger.error('Failed to get quality stats:', error);
+    next(error);
+  }
+});
+
+// Test de résistance pour différentes zones géographiques
+router.post('/routes/stress-test-zone', async (req, res, next) => {
+  try {
+    const { coordinates, testCount = 5 } = req.body;
+    
+    if (!coordinates || coordinates.length !== 2) {
+      return res.status(400).json({
+        success: false,
+        error: 'Coordonnées [latitude, longitude] requises'
+      });
+    }
+
+    const [latitude, longitude] = coordinates;
+    const results = [];
+    
+    // Tester différentes distances et activités
+    const testCases = [
+      { distance: 2, activity: 'running' },
+      { distance: 5, activity: 'running' },
+      { distance: 10, activity: 'running' },
+      { distance: 15, activity: 'cycling' },
+      { distance: 25, activity: 'cycling' }
+    ];
+
+    for (const testCase of testCases) {
+      for (let i = 0; i < testCount; i++) {
+        try {
+          const testParams = {
+            startLat: latitude,
+            startLon: longitude,
+            distanceKm: testCase.distance,
+            activityType: testCase.activity,
+            requestId: `stress_test_${testCase.distance}km_${testCase.activity}_${i}`
+          };
+
+          // Analyser la zone
+          req.body = testParams;
+          const geoMiddleware = GeographicAnalysisMiddleware.analyzeGeographicContext();
+          
+          await new Promise((resolve, reject) => {
+            geoMiddleware(req, {}, (error) => {
+              if (error) reject(error);
+              else resolve();
+            });
+          });
+
+          results.push({
+            testCase,
+            attempt: i + 1,
+            success: true,
+            riskLevel: req.geographicAnalysis.riskLevel,
+            complexityRating: req.geographicAnalysis.complexityRating,
+            recommendedStrategy: req.strategyRecommendations[0]?.name || 'unknown',
+            confidence: req.strategyRecommendations[0]?.confidence || 0
+          });
+
+        } catch (error) {
+          results.push({
+            testCase,
+            attempt: i + 1,
+            success: false,
+            error: error.message
+          });
+        }
+      }
+    }
+
+    // Analyser les résultats
+    const analysis = this.analyzeStressTestResults(results);
+
+    res.json({
+      success: true,
+      stressTest: {
+        coordinates: coordinates,
+        testCount: testCount,
+        results: results,
+        analysis: analysis
+      },
+      timestamp: new Date().toISOString()
+    });
+
+  } catch (error) {
+    logger.error('Stress test failed:', error);
+    next(error);
+  }
+});
+
+// Méthode d'analyse des résultats de stress test
+router.analyzeStressTestResults = function(results) {
+  const successful = results.filter(r => r.success);
+  const failed = results.filter(r => !r.success);
+  
+  const riskDistribution = {};
+  const strategyDistribution = {};
+  
+  successful.forEach(result => {
+    riskDistribution[result.riskLevel] = (riskDistribution[result.riskLevel] || 0) + 1;
+    strategyDistribution[result.recommendedStrategy] = (strategyDistribution[result.recommendedStrategy] || 0) + 1;
+  });
+
+  return {
+    successRate: (successful.length / results.length * 100).toFixed(1),
+    totalTests: results.length,
+    successful: successful.length,
+    failed: failed.length,
+    riskDistribution,
+    strategyDistribution,
+    averageComplexity: successful.length > 0 ? 
+      (successful.reduce((sum, r) => sum + r.complexityRating, 0) / successful.length).toFixed(2) : 0,
+    averageConfidence: successful.length > 0 ? 
+      (successful.reduce((sum, r) => sum + r.confidence, 0) / successful.length).toFixed(2) : 0,
+    recommendations: this.generateZoneRecommendations(riskDistribution, strategyDistribution)
+  };
+};
+
+// Génération de recommandations basées sur les tests
+router.generateZoneRecommendations = function(riskDistribution, strategyDistribution) {
+  const recommendations = [];
+  
+  const highRiskRatio = (riskDistribution.high || 0) / Object.values(riskDistribution).reduce((a, b) => a + b, 1);
+  
+  if (highRiskRatio > 0.6) {
+    recommendations.push({
+      type: 'high_risk_zone',
+      message: 'Cette zone présente un risque élevé de génération de parcours monotones',
+      suggestion: 'Utiliser prioritairement les stratégies organiques'
+    });
+  }
+
+  const topStrategy = Object.keys(strategyDistribution).reduce((a, b) => 
+    strategyDistribution[a] > strategyDistribution[b] ? a : b, 'unknown');
+  
+  if (topStrategy !== 'unknown') {
+    recommendations.push({
+      type: 'optimal_strategy',
+      message: `Stratégie recommandée pour cette zone: ${topStrategy}`,
+      suggestion: `Cette stratégie a été recommandée dans ${strategyDistribution[topStrategy]} tests`
+    });
+  }
+
+  return recommendations;
+};
+
+// ============= ROUTES D'ÉLÉVATION ET AUTRES (conservées) =============
+
 router.post('/elevation/points', async (req, res, next) => {
   try {
     const { coordinates } = req.body;
@@ -197,7 +546,6 @@ router.post('/elevation/points', async (req, res, next) => {
   }
 });
 
-// Génération de profil d'élévation
 router.post('/elevation/profile', async (req, res, next) => {
   try {
     const { coordinates, sampleDistance = 100 } = req.body;
@@ -223,118 +571,11 @@ router.post('/elevation/profile', async (req, res, next) => {
   }
 });
 
-// ============= ROUTES UTILITAIRES =============
-
-// Validation de coordonnées
-router.post('/utils/validate-coordinates', (req, res) => {
-  const { coordinates } = req.body;
-  const geoUtils = require('../utils/validators');
-  
-  if (!coordinates || !Array.isArray(coordinates)) {
-    return res.status(400).json({
-      valid: false,
-      error: 'Coordonnées manquantes ou invalides'
-    });
-  }
-
-  const validation = geoUtils.validateCoordinates(coordinates);
-  res.json(validation);
-});
-
-// Calcul de distance entre deux points
-router.post('/utils/distance', (req, res) => {
-  try {
-    const { point1, point2 } = req.body;
-    
-    if (!point1 || !point2) {
-      return res.status(400).json({
-        error: 'Points manquants'
-      });
-    }
-
-    const turf = require('@turf/turf');
-    const distance = turf.distance(point1, point2, { units: 'meters' });
-    
-    res.json({
-      success: true,
-      distance: Math.round(distance),
-      unit: 'meters'
-    });
-
-  } catch (error) {
-    res.status(400).json({
-      error: error.message
-    });
-  }
-});
-
-// Recherche de POI (Points d'Intérêt) via Overpass API
-router.post('/poi/search', async (req, res, next) => {
-  try {
-    const { bbox, types = ['amenity'], radius = 1000 } = req.body;
-    
-    if (!bbox || bbox.length !== 4) {
-      return res.status(400).json({
-        error: 'Bounding box invalide (format: [minLon, minLat, maxLon, maxLat])'
-      });
-    }
-
-    // Simuler une recherche POI (à implémenter avec Overpass API)
-    const pois = [
-      {
-        id: 'example_poi_1',
-        name: 'Parc Public',
-        type: 'leisure',
-        coordinates: [(bbox[0] + bbox[2]) / 2, (bbox[1] + bbox[3]) / 2],
-        amenities: ['park', 'playground']
-      }
-    ];
-    
-    res.json({
-      success: true,
-      pois,
-      count: pois.length
-    });
-
-  } catch (error) {
-    next(error);
-  }
-});
-
-// ============= ROUTES DE CACHE =============
-
-// Statistiques du cache
-router.get('/cache/stats', (req, res) => {
-  const elevationService = require('../services/elevationService');
-  const routeGeneratorService = require('../services/routeGeneratorService');
-  
-  res.json({
-    elevation: elevationService.getCacheStats(),
-    routes: {
-      size: routeGeneratorService.cache?.size || 0
-    }
-  });
-});
-
-// Nettoyage du cache
-router.delete('/cache/clear', (req, res) => {
-  const elevationService = require('../services/elevationService');
-  
-  elevationService.clearCache();
-  
-  res.json({
-    success: true,
-    message: 'Cache nettoyé'
-  });
-});
-
 // ============= GESTION D'ERREURS =============
 
-// Middleware de gestion d'erreurs spécifique aux routes
 router.use((error, req, res, next) => {
-  logger.error('Route error:', error);
+  logger.error('Enhanced route error:', error);
   
-  // Erreurs GraphHopper spécifiques
   if (error.message.includes('GraphHopper')) {
     return res.status(503).json({
       error: 'Service de routage temporairement indisponible',
@@ -342,7 +583,6 @@ router.use((error, req, res, next) => {
     });
   }
   
-  // Erreurs de validation
   if (error.name === 'ValidationError') {
     return res.status(400).json({
       error: 'Données invalides',
@@ -350,14 +590,12 @@ router.use((error, req, res, next) => {
     });
   }
   
-  // Erreurs de timeout
   if (error.code === 'ECONNABORTED' || error.message.includes('timeout')) {
     return res.status(408).json({
       error: 'Requête expirée, veuillez réessayer'
     });
   }
   
-  // Erreur générique
   res.status(500).json({
     error: 'Erreur interne du serveur',
     timestamp: new Date().toISOString(),
@@ -365,158 +603,6 @@ router.use((error, req, res, next) => {
   });
 });
 
-// Route pour obtenir des paramètres optimisés
-router.post('/routes/optimize-params', (req, res, next) => {
-  try {
-    const { validateRouteParams } = require('../utils/validators');
-    const baseValidation = validateRouteParams(req.body);
-    if (!baseValidation.valid) {
-      return res.status(400).json({
-        success: false,
-        error: 'Paramètres invalides',
-        details: baseValidation.errors
-      });
-    }
-
-    const optimizedParams = RouteValidationMiddleware.optimizeParameters(baseValidation.value);
-    const riskLevel = RouteValidationMiddleware.assessRiskLevel(optimizedParams);
-    const appliedOptimizations = RouteValidationMiddleware.getAppliedOptimizations(
-      baseValidation.value, 
-      optimizedParams
-    );
-
-    res.json({
-      success: true,
-      originalParams: baseValidation.value,
-      optimizedParams,
-      riskLevel,
-      appliedOptimizations,
-      recommendations: RouteValidationMiddleware.getRecommendations(optimizedParams)
-    });
-
-  } catch (error) {
-    logger.error('Parameter optimization failed:', error);
-    next(error);
-  }
-});
-
-// ============= NOUVELLES ROUTES DE MONITORING =============
-
-// Statistiques de qualité des parcours
-router.get('/routes/quality-stats', async (req, res, next) => {
-  try {
-    const { metricsService } = require('../services/metricsService');
-    // Récupérer les statistiques depuis les métriques
-    const metrics = metricsService.getMetrics();
-    
-    // Ajouter des statistiques spécifiques à la qualité
-    const qualityStats = {
-      totalRoutes: metrics.routes.generated,
-      successRate: metrics.routes.generated > 0 ? 
-        ((metrics.routes.generated - metrics.routes.failed) / metrics.routes.generated * 100).toFixed(1) : 0,
-      averageDistance: metrics.routes.averageDistance,
-      qualityDistribution: {
-        // Ces données seraient collectées dans une implémentation réelle
-        excellent: 0,
-        good: 0,
-        acceptable: 0,
-        poor: 0,
-        critical: 0
-      }
-    };
-
-    res.json({
-      success: true,
-      stats: qualityStats,
-      timestamp: new Date().toISOString()
-    });
-
-  } catch (error) {
-    logger.error('Failed to get quality stats:', error);
-    next(error);
-  }
-});
-
-// Route de test pour différentes stratégies
-router.post('/routes/test-strategies', async (req, res, next) => {
-  try {
-    const { params, strategiesToTest = ['optimized_default', 'controlled_radius'] } = req.body;
-    
-    const results = [];
-    
-    for (const strategyName of strategiesToTest) {
-      try {
-        // Simuler les différentes stratégies
-        const testParams = {
-          ...params,
-          _testStrategy: strategyName,
-          requestId: `test_${strategyName}_${Date.now()}`
-        };
-        
-        logger.info(`Testing strategy: ${strategyName}`);
-        
-        // Ici, dans une implémentation réelle, on appellerait le service avec chaque stratégie
-        // Pour cette démonstration, on simule des résultats
-        results.push({
-          strategy: strategyName,
-          success: true,
-          simulatedDistance: params.distanceKm * (0.9 + Math.random() * 0.2),
-          estimatedQuality: ['excellent', 'good', 'acceptable'][Math.floor(Math.random() * 3)]
-        });
-        
-      } catch (error) {
-        results.push({
-          strategy: strategyName,
-          success: false,
-          error: error.message
-        });
-      }
-    }
-
-    res.json({
-      success: true,
-      testResults: results,
-      recommendedStrategy: results.find(r => r.success && r.estimatedQuality === 'excellent')?.strategy || 
-                           results.find(r => r.success)?.strategy
-    });
-
-  } catch (error) {
-    logger.error('Strategy testing failed:', error);
-    next(error);
-  }
-});
-
-console.log('🔧 Toutes les routes sont configurées');
-
-// ✅ FIX: Ajouter la méthode manquante
-RouteValidationMiddleware.getRecommendations = function(params) {
-  const recommendations = [];
-  
-  if (params.distanceKm > 30) {
-    recommendations.push({
-      type: 'long_distance',
-      message: 'Pour les longues distances, considérez diviser en segments',
-      priority: 'medium'
-    });
-  }
-  
-  if (params.elevationGain > 1000) {
-    recommendations.push({
-      type: 'high_elevation',
-      message: 'Dénivelé important, vérifiez la faisabilité',
-      priority: 'high'
-    });
-  }
-  
-  if (params.distanceKm < 1 && !params.isLoop) {
-    recommendations.push({
-      type: 'short_distance',
-      message: 'Pour les courtes distances, une boucle est recommandée',
-      priority: 'low'
-    });
-  }
-  
-  return recommendations;
-};
+console.log('🔧 Routes enrichies avec analyse géographique et génération organique configurées');
 
 module.exports = router;

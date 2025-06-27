@@ -436,150 +436,150 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
   print('✅ === FIN NETTOYAGE COMPLET DU PARCOURS ===');
 }
 
-/// 🆕 Détermine intelligemment si on doit restaurer vers UserTracking
-bool _shouldRestoreToUserTracking(double? lastSelectedLat, double? lastSelectedLng) {
-  // Cas 1: Pas de position sélectionnée différente → UserTracking
-  if (lastSelectedLat == null || lastSelectedLng == null) {
-    return true;
-  }
-  
-  // Cas 2: Position sélectionnée = position utilisateur → UserTracking  
-  if (_userLatitude != null && _userLongitude != null) {
-    final double latDiff = (lastSelectedLat - _userLatitude!).abs();
-    final double lngDiff = (lastSelectedLng - _userLongitude!).abs();
-    
-    // Si les positions sont très proches (moins de 10m environ)
-    if (latDiff < 0.0001 && lngDiff < 0.0001) {
+  /// 🆕 Détermine intelligemment si on doit restaurer vers UserTracking
+  bool _shouldRestoreToUserTracking(double? lastSelectedLat, double? lastSelectedLng) {
+    // Cas 1: Pas de position sélectionnée différente → UserTracking
+    if (lastSelectedLat == null || lastSelectedLng == null) {
       return true;
     }
-  }
-  
-  // Cas 3: Pas de markers visibles → UserTracking
-  if (!_showLottieMarker && locationMarkers.isEmpty) {
-    return true;
-  }
-  
-  // Cas 4: Mode actuel est UserTracking ET pas de markers → UserTracking
-  if (_trackingMode == TrackingMode.userTracking && !_showLottieMarker && locationMarkers.isEmpty) {
-    return true;
-  }
-  
-  // Sinon → Conserver mode Manual/SearchSelected
-  return false;
-}
-
-/// 🎯 Restaure vers le mode UserTracking (supprime markers, focus user)
-Future<void> _restoreToUserTrackingMode() async {
-  print('🎯 === RESTAURATION MODE USER TRACKING ===');
-  
-  // 1. Changer le mode
-  setState(() {
-    _trackingMode = TrackingMode.userTracking;
-    _selectedLatitude = _userLatitude;
-    _selectedLongitude = _userLongitude;
-  });
-
-  // 2. Supprimer TOUS les markers (inutiles en mode GPS)
-  await _clearLocationMarkers();
-  setState(() {
-    _showLottieMarker = false;
-    _lottieMarkerLat = null;
-    _lottieMarkerLng = null;
-  });
-  
-  // 3. FlyTo vers la position utilisateur
-  if (mapboxMap != null && _userLatitude != null && _userLongitude != null) {
-    await mapboxMap!.flyTo(
-      mp.CameraOptions(
-        center: mp.Point(
-          coordinates: mp.Position(_userLongitude!, _userLatitude!)
-        ),
-        zoom: 15,
-      ),
-      mp.MapAnimationOptions(duration: 1200),
-    );
-    print('📍 FlyTo position utilisateur: $_userLatitude, $_userLongitude');
-  }
-
-  // 4. Sauvegarder l'état
-  _mapStateService.saveSelectedPosition(_userLatitude ?? 0, _userLongitude ?? 0);
-  _mapStateService.saveMarkerState(false, null, null);
-  
-  print('✅ Mode UserTracking restauré');
-}
-
-/// 📍 Restaure vers le mode Manual (conserve markers, focus marker)
-Future<void> _restoreToManualMode(double? lastSelectedLat, double? lastSelectedLng) async {
-  print('📍 === RESTAURATION MODE MANUAL ===');
-  
-  if (lastSelectedLat == null || lastSelectedLng == null) {
-    print('❌ Pas de position à restaurer, fallback UserTracking');
-    await _restoreToUserTrackingMode();
-    return;
-  }
-
-  // 1. Changer le mode (garder le mode actuel s'il est déjà manual/searchSelected)
-  setState(() {
-    if (_trackingMode == TrackingMode.userTracking) {
-      _trackingMode = TrackingMode.manual; // Passer en manual si on était en user tracking
-    }
-    // Sinon garder le mode actuel (manual ou searchSelected)
     
-    _selectedLatitude = lastSelectedLat;
-    _selectedLongitude = lastSelectedLng;
-  });
+    // Cas 2: Position sélectionnée = position utilisateur → UserTracking  
+    if (_userLatitude != null && _userLongitude != null) {
+      final double latDiff = (lastSelectedLat - _userLatitude!).abs();
+      final double lngDiff = (lastSelectedLng - _userLongitude!).abs();
+      
+      // Si les positions sont très proches (moins de 10m environ)
+      if (latDiff < 0.0001 && lngDiff < 0.0001) {
+        return true;
+      }
+    }
+    
+    // Cas 3: Pas de markers visibles → UserTracking
+    if (!_showLottieMarker && locationMarkers.isEmpty) {
+      return true;
+    }
+    
+    // Cas 4: Mode actuel est UserTracking ET pas de markers → UserTracking
+    if (_trackingMode == TrackingMode.userTracking && !_showLottieMarker && locationMarkers.isEmpty) {
+      return true;
+    }
+    
+    // Sinon → Conserver mode Manual/SearchSelected
+    return false;
+  }
 
-  // 2. S'assurer qu'un marker est visible
-  await _ensureMarkerAtPosition(lastSelectedLng, lastSelectedLat);
-  
-  // 3. FlyTo vers le marker
-  if (mapboxMap != null) {
-    await mapboxMap!.flyTo(
-      mp.CameraOptions(
-        center: mp.Point(
-          coordinates: mp.Position(lastSelectedLng, lastSelectedLat)
+  /// 🎯 Restaure vers le mode UserTracking (supprime markers, focus user)
+  Future<void> _restoreToUserTrackingMode() async {
+    print('🎯 === RESTAURATION MODE USER TRACKING ===');
+    
+    // 1. Changer le mode
+    setState(() {
+      _trackingMode = TrackingMode.userTracking;
+      _selectedLatitude = _userLatitude;
+      _selectedLongitude = _userLongitude;
+    });
+
+    // 2. Supprimer TOUS les markers (inutiles en mode GPS)
+    await _clearLocationMarkers();
+    setState(() {
+      _showLottieMarker = false;
+      _lottieMarkerLat = null;
+      _lottieMarkerLng = null;
+    });
+    
+    // 3. FlyTo vers la position utilisateur
+    if (mapboxMap != null && _userLatitude != null && _userLongitude != null) {
+      await mapboxMap!.flyTo(
+        mp.CameraOptions(
+          center: mp.Point(
+            coordinates: mp.Position(_userLongitude!, _userLatitude!)
+          ),
+          zoom: 15,
         ),
-        zoom: 15,
-      ),
-      mp.MapAnimationOptions(duration: 1200),
-    );
-    print('📍 FlyTo marker: $lastSelectedLat, $lastSelectedLng');
+        mp.MapAnimationOptions(duration: 1200),
+      );
+      print('📍 FlyTo position utilisateur: $_userLatitude, $_userLongitude');
+    }
+
+    // 4. Sauvegarder l'état
+    _mapStateService.saveSelectedPosition(_userLatitude ?? 0, _userLongitude ?? 0);
+    _mapStateService.saveMarkerState(false, null, null);
+    
+    print('✅ Mode UserTracking restauré');
   }
 
-  // 4. Sauvegarder l'état avec marker
-  _mapStateService.saveSelectedPosition(lastSelectedLat, lastSelectedLng);
-  _mapStateService.saveMarkerState(true, lastSelectedLat, lastSelectedLng);
-  
-  print('✅ Mode Manual restauré avec marker');
-}
+  /// 📍 Restaure vers le mode Manual (conserve markers, focus marker)
+  Future<void> _restoreToManualMode(double? lastSelectedLat, double? lastSelectedLng) async {
+    print('📍 === RESTAURATION MODE MANUAL ===');
+    
+    if (lastSelectedLat == null || lastSelectedLng == null) {
+      print('❌ Pas de position à restaurer, fallback UserTracking');
+      await _restoreToUserTrackingMode();
+      return;
+    }
 
-/// 🆕 S'assure qu'un marker est présent à la position donnée
-Future<void> _ensureMarkerAtPosition(double longitude, double latitude) async {
-  print('🔍 Vérification marker à: $latitude, $longitude');
-  
-  // Si on a déjà un marker Lottie à cette position, c'est bon
-  if (_showLottieMarker && 
-      _lottieMarkerLat != null && _lottieMarkerLng != null &&
-      (_lottieMarkerLat! - latitude).abs() < 0.0001 && 
-      (_lottieMarkerLng! - longitude).abs() < 0.0001) {
-    print('✅ Marker Lottie déjà présent à la bonne position');
-    return;
+    // 1. Changer le mode (garder le mode actuel s'il est déjà manual/searchSelected)
+    setState(() {
+      if (_trackingMode == TrackingMode.userTracking) {
+        _trackingMode = TrackingMode.manual; // Passer en manual si on était en user tracking
+      }
+      // Sinon garder le mode actuel (manual ou searchSelected)
+      
+      _selectedLatitude = lastSelectedLat;
+      _selectedLongitude = lastSelectedLng;
+    });
+
+    // 2. S'assurer qu'un marker est visible
+    await _ensureMarkerAtPosition(lastSelectedLng, lastSelectedLat);
+    
+    // 3. FlyTo vers le marker
+    if (mapboxMap != null) {
+      await mapboxMap!.flyTo(
+        mp.CameraOptions(
+          center: mp.Point(
+            coordinates: mp.Position(lastSelectedLng, lastSelectedLat)
+          ),
+          zoom: 15,
+        ),
+        mp.MapAnimationOptions(duration: 1200),
+      );
+      print('📍 FlyTo marker: $lastSelectedLat, $lastSelectedLng');
+    }
+
+    // 4. Sauvegarder l'état avec marker
+    _mapStateService.saveSelectedPosition(lastSelectedLat, lastSelectedLng);
+    _mapStateService.saveMarkerState(true, lastSelectedLat, lastSelectedLng);
+    
+    print('✅ Mode Manual restauré avec marker');
   }
 
-  // Si on a des markers classiques à peu près à cette position
-  bool hasNearbyMarker = false;
-  if (locationMarkers.isNotEmpty) {
-    // Pour simplifier, on considère qu'on a un marker s'il y en a
-    hasNearbyMarker = true;
-  }
+  /// 🆕 S'assure qu'un marker est présent à la position donnée
+  Future<void> _ensureMarkerAtPosition(double longitude, double latitude) async {
+    print('🔍 Vérification marker à: $latitude, $longitude');
+    
+    // Si on a déjà un marker Lottie à cette position, c'est bon
+    if (_showLottieMarker && 
+        _lottieMarkerLat != null && _lottieMarkerLng != null &&
+        (_lottieMarkerLat! - latitude).abs() < 0.0001 && 
+        (_lottieMarkerLng! - longitude).abs() < 0.0001) {
+      print('✅ Marker Lottie déjà présent à la bonne position');
+      return;
+    }
 
-  if (!hasNearbyMarker && !_showLottieMarker) {
-    print('📍 Création marker manquant');
-    await _placeMarkerWithLottie(longitude, latitude);
-  } else {
-    print('✅ Marker présent (classique ou Lottie)');
+    // Si on a des markers classiques à peu près à cette position
+    bool hasNearbyMarker = false;
+    if (locationMarkers.isNotEmpty) {
+      // Pour simplifier, on considère qu'on a un marker s'il y en a
+      hasNearbyMarker = true;
+    }
+
+    if (!hasNearbyMarker && !_showLottieMarker) {
+      print('📍 Création marker manquant');
+      await _placeMarkerWithLottie(longitude, latitude);
+    } else {
+      print('✅ Marker présent (classique ou Lottie)');
+    }
   }
-}
 
   // Affichage de la route sur la carte
   Future<void> _displayRouteOnMap(List<List<double>> coordinates) async {
@@ -1365,26 +1365,19 @@ Future<void> _ensureMarkerAtPosition(double longitude, double latitude) async {
 
   // === INTERFACE UTILISATEUR ===
   void openGenerator() {
-    showModalBottomSheet(
-      useRootNavigator: true,
-      isScrollControlled: true,
-      isDismissible: true,
-      enableDrag: false,
-      context: context,
-      backgroundColor: Colors.black,
-      builder: (modalCtx) {
-        return BlocProvider.value(
-          value: context.read<RouteParametersBloc>(),
-          child: BlocProvider.value(
-            value: context.read<RouteGenerationBloc>(),
-            child: gen.RouteParameterScreen(
-              startLongitude: _selectedLongitude ?? _userLongitude ?? 0.0,
-              startLatitude: _selectedLatitude ?? _userLatitude ?? 0.0,
-              generateRoute: _handleGenerateRoute, // NOUVEAU CALLBACK
-            ),
+    showModalSheet(
+      context: context, 
+      child: BlocProvider.value(
+        value: context.read<RouteParametersBloc>(),
+        child: BlocProvider.value(
+          value: context.read<RouteGenerationBloc>(),
+          child: gen.RouteParameterScreen(
+            startLongitude: _selectedLongitude ?? _userLongitude ?? 0.0,
+            startLatitude: _selectedLatitude ?? _userLatitude ?? 0.0,
+            generateRoute: _handleGenerateRoute, // NOUVEAU CALLBACK
           ),
-        );
-      },
+        ),
+      ),
     );
   }
 
@@ -1425,14 +1418,9 @@ Future<void> _ensureMarkerAtPosition(double longitude, double latitude) async {
       return;
     }
 
-    showModalBottomSheet(
-      useRootNavigator: true,
-      isScrollControlled: true,
-      isDismissible: true,
-      enableDrag: false,
-      context: context,
-      backgroundColor: Colors.black,
-      builder: (context) => ExportFormatDialog(
+    showModalSheet(
+      context: context, 
+      child: ExportFormatDialog(
         onGpxSelected: () => _exportRoute(RouteExportFormat.gpx),
         onKmlSelected: () => _exportRoute(RouteExportFormat.kml),
         onJsonSelected: () => _exportRoute(RouteExportFormat.json),
@@ -1560,7 +1548,7 @@ Future<void> _ensureMarkerAtPosition(double longitude, double latitude) async {
                                         ? AppColors.primary
                                         : Colors.white,
                                   ),
-                                  10.h,
+                                  15.h,
                                   // Bouton générateur
                                   IconBtn(
                                     padding: 15.0,

@@ -57,3 +57,18 @@ extension L10nExtension on BuildContext {
   /// Utilisation : `context.l10n.helloWorld`
   AppLocalizations get l10n => AppLocalizations.of(this)!;
 }
+
+void showModalSheet({required BuildContext context, required Widget child}) {
+    showModalBottomSheet(
+      useRootNavigator: true,
+      isScrollControlled: true,
+      isDismissible: true,
+      enableDrag: false,
+      context: context,
+      backgroundColor: Colors.black,
+      clipBehavior: Clip.antiAliasWithSaveLayer,
+      builder: (modalCtx) {
+        return child;
+      },
+    );
+  }
