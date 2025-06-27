@@ -26,7 +26,6 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
   late AnimationController _fadeController;
   late OverlayState overlayState;
   late OverlayEntry _overlayEntry;
-  late Animation<double> _fadeAnimation;
 
   @override
   void initState() {
@@ -40,13 +39,6 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
       vsync: this,
     );
 
-    _fadeAnimation = Tween<double>(
-      begin: 0.0,
-      end: 1.0,
-    ).animate(CurvedAnimation(
-      parent: _fadeController,
-      curve: Curves.easeOut,
-    ));
 
     _fadeController.forward();
   }
@@ -339,16 +331,14 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
   void _openAvatar(BuildContext context, String url) {
     Navigator.of(context, rootNavigator: true).push(
       PageRouteBuilder(
-        opaque: false,
-        barrierColor: Colors.black54,
+        opaque: false,                    // on veut voir la page dessous
+        barrierColor: Colors.transparent, // pas de flash noir
         transitionDuration: const Duration(milliseconds: 250),
         reverseTransitionDuration: const Duration(milliseconds: 200),
-        pageBuilder: (_, __, ___) {
-          return _AvatarViewer(
-            url: url,
-            animation: _fadeAnimation, 
-          );
-        },
+
+        // ─── le « child » reçoit l'animation ───
+        pageBuilder: (_, Animation<double> animation, __) =>
+            _AvatarViewer(url: url, animation: animation),
       ),
     );
   }
@@ -554,57 +544,67 @@ class _AvatarViewer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      extendBody: true,
-      backgroundColor: Colors.transparent,
-      body: Stack(
-        alignment: Alignment.bottomCenter,
-        children: [
-          // fond flouté / assombri
-          Positioned.fill(
-            child: GestureDetector(
-              behavior: HitTestBehavior.opaque,     // capte toute la surface
-              onTap: () => Navigator.of(context).pop(),
-              child: FadeTransition(
-                opacity: animation,
-                child: BackdropFilter(
-                  filter: ImageFilter.blur(sigmaX: 30, sigmaY: 30),
-                  child: Container(color: Colors.white.withValues(alpha: 0.25)),
-                ),
-              ),
-            ),
-          ),
-    
-          // l’image agrandie (la destination du Hero)
-          Center(
-            child: SizedBox(
-              height: 280,
-              width: 280,
-              child: Hero(
-                tag: url, // même tag que la vignette
-                flightShuttleBuilder: _buildShuttle, // rendu custom
-                child: ClipOval(
-                  child: CachedNetworkImage(
-                    imageUrl: url,
-                    fit: BoxFit.cover,
+    return AnimatedBuilder(
+      animation: animation,
+      builder: (context, child) {
+        // sigma passe de 0 à 30
+        final sigma = 30 * animation.value;
+        // opacité du voile passe de 0 à 0.25
+        final veilOpacity = 0.25 * animation.value;
+
+        return Scaffold(
+          extendBody: true,
+          backgroundColor: Colors.transparent,
+          body: Stack(
+            alignment: Alignment.bottomCenter,
+            children: [
+              // fond flouté / assombri
+              Positioned.fill(
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,     // capte toute la surface
+                  onTap: () => Navigator.of(context).pop(),
+                  child: FadeTransition(
+                    opacity: animation,
+                    child: BackdropFilter(
+                      filter: ImageFilter.blur(sigmaX: sigma, sigmaY: sigma),
+                      child: Container(color: Colors.white.withValues(alpha: veilOpacity)),
+                    ),
                   ),
                 ),
               ),
-            ),
-          ),
-
-          Positioned(
-            bottom: 50,
-            child: FadeTransition(
-              opacity: animation,
-              child: IconBtn(
-                label: "Edit the photo",
-                icon: HugeIcons.strokeRoundedImage02,
+        
+              // l’image agrandie (la destination du Hero)
+              Center(
+                child: SizedBox(
+                  height: 280,
+                  width: 280,
+                  child: Hero(
+                    tag: url, // même tag que la vignette
+                    flightShuttleBuilder: _buildShuttle, // rendu custom
+                    child: ClipOval(
+                      child: CachedNetworkImage(
+                        imageUrl: url,
+                        fit: BoxFit.cover,
+                      ),
+                    ),
+                  ),
+                ),
               ),
-            ),
-          )
-        ],
-      ),
+        
+              Positioned(
+                bottom: 50,
+                child: FadeTransition(
+                  opacity: animation,
+                  child: IconBtn(
+                    label: "Edit the photo",
+                    icon: HugeIcons.strokeRoundedImage02,
+                  ),
+                ),
+              )
+            ],
+          ),
+        );
+      }
     );
   }
 

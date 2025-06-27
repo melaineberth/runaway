@@ -323,7 +323,6 @@ class ActivityRepository {
   /// Met à jour les records avec un nouveau parcours
   Future<void> updatePersonalRecords(SavedRoute route) async {
     final records = await getPersonalRecords();
-    bool hasNewRecord = false;
 
     // Vérifier distance maximale
     final distanceRecord = records.where((r) => 
@@ -339,7 +338,6 @@ class ActivityRepository {
         'km',
         route,
       );
-      hasNewRecord = true;
     }
 
     // Vérifier dénivelé maximal
@@ -356,7 +354,6 @@ class ActivityRepository {
         'm',
         route,
       );
-      hasNewRecord = true;
     }
 
     // Vérifier vitesse (si durée disponible)
@@ -375,7 +372,6 @@ class ActivityRepository {
           'km/h',
           route,
         );
-        hasNewRecord = true;
       }
 
       // Vérifier durée maximale
@@ -392,14 +388,12 @@ class ActivityRepository {
           'min',
           route,
         );
-        hasNewRecord = true;
       }
     }
   }
 
   /// Utilitaires privés
   int _calculateElevation(SavedRoute route) {
-    final duration = route.actualDuration ?? route.parameters.estimatedDuration.inMinutes;
     final distance = route.parameters.distanceKm;
     
     // Calcul approximatif basé sur l'activité
