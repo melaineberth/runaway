@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:runaway/config/colors.dart';
@@ -32,14 +33,14 @@ class LanguageSelector extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  "Langue disponible",
+                  context.l10n.availableLanguage,
                   style: context.bodySmall?.copyWith(
                     color: Colors.white,
                   ),
                 ),
                 3.h,
                 Text(
-                  'Choisissez votre préférence',
+                  context.l10n.selectPreferenceLanguage,
                   style: context.bodySmall?.copyWith(
                     color: Colors.grey.shade500,
                     fontSize: 15,
@@ -55,12 +56,22 @@ class LanguageSelector extends StatelessWidget {
                       final isSelected = locale == state.locale;
                       final languageName = LocaleService().getLanguageNativeName(locale);
           
-                      return BlocListener<LocaleBloc, LocaleState>(
-                        listener: (context, state) {
-                          if (!state.isLoading && state.error == null) {
-                            Navigator.of(context).pop();
-                          }
-                        },
+                      return MultiBlocListener(
+                        listeners: [
+                          // 🔧 FIX: Gestion séparée du changement de langue
+                          BlocListener<LocaleBloc, LocaleState>(
+                            listenWhen: (previous, current) => 
+                                previous.locale != current.locale && !current.isLoading,
+                            listener: (context, state) {
+                              // 🔧 Attendre la fin du frame avant de fermer la modal
+                              SchedulerBinding.instance.addPostFrameCallback((_) {
+                                if (context.mounted && Navigator.of(context).canPop()) {
+                                  Navigator.of(context).pop();
+                                }
+                              });
+                            },
+                          ),
+                        ],
                         child: Padding(
                           padding: EdgeInsets.only(
                             bottom: i == LocaleService.supportedLocales.length - 1 ? 0 : 12,
@@ -111,7 +122,7 @@ class LanguageSelector extends StatelessWidget {
       onTap: onTap,
       radius: 40,
       color: Colors.white10,
-      padding: EdgeInsets.all(12),
+      padding: const EdgeInsets.all(12),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
@@ -119,7 +130,7 @@ class LanguageSelector extends StatelessWidget {
           Row(
             children: [
               SquircleContainer(
-                padding: EdgeInsets.all(8),
+                padding: const EdgeInsets.all(8),
                 radius: 18,
                 color: Colors.black.withValues(alpha: 0.1),
                 child: Text(
@@ -159,7 +170,7 @@ class LanguageSelector extends StatelessWidget {
               ),
             ),
             child: isSelected
-                ? Icon(
+                ? const Icon(
                     HugeIcons.solidRoundedTick02,
                     color: Colors.white,
                     size: 20,

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
+import 'package:runaway/config/extensions.dart';
 
 class MapboxStyleData {
   final String id;
@@ -71,4 +72,26 @@ class MapboxStyleConstants {
   }
 
   static String getDefaultStyleId() => 'dark';
+}
+
+extension MapboxStyleL10n on MapboxStyleData {
+  String mapStyle(BuildContext context) {
+    final l10n = context.l10n;     // ou `content.l10n` dans ton widget
+    switch (id) {
+      case 'streets':
+        return l10n.mapStyleStreet; 
+      case 'outdoors':
+        return l10n.mapStyleOutdoor; 
+      case 'light':
+        return l10n.mapStyleLight; 
+      case 'dark':
+        return l10n.mapStyleDark; 
+      case 'satellite':
+        return l10n.mapStyleSatellite; 
+      case 'satellite_streets':
+        return l10n.mapStyleHybrid; 
+      default:
+        throw Exception('Style ID don\'t exist: $id');
+    }
+  }
 }

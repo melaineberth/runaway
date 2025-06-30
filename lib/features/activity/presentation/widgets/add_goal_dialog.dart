@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:runaway/config/colors.dart';
+import 'package:runaway/core/widgets/modal_sheet.dart';
 import 'package:runaway/core/widgets/squircle_container.dart';
 import 'package:runaway/features/auth/presentation/widgets/auth_text_field.dart';
 import 'package:uuid/uuid.dart';
@@ -58,84 +59,86 @@ class _AddGoalDialogState extends State<AddGoalDialog> {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(30.0),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            _isEditing ? 'Modifier l\'objectif' : 'Nouvel objectif',
-            style: context.bodyMedium?.copyWith(
-              color: Colors.white,
-            ),
-          ),
-          20.h,
-          Form(
-            key: _formKey,
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildTitleField(),
-                  10.h,
-                  _buildDescriptionField(),
-                  30.h,
-                  _buildTypeSelector(),
-                  30.h,
-                  _buildActivitySelector(),
-                  30.h,
-                  _buildTargetValueField(),
-                  30.h,
-                  _buildDeadlineSelector(),
-                ],
+    return ModalSheet(
+      child: Padding(
+        padding: const EdgeInsets.all(30.0),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              _isEditing ? context.l10n.modifyGoal : context.l10n.newGoal,
+              style: context.bodyMedium?.copyWith(
+                color: Colors.white,
               ),
             ),
-          ),
-          50.h,
-          Row(
-            children: [
-              Expanded(
-                child: SquircleContainer(
-                  onTap: () => context.pop(),
-                  radius: 30.0,
-                  color: Colors.white10,
-                  padding: EdgeInsets.symmetric(vertical: 15.0),
-                  child: Center(
-                    child: Text(
-                      'Annuler',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
+            20.h,
+            Form(
+              key: _formKey,
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildTitleField(),
+                    10.h,
+                    _buildDescriptionField(),
+                    30.h,
+                    _buildTypeSelector(),
+                    30.h,
+                    _buildActivitySelector(),
+                    30.h,
+                    _buildTargetValueField(),
+                    30.h,
+                    _buildDeadlineSelector(),
+                  ],
+                ),
+              ),
+            ),
+            50.h,
+            Row(
+              children: [
+                Expanded(
+                  child: SquircleContainer(
+                    onTap: () => context.pop(),
+                    radius: 30.0,
+                    color: Colors.white10,
+                    padding: EdgeInsets.symmetric(vertical: 15.0),
+                    child: Center(
+                      child: Text(
+                        context.l10n.cancel,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ),
                   ),
                 ),
-              ),
-              10.w,
-              Expanded(
-                child: SquircleContainer(
-                  onTap: _saveGoal,
-                  radius: 30.0,
-                  color: AppColors.primary,
-                  padding: EdgeInsets.symmetric(vertical: 15.0),
-                  child: Center(
-                    child: Text(
-                      _isEditing ? 'Modifier' : 'Créer',
-                      style: const TextStyle(
-                        color: Colors.black,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
+                10.w,
+                Expanded(
+                  child: SquircleContainer(
+                    onTap: _saveGoal,
+                    radius: 30.0,
+                    color: AppColors.primary,
+                    padding: EdgeInsets.symmetric(vertical: 15.0),
+                    child: Center(
+                      child: Text(
+                        _isEditing ? context.l10n.modify : context.l10n.create,
+                        style: const TextStyle(
+                          color: Colors.black,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ),
                   ),
                 ),
-              ),
-            ],
-          ),
-        ],
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -143,10 +146,10 @@ class _AddGoalDialogState extends State<AddGoalDialog> {
   Widget _buildTitleField() {
     return AuthTextField(
       controller: _titleController,
-      hint: "Titre de l'objectif",
+      hint: context.l10n.goalTitle,
       validator: (value) {
         if (value == null || value.isEmpty) {
-          return 'Veuillez saisir un titre';
+          return context.l10n.titleValidator;
         }
         return null;
       },
@@ -156,7 +159,7 @@ class _AddGoalDialogState extends State<AddGoalDialog> {
   Widget _buildDescriptionField() {
     return AuthTextField(
       controller: _descriptionController,
-      hint: "Description (optionnel)",
+      hint: context.l10n.optionalDescription,
       maxLines: 2,
     );
   }
@@ -166,7 +169,7 @@ class _AddGoalDialogState extends State<AddGoalDialog> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Type d\'objectif',
+          context.l10n.goalType,
           style: context.bodySmall,
         ),
         8.h,
@@ -185,7 +188,7 @@ class _AddGoalDialogState extends State<AddGoalDialog> {
                 ),
                 padding: EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
                 child: Text(
-                  type.label,
+                  type.goalLabel(context),
                   style: context.bodySmall?.copyWith(
                     fontSize: 14,
                     color:Colors.white,
@@ -205,7 +208,7 @@ class _AddGoalDialogState extends State<AddGoalDialog> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Activité (optionnel)',
+          context.l10n.optionalActivity,
           style: context.bodySmall,
         ),
         8.h,
@@ -213,9 +216,9 @@ class _AddGoalDialogState extends State<AddGoalDialog> {
           spacing: 8.0,
           runSpacing: 8.0,
           children: [
-            _buildActivityOption(null, 'Toutes'),
+            _buildActivityOption(null, context.l10n.allFilter),
             ...ActivityType.values.map(
-              (activity) => _buildActivityOption(activity, activity.title),
+              (activity) => _buildActivityOption(activity, activity.label(context)),
             ),
           ],
         ),
@@ -249,16 +252,16 @@ class _AddGoalDialogState extends State<AddGoalDialog> {
   Widget _buildTargetValueField() {
     return AuthTextField(
       controller: _targetValueController,
-      hint: "Valeur cible",
+      hint: context.l10n.targetValue,
       suffixText: _getUnit(),
       keyboardType: TextInputType.numberWithOptions(decimal: true),
       validator: (value) {
         if (value == null || value.isEmpty) {
-          return 'Veuillez saisir une valeur cible';
+          return context.l10n.targetValueValidator;
         }
         final doubleValue = double.tryParse(value);
         if (doubleValue == null || doubleValue <= 0) {
-          return 'Veuillez saisir une valeur positive';
+          return context.l10n.positiveValueValidator;
         }
         return null;
       },
@@ -270,7 +273,7 @@ class _AddGoalDialogState extends State<AddGoalDialog> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Échéance (optionnel)',
+          context.l10n.optionalDeadline,
           style: context.bodySmall,
         ),
         8.h,
@@ -292,7 +295,7 @@ class _AddGoalDialogState extends State<AddGoalDialog> {
                 child: Text(
                   _deadline != null
                       ? '${_deadline!.day}/${_deadline!.month}/${_deadline!.year}'
-                      : 'Sélectionner une date',
+                      : context.l10n.selectDate,
                   style: context.bodySmall?.copyWith(
                     color: _deadline != null ? Colors.white : Colors.white30,
                   ),
@@ -342,13 +345,13 @@ class _AddGoalDialogState extends State<AddGoalDialog> {
   String _getUnit() {
     switch (_selectedType) {
       case GoalType.distance:
-        return 'km';
+        return context.l10n.distanceType;
       case GoalType.routes:
-        return 'parcours';
+        return context.l10n.routesType;
       case GoalType.speed:
-        return 'km/h';
+        return context.l10n.speedType;
       case GoalType.elevation:
-        return 'm';
+        return context.l10n.elevationType;
     }
   }
 

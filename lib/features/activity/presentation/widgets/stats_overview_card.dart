@@ -21,7 +21,7 @@ class StatsOverviewCard extends StatelessWidget {
       key: const ValueKey('loaded'),
       children: [
         Text(
-          'Vue d\'ensemble',
+          context.l10n.overview,
           style: context.bodyMedium?.copyWith(color: Colors.white, fontWeight: FontWeight.w700),
         ),
         15.h,
@@ -36,7 +36,7 @@ class StatsOverviewCard extends StatelessWidget {
                   context: context,
                   icon: HugeIcons.solidRoundedRoute01,
                   value: stats.totalDistanceKm.toStringAsFixed(1),
-                  label: 'Distance totale',
+                  label: context.l10n.totalDistance,
                   indicator: " km"
                 ),
               ),
@@ -45,7 +45,7 @@ class StatsOverviewCard extends StatelessWidget {
                   context: context,
                   icon: HugeIcons.solidRoundedTimer02,
                   value: (stats.totalDurationMinutes / 60).toStringAsFixed(1),
-                  label: 'Temps total',
+                  label: context.l10n.totalTime,
                   indicator: " h"
                 ),
               ),
@@ -54,7 +54,7 @@ class StatsOverviewCard extends StatelessWidget {
                   context: context,
                   icon: HugeIcons.solidRoundedDashboardSpeed02,
                   value: stats.averageSpeedKmh.toStringAsFixed(1),
-                  label: 'Vitesse moy.',
+                  label: context.l10n.averageSpeedTitle,
                   indicator: " km/h"
                 ),
               ),

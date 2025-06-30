@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hugeicons/hugeicons.dart';
+import 'package:runaway/core/widgets/modal_sheet.dart';
 import 'package:runaway/core/widgets/squircle_container.dart';
 import 'package:uuid/uuid.dart';
 import '../../../../config/extensions.dart';
@@ -12,85 +13,87 @@ class GoalTemplatesDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(30.0),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Modèles d\'objectifs',
-            style: context.bodyMedium?.copyWith(
-              color: Colors.white,
+    return ModalSheet(
+      child: Padding(
+        padding: const EdgeInsets.all(30.0),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              context.l10n.goalsModels,
+              style: context.bodySmall?.copyWith(
+                color: Colors.white,
+              ),
             ),
-          ),
-          20.h,
-          _buildTemplate(
-            context,
-            'Course mensuelle',
-            '50km par mois de course',
-            HugeIcons.strokeRoundedWorkoutRun,
-            () => _createTemplate(
-              'Course mensuelle',
-              'Courir 50km par mois',
-              GoalType.distance,
-              50,
-              ActivityType.running,
+            20.h,
+            _buildTemplate(
+              context,
+              context.l10n.monthlyRaceTitle,
+              context.l10n.monthlyRaceMessage,
+              HugeIcons.solidRoundedWorkoutRun,
+              () => _createTemplate(
+                context.l10n.monthlyRaceTitle,
+                context.l10n.monthlyRaceGoal,
+                GoalType.distance,
+                50,
+                ActivityType.running,
+              ),
             ),
-          ),
-          _buildTemplate(
-            context,
-            'Vélo hebdomadaire',
-            '100km par semaine à vélo',
-            HugeIcons.strokeRoundedBicycle01,
-            () => _createTemplate(
-              'Vélo hebdomadaire',
-              'Faire 100km de vélo par semaine',
-              GoalType.distance,
-              100,
-              ActivityType.cycling,
+            _buildTemplate(
+              context,
+              context.l10n.weeklyBikeTitle,
+              context.l10n.weeklyBikeMessage,
+              HugeIcons.solidRoundedBicycle01,
+              () => _createTemplate(
+                context.l10n.weeklyBikeTitle,
+                context.l10n.weeklyBikeGoal,
+                GoalType.distance,
+                100,
+                ActivityType.cycling,
+              ),
             ),
-          ),
-          _buildTemplate(
-            context,
-            'Parcours réguliers',
-            '10 parcours par mois',
-            HugeIcons.strokeRoundedActivity01,
-            () => _createTemplate(
-              'Parcours réguliers',
-              'Compléter 10 parcours par mois',
-              GoalType.routes,
-              10,
-              null,
+            _buildTemplate(
+              context,
+              context.l10n.regularTripsTitle,
+              context.l10n.regularTripsMessage,
+              HugeIcons.solidRoundedRoute01,
+              () => _createTemplate(
+                context.l10n.regularTripsTitle,
+                context.l10n.regularTripsGoal,
+                GoalType.routes,
+                10,
+                null,
+              ),
             ),
-          ),
-          _buildTemplate(
-            context,
-            'Défi montagne',
-            '1000m de dénivelé par mois',
-            HugeIcons.strokeRoundedActivity01,
-            () => _createTemplate(
-              'Défi montagne',
-              'Gravir 1000m de dénivelé par mois',
-              GoalType.elevation,
-              1000,
-              null,
+            _buildTemplate(
+              context,
+              context.l10n.mountainChallengeTitle,
+              context.l10n.mountainChallengeMessage,
+              HugeIcons.solidRoundedMountain,
+              () => _createTemplate(
+                context.l10n.mountainChallengeTitle,
+                context.l10n.mountainChallengeGoal,
+                GoalType.elevation,
+                1000,
+                null,
+              ),
             ),
-          ),
-          _buildTemplate(
-            context,
-            'Vitesse moyenne',
-            'Maintenir 12km/h de moyenne',
-            HugeIcons.strokeRoundedActivity01,
-            () => _createTemplate(
-              'Vitesse moyenne',
-              'Maintenir une vitesse moyenne de 12km/h',
-              GoalType.speed,
-              12,
-              ActivityType.running,
+            _buildTemplate(
+              context,
+              context.l10n.averageSpeedTitle,
+              context.l10n.averageSpeedMessage,
+              HugeIcons.solidRoundedRocket01,
+              () => _createTemplate(
+                context.l10n.averageSpeedTitle,
+                context.l10n.averageSpeedGoal,
+                GoalType.speed,
+                12,
+                ActivityType.running,
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

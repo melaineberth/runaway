@@ -31,7 +31,7 @@ class ActivityTypeStatsCard extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(
-              'Par activité',
+              context.l10n.activityFilter,
               style: context.bodyMedium?.copyWith(color: Colors.white, fontWeight: FontWeight.w700),
             ),
             _buildFilterButton(context),
@@ -72,7 +72,7 @@ class ActivityTypeStatsCard extends StatelessWidget {
         ),
         padding: EdgeInsets.symmetric(horizontal: 15.0, vertical: 8.0),
         child: Text(
-          selectedType?.title ?? 'Tous',
+          selectedType?.title ?? context.l10n.allFilter,
           style: TextStyle(
             fontSize: 15,
             fontWeight: FontWeight.w500,
@@ -111,7 +111,7 @@ class ActivityTypeStatsCard extends StatelessWidget {
                   ),
                 ),
                 Text(
-                  '${stat.totalRoutes} parcours',
+                  context.l10n.totalRoutes(stat.totalRoutes),
                   style: context.bodySmall?.copyWith(
                     fontSize: 14,
                     fontWeight: FontWeight.w500,
@@ -129,7 +129,7 @@ class ActivityTypeStatsCard extends StatelessWidget {
               ),
               children: <InlineSpan>[
                 TextSpan(
-                  text: " km/h",
+                  text: context.l10n.distanceType,
                   style: context.bodySmall?.copyWith(
                     fontSize: 15,
                   ),
@@ -160,7 +160,7 @@ class ActivityTypeStatsCard extends StatelessWidget {
               ),
               8.h,
               Text(
-                'Aucune donnée pour ce filtre',
+                context.l10n.emptyDataFilter,
                 style: context.bodySmall?.copyWith(
                   color: Colors.white30,
                 ),
@@ -182,23 +182,25 @@ class ActivityTypeStatsCard extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              'Filtrer par activité',
-              style: context.bodyMedium?.copyWith(
+              context.l10n.byActivityFilter,
+              style: context.bodySmall?.copyWith(
                 color: Colors.white,
               ),
             ),
             Text(
-                'Choisissez le type d\'activité :',
+                context.l10n.typeOfActivity,
                 style: context.bodySmall?.copyWith(
-                  color: Colors.white38,
+                  color: Colors.grey.shade500,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w500
                 ),
               ),
               
               20.h,
                       
-            _buildFilterOption(context, null, 'Toutes les activités'),
+            _buildFilterOption(context, null, context.l10n.allActivities),
             ...ActivityType.values.map(
-              (type) => _buildFilterOption(context, type, type.title),
+              (type) => _buildFilterOption(context, type, type.label(context)),
             ),
           ],
         ),

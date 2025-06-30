@@ -107,6 +107,12 @@ abstract class AppLocalizations {
   /// **'Select Language'**
   String get selectLanguage;
 
+  /// Language selected
+  ///
+  /// In en, this message translates to:
+  /// **'English'**
+  String get currentLanguage;
+
   /// Headline or toast shown once a route has been successfully generated.
   ///
   /// In en, this message translates to:
@@ -191,115 +197,115 @@ abstract class AppLocalizations {
   /// **'My {distance} km RunAway route generated with the RunAway app'**
   String shareMsg(String distance);
 
-  /// No description provided for @currentPosition.
+  /// Texte affiché pour indiquer la position GPS actuelle de l'utilisateur.
   ///
   /// In en, this message translates to:
   /// **'Current position'**
   String get currentPosition;
 
-  /// No description provided for @retrySmallRay.
+  /// Message d’erreur invitant l’utilisateur à relancer la recherche avec un rayon plus petit.
   ///
   /// In en, this message translates to:
   /// **'Try again with a smaller ray'**
   String get retrySmallRay;
 
-  /// No description provided for @noCoordinateServer.
+  /// Erreur indiquant que le serveur n’a renvoyé aucune coordonnée.
   ///
   /// In en, this message translates to:
   /// **'No coordinate received from the server'**
   String get noCoordinateServer;
 
-  /// No description provided for @generationError.
+  /// Message d’erreur générique lorsqu’une génération de données échoue.
   ///
   /// In en, this message translates to:
   /// **'Error during the generation'**
   String get generationError;
 
-  /// No description provided for @disabledLocation.
+  /// Message d’erreur lorsque les services de localisation sont désactivés sur l’appareil.
   ///
   /// In en, this message translates to:
   /// **'Location services are disabled.'**
   String get disabledLocation;
 
-  /// No description provided for @deniedPermission.
+  /// Message d’erreur lorsque l’utilisateur refuse ponctuellement l’autorisation de localisation.
   ///
   /// In en, this message translates to:
   /// **'Location permissions are denied.'**
   String get deniedPermission;
 
-  /// No description provided for @disabledAndDenied.
+  /// Message d’erreur lorsque l’utilisateur a refusé définitivement l’autorisation de localisation.
   ///
   /// In en, this message translates to:
   /// **'Location permissions are permanently denied, we cannot request permission.'**
   String get disabledAndDenied;
 
-  /// No description provided for @toTheRouteNavigation.
+  /// Titre ou annonce de navigation visant à rejoindre un itinéraire interrompu.
   ///
   /// In en, this message translates to:
   /// **'Navigation to the stopped route'**
   String get toTheRouteNavigation;
 
-  /// No description provided for @completedCourseNavigation.
+  /// Titre ou annonce de navigation d’un parcours déjà terminé.
   ///
   /// In en, this message translates to:
   /// **'Navigation of the completed course'**
   String get completedCourseNavigation;
 
-  /// No description provided for @startingPoint.
+  /// Notification indiquant que le point de départ a été atteint.
   ///
   /// In en, this message translates to:
   /// **'Starting point reached!'**
   String get startingPoint;
 
-  /// No description provided for @startingPointNavigation.
+  /// Message affiché pendant le guidage vers le point de départ.
   ///
   /// In en, this message translates to:
   /// **'Navigation to the starting point...'**
   String get startingPointNavigation;
 
-  /// No description provided for @arrivedToStartingPoint.
+  /// Message annonçant l’arrivée au point de départ du parcours.
   ///
   /// In en, this message translates to:
   /// **'You have arrived at the starting point of the course!'**
   String get arrivedToStartingPoint;
 
-  /// No description provided for @later.
+  /// Bouton ou action permettant de reporter une décision ou un rappel.
   ///
   /// In en, this message translates to:
   /// **'Later'**
   String get later;
 
-  /// No description provided for @startCourse.
+  /// Bouton ou commande pour débuter la navigation d’un parcours.
   ///
   /// In en, this message translates to:
   /// **'Start the course'**
   String get startCourse;
 
-  /// No description provided for @courseStarted.
+  /// Message indiquant que la navigation du parcours a commencé.
   ///
   /// In en, this message translates to:
   /// **'Navigation of the course started...'**
   String get courseStarted;
 
-  /// No description provided for @userAreStartingPoint.
+  /// Message informant l’utilisateur qu’il se trouve déjà sur le point de départ.
   ///
   /// In en, this message translates to:
   /// **'You are at the starting point of the course.'**
   String get userAreStartingPoint;
 
-  /// No description provided for @error.
+  /// Libellé générique pour une erreur dans une boîte de dialogue ou une bannière.
   ///
   /// In en, this message translates to:
   /// **'Error'**
   String get error;
 
-  /// No description provided for @routeCalculation.
+  /// Message affiché pendant le calcul de l’itinéraire vers le parcours.
   ///
   /// In en, this message translates to:
   /// **'Calculation of the route to the course...'**
   String get routeCalculation;
 
-  /// No description provided for @unableCalculateRoute.
+  /// Message d’erreur lorsque le calcul d’itinéraire vers le parcours échoue.
   ///
   /// In en, this message translates to:
   /// **'Unable to calculate the route to the course'**
@@ -311,13 +317,13 @@ abstract class AppLocalizations {
   /// **'Unable to start navigation: {error}'**
   String unableStartNavigation(Object error);
 
-  /// No description provided for @navigationServiceError.
+  /// Erreur renvoyée lorsque le service de navigation répond « false » (échec de l’appel).
   ///
   /// In en, this message translates to:
   /// **'The navigation service returned false'**
   String get navigationServiceError;
 
-  /// No description provided for @calculationError.
+  /// Message d’erreur affiché quand le calcul d’itinéraire échoue.
   ///
   /// In en, this message translates to:
   /// **'Error calculation route'**
@@ -329,25 +335,25 @@ abstract class AppLocalizations {
   /// **'Error calculation route: {error}'**
   String calculationRouteError(String error);
 
-  /// No description provided for @navigationInitializedError.
+  /// Erreur indiquant que le service de navigation n’est pas initialisé lorsque l’on tente de l’utiliser.
   ///
   /// In en, this message translates to:
   /// **'Navigation error (service not initialized)'**
   String get navigationInitializedError;
 
-  /// No description provided for @navigationError.
+  /// Message générique pour toute erreur provenant du service de navigation.
   ///
   /// In en, this message translates to:
   /// **'Error of the navigation service'**
   String get navigationError;
 
-  /// No description provided for @retry.
+  /// Texte d’un bouton ou lien permettant de relancer l’opération après un échec.
   ///
   /// In en, this message translates to:
   /// **'Try again'**
   String get retry;
 
-  /// No description provided for @navigationToCourse.
+  /// Titre ou en-tête indiquant la navigation vers un parcours spécifique.
   ///
   /// In en, this message translates to:
   /// **'Navigation to the course'**
@@ -359,217 +365,217 @@ abstract class AppLocalizations {
   /// **'You are {distance} from the starting point.'**
   String userToStartingPoint(String distance);
 
-  /// No description provided for @askUserChooseRoute.
+  /// Question affichée dans une boîte de dialogue pour que l’utilisateur choisisse l’action à réaliser (ex. navigation ou création d’itinéraire).
   ///
   /// In en, this message translates to:
   /// **'What do you want to do?'**
   String get askUserChooseRoute;
 
-  /// No description provided for @voiceInstructions.
+  /// Option permettant d’activer la navigation guidée par instructions vocales.
   ///
   /// In en, this message translates to:
   /// **'Navigation with voice instructions'**
   String get voiceInstructions;
 
-  /// No description provided for @cancel.
+  /// Libellé d’un bouton d’annulation ou pour fermer une boîte de dialogue.
   ///
   /// In en, this message translates to:
   /// **'Cancel'**
   String get cancel;
 
-  /// No description provided for @directPath.
+  /// Option proposant l’itinéraire le plus direct possible vers la destination.
   ///
   /// In en, this message translates to:
   /// **'Direct path'**
   String get directPath;
 
-  /// No description provided for @guideMe.
+  /// Bouton demandant au système de commencer le guidage pas-à-pas jusqu’à la destination.
   ///
   /// In en, this message translates to:
   /// **'Guide me'**
   String get guideMe;
 
-  /// No description provided for @readyToStart.
+  /// Message indiquant que tout est prêt pour démarrer la navigation du parcours.
   ///
   /// In en, this message translates to:
   /// **'Ready to start the navigation of the course'**
   String get readyToStart;
 
-  /// No description provided for @notAvailablePosition.
+  /// Avertissement affiché quand la position de l’utilisateur ou l’itinéraire est indisponible.
   ///
   /// In en, this message translates to:
   /// **'User position or route not available'**
   String get notAvailablePosition;
 
-  /// No description provided for @urbanization.
+  /// Étiquette d’un champ ou filtre précisant le degré d’urbanisation souhaité pour le parcours.
   ///
   /// In en, this message translates to:
   /// **'Level of urbanization'**
   String get urbanization;
 
-  /// No description provided for @terrain.
+  /// Étiquette d’un champ ou filtre déterminant le type de terrain du parcours.
   ///
   /// In en, this message translates to:
   /// **'Type of terrain'**
   String get terrain;
 
-  /// No description provided for @activity.
+  /// Étiquette d’un champ ou filtre pour sélectionner l’activité (marche, course, vélo…).
   ///
   /// In en, this message translates to:
   /// **'Type of activity'**
   String get activity;
 
-  /// No description provided for @distance.
+  /// Champ indiquant la distance totale du parcours.
   ///
   /// In en, this message translates to:
   /// **'Distance'**
   String get distance;
 
-  /// No description provided for @elevation.
+  /// Champ indiquant le dénivelé positif total du parcours.
   ///
   /// In en, this message translates to:
-  /// **'Elevation'**
+  /// **'Elevation gain'**
   String get elevation;
 
-  /// No description provided for @generate.
+  /// Bouton pour lancer la génération d’un itinéraire sur mesure.
   ///
   /// In en, this message translates to:
   /// **'Generate'**
   String get generate;
 
-  /// No description provided for @advancedOptions.
+  /// Lien ou bouton ouvrant des paramètres avancés pour affiner la génération de parcours.
   ///
   /// In en, this message translates to:
   /// **'Advanced options'**
   String get advancedOptions;
 
-  /// No description provided for @loopCourse.
+  /// Option permettant de générer un parcours en boucle (départ = arrivée).
   ///
   /// In en, this message translates to:
   /// **'Loop course'**
   String get loopCourse;
 
-  /// No description provided for @returnStartingPoint.
+  /// Option pour demander un guidage retour vers le point de départ.
   ///
   /// In en, this message translates to:
   /// **'Return to the starting point'**
   String get returnStartingPoint;
 
-  /// No description provided for @avoidTraffic.
+  /// Option de génération d’itinéraire visant à éviter les zones à forte circulation.
   ///
   /// In en, this message translates to:
   /// **'Avoid traffic'**
   String get avoidTraffic;
 
-  /// No description provided for @quietStreets.
+  /// Option pour privilégier les rues calmes dans le calcul du parcours.
   ///
   /// In en, this message translates to:
   /// **'Prioritize quiet streets'**
   String get quietStreets;
 
-  /// No description provided for @scenicRoute.
+  /// Option proposant un itinéraire pittoresque avec de beaux points de vue.
   ///
   /// In en, this message translates to:
   /// **'Scenic route'**
   String get scenicRoute;
 
-  /// No description provided for @prioritizeLandscapes.
+  /// Option privilégiant les paysages attrayants lors de la génération de l’itinéraire.
   ///
   /// In en, this message translates to:
   /// **'Prioritize beautiful landscapes'**
   String get prioritizeLandscapes;
 
-  /// No description provided for @walking.
+  /// Valeur d’activité représentant la marche à pied.
   ///
   /// In en, this message translates to:
   /// **'Walk'**
   String get walking;
 
-  /// No description provided for @running.
+  /// Valeur d’activité représentant la course à pied.
   ///
   /// In en, this message translates to:
   /// **'Run'**
   String get running;
 
-  /// No description provided for @cycling.
+  /// Valeur d’activité représentant le cyclisme.
   ///
   /// In en, this message translates to:
   /// **'Cycle'**
   String get cycling;
 
-  /// No description provided for @nature.
+  /// Niveau d’urbanisation : parcours principalement en milieu naturel.
   ///
   /// In en, this message translates to:
   /// **'Nature'**
   String get nature;
 
-  /// No description provided for @mixedUrbanization.
+  /// Niveau d’urbanisation : parcours mêlant ville et nature.
   ///
   /// In en, this message translates to:
   /// **'Mixed'**
   String get mixedUrbanization;
 
-  /// No description provided for @urban.
+  /// Niveau d’urbanisation : parcours principalement urbain.
   ///
   /// In en, this message translates to:
   /// **'Urban'**
   String get urban;
 
-  /// No description provided for @flat.
+  /// Type de terrain : plat (peu ou pas de dénivelé).
   ///
   /// In en, this message translates to:
   /// **'Flat'**
   String get flat;
 
-  /// No description provided for @mixedTerrain.
+  /// Type de terrain : varié (combinaison de plat et de pentes modérées).
   ///
   /// In en, this message translates to:
   /// **'Mixed'**
   String get mixedTerrain;
 
-  /// No description provided for @hilly.
+  /// Type de terrain : vallonné / pentes prononcées.
   ///
   /// In en, this message translates to:
   /// **'Hilly'**
   String get hilly;
 
-  /// No description provided for @flatDesc.
+  /// Description courte du terrain plat, utilisée dans des info-bulles ou listes.
   ///
   /// In en, this message translates to:
   /// **'Flat land with little elevation gain'**
   String get flatDesc;
 
-  /// No description provided for @mixedTerrainDesc.
+  /// Description courte du terrain mixte, utilisée dans des info-bulles ou listes.
   ///
   /// In en, this message translates to:
   /// **'Varied terrain with moderate elevation gain'**
   String get mixedTerrainDesc;
 
-  /// No description provided for @hillyDesc.
+  /// Description courte du terrain vallonné, utilisée dans des info-bulles ou listes.
   ///
   /// In en, this message translates to:
   /// **'Land with a steep slope'**
   String get hillyDesc;
 
-  /// No description provided for @natureDesc.
+  /// Description courte d’un parcours majoritairement en nature.
   ///
   /// In en, this message translates to:
   /// **'Mainly in nature'**
   String get natureDesc;
 
-  /// No description provided for @mixedUrbanizationDesc.
+  /// Description courte d’un parcours mixte (ville + nature).
   ///
   /// In en, this message translates to:
   /// **'Mix city and nature'**
   String get mixedUrbanizationDesc;
 
-  /// No description provided for @urbanDesc.
+  /// Description courte d’un parcours majoritairement urbain.
   ///
   /// In en, this message translates to:
   /// **'Mainly in the city'**
   String get urbanDesc;
 
-  /// No description provided for @arriveAtDestination.
+  /// Annonce vocale ou notification indiquant l’arrivée à destination.
   ///
   /// In en, this message translates to:
   /// **'You arrive at your destination'**
@@ -821,65 +827,785 @@ abstract class AppLocalizations {
   /// **'At least 6 characters'**
   String get passwordMinLength;
 
-  /// No description provided for @currentGeneration.
+  /// Texte affiché pendant la génération en cours (parcours, statistiques, etc.).
   ///
   /// In en, this message translates to:
   /// **'Current generation...'**
   String get currentGeneration;
 
-  /// No description provided for @navigationPaused.
+  /// Message indiquant que la navigation a été mise en pause.
   ///
   /// In en, this message translates to:
   /// **'Navigation paused'**
   String get navigationPaused;
 
-  /// No description provided for @navigationResumed.
+  /// Message indiquant que la navigation a repris après la pause.
   ///
   /// In en, this message translates to:
   /// **'Navigation resumed'**
   String get navigationResumed;
 
-  /// No description provided for @time.
+  /// Étiquette pour la durée écoulée ou l’heure courante, selon le contexte.
   ///
   /// In en, this message translates to:
   /// **'Time'**
   String get time;
 
-  /// No description provided for @pace.
+  /// Étiquette pour le rythme (ex. min/km ou min/mi) dans les statistiques d’activité.
   ///
   /// In en, this message translates to:
   /// **'Pace'**
   String get pace;
 
-  /// No description provided for @speed.
+  /// Étiquette pour la vitesse (ex. km/h ou mph) dans les statistiques d’activité.
   ///
   /// In en, this message translates to:
   /// **'Speed'**
   String get speed;
 
-  /// No description provided for @elevationGain.
+  /// Étiquette pour le dénivelé positif total (gain d’altitude) du parcours.
   ///
   /// In en, this message translates to:
   /// **'Gain'**
   String get elevationGain;
 
-  /// No description provided for @remaining.
+  /// Étiquette indiquant la distance ou le temps restant avant l’arrivée ou la fin du parcours.
   ///
   /// In en, this message translates to:
   /// **'Remaining'**
   String get remaining;
 
-  /// No description provided for @progress.
+  /// Étiquette pour la progression réalisée (distance, temps ou pourcentage accompli).
   ///
   /// In en, this message translates to:
   /// **'Progress'**
   String get progress;
 
-  /// No description provided for @estimatedTime.
+  /// Étiquette pour le temps estimé avant d’atteindre la destination ou de terminer l’activité.
   ///
   /// In en, this message translates to:
   /// **'Est. Time'**
   String get estimatedTime;
+
+  /// Top-snack-bar message shown while the new avatar is being uploaded and saved.
+  ///
+  /// In en, this message translates to:
+  /// **'Updating the photo…'**
+  String get updatingPhoto;
+
+  /// Top-snack-bar message shown when the image picker throws an exception.
+  ///
+  /// In en, this message translates to:
+  /// **'Error during selection: {error}'**
+  String selectionError(String error);
+
+  /// Title of the account screen (AppBar).
+  ///
+  /// In en, this message translates to:
+  /// **'Account'**
+  String get account;
+
+  /// Fallback name displayed when the profile has no full name.
+  ///
+  /// In en, this message translates to:
+  /// **'User'**
+  String get defaultUserName;
+
+  /// Section heading for user-preference settings.
+  ///
+  /// In en, this message translates to:
+  /// **'Preferences'**
+  String get preferences;
+
+  /// Label for the notifications setting row.
+  ///
+  /// In en, this message translates to:
+  /// **'Notifications'**
+  String get notifications;
+
+  /// Label for the theme-selection setting row.
+  ///
+  /// In en, this message translates to:
+  /// **'Theme'**
+  String get theme;
+
+  /// Value text indicating that a setting (e.g. notifications) is ON.
+  ///
+  /// In en, this message translates to:
+  /// **'Enabled'**
+  String get enabled;
+
+  /// Value text for the light-theme choice.
+  ///
+  /// In en, this message translates to:
+  /// **'Light'**
+  String get lightTheme;
+
+  /// Section heading grouping account-related actions such as logout and delete profile.
+  ///
+  /// In en, this message translates to:
+  /// **'Account'**
+  String get accountSection;
+
+  /// Action that logs the user out of the application.
+  ///
+  /// In en, this message translates to:
+  /// **'Disconnect'**
+  String get disconnect;
+
+  /// Action that permanently deletes the user’s profile.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete profile'**
+  String get deleteProfile;
+
+  /// Button that should navigate to the profile-editing screen.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit profile'**
+  String get editProfile;
+
+  /// Temporary snack-bar informing that profile editing is not yet implemented.
+  ///
+  /// In en, this message translates to:
+  /// **'Profile editing – To implement'**
+  String get editProfileTodo;
+
+  /// Title of the confirmation dialog displayed before logging out.
+  ///
+  /// In en, this message translates to:
+  /// **'Log out'**
+  String get logoutTitle;
+
+  /// Body text of the log-out confirmation dialog.
+  ///
+  /// In en, this message translates to:
+  /// **'Are you sure you want to log out?'**
+  String get logoutMessage;
+
+  /// Positive-action button in the log-out dialog.
+  ///
+  /// In en, this message translates to:
+  /// **'Log out'**
+  String get logoutConfirm;
+
+  /// Title of the confirmation dialog displayed before deleting the account.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete account'**
+  String get deleteAccountTitle;
+
+  /// Primary warning text in the delete-account dialog.
+  ///
+  /// In en, this message translates to:
+  /// **'This action is irreversible. All your data will be permanently deleted.'**
+  String get deleteAccountMessage;
+
+  /// Additional highlighted warning shown inside the delete-account dialog.
+  ///
+  /// In en, this message translates to:
+  /// **'This action cannot be undone'**
+  String get deleteAccountWarning;
+
+  /// Positive-action button in the delete-account dialog.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete'**
+  String get delete;
+
+  /// Temporary snack-bar informing that account deletion is not yet implemented.
+  ///
+  /// In en, this message translates to:
+  /// **'Account deletion – To implement'**
+  String get deleteAccountTodo;
+
+  /// Button shown under the enlarged avatar that lets the user choose a new profile picture.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit the photo'**
+  String get editPhoto;
+
+  /// Label for the setting that shows the language currently offered to the user.
+  ///
+  /// In en, this message translates to:
+  /// **'Available language'**
+  String get availableLanguage;
+
+  /// Prompt inviting the user to choose their preferred language.
+  ///
+  /// In en, this message translates to:
+  /// **'Select your preference'**
+  String get selectPreferenceLanguage;
+
+  /// Section header or field label that refers to the user's activity type.
+  ///
+  /// In en, this message translates to:
+  /// **'Activity'**
+  String get activityTitle;
+
+  /// Button or menu item used to export the user's data (e.g., workouts, goals).
+  ///
+  /// In en, this message translates to:
+  /// **'Export data'**
+  String get exportData;
+
+  /// Button or menu item that resets all user-defined goals.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset goals'**
+  String get resetGoals;
+
+  /// Status message displayed while statistics are being calculated.
+  ///
+  /// In en, this message translates to:
+  /// **'Calculation of statistics...'**
+  String get statisticsCalculation;
+
+  /// Generic loading indicator shown during any asynchronous operation.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading...'**
+  String get loading;
+
+  /// Action label prompting the user to start creating a new goal.
+  ///
+  /// In en, this message translates to:
+  /// **'Create a goal'**
+  String get createGoal;
+
+  /// Label indicating that a goal is user-defined rather than predefined.
+  ///
+  /// In en, this message translates to:
+  /// **'Custom goal'**
+  String get customGoal;
+
+  /// Button or link to open the workflow for creating a user-defined goal.
+  ///
+  /// In en, this message translates to:
+  /// **'Create a custom goal'**
+  String get createCustomGoal;
+
+  /// Title for the list of preset goal templates available to the user.
+  ///
+  /// In en, this message translates to:
+  /// **'Goals models'**
+  String get goalsModels;
+
+  /// Instruction text inviting the user to pick one of the preset goal templates.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose from pre-defined goals'**
+  String get predefinedGoals;
+
+  /// Toast or confirmation message shown after a goal is successfully updated.
+  ///
+  /// In en, this message translates to:
+  /// **'Updated goal'**
+  String get updatedGoal;
+
+  /// Toast or confirmation message shown after a goal is successfully created.
+  ///
+  /// In en, this message translates to:
+  /// **'Goal created'**
+  String get createdGoal;
+
+  /// Dialog title asking the user to confirm deletion of a goal.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete goal'**
+  String get deleteGoalTitle;
+
+  /// Dialog body text warning the user that deleting the goal is irreversible.
+  ///
+  /// In en, this message translates to:
+  /// **'Are you sure you want to delete this goal?'**
+  String get deleteGoalMessage;
+
+  /// Toast or confirmation message displayed after a goal has been deleted.
+  ///
+  /// In en, this message translates to:
+  /// **'Goal removed'**
+  String get removedGoal;
+
+  /// Dialog title asking the user to confirm resetting all goals.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset the goals'**
+  String get goalsResetTitle;
+
+  /// Dialog body warning that the reset will delete every goal the user has set.
+  ///
+  /// In en, this message translates to:
+  /// **'This action will remove all your goals. Are you sure?'**
+  String get goalsResetMessage;
+
+  /// Generic button label used to restore default values in a form or setting.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset'**
+  String get reset;
+
+  /// Label for a filter button that limits the list of items by activity type.
+  ///
+  /// In en, this message translates to:
+  /// **'By activity'**
+  String get activityFilter;
+
+  /// Filter option that removes any active filters and shows every item.
+  ///
+  /// In en, this message translates to:
+  /// **'All'**
+  String get allFilter;
+
+  /// Summary text showing the total number of routes available. The number is inserted dynamically.
+  ///
+  /// In en, this message translates to:
+  /// **'{totalRoutes} routes'**
+  String totalRoutes(int totalRoutes);
+
+  /// Message displayed when the current filter returns no results.
+  ///
+  /// In en, this message translates to:
+  /// **'No data for this filter'**
+  String get emptyDataFilter;
+
+  /// Title or tooltip for an option that lets the user filter data by activity type.
+  ///
+  /// In en, this message translates to:
+  /// **'Filter by activity'**
+  String get byActivityFilter;
+
+  /// Prompt asking the user to select an activity type from a list.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose the type of activity'**
+  String get typeOfActivity;
+
+  /// Dropdown option representing every possible activity type.
+  ///
+  /// In en, this message translates to:
+  /// **'All activities'**
+  String get allActivities;
+
+  /// Button label that opens a form to edit an existing goal.
+  ///
+  /// In en, this message translates to:
+  /// **'Modify goal'**
+  String get modifyGoal;
+
+  /// Button label that opens a form to create a new goal.
+  ///
+  /// In en, this message translates to:
+  /// **'New goal'**
+  String get newGoal;
+
+  /// Generic action label used to edit the current item.
+  ///
+  /// In en, this message translates to:
+  /// **'Modify'**
+  String get modify;
+
+  /// Generic action label used to create a new item.
+  ///
+  /// In en, this message translates to:
+  /// **'Create'**
+  String get create;
+
+  /// Field label for entering the title of a goal.
+  ///
+  /// In en, this message translates to:
+  /// **'Goal title'**
+  String get goalTitle;
+
+  /// Validation error shown when the goal title field is empty.
+  ///
+  /// In en, this message translates to:
+  /// **'You should enter a title'**
+  String get titleValidator;
+
+  /// Label for an optional description field in a form.
+  ///
+  /// In en, this message translates to:
+  /// **'Description (optional)'**
+  String get optionalDescription;
+
+  /// Label for selecting the category of goal (distance, speed, etc.).
+  ///
+  /// In en, this message translates to:
+  /// **'Goal type'**
+  String get goalType;
+
+  /// Label for an optional field where the user can link a goal to a specific activity.
+  ///
+  /// In en, this message translates to:
+  /// **'Activity (optional)'**
+  String get optionalActivity;
+
+  /// Label for the numeric target value of a goal.
+  ///
+  /// In en, this message translates to:
+  /// **'Target value'**
+  String get targetValue;
+
+  /// Validation error shown when the target value field is empty.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter a target value'**
+  String get targetValueValidator;
+
+  /// Validation error shown when the entered value is zero or negative.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter a positive value'**
+  String get positiveValueValidator;
+
+  /// Label for an optional date picker that sets a deadline for the goal.
+  ///
+  /// In en, this message translates to:
+  /// **'Deadline (optional)'**
+  String get optionalDeadline;
+
+  /// Prompt on the date picker button inviting the user to choose a date.
+  ///
+  /// In en, this message translates to:
+  /// **'Select a date'**
+  String get selectDate;
+
+  /// Unit label for distance displayed in kilometers.
+  ///
+  /// In en, this message translates to:
+  /// **'km'**
+  String get distanceType;
+
+  /// Unit label representing a count of individual routes.
+  ///
+  /// In en, this message translates to:
+  /// **'routes'**
+  String get routesType;
+
+  /// Unit label for speed displayed in kilometers per hour.
+  ///
+  /// In en, this message translates to:
+  /// **'km/h'**
+  String get speedType;
+
+  /// Unit label for elevation gain displayed in meters.
+  ///
+  /// In en, this message translates to:
+  /// **'m'**
+  String get elevationType;
+
+  /// Name of a goal category that tracks total distance per month.
+  ///
+  /// In en, this message translates to:
+  /// **'Monthly distance'**
+  String get goalTypeDistance;
+
+  /// Name of a goal category that tracks how many routes are completed.
+  ///
+  /// In en, this message translates to:
+  /// **'Number of routes'**
+  String get goalTypeRoutes;
+
+  /// Name of a goal category that tracks the average speed over a period.
+  ///
+  /// In en, this message translates to:
+  /// **'Average speed'**
+  String get goalTypeSpeed;
+
+  /// Name of a goal category that tracks cumulative elevation gain.
+  ///
+  /// In en, this message translates to:
+  /// **'Total elevation gain'**
+  String get goalTypeElevation;
+
+  /// Default title for a sample goal focused on monthly running distance.
+  ///
+  /// In en, this message translates to:
+  /// **'Monthly race'**
+  String get monthlyRaceTitle;
+
+  /// Short description of the monthly running distance goal.
+  ///
+  /// In en, this message translates to:
+  /// **'50km per month of running'**
+  String get monthlyRaceMessage;
+
+  /// Goal summary stating the user should run 50 km each month.
+  ///
+  /// In en, this message translates to:
+  /// **'Run 50km per month'**
+  String get monthlyRaceGoal;
+
+  /// Default title for a sample goal focused on weekly cycling distance.
+  ///
+  /// In en, this message translates to:
+  /// **'Weekly bike'**
+  String get weeklyBikeTitle;
+
+  /// Short description of the weekly cycling distance goal.
+  ///
+  /// In en, this message translates to:
+  /// **'100km per week by bike'**
+  String get weeklyBikeMessage;
+
+  /// Goal summary stating the user should cycle 100 km each week.
+  ///
+  /// In en, this message translates to:
+  /// **'Ride a bike for 100km per week'**
+  String get weeklyBikeGoal;
+
+  /// Default title for a sample goal that counts the number of routes per month.
+  ///
+  /// In en, this message translates to:
+  /// **'Regular courses'**
+  String get regularTripsTitle;
+
+  /// Short description of the monthly routes goal.
+  ///
+  /// In en, this message translates to:
+  /// **'10 courses per month'**
+  String get regularTripsMessage;
+
+  /// Goal summary stating the user should complete 10 routes each month.
+  ///
+  /// In en, this message translates to:
+  /// **'Complete 10 courses per month'**
+  String get regularTripsGoal;
+
+  /// Default title for a sample goal focused on monthly elevation gain.
+  ///
+  /// In en, this message translates to:
+  /// **'Mountain Challenge'**
+  String get mountainChallengeTitle;
+
+  /// Short description of the monthly elevation gain goal.
+  ///
+  /// In en, this message translates to:
+  /// **'1000m of elevation gain per month'**
+  String get mountainChallengeMessage;
+
+  /// Goal summary stating the user should achieve 1000 m of elevation gain each month.
+  ///
+  /// In en, this message translates to:
+  /// **'Climb 1000m of elevation gain per month'**
+  String get mountainChallengeGoal;
+
+  /// Default title for a sample goal focused on maintaining average speed.
+  ///
+  /// In en, this message translates to:
+  /// **'Average speed'**
+  String get averageSpeedTitle;
+
+  /// Short description of the average speed goal.
+  ///
+  /// In en, this message translates to:
+  /// **'Maintain 12km/h of average'**
+  String get averageSpeedMessage;
+
+  /// Goal summary stating the user should keep an average speed of 12 km/h.
+  ///
+  /// In en, this message translates to:
+  /// **'Maintain an average speed of 12km/h'**
+  String get averageSpeedGoal;
+
+  /// Section header listing all user-defined goals.
+  ///
+  /// In en, this message translates to:
+  /// **'Personal goals'**
+  String get personalGoals;
+
+  /// Button label used to add a new item (goal, record, etc.).
+  ///
+  /// In en, this message translates to:
+  /// **'Add'**
+  String get add;
+
+  /// Message shown when the user has not created any goals yet.
+  ///
+  /// In en, this message translates to:
+  /// **'You have no defined goals'**
+  String get emptyDefinedGoals;
+
+  /// Instruction telling the user how to start adding a new goal.
+  ///
+  /// In en, this message translates to:
+  /// **'Press + to create one'**
+  String get pressToAdd;
+
+  /// Section header listing the user's best performances.
+  ///
+  /// In en, this message translates to:
+  /// **'Personal records'**
+  String get personalRecords;
+
+  /// Message shown when no personal records exist yet.
+  ///
+  /// In en, this message translates to:
+  /// **'Complete courses to establish your records'**
+  String get empryPersonalRecords;
+
+  /// Tab or section title showing a summary of statistics.
+  ///
+  /// In en, this message translates to:
+  /// **'Overview'**
+  String get overview;
+
+  /// Label for the cumulative distance statistic.
+  ///
+  /// In en, this message translates to:
+  /// **'Total distance'**
+  String get totalDistance;
+
+  /// Label for the cumulative time statistic.
+  ///
+  /// In en, this message translates to:
+  /// **'Total time'**
+  String get totalTime;
+
+  /// Dialog title shown when the user is about to delete a saved route.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm the deletion'**
+  String get confirmRouteDeletionTitle;
+
+  /// Confirmation message asking whether the user truly wants to delete a specific route.
+  ///
+  /// In en, this message translates to:
+  /// **'Do you really want to delete the {routeName} route?'**
+  String confirmRouteDeletionMessage(String routeName);
+
+  /// Tab or section title that opens the list of previously completed routes.
+  ///
+  /// In en, this message translates to:
+  /// **'Historic'**
+  String get historic;
+
+  /// Generic error label shown when data fails to load.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading error'**
+  String get loadingError;
+
+  /// Title displayed when the user has not yet saved any routes.
+  ///
+  /// In en, this message translates to:
+  /// **'No route saved'**
+  String get emptySavedRouteTitle;
+
+  /// Message encouraging the user to create their first route when the saved-routes list is empty.
+  ///
+  /// In en, this message translates to:
+  /// **'Generate your first route from the homepage to see it appear here'**
+  String get emptySavedRouteMessage;
+
+  /// Button text that triggers the route-generation process.
+  ///
+  /// In en, this message translates to:
+  /// **'Generate a route'**
+  String get generateRoute;
+
+  /// Label or column header indicating a single route entry.
+  ///
+  /// In en, this message translates to:
+  /// **'Route'**
+  String get route;
+
+  /// Label for totals (distance, elevation, etc.) in summary views.
+  ///
+  /// In en, this message translates to:
+  /// **'Total'**
+  String get total;
+
+  /// Status label shown when a route has not been synchronized to the server.
+  ///
+  /// In en, this message translates to:
+  /// **'Unsync'**
+  String get unsynchronized;
+
+  /// Status label indicating that a route is already synchronized with the server.
+  ///
+  /// In en, this message translates to:
+  /// **'Sync'**
+  String get synchronized;
+
+  /// Action item allowing the user to rename a saved route.
+  ///
+  /// In en, this message translates to:
+  /// **'Rename'**
+  String get renameRoute;
+
+  /// Action item that uploads or synchronizes a route to the server.
+  ///
+  /// In en, this message translates to:
+  /// **'Synchronize'**
+  String get synchronizeRoute;
+
+  /// Action item that deletes a saved route.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete'**
+  String get deleteRoute;
+
+  /// Action item that starts guidance along the selected route.
+  ///
+  /// In en, this message translates to:
+  /// **'Follow'**
+  String get followRoute;
+
+  /// Fallback text shown when a route thumbnail or preview image cannot be displayed.
+  ///
+  /// In en, this message translates to:
+  /// **'Image unavailable'**
+  String get imageUnavailable;
+
+  /// Title for the UI section where users choose a map style.
+  ///
+  /// In en, this message translates to:
+  /// **'Type of card'**
+  String get mapStyleTitle;
+
+  /// Subtitle prompting the user to pick their preferred map style.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose your style'**
+  String get mapStyleSubtitle;
+
+  /// Map-layer option that displays a classic street map with roads, place names and basic landmarks.
+  ///
+  /// In en, this message translates to:
+  /// **'Street'**
+  String get mapStyleStreet;
+
+  /// Map-layer option optimized for outdoor activities; highlights trails, terrain contours and natural features.
+  ///
+  /// In en, this message translates to:
+  /// **'Outdoor'**
+  String get mapStyleOutdoor;
+
+  /// Map-layer option with a light color palette, suitable for bright environments or printing.
+  ///
+  /// In en, this message translates to:
+  /// **'Light'**
+  String get mapStyleLight;
+
+  /// Map-layer option with a dark color palette, ideal for night mode or low-light conditions.
+  ///
+  /// In en, this message translates to:
+  /// **'Dark'**
+  String get mapStyleDark;
+
+  /// Map-layer option that shows high-resolution satellite imagery without additional labels.
+  ///
+  /// In en, this message translates to:
+  /// **'Satellite'**
+  String get mapStyleSatellite;
+
+  /// Map-layer option that overlays place labels and roads on top of satellite imagery.
+  ///
+  /// In en, this message translates to:
+  /// **'Hybrid'**
+  String get mapStyleHybrid;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

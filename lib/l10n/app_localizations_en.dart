@@ -15,6 +15,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get selectLanguage => 'Select Language';
 
   @override
+  String get currentLanguage => 'English';
+
+  @override
   String get pathGenerated => 'Path generated';
 
   @override
@@ -182,7 +185,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get distance => 'Distance';
 
   @override
-  String get elevation => 'Elevation';
+  String get elevation => 'Elevation gain';
 
   @override
   String get generate => 'Generate';
@@ -414,4 +417,370 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get estimatedTime => 'Est. Time';
+
+  @override
+  String get updatingPhoto => 'Updating the photo…';
+
+  @override
+  String selectionError(String error) {
+    return 'Error during selection: $error';
+  }
+
+  @override
+  String get account => 'Account';
+
+  @override
+  String get defaultUserName => 'User';
+
+  @override
+  String get preferences => 'Preferences';
+
+  @override
+  String get notifications => 'Notifications';
+
+  @override
+  String get theme => 'Theme';
+
+  @override
+  String get enabled => 'Enabled';
+
+  @override
+  String get lightTheme => 'Light';
+
+  @override
+  String get accountSection => 'Account';
+
+  @override
+  String get disconnect => 'Disconnect';
+
+  @override
+  String get deleteProfile => 'Delete profile';
+
+  @override
+  String get editProfile => 'Edit profile';
+
+  @override
+  String get editProfileTodo => 'Profile editing – To implement';
+
+  @override
+  String get logoutTitle => 'Log out';
+
+  @override
+  String get logoutMessage => 'Are you sure you want to log out?';
+
+  @override
+  String get logoutConfirm => 'Log out';
+
+  @override
+  String get deleteAccountTitle => 'Delete account';
+
+  @override
+  String get deleteAccountMessage => 'This action is irreversible. All your data will be permanently deleted.';
+
+  @override
+  String get deleteAccountWarning => 'This action cannot be undone';
+
+  @override
+  String get delete => 'Delete';
+
+  @override
+  String get deleteAccountTodo => 'Account deletion – To implement';
+
+  @override
+  String get editPhoto => 'Edit the photo';
+
+  @override
+  String get availableLanguage => 'Available language';
+
+  @override
+  String get selectPreferenceLanguage => 'Select your preference';
+
+  @override
+  String get activityTitle => 'Activity';
+
+  @override
+  String get exportData => 'Export data';
+
+  @override
+  String get resetGoals => 'Reset goals';
+
+  @override
+  String get statisticsCalculation => 'Calculation of statistics...';
+
+  @override
+  String get loading => 'Loading...';
+
+  @override
+  String get createGoal => 'Create a goal';
+
+  @override
+  String get customGoal => 'Custom goal';
+
+  @override
+  String get createCustomGoal => 'Create a custom goal';
+
+  @override
+  String get goalsModels => 'Goals models';
+
+  @override
+  String get predefinedGoals => 'Choose from pre-defined goals';
+
+  @override
+  String get updatedGoal => 'Updated goal';
+
+  @override
+  String get createdGoal => 'Goal created';
+
+  @override
+  String get deleteGoalTitle => 'Delete goal';
+
+  @override
+  String get deleteGoalMessage => 'Are you sure you want to delete this goal?';
+
+  @override
+  String get removedGoal => 'Goal removed';
+
+  @override
+  String get goalsResetTitle => 'Reset the goals';
+
+  @override
+  String get goalsResetMessage => 'This action will remove all your goals. Are you sure?';
+
+  @override
+  String get reset => 'Reset';
+
+  @override
+  String get activityFilter => 'By activity';
+
+  @override
+  String get allFilter => 'All';
+
+  @override
+  String totalRoutes(int totalRoutes) {
+    return '$totalRoutes routes';
+  }
+
+  @override
+  String get emptyDataFilter => 'No data for this filter';
+
+  @override
+  String get byActivityFilter => 'Filter by activity';
+
+  @override
+  String get typeOfActivity => 'Choose the type of activity';
+
+  @override
+  String get allActivities => 'All activities';
+
+  @override
+  String get modifyGoal => 'Modify goal';
+
+  @override
+  String get newGoal => 'New goal';
+
+  @override
+  String get modify => 'Modify';
+
+  @override
+  String get create => 'Create';
+
+  @override
+  String get goalTitle => 'Goal title';
+
+  @override
+  String get titleValidator => 'You should enter a title';
+
+  @override
+  String get optionalDescription => 'Description (optional)';
+
+  @override
+  String get goalType => 'Goal type';
+
+  @override
+  String get optionalActivity => 'Activity (optional)';
+
+  @override
+  String get targetValue => 'Target value';
+
+  @override
+  String get targetValueValidator => 'Please enter a target value';
+
+  @override
+  String get positiveValueValidator => 'Please enter a positive value';
+
+  @override
+  String get optionalDeadline => 'Deadline (optional)';
+
+  @override
+  String get selectDate => 'Select a date';
+
+  @override
+  String get distanceType => 'km';
+
+  @override
+  String get routesType => 'routes';
+
+  @override
+  String get speedType => 'km/h';
+
+  @override
+  String get elevationType => 'm';
+
+  @override
+  String get goalTypeDistance => 'Monthly distance';
+
+  @override
+  String get goalTypeRoutes => 'Number of routes';
+
+  @override
+  String get goalTypeSpeed => 'Average speed';
+
+  @override
+  String get goalTypeElevation => 'Total elevation gain';
+
+  @override
+  String get monthlyRaceTitle => 'Monthly race';
+
+  @override
+  String get monthlyRaceMessage => '50km per month of running';
+
+  @override
+  String get monthlyRaceGoal => 'Run 50km per month';
+
+  @override
+  String get weeklyBikeTitle => 'Weekly bike';
+
+  @override
+  String get weeklyBikeMessage => '100km per week by bike';
+
+  @override
+  String get weeklyBikeGoal => 'Ride a bike for 100km per week';
+
+  @override
+  String get regularTripsTitle => 'Regular courses';
+
+  @override
+  String get regularTripsMessage => '10 courses per month';
+
+  @override
+  String get regularTripsGoal => 'Complete 10 courses per month';
+
+  @override
+  String get mountainChallengeTitle => 'Mountain Challenge';
+
+  @override
+  String get mountainChallengeMessage => '1000m of elevation gain per month';
+
+  @override
+  String get mountainChallengeGoal => 'Climb 1000m of elevation gain per month';
+
+  @override
+  String get averageSpeedTitle => 'Average speed';
+
+  @override
+  String get averageSpeedMessage => 'Maintain 12km/h of average';
+
+  @override
+  String get averageSpeedGoal => 'Maintain an average speed of 12km/h';
+
+  @override
+  String get personalGoals => 'Personal goals';
+
+  @override
+  String get add => 'Add';
+
+  @override
+  String get emptyDefinedGoals => 'You have no defined goals';
+
+  @override
+  String get pressToAdd => 'Press + to create one';
+
+  @override
+  String get personalRecords => 'Personal records';
+
+  @override
+  String get empryPersonalRecords => 'Complete courses to establish your records';
+
+  @override
+  String get overview => 'Overview';
+
+  @override
+  String get totalDistance => 'Total distance';
+
+  @override
+  String get totalTime => 'Total time';
+
+  @override
+  String get confirmRouteDeletionTitle => 'Confirm the deletion';
+
+  @override
+  String confirmRouteDeletionMessage(String routeName) {
+    return 'Do you really want to delete the $routeName route?';
+  }
+
+  @override
+  String get historic => 'Historic';
+
+  @override
+  String get loadingError => 'Loading error';
+
+  @override
+  String get emptySavedRouteTitle => 'No route saved';
+
+  @override
+  String get emptySavedRouteMessage => 'Generate your first route from the homepage to see it appear here';
+
+  @override
+  String get generateRoute => 'Generate a route';
+
+  @override
+  String get route => 'Route';
+
+  @override
+  String get total => 'Total';
+
+  @override
+  String get unsynchronized => 'Unsync';
+
+  @override
+  String get synchronized => 'Sync';
+
+  @override
+  String get renameRoute => 'Rename';
+
+  @override
+  String get synchronizeRoute => 'Synchronize';
+
+  @override
+  String get deleteRoute => 'Delete';
+
+  @override
+  String get followRoute => 'Follow';
+
+  @override
+  String get imageUnavailable => 'Image unavailable';
+
+  @override
+  String get mapStyleTitle => 'Type of card';
+
+  @override
+  String get mapStyleSubtitle => 'Choose your style';
+
+  @override
+  String get mapStyleStreet => 'Street';
+
+  @override
+  String get mapStyleOutdoor => 'Outdoor';
+
+  @override
+  String get mapStyleLight => 'Light';
+
+  @override
+  String get mapStyleDark => 'Dark';
+
+  @override
+  String get mapStyleSatellite => 'Satellite';
+
+  @override
+  String get mapStyleHybrid => 'Hybrid';
 }

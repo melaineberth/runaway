@@ -1,4 +1,6 @@
 import 'package:equatable/equatable.dart';
+import 'package:flutter/material.dart';
+import 'package:runaway/config/extensions.dart';
 import '../../../route_generator/domain/models/activity_type.dart';
 
 /// Statistiques générales de l'utilisateur
@@ -211,6 +213,23 @@ enum GoalType {
 
   const GoalType(this.label);
   final String label;
+}
+
+extension GoalL10n on GoalType {
+  /// Renvoie la chaîne localisée pour *cette* valeur de enum.
+  String goalLabel(BuildContext context) {
+    final l10n = context.l10n;     // ou `content.l10n` dans ton widget
+    switch (this) {
+      case GoalType.distance:
+        return l10n.goalTypeDistance;
+      case GoalType.routes:
+        return l10n.goalTypeRoutes;
+      case GoalType.speed:
+        return l10n.goalTypeSpeed;
+      case GoalType.elevation:
+        return l10n.goalTypeElevation;
+    }
+  }
 }
 
 /// Records personnels

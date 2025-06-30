@@ -12,13 +12,14 @@ import 'package:runaway/config/extensions.dart';
 import 'package:runaway/core/widgets/ask_registration.dart';
 import 'package:runaway/core/widgets/blurry_page.dart';
 import 'package:runaway/core/widgets/icon_btn.dart';
-import 'package:runaway/core/widgets/modal_sheet.dart';
-import 'package:runaway/core/widgets/squircle_container.dart';
+import 'package:runaway/core/widgets/top_snackbar.dart';
 import 'package:runaway/features/account/presentation/widgets/language_selector.dart';
 import 'package:runaway/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:runaway/features/auth/presentation/bloc/auth_event.dart';
 import 'package:runaway/features/auth/presentation/bloc/auth_state.dart';
 import 'dart:math' as math;
+
+import 'package:top_snackbar_flutter/top_snack_bar.dart';
 
 class AccountScreen extends StatefulWidget {
   const AccountScreen({super.key});
@@ -70,21 +71,25 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
         context.read<AuthBloc>().add(
           UpdateProfileRequested(avatar: avatarFile),
         );
-                
+
         // Afficher un message de confirmation
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Mise à jour de la photo en cours...'),
-            backgroundColor: Colors.orange,
+        showTopSnackBar(
+          Overlay.of(context),
+          TopSnackBar(
+            title: context.l10n.updatingPhoto,
+            icon: HugeIcons.solidRoundedLoading03,
+            color: Colors.orange,
           ),
         );
       }
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Erreur lors de la sélection: $e'),
-            backgroundColor: Colors.red,
+        showTopSnackBar(
+          Overlay.of(context),
+          TopSnackBar(
+            title: context.l10n.selectionError(e.toString()),
+            icon: HugeIcons.solidRoundedAlert02,
+            color: Colors.red,
           ),
         );
         print(e.toString());
@@ -123,7 +128,7 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
         forceMaterialTransparency: true,
         backgroundColor: Colors.transparent,
         title: Text(
-          "Account",
+          context.l10n.account,
           style: context.bodySmall?.copyWith(
             color: Colors.white,
           ),
@@ -133,7 +138,7 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
         children: [
           _buildHeaderAccount(
             ctx: context,
-            name: user.fullName ?? "Utilisateur",
+            name: user.fullName ?? context.l10n.defaultUserName,
             username: "@${user.username}",
             avatarUrl: user.avatarUrl,
             initials: user.initials,
@@ -146,16 +151,16 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
               children: [
                 _buildSettingCategory(
                   context,
-                  title: "Preferences",
+                  title: context.l10n.preferences,
                   children: [
                     _buildSettingTile(
                       context,
-                      label: "Language",
+                      label: context.l10n.language,
                       icon: HugeIcons.strokeRoundedLanguageSkill,
                       child: IconBtn(
                         padding: 0.0,
                         backgroundColor: Colors.transparent,
-                        label: "English",
+                        label: context.l10n.currentLanguage,
                         onPressed: () => showModalSheet(
                           context: context, 
                           backgroundColor: Colors.transparent,
@@ -169,12 +174,12 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
                     ),
                     _buildSettingTile(
                       context,
-                      label: "Notifications",
+                      label: context.l10n.notifications,
                       icon: HugeIcons.strokeRoundedNotification02,
                       child: IconBtn(
                         padding: 0.0,
                         backgroundColor: Colors.transparent,
-                        label: "Enabled",
+                        label: context.l10n.enabled,
                         onPressed: () {}, 
                         iconSize: 19,
                         labelColor: Colors.white54,
@@ -184,12 +189,12 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
                     ),
                     _buildSettingTile(
                       context,
-                      label: "Theme",
+                      label: context.l10n.theme,
                       icon: HugeIcons.strokeRoundedPaintBoard,
                       child: IconBtn(
                         padding: 0.0,
                         backgroundColor: Colors.transparent,
-                        label: "Light",
+                        label: context.l10n.lightTheme,
                         onPressed: () {}, 
                         iconSize: 19,
                         labelColor: Colors.white54,
@@ -235,11 +240,11 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
     
                 _buildSettingCategory(
                   context,
-                  title: "Account",
+                  title: context.l10n.account,
                   children: [
                     _buildSettingTile(
                       context,
-                      label: "Disconnect",
+                      label: context.l10n.disconnect,
                       icon: HugeIcons.strokeRoundedLogoutSquare02,
                       child: IconBtn(
                         padding: 0.0,
@@ -252,7 +257,7 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
                     ),
                     _buildSettingTile(
                       context,
-                      label: "Delete profile",
+                      label: context.l10n.deleteProfile,
                       icon: HugeIcons.strokeRoundedDelete02,
                       iconColor: Colors.red,
                       labelColor: Colors.red,
@@ -324,12 +329,11 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
   void _openAvatar(BuildContext context, String url) {
     Navigator.of(context, rootNavigator: true).push(
       PageRouteBuilder(
-        opaque: false,                    // on veut voir la page dessous
-        barrierColor: Colors.transparent, // pas de flash noir
+        opaque: false,
+        barrierColor: Colors.transparent,
         transitionDuration: const Duration(milliseconds: 250),
         reverseTransitionDuration: const Duration(milliseconds: 200),
 
-        // ─── le « child » reçoit l'animation ───
         pageBuilder: (_, Animation<double> animation, __) {
           return _AvatarViewer(
             url: url, 
@@ -427,7 +431,7 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
             padding: 10,
             trailling: HugeIcons.strokeStandardArrowRight01,
             iconSize: 19,
-            label: "Edit profile",
+            label: context.l10n.editProfile,
             textStyle: ctx.bodySmall?.copyWith(
               fontWeight: FontWeight.w500,
             ),
@@ -436,7 +440,7 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
               // TODO: Naviguer vers l'écran d'édition de profil
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
-                  content: Text('Édition du profil - À implémenter'),
+                  content: Text(context.l10n.editProfileTodo),
                   backgroundColor: Colors.orange,
                 ),
               );
@@ -453,18 +457,18 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
       builder: (dialogContext) => AlertDialog(
         backgroundColor: Colors.black,
         title: Text(
-          'Déconnexion',
+          context.l10n.logoutTitle,
           style: context.titleMedium?.copyWith(color: Colors.white),
         ),
         content: Text(
-          'Êtes-vous sûr de vouloir vous déconnecter ?',
+          context.l10n.logoutMessage,
           style: context.bodyMedium?.copyWith(color: Colors.white70),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(),
             child: Text(
-              'Annuler', 
+              context.l10n.cancel, 
               style: TextStyle(color: Colors.white70),
             ),
           ),
@@ -477,7 +481,7 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
               backgroundColor: AppColors.primary,
               foregroundColor: Colors.black,
             ),
-            child: Text('Déconnexion'),
+            child: Text(context.l10n.logoutConfirm),
           ),
         ],
       ),
@@ -490,7 +494,7 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
       builder: (dialogContext) => AlertDialog(
         backgroundColor: Colors.black,
         title: Text(
-          'Supprimer le compte',
+          context.l10n.deleteAccountTitle,
           style: context.titleMedium?.copyWith(color: Colors.red),
         ),
         content: Column(
@@ -498,7 +502,7 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Cette action est irréversible. Toutes vos données seront définitivement supprimées.',
+              context.l10n.deleteAccountMessage,
               style: context.bodyMedium?.copyWith(color: Colors.white70),
             ),
             16.h,
@@ -518,7 +522,7 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
                   8.w,
                   Expanded(
                     child: Text(
-                      'Cette action ne peut pas être annulée',
+                      context.l10n.deleteAccountWarning,
                       style: context.bodySmall?.copyWith(
                         color: Colors.red,
                         fontSize: 12,
@@ -534,7 +538,7 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(),
             child: Text(
-              'Annuler', 
+              context.l10n.cancel, 
               style: TextStyle(color: Colors.white70),
             ),
           ),
@@ -544,7 +548,7 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
               // TODO: Implémenter la suppression du compte
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
-                  content: Text('Suppression du compte - À implémenter'),
+                  content: Text(context.l10n.deleteAccountTodo),
                   backgroundColor: Colors.red,
                 ),
               );
@@ -553,7 +557,7 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
               backgroundColor: Colors.red,
               foregroundColor: Colors.white,
             ),
-            child: Text('Supprimer'),
+            child: Text(context.l10n.delete),
           ),
         ],
       ),
@@ -623,7 +627,7 @@ class _AvatarViewer extends StatelessWidget {
                   opacity: animation,
                   child: IconBtn(
                     onPressed: onTap,
-                    label: "Edit the photo",
+                    label: context.l10n.editPhoto,
                     icon: HugeIcons.strokeRoundedImage02,
                   ),
                 ),

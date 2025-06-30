@@ -28,14 +28,14 @@ class GoalsSection extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(
-              'Objectifs personnels',
+              context.l10n.personalGoals,
               style: context.bodyMedium?.copyWith(color: Colors.white, fontWeight: FontWeight.w700),
             ),
             IconBtn(
               padding: 8.0,
               icon: HugeIcons.solidRoundedAdd01,
               iconSize: 16,
-              label: "Ajouter",
+              label: context.l10n.add,
               textStyle: TextStyle(
                 fontSize: 15,
                 fontWeight: FontWeight.w500,
@@ -150,7 +150,7 @@ class GoalsSection extends StatelessWidget {
         if (goal.deadline != null) ...[
           8.h,
           Text(
-            'Échéance: ${goal.deadline!.day}/${goal.deadline!.month}/${goal.deadline!.year}',
+            '${goal.deadline!.day}/${goal.deadline!.month}/${goal.deadline!.year}',
             style: TextStyle(
               color: Colors.orange,
               fontSize: 11,
@@ -174,14 +174,14 @@ class GoalsSection extends StatelessWidget {
             ),
             8.h,
             Text(
-              'Vous n\'avez aucun objectif de défini',
+              context.l10n.emptyDefinedGoals,
               style: context.bodySmall?.copyWith(
                 color: Colors.white30,
               ),
             ),
             4.h,
             Text(
-              'Appuyez sur + pour en créer un',
+              context.l10n.pressToAdd,
               style: context.bodySmall?.copyWith(
                 color: Colors.white30,
                 fontSize: 14,

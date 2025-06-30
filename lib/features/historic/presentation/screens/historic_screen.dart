@@ -243,14 +243,6 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
         setState(() {
           _hasPendingSync = false;
         });
-        
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Erreur lors de la suppression: ${e.toString()}'),
-            backgroundColor: Colors.red,
-            duration: const Duration(seconds: 3),
-          ),
-        );
       }
     }
   }
@@ -260,12 +252,12 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: const Text('Confirmer la suppression'),
-          content: Text('Voulez-vous vraiment supprimer le parcours "$routeName" ?'),
+          title: Text(context.l10n.confirmRouteDeletionTitle),
+          content: Text(context.l10n.confirmRouteDeletionMessage(routeName)),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(false), // ✅ Retourner false
-              child: const Text('Annuler'),
+              child: Text(context.l10n.cancel),
             ),
             ElevatedButton(
               onPressed: () {
@@ -276,7 +268,7 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
                 backgroundColor: Colors.red,
                 foregroundColor: Colors.white,
               ),
-              child: const Text('Supprimer'),
+              child: Text(context.l10n.delete),
             ),
           ],
         );
@@ -347,7 +339,7 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
       forceMaterialTransparency: true,
       backgroundColor: Colors.transparent,
       title: Text(
-        "Historique",
+        context.l10n.historic,
         style: context.bodySmall?.copyWith(color: Colors.white),
       ),
       actions: [
@@ -464,7 +456,7 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
         forceMaterialTransparency: true,
         backgroundColor: Colors.transparent,
         title: Text(
-          "Historique",
+          context.l10n.historic,
           style: context.bodySmall?.copyWith(color: Colors.white),
         ),
         actions: [
@@ -485,7 +477,7 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
             ),
             16.h,
             Text(
-              'Erreur de chargement',
+              context.l10n.loadingError,
               style: context.bodyLarge?.copyWith(
                 color: Colors.white,
                 fontSize: 24,
@@ -505,7 +497,7 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
             ElevatedButton.icon(
               onPressed: _loadSavedRoutes,
               icon: Icon(HugeIcons.strokeRoundedRefresh),
-              label: Text('Réessayer'),
+              label: Text(context.l10n.retry),
             ),
           ],
         ),
@@ -541,7 +533,7 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
             ),
             30.h,
             Text(
-              'Aucun parcours sauvegardé',
+              context.l10n.emptySavedRouteTitle,
               style: context.bodyLarge?.copyWith(
                 color: Colors.white,
                 fontSize: 25,
@@ -552,7 +544,7 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
             Padding(
               padding: EdgeInsets.symmetric(horizontal: 40),
               child: Text(
-                'Générez votre premier parcours depuis l\'accueil pour le voir apparaître ici',
+                context.l10n.emptySavedRouteMessage,
                 style: context.bodyMedium?.copyWith(
                   color: Colors.white54,
                   fontWeight: FontWeight.w500,
@@ -566,7 +558,7 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
             ElevatedButton.icon(
               onPressed: () => context.go('/home'),
               icon: Icon(HugeIcons.strokeRoundedAiMagic),
-              label: Text('Générer un parcours'),
+              label: Text(context.l10n.generateRoute),
             ),
           ],
         ),
@@ -594,25 +586,25 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
           _buildStatItem(
             icon: HugeIcons.strokeRoundedRoute01,
             value: totalRoutes.toString(),
-            label: 'Parcours',
+            label: context.l10n.route,
           ),
           _buildStatItem(
             icon: HugeIcons.strokeRoundedNavigator01,
             value: '${totalDistance.toStringAsFixed(1)}km',
-            label: 'Total',
+            label: context.l10n.total,
           ),
           if (unsyncedCount > 0)
           _buildStatItem(
             icon: HugeIcons.strokeRoundedWifiOff01,
             value: unsyncedCount.toString(),
-            label: 'Non sync',
+            label: context.l10n.unsynchronized,
             color: Colors.orange,
           )
         else
           _buildStatItem(
             icon: HugeIcons.strokeRoundedWifi01,
             value: syncedCount.toString(),
-            label: 'Sync',
+            label: context.l10n.synchronized,
             color: Colors.green,
           ),
 

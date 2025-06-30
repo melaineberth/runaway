@@ -6,7 +6,10 @@ import 'package:runaway/config/colors.dart';
 import 'package:runaway/config/extensions.dart';
 import 'package:runaway/core/widgets/squircle_container.dart';
 import 'package:runaway/core/services/reverse_geocoding_service.dart';
+import 'package:runaway/features/route_generator/domain/models/activity_type.dart';
 import 'package:runaway/features/route_generator/domain/models/saved_route.dart';
+import 'package:runaway/features/route_generator/domain/models/terrain_type.dart';
+import 'package:runaway/features/route_generator/domain/models/urban_density.dart';
 
 class HistoricCard extends StatefulWidget {
   final SavedRoute route;
@@ -136,18 +139,18 @@ class _HistoricCardState extends State<HistoricCard> {
                       itemBuilder: (context) => [
                         PullDownMenuItem(
                           icon: HugeIcons.solidRoundedTypeCursor,
-                          title: 'Rename',
+                          title: context.l10n.renameRoute,
                           onTap: widget.onRename,
                         ),
                         PullDownMenuItem(
                           icon: HugeIcons.strokeRoundedLayerSendToBack,
-                          title: 'Synchronize',
+                          title: context.l10n.synchronizeRoute,
                           onTap: widget.onSync,
                         ),
                         PullDownMenuItem(
                           isDestructive: true,
                           icon: HugeIcons.strokeRoundedDelete02,
-                          title: 'Delete',
+                          title: context.l10n.deleteRoute,
                           onTap: widget.onDelete,
                         ),
                       ],
@@ -180,7 +183,7 @@ class _HistoricCardState extends State<HistoricCard> {
               children: [
                 _buildDetailChip(
                   icon: widget.route.parameters.activityType.icon,
-                  text: widget.route.parameters.activityType.title,
+                  text: widget.route.parameters.activityType.label(context),
                 ),
                 _buildDetailChip(
                   icon: HugeIcons.solidRoundedNavigator01,
@@ -188,11 +191,11 @@ class _HistoricCardState extends State<HistoricCard> {
                 ),
                 _buildDetailChip(
                   icon: _getTerrainIcon(),
-                  text: widget.route.parameters.terrainType.title,
+                  text: widget.route.parameters.terrainType.label(context),
                 ),
                 _buildDetailChip(
                   icon: _getUrbanDensityIcon(),
-                  text: widget.route.parameters.urbanDensity.title,
+                  text: widget.route.parameters.urbanDensity.label(context),
                 ),
                 if (widget.route.parameters.elevationGain > 0)
                   _buildDetailChip(
@@ -202,7 +205,7 @@ class _HistoricCardState extends State<HistoricCard> {
                 if (widget.route.parameters.isLoop)
                   _buildDetailChip(
                     icon: HugeIcons.solidRoundedRepeat,
-                    text: 'Boucle',
+                    text: widget.route.parameters.isLoop ? context.l10n.pathLoop : context.l10n.pathSimple,
                   ),
                 if (widget.route.timesUsed > 0)
                   _buildDetailChip(
@@ -221,7 +224,7 @@ class _HistoricCardState extends State<HistoricCard> {
               padding: EdgeInsets.symmetric(vertical: 15.0),
               child: Center(
                 child: Text(
-                  "Suivre", 
+                  context.l10n.followRoute, 
                   style: context.bodySmall?.copyWith(
                     color: Colors.black,
                     fontSize: 16,
@@ -336,7 +339,7 @@ class _HistoricCardState extends State<HistoricCard> {
             ),
             8.h,
             Text(
-              'Chargement...',
+              context.l10n.loading,
               style: context.bodySmall?.copyWith(
                 color: Colors.white,
                 fontSize: 12,
@@ -409,7 +412,7 @@ class _HistoricCardState extends State<HistoricCard> {
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
-                  'Image indisponible',
+                  context.l10n.imageUnavailable,
                   style: context.bodySmall?.copyWith(
                     color: Colors.white70,
                     fontSize: 10,

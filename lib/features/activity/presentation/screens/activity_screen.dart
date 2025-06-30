@@ -6,13 +6,12 @@ import 'package:runaway/core/blocs/app_data/app_data_bloc.dart';
 import 'package:runaway/core/blocs/app_data/app_data_event.dart';
 import 'package:runaway/core/blocs/app_data/app_data_state.dart';
 import 'package:runaway/core/widgets/blurry_page.dart';
+import 'package:runaway/core/widgets/modal_sheet.dart';
 import 'package:runaway/core/widgets/squircle_container.dart';
 import 'package:runaway/features/activity/data/repositories/activity_repository.dart';
 import 'package:runaway/features/activity/presentation/widgets/goal_templates_dialog.dart';
-import 'package:top_snackbar_flutter/top_snack_bar.dart';
 import '../../../../config/extensions.dart';
 import '../../../../core/widgets/ask_registration.dart';
-import '../../../../core/widgets/top_snackbar.dart';
 import '../../../auth/presentation/bloc/auth_bloc.dart';
 import '../../../auth/presentation/bloc/auth_state.dart';
 import '../../domain/models/activity_stats.dart';
@@ -103,14 +102,7 @@ class _ActivityScreenState extends State<ActivityScreen> with TickerProviderStat
     );
   }
 
-  Widget _buildBody(AppDataState appDataState) {
-    // Débogage : afficher l'état des données
-    print('🔍 ActivityScreen - État des données:');
-    print('   - isLoading: ${appDataState.isLoading}');
-    print('   - isDataLoaded: ${appDataState.isDataLoaded}');
-    print('   - hasActivityData: ${appDataState.hasActivityData}');
-    print('   - lastError: ${appDataState.lastError}');
-    
+  Widget _buildBody(AppDataState appDataState) {    
     // Si les données ne sont pas encore chargées ET qu'on charge
     if (!appDataState.isDataLoaded && appDataState.isLoading) {
       return _buildLoadingState();
@@ -147,7 +139,7 @@ class _ActivityScreenState extends State<ActivityScreen> with TickerProviderStat
       title: FadeTransition(
         opacity: _fadeAnimation,
         child: Text(
-          "Activité",
+          context.l10n.activityTitle,
           style: context.bodySmall?.copyWith(
             color: Colors.white,
             fontWeight: FontWeight.w600,
@@ -181,7 +173,7 @@ class _ActivityScreenState extends State<ActivityScreen> with TickerProviderStat
                   children: [
                     Icon(HugeIcons.strokeRoundedDownload01, color: Colors.white, size: 20),
                     SizedBox(width: 8),
-                    Text('Exporter les données', style: TextStyle(color: Colors.white)),
+                    Text(context.l10n.exportData, style: TextStyle(color: Colors.white)),
                   ],
                 ),
               ),
@@ -191,7 +183,7 @@ class _ActivityScreenState extends State<ActivityScreen> with TickerProviderStat
                   children: [
                     Icon(HugeIcons.strokeRoundedRefresh, color: Colors.orange, size: 20),
                     SizedBox(width: 8),
-                    Text('Réinitialiser objectifs', style: TextStyle(color: Colors.orange)),
+                    Text(context.l10n.resetGoals, style: TextStyle(color: Colors.orange)),
                   ],
                 ),
               ),
@@ -223,7 +215,7 @@ class _ActivityScreenState extends State<ActivityScreen> with TickerProviderStat
             ),
             20.h,
             Text(
-              'Calcul des statistiques...',
+              context.l10n.statisticsCalculation,
               style: context.bodyMedium?.copyWith(
                 color: Colors.white70,
               ),
@@ -259,7 +251,7 @@ class _ActivityScreenState extends State<ActivityScreen> with TickerProviderStat
               ),
               24.h,
               Text(
-                'Erreur',
+                context.l10n.error,
                 style: context.titleLarge?.copyWith(
                   color: Colors.white,
                   fontWeight: FontWeight.bold,
@@ -277,7 +269,7 @@ class _ActivityScreenState extends State<ActivityScreen> with TickerProviderStat
               ElevatedButton.icon(
                 onPressed: _refreshData,
                 icon: Icon(HugeIcons.strokeRoundedRefresh),
-                label: Text('Réessayer'),
+                label: Text(context.l10n.retry),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.blue,
                   foregroundColor: Colors.white,
@@ -313,7 +305,7 @@ class _ActivityScreenState extends State<ActivityScreen> with TickerProviderStat
             ),
             24.h,
             Text(
-              'Chargement...',
+              context.l10n.loading,
               style: context.bodyLarge?.copyWith(
                 color: Colors.white,
                 fontSize: 24,
@@ -436,7 +428,7 @@ class _ActivityScreenState extends State<ActivityScreen> with TickerProviderStat
   void _handleMenuSelection(String value) {
     switch (value) {
       case 'export':
-        _exportData();
+        (){};
         break;
       case 'reset_goals':
         _showResetGoalsDialog();
@@ -447,49 +439,53 @@ class _ActivityScreenState extends State<ActivityScreen> with TickerProviderStat
   void _showAddGoalOptions() {
     showModalSheet(
       context: context, 
+      backgroundColor: Colors.transparent,
       child: _buildGoalOptions(),
     );
   }
 
   Widget _buildGoalOptions() {
-    return Padding(
-      padding: const EdgeInsets.all(30.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            'Créer un objectif',
-            style: context.bodyMedium?.copyWith(
-              color: Colors.white,
+    return ModalSheet(
+      child: Padding(
+        padding: const EdgeInsets.all(30.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              context.l10n.createGoal,
+              style: context.bodySmall?.copyWith(
+                color: Colors.white,
+              ),
             ),
-          ),
-          20.h,
-          _buildGoalOption(
-            context: context,
-            icon: HugeIcons.strokeRoundedAdd01,
-            title: 'Objectif personnalisé',
-            subtitle: 'Créer un objectif sur mesure',
-            color: Colors.blue,
-            onTap: () {
-              Navigator.pop(context);
-              _showAddGoalDialog();
-            },
-          ),
-          _buildGoalOption(
-            context: context,
-            icon: HugeIcons.strokeRoundedAdd01,
-            title: 'Modèles d\'objectifs',
-            subtitle: 'Choisir parmi des objectifs pré-définis',
-            color: Colors.green,
-            onTap: () {
-              showModalSheet(
-                context: context, 
-                child: GoalTemplatesDialog(),
-              );
-            },
-          ),
-        ],
+            20.h,
+            _buildGoalOption(
+              context: context,
+              icon: HugeIcons.strokeRoundedAdd01,
+              title: context.l10n.customGoal,
+              subtitle: context.l10n.createCustomGoal,
+              color: Colors.blue,
+              onTap: () {
+                context.pop();
+                _showAddGoalDialog();
+              },
+            ),
+            _buildGoalOption(
+              context: context,
+              icon: HugeIcons.strokeRoundedAdd01,
+              title: context.l10n.goalsModels,
+              subtitle: context.l10n.predefinedGoals,
+              color: Colors.green,
+              onTap: () {
+                showModalSheet(
+                  context: context, 
+                  backgroundColor: Colors.transparent,
+                  child: GoalTemplatesDialog(),
+                );
+              },
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -554,7 +550,7 @@ class _ActivityScreenState extends State<ActivityScreen> with TickerProviderStat
       isDismissible: true,
       enableDrag: false,
       context: context,
-      backgroundColor: Colors.black,
+      backgroundColor: Colors.transparent,
       builder: (context) => AddGoalDialog(existingGoal: existingGoal),
     );
 
@@ -564,10 +560,6 @@ class _ActivityScreenState extends State<ActivityScreen> with TickerProviderStat
       } else {
         context.read<ActivityBloc>().add(PersonalGoalAdded(result));
       }
-      
-      _showSuccessSnackbar(
-        existingGoal != null ? 'Objectif mis à jour' : 'Objectif créé'
-      );
     }
   }
 
@@ -580,36 +572,30 @@ class _ActivityScreenState extends State<ActivityScreen> with TickerProviderStat
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: Colors.black87,
-        title: Text('Supprimer l\'objectif', style: TextStyle(color: Colors.white)),
+        title: Text(context.l10n.deleteGoalTitle, style: TextStyle(color: Colors.white)),
         content: Text(
-          'Êtes-vous sûr de vouloir supprimer cet objectif ?',
+          context.l10n.deleteGoalMessage,
           style: TextStyle(color: Colors.white70),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text('Annuler', style: TextStyle(color: Colors.white60)),
+            child: Text(context.l10n.cancel, style: TextStyle(color: Colors.white60)),
           ),
           ElevatedButton(
             onPressed: () {
               Navigator.pop(context);
               context.read<ActivityBloc>().add(PersonalGoalDeleted(goalId));
-              _showSuccessSnackbar('Objectif supprimé');
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.red,
               foregroundColor: Colors.white,
             ),
-            child: Text('Supprimer'),
+            child: Text(context.l10n.delete),
           ),
         ],
       ),
     );
-  }
-
-  void _exportData() {
-    _showSuccessSnackbar('Export des données en cours...');
-    // TODO: Implémenter l'export des données
   }
 
   void _showResetGoalsDialog() {
@@ -617,46 +603,26 @@ class _ActivityScreenState extends State<ActivityScreen> with TickerProviderStat
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: Colors.black87,
-        title: Text('Réinitialiser les objectifs', style: TextStyle(color: Colors.white)),
+        title: Text(context.l10n.goalsResetTitle, style: TextStyle(color: Colors.white)),
         content: Text(
-          'Cette action supprimera tous vos objectifs. Êtes-vous sûr ?',
+          context.l10n.goalsResetMessage,
           style: TextStyle(color: Colors.white70),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text('Annuler', style: TextStyle(color: Colors.white60)),
+            child: Text(context.l10n.cancel, style: TextStyle(color: Colors.white60)),
           ),
           ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              _resetAllGoals();
-            },
+            onPressed: () {},
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.orange,
               foregroundColor: Colors.white,
             ),
-            child: Text('Réinitialiser'),
+            child: Text(context.l10n.reset),
           ),
         ],
       ),
     );
   }
-
-  void _resetAllGoals() {
-    // TODO: Implémenter la réinitialisation des objectifs
-    _showSuccessSnackbar('Objectifs réinitialisés');
-  }
-
-  void _showSuccessSnackbar(String message) {
-    showTopSnackBar(
-      Overlay.of(context),
-      TopSnackBar(
-        title: message,
-        icon: HugeIcons.solidRoundedCheckmarkCircle02,
-        color: Colors.green,
-      ),
-    );
-  }
-
 }

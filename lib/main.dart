@@ -5,6 +5,7 @@ import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:runaway/config/environment_config.dart';
+import 'package:runaway/config/extensions.dart';
 import 'package:runaway/config/router.dart';
 import 'package:runaway/config/theme.dart';
 import 'package:runaway/core/blocs/app_data/app_data_bloc.dart';
@@ -21,7 +22,6 @@ import 'package:runaway/features/auth/presentation/bloc/auth_event.dart';
 import 'package:runaway/features/route_generator/data/repositories/routes_repository.dart';
 import 'package:runaway/l10n/app_localizations.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:flutter_localizations/flutter_localizations.dart';
 import 'core/blocs/app_bloc_observer.dart';
 import 'features/home/presentation/blocs/route_parameters_bloc.dart';
 import 'features/route_generator/presentation/blocs/route_generation/route_generation_bloc.dart';
@@ -142,13 +142,13 @@ class RunAway extends StatelessWidget {
           child: BlocBuilder<LocaleBloc, LocaleState>(
             builder: (context, localeState) {
               return MaterialApp.router(
-                title: 'RunAway - Générateur de Parcours',
+                title: 'Trailix',
                 debugShowCheckedModeBanner: false,
                 routerConfig: router,
                 theme: getAppTheme(Brightness.light),
                 darkTheme: getAppTheme(Brightness.dark),
                 themeMode: ThemeMode.dark,
-                locale: localeState.locale,  // 🔧 AJOUT: Utiliser la locale du bloc
+                locale: localeState.locale,
                 localizationsDelegates: AppLocalizations.localizationsDelegates,
                 supportedLocales: AppLocalizations.supportedLocales,
                 builder: (context, child) {
@@ -189,7 +189,7 @@ class ErrorApp extends StatelessWidget {
                 ),
                 SizedBox(height: 16),
                 Text(
-                  'Erreur d\'initialisation',
+                  context.l10n.error,
                   style: TextStyle(
                     fontSize: 24,
                     fontWeight: FontWeight.bold,
@@ -209,7 +209,7 @@ class ErrorApp extends StatelessWidget {
                     // Redémarrer l'app
                     main();
                   },
-                  child: Text('Réessayer'),
+                  child: Text(context.l10n.retry),
                 ),
               ],
             ),

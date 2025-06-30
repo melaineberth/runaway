@@ -18,7 +18,7 @@ class RecordsSection extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Records personnels',
+          context.l10n.personalRecords,
           style: context.bodyMedium?.copyWith(color: Colors.white, fontWeight: FontWeight.w700),
         ),
         15.h,
@@ -132,7 +132,7 @@ class RecordsSection extends StatelessWidget {
             ),
             8.h,
             Text(
-              'Complétez des parcours pour établir vos records',
+              context.l10n.empryPersonalRecords,
               style: context.bodySmall?.copyWith(
                 color: Colors.white30,
               ),

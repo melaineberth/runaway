@@ -47,14 +47,14 @@ class _MapStyleSelectorState extends State<MapStyleSelector> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              "Type de carte",
+              context.l10n.mapStyleTitle,
               style: context.bodySmall?.copyWith(
                 color: Colors.white,
               ),
             ),
             3.h,
             Text(
-              'Choisissez votre style',
+              context.l10n.mapStyleSubtitle,
               style: context.bodySmall?.copyWith(
                 color: Colors.grey.shade500,
                 fontSize: 15,
@@ -117,7 +117,7 @@ class _MapStyleSelectorState extends State<MapStyleSelector> {
                 
               // Informations du style
               Text(
-                style.name,
+                style.mapStyle(context),
                 style: context.bodyMedium?.copyWith(
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
