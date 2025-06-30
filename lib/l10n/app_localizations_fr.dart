@@ -4,33 +4,33 @@ import 'app_localizations.dart';
 
 // ignore_for_file: type=lint
 
-/// The translations for English (`en`).
-class AppLocalizationsEn extends AppLocalizations {
-  AppLocalizationsEn([String locale = 'en']) : super(locale);
+/// The translations for French (`fr`).
+class AppLocalizationsFr extends AppLocalizations {
+  AppLocalizationsFr([String locale = 'fr']) : super(locale);
 
   @override
-  String get language => 'Language';
+  String get language => 'Langue';
 
   @override
-  String get selectLanguage => 'Select Language';
+  String get selectLanguage => 'Sélectionner la langue';
 
   @override
-  String get pathGenerated => 'Path generated';
+  String get pathGenerated => 'Parcours généré';
 
   @override
-  String get pathLoop => 'Loop';
+  String get pathLoop => 'Boucle';
 
   @override
   String get pathSimple => 'Simple';
 
   @override
-  String get start => 'Start';
+  String get start => 'Démarrer';
 
   @override
-  String get share => 'Share';
+  String get share => 'Partager';
 
   @override
-  String get toTheRun => 'To the run';
+  String get toTheRun => 'Vers la course';
 
   @override
   String get pathPoint => 'Point';
@@ -39,7 +39,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get pathTotal => 'Total';
 
   @override
-  String get pathTime => 'Duration';
+  String get pathTime => 'Durée';
 
   @override
   String get pointsCount => 'Points';
@@ -48,36 +48,36 @@ class AppLocalizationsEn extends AppLocalizations {
   String get guide => 'GUIDE';
 
   @override
-  String get course => 'COURSE';
+  String get course => 'PARCOURS';
 
   @override
-  String get enterDestination => 'Enter a destination';
+  String get enterDestination => 'Entrez une destination';
 
   @override
   String shareMsg(String distance) {
-    return 'My $distance km RunAway route generated with the RunAway app';
+    return 'Mon parcours RunAway de $distance km généré avec l\'application RunAway';
   }
 
   @override
-  String get currentPosition => 'Current position';
+  String get currentPosition => 'Position actuelle';
 
   @override
-  String get retrySmallRay => 'Try again with a smaller ray';
+  String get retrySmallRay => 'Réessayez avec un rayon plus petit';
 
   @override
-  String get noCoordinateServer => 'No coordinate received from the server';
+  String get noCoordinateServer => 'Aucune coordonnée reçue du serveur';
 
   @override
-  String get generationError => 'Error during the generation';
+  String get generationError => 'Erreur lors de la génération';
 
   @override
-  String get disabledLocation => 'Location services are disabled.';
+  String get disabledLocation => 'Les services de localisation sont désactivés.';
 
   @override
-  String get deniedPermission => 'Location permissions are denied.';
+  String get deniedPermission => 'Les permissions de localisation sont refusées.';
 
   @override
-  String get disabledAndDenied => 'Location permissions are permanently denied, we cannot request permission.';
+  String get disabledAndDenied => 'Les permissions de localisation sont définitivement refusées, nous ne pouvons pas demander la permission.';
 
   @override
   String get toTheRouteNavigation => 'Navigation to the stopped route';

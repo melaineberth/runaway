@@ -1,5 +1,16 @@
 {
   "@@locale": "en",
+  
+  "language": "Language",
+  "@language": {
+    "description": "Label for language selection setting"
+  },
+
+  "selectLanguage": "Select Language",
+  "@selectLanguage": {
+    "description": "Title for language selection dialog"
+  },
+
   "pathGenerated": "Path generated",
   "@pathGenerated": {
     "description": "Headline or toast shown once a route has been successfully generated."

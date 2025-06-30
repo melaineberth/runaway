@@ -36,6 +36,7 @@ class _ModalSheetState extends State<ModalSheet> {
       padding: EdgeInsets.all(_outerPadding),
       child: Container(
         height: widget.height,
+        width: double.infinity,
         decoration: BoxDecoration(
           color: Colors.black,
           borderRadius: BorderRadius.only(

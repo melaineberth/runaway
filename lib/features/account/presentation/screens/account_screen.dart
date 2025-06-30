@@ -12,6 +12,9 @@ import 'package:runaway/config/extensions.dart';
 import 'package:runaway/core/widgets/ask_registration.dart';
 import 'package:runaway/core/widgets/blurry_page.dart';
 import 'package:runaway/core/widgets/icon_btn.dart';
+import 'package:runaway/core/widgets/modal_sheet.dart';
+import 'package:runaway/core/widgets/squircle_container.dart';
+import 'package:runaway/features/account/presentation/widgets/language_selector.dart';
 import 'package:runaway/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:runaway/features/auth/presentation/bloc/auth_event.dart';
 import 'package:runaway/features/auth/presentation/bloc/auth_state.dart';
@@ -153,7 +156,11 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
                         padding: 0.0,
                         backgroundColor: Colors.transparent,
                         label: "English",
-                        onPressed: () {}, 
+                        onPressed: () => showModalSheet(
+                          context: context, 
+                          backgroundColor: Colors.transparent,
+                          child: LanguageSelector(),
+                        ), 
                         iconSize: 19,
                         labelColor: Colors.white54,
                         iconColor: Colors.white54,

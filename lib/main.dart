@@ -8,6 +8,7 @@ import 'package:runaway/config/environment_config.dart';
 import 'package:runaway/config/router.dart';
 import 'package:runaway/config/theme.dart';
 import 'package:runaway/core/blocs/app_data/app_data_bloc.dart';
+import 'package:runaway/core/blocs/locale/locale_bloc.dart';
 import 'package:runaway/core/services/app_data_initialization_service.dart';
 import 'package:runaway/core/services/app_initialization_service.dart';
 import 'package:runaway/core/services/route_data_sync_wrapper.dart';
@@ -120,6 +121,14 @@ class RunAway extends StatelessWidget {
           },
         ),
 
+        BlocProvider(
+          create: (_) {
+            final localeBloc = LocaleBloc();
+            localeBloc.add(const LocaleInitialized());
+            return localeBloc;
+          },
+        ),
+
         // ActivityBloc - maintenant moins critique
         BlocProvider<ActivityBloc>(
           create: (context) => ActivityBloc(
@@ -130,28 +139,26 @@ class RunAway extends StatelessWidget {
       ],
       child: AuthDataListener(
         child: RouteDataSyncWrapper(
-          child: MaterialApp.router(
-            title: 'RunAway - Générateur de Parcours',
-            debugShowCheckedModeBanner: false,
-            routerConfig: router,
-            theme: getAppTheme(Brightness.light),
-            darkTheme: getAppTheme(Brightness.dark),
-            themeMode: ThemeMode.dark,
-            localizationsDelegates: const [
-              AppLocalizations.delegate,
-              GlobalMaterialLocalizations.delegate,
-              GlobalWidgetsLocalizations.delegate,
-              GlobalCupertinoLocalizations.delegate,
-            ],
-            supportedLocales: const [
-              Locale('en'),
-            ],
-            builder: (context, child) {
-              return MediaQuery(
-                data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(1.0)),
-                child: child ?? Container(),
+          child: BlocBuilder<LocaleBloc, LocaleState>(
+            builder: (context, localeState) {
+              return MaterialApp.router(
+                title: 'RunAway - Générateur de Parcours',
+                debugShowCheckedModeBanner: false,
+                routerConfig: router,
+                theme: getAppTheme(Brightness.light),
+                darkTheme: getAppTheme(Brightness.dark),
+                themeMode: ThemeMode.dark,
+                locale: localeState.locale,  // 🔧 AJOUT: Utiliser la locale du bloc
+                localizationsDelegates: AppLocalizations.localizationsDelegates,
+                supportedLocales: AppLocalizations.supportedLocales,
+                builder: (context, child) {
+                  return MediaQuery(
+                    data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(1.0)),
+                    child: child ?? Container(),
+                  );
+                },
               );
-            },
+            }
           ),
         ),
       ),

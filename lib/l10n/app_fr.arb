@@ -1,0 +1,118 @@
+{
+    "@@locale": "fr",
+    
+    "pathGenerated": "Parcours généré",
+    "@pathGenerated": {
+      "description": "Headline or toast shown once a route has been successfully generated."
+    },
+  
+    "pathLoop": "Boucle",
+    "@pathLoop": {
+      "description": "Toggle / chip label for selecting a circular (loop) route."
+    },
+  
+    "pathSimple": "Simple",
+    "@pathSimple": {
+      "description": "Toggle / chip label for selecting a simple (out-and-back or point-to-point) route."
+    },
+  
+    "start": "Démarrer",
+    "@start": {
+      "description": "Label for the primary action button that begins the workout or navigation."
+    },
+  
+    "share": "Partager",
+    "@share": {
+      "description": "Button text for sharing the generated route with others."
+    },
+  
+    "toTheRun": "Vers la course",
+    "@toTheRun": {
+      "description": "Navigation button that takes the user to the live run screen."
+    },
+  
+    "pathPoint": "Point",
+    "@pathPoint": {
+      "description": "Metric label indicating a single waypoint or checkpoint in the route details."
+    },
+  
+    "pathTotal": "Total",
+    "@pathTotal": {
+      "description": "Metric label denoting the aggregate distance of the route."
+    },
+  
+    "pathTime": "Durée",
+    "@pathTime": {
+      "description": "Metric label showing the estimated time required to complete the route."
+    },
+  
+    "pointsCount": "Points",
+    "@pointsCount": {
+      "description": "Metric label for the total number of waypoints/checkpoints in the generated route."
+    },
+  
+    "guide": "GUIDE",
+    "@guide": {
+      "description": "Section header for guidance or instructional content within the UI."
+    },
+  
+    "course": "PARCOURS",
+    "@course": {
+      "description": "Section header for the route/course overview."
+    },
+  
+    "enterDestination": "Entrez une destination",
+    "@enterDestination": {
+      "description": "Placeholder text in a search field prompting the user to type the destination address or landmark."
+    },
+  
+    "shareMsg": "Mon parcours RunAway de {distance} km généré avec l'application RunAway",
+    "@shareMsg": {
+      "description": "Template for the message used when sharing generated routes, including distance."
+    },
+  
+    "currentPosition": "Position actuelle",
+    "@currentPosition": {
+      "description": "Label indicating the user's current geographical location."
+    },
+  
+    "retrySmallRay": "Réessayez avec un rayon plus petit",
+    "@retrySmallRay": {
+      "description": "Error message suggesting the user reduce the search radius if route generation fails."
+    },
+  
+    "noCoordinateServer": "Aucune coordonnée reçue du serveur",
+    "@noCoordinateServer": {
+      "description": "Error message when the server fails to return route coordinates."
+    },
+  
+    "generationError": "Erreur lors de la génération",
+    "@generationError": {
+      "description": "Generic error message shown when route generation fails."
+    },
+  
+    "disabledLocation": "Les services de localisation sont désactivés.",
+    "@disabledLocation": {
+      "description": "Error message when location services are turned off on the device."
+    },
+  
+    "deniedPermission": "Les permissions de localisation sont refusées.",
+    "@deniedPermission": {
+      "description": "Error message when the user has denied location access permissions."
+    },
+  
+    "disabledAndDenied": "Les permissions de localisation sont définitivement refusées, nous ne pouvons pas demander la permission.",
+    "@disabledAndDenied": {
+      "description": "Error message when location permissions are permanently denied and cannot be requested again."
+    },
+  
+    "language": "Langue",
+    "@language": {
+      "description": "Label for language selection setting"
+    },
+  
+    "selectLanguage": "Sélectionner la langue",
+    "@selectLanguage": {
+      "description": "Title for language selection dialog"
+    }
+  }
