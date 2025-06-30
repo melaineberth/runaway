@@ -111,11 +111,11 @@ class _LocationSearchBarState extends State<LocationSearchBar> {
           child: Container(
             constraints: BoxConstraints(maxHeight: 300),
             decoration: BoxDecoration(
-              color: Colors.black,
+              color: context.adaptiveBackground,
               borderRadius: BorderRadius.circular(20),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.18),
+                  color: context.adaptiveBackground.withValues(alpha: 0.18),
                   spreadRadius: 2,
                   blurRadius: 30,
                   offset: Offset(0, 0),
@@ -142,11 +142,11 @@ class _LocationSearchBarState extends State<LocationSearchBar> {
                           SquircleContainer(
                             radius: 20,
                             padding: EdgeInsets.all(8),
-                            color: Colors.grey.shade100,
+                            color: context.adaptiveBorder,
                             child: HugeIcon(
                               icon: HugeIcons.strokeRoundedLocation01,
                               size: 25,
-                              color: Colors.grey.shade600,
+                              color: context.adaptiveTextSecondary,
                             ),
                           ),
                           12.w,
@@ -158,7 +158,7 @@ class _LocationSearchBarState extends State<LocationSearchBar> {
                                   suggestion.placeName.split(',').first,
                                   style: context.bodySmall?.copyWith(
                                     fontWeight: FontWeight.w600,
-                                    color: Colors.white,
+                                    color: context.adaptiveTextPrimary,
                                   ),
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
@@ -169,7 +169,7 @@ class _LocationSearchBarState extends State<LocationSearchBar> {
                                     suggestion.placeName.split(',').skip(1).join(',').trim(),
                                     style: context.bodySmall?.copyWith(
                                       fontSize: 14,
-                                      color: Colors.white60,
+                                      color: context.adaptiveTextSecondary,
                                       fontWeight: FontWeight.normal,
                                     ),
                                     maxLines: 1,
@@ -225,13 +225,13 @@ class _LocationSearchBarState extends State<LocationSearchBar> {
       radius: 40,
       padding: EdgeInsets.symmetric(horizontal: 15, vertical: 8),
       height: 60,
-      color: Colors.black,
+      color: context.adaptiveBackground,
       child: Row(
         children: [
           HugeIcon(
             icon: HugeIcons.solidRoundedSearch01,
             size: 22,
-            color: Colors.white38,
+            color: context.adaptiveDisabled,
           ),
           12.w,
           Expanded(
@@ -241,16 +241,13 @@ class _LocationSearchBarState extends State<LocationSearchBar> {
               onChanged: _onSearchChanged,
               style: context.bodySmall?.copyWith(
                 fontWeight: FontWeight.w500,
-                color: Colors.white,
+                color: context.adaptiveTextPrimary,
               ),
-              // onTapOutside: (event) {
-              //   FocusScope.of(context).unfocus();
-              // },
               textCapitalization: TextCapitalization.sentences,
               decoration: InputDecoration(
                 hintText: context.l10n.enterDestination,
                 hintStyle: context.bodySmall?.copyWith(
-                  color: Colors.white38,
+                  color: context.adaptiveDisabled,
                   fontWeight: FontWeight.w500,
                   fontSize: 17,
                 ),
@@ -269,7 +266,7 @@ class _LocationSearchBarState extends State<LocationSearchBar> {
                 height: 20,
                 child: CircularProgressIndicator(
                   strokeWidth: 2,
-                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white38),
+                  valueColor: AlwaysStoppedAnimation<Color>(context.adaptiveDisabled),
                 ),
               )
               : GestureDetector(
@@ -277,7 +274,7 @@ class _LocationSearchBarState extends State<LocationSearchBar> {
               child: HugeIcon(
                 icon: HugeIcons.solidRoundedCancelCircle,
                 size: 25,
-                color: Colors.white38,
+                color: context.adaptiveDisabled,
               ),
             ),
         ),

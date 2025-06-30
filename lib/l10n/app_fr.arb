@@ -600,6 +600,18 @@
   "@lightTheme": {
     "description": "Texte de valeur pour le choix de thème clair."
   },
+  "selectPreferenceTheme": "Sélectionnez votre préférence",
+  "@selectPreferenceTheme": {
+    "description": "Invite invitant l'utilisateur à choisir son thème préféré."
+  },
+  "autoTheme": "Auto",
+  "@autoTheme": {
+    "description": "Texte de valeur pour le choix de thème automatique (thème système)."
+  },
+  "darkTheme": "Sombre",
+  "@darkTheme": {
+    "description": "Texte de valeur pour le choix de thème sombre."
+  },
   "accountSection": "Compte",
   "@accountSection": {
     "description": "En-tête de section regroupant les actions liées au compte comme la déconnexion et la suppression du profil."

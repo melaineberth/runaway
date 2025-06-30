@@ -38,7 +38,7 @@ class _ModalSheetState extends State<ModalSheet> {
         height: widget.height,
         width: double.infinity,
         decoration: BoxDecoration(
-          color: Colors.black,
+          color: context.adaptiveBackground,
           borderRadius: BorderRadius.only(
             topLeft: Radius.circular(innerRadius / 1.5),
             topRight: Radius.circular(innerRadius / 1.5),

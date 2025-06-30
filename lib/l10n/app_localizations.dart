@@ -941,6 +941,24 @@ abstract class AppLocalizations {
   /// **'Light'**
   String get lightTheme;
 
+  /// Prompt inviting the user to choose their preferred theme.
+  ///
+  /// In en, this message translates to:
+  /// **'Select your preference'**
+  String get selectPreferenceTheme;
+
+  /// Value text for the auto-theme choice (system theme).
+  ///
+  /// In en, this message translates to:
+  /// **'Auto'**
+  String get autoTheme;
+
+  /// Value text for the dark-theme choice.
+  ///
+  /// In en, this message translates to:
+  /// **'Dark'**
+  String get darkTheme;
+
   /// Section heading grouping account-related actions such as logout and delete profile.
   ///
   /// In en, this message translates to:

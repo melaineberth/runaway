@@ -4,19 +4,16 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:runaway/config/colors.dart';
 import 'package:runaway/config/extensions.dart';
-import 'package:runaway/core/blocs/locale/locale_bloc.dart';
-import 'package:runaway/core/services/locale_service.dart';
+import 'package:runaway/core/blocs/theme_bloc/theme_bloc.dart';
 import 'package:runaway/core/widgets/modal_sheet.dart';
 import 'package:runaway/core/widgets/squircle_container.dart';
 
-class LanguageSelector extends StatelessWidget {
-  const LanguageSelector({
-    super.key,
-  });
+class ThemeSelector extends StatelessWidget {
+  const ThemeSelector({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<LocaleBloc, LocaleState>(
+    return BlocBuilder<ThemeBloc, ThemeState>(
       builder: (context, state) {
         if (state.isLoading) {
           return const SizedBox(
@@ -33,14 +30,14 @@ class LanguageSelector extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  context.l10n.availableLanguage,
+                  context.l10n.theme,
                   style: context.bodySmall?.copyWith(
                     color: context.adaptiveTextPrimary,
                   ),
                 ),
                 3.h,
                 Text(
-                  context.l10n.selectPreferenceLanguage,
+                  context.l10n.selectPreferenceTheme,
                   style: context.bodySmall?.copyWith(
                     color: context.adaptiveTextSecondary,
                     fontSize: 15,
@@ -50,20 +47,18 @@ class LanguageSelector extends StatelessWidget {
                 20.h,
                 Column(
                   children: [
-                    ...LocaleService.supportedLocales.asMap().entries.map((entry) {
+                    ...AppThemeMode.values.asMap().entries.map((entry) {
                       final i = entry.key;
-                      final locale = entry.value;
-                      final isSelected = locale == state.locale;
-                      final languageName = LocaleService().getLanguageNativeName(locale);
-          
+                      final themeMode = entry.value;
+                      final isSelected = themeMode == state.themeMode;
+                      final themeName = _getThemeName(context, themeMode);
+                      
                       return MultiBlocListener(
                         listeners: [
-                          // 🔧 FIX: Gestion séparée du changement de langue
-                          BlocListener<LocaleBloc, LocaleState>(
+                          BlocListener<ThemeBloc, ThemeState>(
                             listenWhen: (previous, current) => 
-                                previous.locale != current.locale && !current.isLoading,
+                                previous.themeMode != current.themeMode && !current.isLoading,
                             listener: (context, state) {
-                              // 🔧 Attendre la fin du frame avant de fermer la modal
                               SchedulerBinding.instance.addPostFrameCallback((_) {
                                 if (context.mounted && Navigator.of(context).canPop()) {
                                   Navigator.of(context).pop();
@@ -74,16 +69,16 @@ class LanguageSelector extends StatelessWidget {
                         ],
                         child: Padding(
                           padding: EdgeInsets.only(
-                            bottom: i == LocaleService.supportedLocales.length - 1 ? 0 : 12,
+                            bottom: i == AppThemeMode.values.length - 1 ? 0 : 12,
                           ),
-                          child: _buildStyleTile(
+                          child: _buildThemeTile(
                             context: context, 
-                            name: languageName, 
-                            flag: _getLanguageFlag(locale),
+                            name: themeName, 
+                            icon: _getThemeIcon(themeMode),
                             isSelected: isSelected, 
                             onTap: () {
                               if (!isSelected) {
-                                context.read<LocaleBloc>().add(LocaleChanged(locale));
+                                context.read<ThemeBloc>().add(ThemeChanged(themeMode));
                               }
                             },
                           ),
@@ -100,21 +95,32 @@ class LanguageSelector extends StatelessWidget {
     );
   }
 
-  String _getLanguageFlag(Locale locale) {
-    switch (locale.languageCode) {
-      case 'fr':
-        return '🇫🇷';
-      case 'en':
-        return '🇺🇸';
-      default:
-        return '🌍';
+  String _getThemeName(BuildContext context, AppThemeMode themeMode) {
+    switch (themeMode) {
+      case AppThemeMode.auto:
+        return context.l10n.autoTheme;
+      case AppThemeMode.light:
+        return context.l10n.lightTheme;
+      case AppThemeMode.dark:
+        return context.l10n.darkTheme;
     }
   }
 
-  Widget _buildStyleTile({
+  IconData _getThemeIcon(AppThemeMode themeMode) {
+    switch (themeMode) {
+      case AppThemeMode.auto:
+        return HugeIcons.strokeRoundedSmartPhone01;
+      case AppThemeMode.light:
+        return HugeIcons.strokeRoundedSun03;
+      case AppThemeMode.dark:
+        return HugeIcons.strokeRoundedMoon02;
+    }
+  }
+
+  Widget _buildThemeTile({
     required BuildContext context,
     required String name,
-    required String flag,
+    required IconData icon,
     required bool isSelected,
     required VoidCallback onTap,
   }) {
@@ -126,25 +132,21 @@ class LanguageSelector extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          // Icône du style
           Row(
             children: [
               SquircleContainer(
-                width: 50,
                 padding: const EdgeInsets.all(8),
                 radius: 18,
-                color: context.adaptiveBorder,
-                child: Center(
-                  child: Text(
-                    flag,
-                    style: const TextStyle(fontSize: 24),
-                  ),
+                color: context.adaptiveBorder.withValues(alpha: 0.1),
+                child: Icon(
+                  icon,
+                  color: context.adaptiveTextPrimary,
+                  size: 24,
                 ),
               ),
                 
               15.w,
                 
-              // Informations du style
               Text(
                 name,
                 style: context.bodyMedium?.copyWith(
@@ -155,7 +157,6 @@ class LanguageSelector extends StatelessWidget {
             ],
           ),
             
-          // Indicateur de sélection
           AnimatedContainer(
             duration: const Duration(milliseconds: 200),
             width: 24,

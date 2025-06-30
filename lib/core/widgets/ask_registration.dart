@@ -28,7 +28,7 @@ class _AskRegistrationState extends State<AskRegistration> {
         title: Text(
           context.l10n.restrictedAccessTitle,
           style: context.bodySmall?.copyWith(
-            color: Colors.white,
+            color: context.adaptiveTextPrimary,
           ),
         ),
       ),
@@ -92,7 +92,7 @@ class _AskRegistrationState extends State<AskRegistration> {
                   child: Text(
                     context.l10n.needHelpContactUs,
                     style: context.bodySmall?.copyWith(
-                      color: Colors.white,
+                      color: context.adaptiveTextPrimary,
                       fontSize: 14,
                       fontWeight: FontWeight.w400,
                     ),

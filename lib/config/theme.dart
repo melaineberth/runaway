@@ -6,10 +6,11 @@ ThemeData getAppTheme(Brightness brightness) {
 
   return ThemeData(
     useMaterial3: true,
-    scaffoldBackgroundColor: AppColorsDark.background,
+    brightness: brightness,
+    scaffoldBackgroundColor: isDark ? AppColorsDark.background : AppColors.background,
     colorScheme: ColorScheme(
       brightness: brightness,
-      primary: AppColors.primary,
+      primary: isDark ? AppColorsDark.primary : AppColors.primary,
       secondary: isDark ? AppColorsDark.secondary : AppColors.secondary,
       surface: isDark ? AppColorsDark.surface : AppColors.surface,
       error: AppColors.danger,
@@ -22,37 +23,38 @@ ThemeData getAppTheme(Brightness brightness) {
       headlineLarge: TextStyle(
         fontSize: 32,
         fontWeight: FontWeight.bold,
-        color: Colors.white,
+        color: isDark ? AppColorsDark.textPrimary : AppColors.textPrimary,
       ),
       titleLarge: TextStyle(
         fontSize: 24,
         fontWeight: FontWeight.w600,
-        color: Colors.white,
+        color: isDark ? AppColorsDark.textPrimary : AppColors.textPrimary,
       ),
       bodyLarge: TextStyle(
         fontSize: 35,
         fontWeight: FontWeight.w600,
         letterSpacing: -0.3,
         height: 1.2,
-        color: Colors.white,
+        color: isDark ? AppColorsDark.textPrimary : AppColors.textPrimary,
       ),
       bodyMedium: TextStyle(
         fontSize: 20,
         fontWeight: FontWeight.w600,
         letterSpacing: -0.3,
-        color: Colors.white,
+        color: isDark ? AppColorsDark.textPrimary : AppColors.textPrimary,
       ),
       bodySmall: TextStyle(
         fontSize: 17,
         fontWeight: FontWeight.w600,
         letterSpacing: -0.3,
-        color: Colors.white,
+        color: isDark ? AppColorsDark.textPrimary : AppColors.textPrimary,
       ),
     ),
     appBarTheme: AppBarTheme(
-      backgroundColor: AppColorsDark.background,
-      foregroundColor: AppColorsDark.textPrimary,
+      backgroundColor: isDark ? AppColorsDark.background : AppColors.background,
+      foregroundColor: isDark ? AppColorsDark.textPrimary : AppColors.textPrimary,
       elevation: 0,
+      surfaceTintColor: Colors.transparent,
     ),
     cardTheme: CardThemeData(
       color: isDark ? AppColorsDark.surface : AppColors.surface,
@@ -67,6 +69,28 @@ ThemeData getAppTheme(Brightness brightness) {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.all(Radius.circular(16)),
       ),
+    ),
+    // Ajout des thèmes additionnels pour une meilleure cohérence
+    elevatedButtonTheme: ElevatedButtonThemeData(
+      style: ElevatedButton.styleFrom(
+        backgroundColor: isDark ? AppColorsDark.primary : AppColors.primary,
+        foregroundColor: Colors.white,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.all(Radius.circular(16)),
+        ),
+      ),
+    ),
+    bottomNavigationBarTheme: BottomNavigationBarThemeData(
+      backgroundColor: isDark ? AppColorsDark.surface : AppColors.surface,
+      selectedItemColor: isDark ? AppColorsDark.primary : AppColors.primary,
+      unselectedItemColor: isDark ? AppColorsDark.textSecondary : AppColors.textSecondary,
+    ),
+    dividerTheme: DividerThemeData(
+      color: isDark ? Colors.white12 : Colors.black12,
+      thickness: 1,
+    ),
+    iconTheme: IconThemeData(
+      color: isDark ? AppColorsDark.textPrimary : AppColors.textPrimary,
     ),
   );
 }

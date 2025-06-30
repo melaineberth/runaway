@@ -600,6 +600,18 @@
   "@lightTheme": {
     "description": "Value text for the light-theme choice."
   },
+  "selectPreferenceTheme": "Select your preference",
+  "@selectPreferenceTheme": {
+    "description": "Prompt inviting the user to choose their preferred theme."
+  },
+  "autoTheme": "Auto",
+  "@autoTheme": {
+    "description": "Value text for the auto-theme choice (system theme)."
+  },
+  "darkTheme": "Dark",
+  "@darkTheme": {
+    "description": "Value text for the dark-theme choice."
+  },
   "accountSection": "Account",
   "@accountSection": {
     "description": "Section heading grouping account-related actions such as logout and delete profile."

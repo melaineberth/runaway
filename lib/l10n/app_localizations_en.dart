@@ -448,6 +448,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get lightTheme => 'Light';
 
   @override
+  String get selectPreferenceTheme => 'Select your preference';
+
+  @override
+  String get autoTheme => 'Auto';
+
+  @override
+  String get darkTheme => 'Dark';
+
+  @override
   String get accountSection => 'Account';
 
   @override

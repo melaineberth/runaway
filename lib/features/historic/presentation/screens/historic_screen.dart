@@ -8,6 +8,7 @@ import 'package:runaway/core/blocs/app_data/app_data_event.dart';
 import 'package:runaway/core/blocs/app_data/app_data_state.dart';
 import 'package:runaway/core/widgets/ask_registration.dart';
 import 'package:runaway/core/widgets/blurry_page.dart';
+import 'package:runaway/core/widgets/icon_btn.dart';
 import 'package:runaway/core/widgets/squircle_container.dart';
 import 'package:runaway/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:runaway/features/auth/presentation/bloc/auth_state.dart';
@@ -340,11 +341,10 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
       backgroundColor: Colors.transparent,
       title: Text(
         context.l10n.historic,
-        style: context.bodySmall?.copyWith(color: Colors.white),
+        style: context.bodySmall?.copyWith(color: context.adaptiveTextPrimary),
       ),
       actions: [
         if (pendingSync) ...[
-          const SizedBox(width: 8),
           Container(
             width: 8,
             height: 8,
@@ -457,12 +457,12 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
         backgroundColor: Colors.transparent,
         title: Text(
           context.l10n.historic,
-          style: context.bodySmall?.copyWith(color: Colors.white),
+          style: context.bodySmall?.copyWith(color: context.adaptiveTextPrimary),
         ),
         actions: [
           IconButton(
             onPressed: _loadSavedRoutes,
-            icon: Icon(HugeIcons.strokeRoundedRefresh, color: Colors.white),
+            icon: Icon(HugeIcons.strokeRoundedRefresh, color: context.adaptiveTextPrimary),
           ),
         ],
       ),
@@ -479,7 +479,7 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
             Text(
               context.l10n.loadingError,
               style: context.bodyLarge?.copyWith(
-                color: Colors.white,
+                color: context.adaptiveTextPrimary,
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
               ),
@@ -489,7 +489,7 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
               padding: EdgeInsets.symmetric(horizontal: 40),
               child: Text(
                 error,
-                style: context.bodyMedium?.copyWith(color: Colors.white70),
+                style: context.bodyMedium?.copyWith(color: context.adaptiveTextPrimary),
                 textAlign: TextAlign.center,
               ),
             ),
@@ -513,10 +513,6 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
       extendBodyBehindAppBar: true,
       appBar: _buildAppBar(
         isLoading,
-        // child: IconButton(
-        //   onPressed: _loadSavedRoutes,
-        //   icon: Icon(HugeIcons.strokeRoundedRefresh, color: Colors.white),
-        // ),
       ),
       body: Center(
         child: Column(
@@ -535,7 +531,7 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
             Text(
               context.l10n.emptySavedRouteTitle,
               style: context.bodyLarge?.copyWith(
-                color: Colors.white,
+                color: context.adaptiveTextPrimary,
                 fontSize: 25,
                 fontWeight: FontWeight.w700,
               ),
@@ -546,19 +542,13 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
               child: Text(
                 context.l10n.emptySavedRouteMessage,
                 style: context.bodyMedium?.copyWith(
-                  color: Colors.white54,
+                  color: context.adaptiveTextSecondary,
                   fontWeight: FontWeight.w500,
                   fontSize: 17,
                   height: 1.3,
                 ),
                 textAlign: TextAlign.center,
               ),
-            ),
-            24.h,
-            ElevatedButton.icon(
-              onPressed: () => context.go('/home'),
-              icon: Icon(HugeIcons.strokeRoundedAiMagic),
-              label: Text(context.l10n.generateRoute),
             ),
           ],
         ),

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:runaway/config/colors.dart';
+import 'package:runaway/config/extensions.dart';
 import 'package:runaway/core/widgets/icon_btn.dart';
 import 'package:runaway/core/widgets/loading_overlay.dart';
 import 'package:runaway/features/home/domain/models/nav_item_model.dart';
@@ -34,33 +35,27 @@ class MainScaffold extends StatelessWidget {
               bottomNavigationBar: SafeArea(
                 child: Padding(
                   padding: EdgeInsets.symmetric(horizontal: 80),
-                  child: ClipRRect(
-                    borderRadius: BorderRadiusGeometry.circular(100),
-                    child: BackdropFilter(
-                      filter: ImageFilter.blur(sigmaX: selectedIndex == 0 ? 0 : 30, sigmaY: selectedIndex == 0 ? 0 : 30),
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: Colors.black.withValues(alpha: selectedIndex == 0 ? 1 : 0.4),
-                          borderRadius: BorderRadius.circular(100),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: List.generate(
-                            bottomNavItems.length, 
-                            (index) {
-                              final item = bottomNavItems[index];
-                              final bool isSelected = index == selectedIndex;
-                              return IconBtn(
-                                onPressed: () => context.go(item.route),
-                                icon: isSelected ? item.activeIcon : item.inactiveIcon,
-                                iconColor: isSelected ? AppColors.primary : Colors.white60,
-                                padding: 20,
-                                backgroundColor: Colors.transparent,
-                              );
-                            },
-                          ),
-                        ),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: context.adaptiveBackground,
+                      borderRadius: BorderRadius.circular(100),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: List.generate(
+                        bottomNavItems.length, 
+                        (index) {
+                          final item = bottomNavItems[index];
+                          final bool isSelected = index == selectedIndex;
+                          return IconBtn(
+                            onPressed: () => context.go(item.route),
+                            icon: isSelected ? item.activeIcon : item.inactiveIcon,
+                            iconColor: isSelected ? AppColors.primary : context.adaptiveTextPrimary.withValues(alpha: 0.4),
+                            padding: 20,
+                            backgroundColor: Colors.transparent,
+                          );
+                        },
                       ),
                     ),
                   ),

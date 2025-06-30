@@ -10,6 +10,7 @@ import 'package:runaway/config/router.dart';
 import 'package:runaway/config/theme.dart';
 import 'package:runaway/core/blocs/app_data/app_data_bloc.dart';
 import 'package:runaway/core/blocs/locale/locale_bloc.dart';
+import 'package:runaway/core/blocs/theme_bloc/theme_bloc.dart';
 import 'package:runaway/core/services/app_data_initialization_service.dart';
 import 'package:runaway/core/services/app_initialization_service.dart';
 import 'package:runaway/core/services/route_data_sync_wrapper.dart';
@@ -136,27 +137,39 @@ class RunAway extends StatelessWidget {
             routesRepository: RoutesRepository(),
           ),
         ),
+
+        BlocProvider(
+          create: (_) {
+            final themeBloc = ThemeBloc();
+            themeBloc.add(const ThemeInitialized());
+            return themeBloc;
+          },
+        ),
       ],
       child: AuthDataListener(
         child: RouteDataSyncWrapper(
           child: BlocBuilder<LocaleBloc, LocaleState>(
             builder: (context, localeState) {
-              return MaterialApp.router(
-                title: 'Trailix',
-                debugShowCheckedModeBanner: false,
-                routerConfig: router,
-                theme: getAppTheme(Brightness.light),
-                darkTheme: getAppTheme(Brightness.dark),
-                themeMode: ThemeMode.dark,
-                locale: localeState.locale,
-                localizationsDelegates: AppLocalizations.localizationsDelegates,
-                supportedLocales: AppLocalizations.supportedLocales,
-                builder: (context, child) {
-                  return MediaQuery(
-                    data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(1.0)),
-                    child: child ?? Container(),
+              return BlocBuilder<ThemeBloc, ThemeState>(
+                builder: (context, themeState) {
+                  return MaterialApp.router(
+                    title: 'Trailix',
+                    debugShowCheckedModeBanner: false,
+                    routerConfig: router,
+                    theme: getAppTheme(Brightness.light),
+                    darkTheme: getAppTheme(Brightness.dark),
+                    themeMode: themeState.themeMode.toThemeMode(), // ← Changement ici
+                    locale: localeState.locale,
+                    localizationsDelegates: AppLocalizations.localizationsDelegates,
+                    supportedLocales: AppLocalizations.supportedLocales,
+                    builder: (context, child) {
+                      return MediaQuery(
+                        data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(1.0)),
+                        child: child ?? Container(),
+                      );
+                    },
                   );
-                },
+                }
               );
             }
           ),

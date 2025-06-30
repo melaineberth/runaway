@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:runaway/config/colors.dart';
+import 'package:runaway/config/extensions.dart';
 import 'package:smooth_gradient/smooth_gradient.dart';
 
 class BlurryPage extends StatefulWidget {
@@ -60,8 +61,8 @@ class _BlurryPageState extends State<BlurryPage> {
                 height: MediaQuery.of(context).size.height / 4,
                 decoration: BoxDecoration(
                   gradient: SmoothGradient(
-                    from: widget.color?.withValues(alpha: 0) ?? AppColorsDark.background.withValues(alpha: 0),
-                    to: widget.color ?? AppColorsDark.background,
+                    from: widget.color?.withValues(alpha: 0) ?? context.adaptiveBackground.withValues(alpha: 0),
+                    to: widget.color ?? context.adaptiveBackground,
                     curve: Curves.linear,
                     begin: Alignment.center,
                     end: Alignment.bottomCenter,
@@ -81,8 +82,8 @@ class _BlurryPageState extends State<BlurryPage> {
                 height: MediaQuery.of(context).size.height / 3,
                 decoration: BoxDecoration(
                   gradient: SmoothGradient(
-                    from: widget.color ?? AppColorsDark.background,
-                    to: widget.color?.withValues(alpha: 0) ?? AppColorsDark.background.withValues(alpha: 0),
+                    from: widget.color ?? context.adaptiveBackground,
+                    to: widget.color?.withValues(alpha: 0) ?? context.adaptiveBackground.withValues(alpha: 0),
                     curve: Curves.linear,
                     begin: Alignment.topCenter,
                     end: Alignment.center,

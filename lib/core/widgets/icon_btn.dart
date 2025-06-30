@@ -15,6 +15,7 @@ class IconBtn extends StatelessWidget {
   final double? padding;
   final BoxBorder? border;
   final TextStyle? textStyle;
+  final List<BoxShadow>? boxShadow;
 
   const IconBtn({
     super.key, 
@@ -30,6 +31,7 @@ class IconBtn extends StatelessWidget {
     this.padding,
     this.border,
     this.textStyle,
+    this.boxShadow,
   });
 
   @override
@@ -41,14 +43,7 @@ class IconBtn extends StatelessWidget {
         decoration: BoxDecoration(
           color: backgroundColor ?? Colors.black,
           borderRadius: BorderRadius.circular(radius ?? 100),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.18),
-              spreadRadius: 2,
-              blurRadius: 30,
-              offset: Offset(0, 0), // changes position of shadow
-            ),
-          ],
+          boxShadow: boxShadow,
           border: border,
         ),
         child: Row(
@@ -59,7 +54,7 @@ class IconBtn extends StatelessWidget {
               HugeIcon(
                 icon: icon, 
                 size: iconSize ?? 28, 
-                color: iconColor ?? Colors.white,
+                color: iconColor ?? context.adaptiveTextSecondary,
               ),
             ],
             if (label != null && label!.isNotEmpty) ...[
@@ -69,7 +64,7 @@ class IconBtn extends StatelessWidget {
                 child: Text(
                   label!, 
                   style: textStyle ?? context.bodySmall?.copyWith(
-                    color: labelColor ?? Colors.white,
+                    color: labelColor ?? context.adaptiveTextSecondary,
                   ),
                 ),
               ),
@@ -79,7 +74,7 @@ class IconBtn extends StatelessWidget {
               HugeIcon(
                 icon: trailling, 
                 size: iconSize ?? 28, 
-                color: iconColor ?? Colors.white,
+                color: iconColor ?? context.adaptiveTextSecondary,
               ),
             ],
           ],

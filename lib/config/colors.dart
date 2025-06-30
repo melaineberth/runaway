@@ -1,21 +1,25 @@
 import 'package:flutter/material.dart';
 
 class AppColors {
-  static const Color primary = Color.fromARGB(255, 196, 119, 255);
-  static const Color secondary = Color(0xFF0984E3);
-  static const Color background = Color(0xFFF9F9F9);
-  static const Color surface = Color(0xFFFFFFFF);
-  static const Color textPrimary = Color(0xFF2D3436);
-  static const Color textSecondary = Color(0xFF636E72);
-  static const Color success = Color(0xFF00CEC9);
-  static const Color danger = Color(0xFFD63031);
+  // Thème CLAIR
+  static const Color primary = Color.fromARGB(255, 196, 119, 255); // Violet conservé
+  static const Color secondary = Color(0xFF0984E3); // Bleu
+  static const Color background = Color(0xFFF9F9F9); // Gris très clair
+  static const Color surface = Color(0xFFFFFFFF); // Blanc
+  static const Color textPrimary = Color(0xFF2D3436); // Noir-gris foncé
+  static const Color textSecondary = Color(0xFF636E72); // Gris moyen
+  static const Color success = Color(0xFF00CEC9); // Turquoise
+  static const Color danger = Color(0xFFD63031); // Rouge
 }
 
 class AppColorsDark {
-  static const Color primary = Color(0xFF00B894);
-  static const Color secondary = Color(0xFF0984E3);
-  static const Color background = Color(0xFF121212);
-  static const Color surface = Color(0xFF1E1E1E);
-  static const Color textPrimary = Color(0xFFECECEC);
-  static const Color textSecondary = Color(0xFFB0BEC5);
+  // Thème SOMBRE
+  static const Color primary = Color.fromARGB(255, 196, 119, 255); // Même violet pour cohérence
+  static const Color secondary = Color(0xFF74B9FF); // Bleu plus clair pour le dark
+  static const Color background = Color(0xFF121212); // Noir très sombre
+  static const Color surface = Color(0xFF1E1E1E); // Gris très sombre
+  static const Color textPrimary = Color(0xFFECECEC); // Blanc cassé
+  static const Color textSecondary = Color(0xFFB0BEC5); // Gris clair
+  static const Color success = Color(0xFF4DD0E1); // Turquoise plus claire
+  static const Color danger = Color(0xFFFF5252); // Rouge plus claire
 }

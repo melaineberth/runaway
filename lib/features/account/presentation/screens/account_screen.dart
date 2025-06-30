@@ -9,11 +9,13 @@ import 'package:hugeicons/hugeicons.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:runaway/config/colors.dart';
 import 'package:runaway/config/extensions.dart';
+import 'package:runaway/core/blocs/theme_bloc/theme_bloc.dart';
 import 'package:runaway/core/widgets/ask_registration.dart';
 import 'package:runaway/core/widgets/blurry_page.dart';
 import 'package:runaway/core/widgets/icon_btn.dart';
 import 'package:runaway/core/widgets/top_snackbar.dart';
 import 'package:runaway/features/account/presentation/widgets/language_selector.dart';
+import 'package:runaway/features/account/presentation/widgets/theme_selector.dart';
 import 'package:runaway/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:runaway/features/auth/presentation/bloc/auth_event.dart';
 import 'package:runaway/features/auth/presentation/bloc/auth_state.dart';
@@ -130,7 +132,7 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
         title: Text(
           context.l10n.account,
           style: context.bodySmall?.copyWith(
-            color: Colors.white,
+            color: context.adaptiveTextPrimary,
           ),
         ),
       ),
@@ -167,8 +169,8 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
                           child: LanguageSelector(),
                         ), 
                         iconSize: 19,
-                        labelColor: Colors.white54,
-                        iconColor: Colors.white54,
+                        labelColor: context.adaptiveTextSecondary,
+                        iconColor: context.adaptiveTextSecondary,
                         trailling: HugeIcons.strokeStandardArrowRight01,
                       ),
                     ),
@@ -182,8 +184,8 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
                         label: context.l10n.enabled,
                         onPressed: () {}, 
                         iconSize: 19,
-                        labelColor: Colors.white54,
-                        iconColor: Colors.white54,
+                        labelColor: context.adaptiveTextSecondary,
+                        iconColor: context.adaptiveTextSecondary,
                         trailling: HugeIcons.strokeStandardArrowRight01,
                       ),
                     ),
@@ -191,15 +193,36 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
                       context,
                       label: context.l10n.theme,
                       icon: HugeIcons.strokeRoundedPaintBoard,
-                      child: IconBtn(
-                        padding: 0.0,
-                        backgroundColor: Colors.transparent,
-                        label: context.l10n.lightTheme,
-                        onPressed: () {}, 
-                        iconSize: 19,
-                        labelColor: Colors.white54,
-                        iconColor: Colors.white54,
-                        trailling: HugeIcons.strokeStandardArrowRight01,
+                      child: BlocBuilder<ThemeBloc, ThemeState>(
+                        builder: (context, themeState) {
+                          String currentThemeLabel;
+                          switch (themeState.themeMode) {
+                            case AppThemeMode.auto:
+                              currentThemeLabel = context.l10n.autoTheme;
+                              break;
+                            case AppThemeMode.light:
+                              currentThemeLabel = context.l10n.lightTheme;
+                              break;
+                            case AppThemeMode.dark:
+                              currentThemeLabel = context.l10n.darkTheme;
+                              break;
+                          }
+                          
+                          return IconBtn(
+                            padding: 0.0,
+                            backgroundColor: Colors.transparent,
+                            label: currentThemeLabel,
+                            onPressed: () => showModalSheet(
+                              context: context, 
+                              backgroundColor: Colors.transparent,
+                              child: const ThemeSelector(),
+                            ), 
+                            iconSize: 19,
+                            labelColor: context.adaptiveTextSecondary,
+                            iconColor: context.adaptiveTextSecondary,
+                            trailling: HugeIcons.strokeStandardArrowRight01,
+                          );
+                        }
                       ),
                     ),
                   ]
@@ -251,7 +274,8 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
                         backgroundColor: Colors.transparent,
                         onPressed: () => _showLogoutDialog(context), 
                         iconSize: 19,
-                        iconColor: Colors.white54,
+                        labelColor: context.adaptiveTextSecondary,
+                        iconColor: context.adaptiveTextSecondary,
                         trailling: HugeIcons.strokeStandardArrowRight01,
                       ),
                     ),
@@ -304,7 +328,7 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
     );
   }
 
-  Widget _buildSettingTile(BuildContext context, {required String label, Color labelColor = Colors.white, required IconData icon, Color iconColor = Colors.white, required Widget child}) {
+  Widget _buildSettingTile(BuildContext context, {required String label, Color? labelColor, required IconData icon, Color? iconColor, required Widget child}) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
@@ -313,12 +337,12 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
             IconBtn(
               icon: icon,
               iconSize: 25.0, 
-              iconColor: iconColor,
+              iconColor: iconColor ?? context.adaptiveTextSecondary,
               padding: 12.0,
-              backgroundColor: Colors.white10,
+              backgroundColor: context.adaptiveBorder.withValues(alpha: 0.07),
             ),
             15.w,
-            Text(label, style: context.bodySmall?.copyWith(color: labelColor)),
+            Text(label, style: context.bodySmall?.copyWith(color: labelColor ?? context.adaptiveTextPrimary)),
           ],
         ),
         child,
@@ -412,14 +436,14 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
                 name,
                 style: ctx.bodyMedium?.copyWith(
                   fontSize: 25,
-                  color: Colors.white,
+                  color: context.adaptiveTextPrimary,
                 ),
               ),
               Text(
                 username,
                 style: ctx.bodySmall?.copyWith(
                   fontWeight: FontWeight.w500,
-                  color: Colors.white38,
+                  color: context.adaptiveTextSecondary,
                 ),
               ),
             ],
@@ -434,10 +458,11 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
             label: context.l10n.editProfile,
             textStyle: ctx.bodySmall?.copyWith(
               fontWeight: FontWeight.w500,
+              color: context.adaptiveBackground,
             ),
+            iconColor: context.adaptiveBackground,
             backgroundColor: AppColors.primary,
             onPressed: () {
-              // TODO: Naviguer vers l'écran d'édition de profil
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
                   content: Text(context.l10n.editProfileTodo),

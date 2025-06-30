@@ -1867,26 +1867,31 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
                                     // Map style
                                     IconBtn(
                                       padding: 15.0,
+                                      backgroundColor: context.adaptiveBackground,
                                       icon: HugeIcons.strokeRoundedMaterialAndTexture,
+                                      iconColor: context.adaptiveTextSecondary,
                                       onPressed: _openMapStyleSelector,
                                     ),
       
                                     // Bouton retour position utilisateur
                                     IconBtn(
                                       padding: 15.0,
+                                      backgroundColor: context.adaptiveBackground,
                                       icon: _trackingMode == TrackingMode.userTracking
                                           ? HugeIcons.solidRoundedLocationShare02
                                           : HugeIcons.strokeRoundedLocationShare02,
                                       onPressed: _activateUserTracking,
                                       iconColor: _trackingMode == TrackingMode.userTracking
                                           ? AppColors.primary
-                                          : Colors.white,
+                                          : context.adaptiveTextSecondary,
                                     ),
                                     
                                     // Bouton générateur
                                     IconBtn(
                                       padding: 15.0,
+                                      backgroundColor: context.adaptiveBackground,
                                       icon: HugeIcons.strokeRoundedAiMagic,
+                                      iconColor: context.adaptiveTextSecondary,
                                       onPressed: openGenerator,
                                     ),
                                   ],
@@ -1921,7 +1926,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
                           borderRadius: BorderRadius.circular(20),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.3),
+                              color: context.adaptiveBackground.withValues(alpha: 0.3),
                               spreadRadius: 3,
                               blurRadius: 15,
                               offset: Offset(0, 5),
