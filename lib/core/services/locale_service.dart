@@ -12,6 +12,8 @@ class LocaleService {
   static const List<Locale> supportedLocales = [
     Locale('en'),
     Locale('fr'),
+    Locale('it'),
+    Locale('es'),
   ];
 
   /// Obtient la langue sauvegardée ou celle du système par défaut
@@ -61,9 +63,13 @@ class LocaleService {
   String getLanguageDisplayName(Locale locale) {
     switch (locale.languageCode) {
       case 'en':
-        return 'English';
+        return 'Anglais';
       case 'fr':
         return 'Français';
+      case 'it':
+        return 'Italien';
+      case 'es':
+        return 'Espagnol';
       default:
         return locale.languageCode.toUpperCase();
     }
@@ -76,6 +82,10 @@ class LocaleService {
         return 'English';
       case 'fr':
         return 'Français';
+      case 'it':
+        return 'Italiano';
+      case 'es':
+        return 'Español';
       default:
         return locale.languageCode.toUpperCase();
     }

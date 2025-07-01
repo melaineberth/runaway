@@ -19,13 +19,13 @@ class RecordsSection extends StatelessWidget {
       children: [
         Text(
           context.l10n.personalRecords,
-          style: context.bodyMedium?.copyWith(color: Colors.white, fontWeight: FontWeight.w700),
+          style: context.bodyMedium?.copyWith(color: context.adaptiveTextPrimary, fontWeight: FontWeight.w700),
         ),
         15.h,
         SquircleContainer(
           radius: 50.0,
           padding: const EdgeInsets.all(10),
-          color: Colors.white10,
+          color: context.adaptiveBorder.withValues(alpha: 0.08),
           child: Column(
             children: [
               if (records.isEmpty)
@@ -98,7 +98,7 @@ class RecordsSection extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Text(
-                '${record.value.toStringAsFixed(record.unit == 'km/h' ? 1 : 0)}',
+                record.value.toStringAsFixed(record.unit == 'km/h' ? 1 : 0),
                 style: TextStyle(
                   color: Colors.amber,
                   fontWeight: FontWeight.bold,
@@ -120,26 +120,24 @@ class RecordsSection extends StatelessWidget {
   }
 
   Widget _buildEmptyState(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(20.0),
-        child: Column(
-          children: [
-            Icon(
-              HugeIcons.strokeRoundedRoute01,
-              size: 48,
-              color: Colors.white30,
+    return Padding(
+      padding: const EdgeInsets.all(20.0),
+      child: Column(
+        children: [
+          Icon(
+            HugeIcons.strokeRoundedRoute01,
+            size: 48,
+            color: context.adaptiveDisabled,
+          ),
+          8.h,
+          Text(
+            context.l10n.empryPersonalRecords,
+            style: context.bodySmall?.copyWith(
+              color: context.adaptiveDisabled,
             ),
-            8.h,
-            Text(
-              context.l10n.empryPersonalRecords,
-              style: context.bodySmall?.copyWith(
-                color: Colors.white30,
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
+            textAlign: TextAlign.center,
+          ),
+        ],
       ),
     );
   }

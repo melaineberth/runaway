@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:hugeicons/hugeicons.dart';
-import 'package:runaway/config/colors.dart';
+import 'package:runaway/core/widgets/modal_sheet.dart';
 import 'package:runaway/core/widgets/squircle_container.dart';
 import '../../../../config/extensions.dart';
 import '../../domain/models/activity_stats.dart';
@@ -32,7 +33,7 @@ class ActivityTypeStatsCard extends StatelessWidget {
           children: [
             Text(
               context.l10n.activityFilter,
-              style: context.bodyMedium?.copyWith(color: Colors.white, fontWeight: FontWeight.w700),
+              style: context.bodyMedium?.copyWith(color: context.adaptiveTextPrimary, fontWeight: FontWeight.w700),
             ),
             _buildFilterButton(context),
           ],
@@ -67,7 +68,7 @@ class ActivityTypeStatsCard extends StatelessWidget {
       onTap: () => _showFilterDialog(context),
       child: Container(
         decoration: BoxDecoration(
-          color: Colors.white10,
+          color: context.adaptiveBorder.withValues(alpha: 0.05),
           borderRadius: BorderRadius.circular(100),
         ),
         padding: EdgeInsets.symmetric(horizontal: 15.0, vertical: 8.0),
@@ -86,13 +87,13 @@ class ActivityTypeStatsCard extends StatelessWidget {
     return SquircleContainer(
       radius: 50.0,
       padding: const EdgeInsets.all(10),
-      color: Colors.white10,
+      color: context.adaptiveBorder.withValues(alpha: 0.05),
       child: Row(
         children: [
           SquircleContainer(
             radius: 30.0,
             padding: const EdgeInsets.all(20),
-            color: AppColors.primary,
+            color: context.adaptivePrimary,
             child: Icon(
               stat.activityType.icon,
               color: Colors.white,
@@ -115,7 +116,7 @@ class ActivityTypeStatsCard extends StatelessWidget {
                   style: context.bodySmall?.copyWith(
                     fontSize: 14,
                     fontWeight: FontWeight.w500,
-                    color: Colors.white54,
+                    color: context.adaptiveTextSecondary,
                   ),
                 ),
               ],
@@ -147,7 +148,7 @@ class ActivityTypeStatsCard extends StatelessWidget {
     return SquircleContainer(
       radius: 50.0,
       padding: const EdgeInsets.all(20),
-      color: Colors.white10,
+      color: context.adaptiveBorder.withValues(alpha: 0.05),
       child: Center(
         child: Padding(
           padding: const EdgeInsets.all(20.0),
@@ -156,13 +157,13 @@ class ActivityTypeStatsCard extends StatelessWidget {
               Icon(
                 HugeIcons.strokeRoundedActivity01,
                 size: 48,
-                color: Colors.white30,
+                color: context.adaptiveDisabled,
               ),
               8.h,
               Text(
                 context.l10n.emptyDataFilter,
                 style: context.bodySmall?.copyWith(
-                  color: Colors.white30,
+                  color: context.adaptiveDisabled,
                 ),
               ),
             ],
@@ -175,34 +176,37 @@ class ActivityTypeStatsCard extends StatelessWidget {
   void _showFilterDialog(BuildContext context) {
     showModalSheet(
       context: context, 
-      child: Padding(
-        padding: const EdgeInsets.all(30.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              context.l10n.byActivityFilter,
-              style: context.bodySmall?.copyWith(
-                color: Colors.white,
-              ),
-            ),
-            Text(
-                context.l10n.typeOfActivity,
+      backgroundColor: Colors.transparent,
+      child: ModalSheet(
+        child: Padding(
+          padding: const EdgeInsets.all(30.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                context.l10n.byActivityFilter,
                 style: context.bodySmall?.copyWith(
-                  color: Colors.grey.shade500,
-                  fontSize: 15,
-                  fontWeight: FontWeight.w500
+                  color: context.adaptiveTextPrimary,
                 ),
               ),
-              
-              20.h,
-                      
-            _buildFilterOption(context, null, context.l10n.allActivities),
-            ...ActivityType.values.map(
-              (type) => _buildFilterOption(context, type, type.label(context)),
-            ),
-          ],
+              Text(
+                  context.l10n.typeOfActivity,
+                  style: context.bodySmall?.copyWith(
+                    color: context.adaptiveTextSecondary,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w500
+                  ),
+                ),
+                
+                20.h,
+                        
+              _buildFilterOption(context, null, context.l10n.allActivities),
+              ...ActivityType.values.map(
+                (type) => _buildFilterOption(context, type, type.label(context)),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -212,44 +216,69 @@ class ActivityTypeStatsCard extends StatelessWidget {
     final isSelected = selectedType == type;
     
     return Padding(
-      padding: const EdgeInsets.only(bottom: 12.0),
+      padding: const EdgeInsets.only(bottom: 10.0),
       child: SquircleContainer(
         onTap: () {
           onTypeSelected(type);
-          Navigator.of(context).pop();
+          context.pop();
         },
         radius: 40,
-        color: Colors.white10,
-        padding: EdgeInsets.all(12),
+        color: context.adaptiveBorder.withValues(alpha: 0.05),
+        padding: EdgeInsets.all(8),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Row(
               children: [
                 SquircleContainer(
-                  padding: EdgeInsets.all(8),
+                  padding: const EdgeInsets.all(12),
                   radius: 18,
-                  color: isSelected ? Colors.blue.withValues(alpha: 0.1) : Colors.white10,
+                  color: context.adaptivePrimary.withValues(alpha: 0.25),
                   child: Icon(
                     type?.icon ?? HugeIcons.solidRoundedMenu01,
-                    color: isSelected ? Colors.blue : Colors.white,
+                    color: context.adaptivePrimary,
+                    size: 25,
                   ),
                 ),
-                15.w,
+                10.w,
                 Text(
                   label,
                   style: context.bodyMedium?.copyWith(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
-                    color: isSelected ? Colors.blue : Colors.white,
+                    color: context.adaptiveTextPrimary,
                   ),
                 ),
               ],
             ),
-            Icon(
-              HugeIcons.strokeRoundedArrowRight01,
-              color: Colors.grey[400],
-              size: 20,
+
+            // Indicateur de sélection
+            Padding(
+              padding: const EdgeInsets.only(right: 8.0),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                width: 24,
+                height: 24,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: isSelected 
+                      ? context.adaptivePrimary
+                      : Colors.transparent,
+                  border: Border.all(
+                    color: isSelected 
+                        ? context.adaptivePrimary
+                        : context.adaptiveBorder,
+                    width: 2,
+                  ),
+                ),
+                child: isSelected
+                    ? const Icon(
+                        HugeIcons.solidRoundedTick02,
+                        color: Colors.white,
+                        size: 20,
+                      )
+                    : null,
+              ),
             ),
           ],
         ),

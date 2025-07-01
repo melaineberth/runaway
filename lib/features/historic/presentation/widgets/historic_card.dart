@@ -89,7 +89,7 @@ class _HistoricCardState extends State<HistoricCard> {
       child: SquircleContainer(
         radius: outerRadius,
         padding: padding,
-        color: Colors.white10,
+        color: context.adaptiveBorder.withValues(alpha: 0.08),
         child: Column(
           spacing: 20.0,
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -116,7 +116,7 @@ class _HistoricCardState extends State<HistoricCard> {
                     fontSize: 15,
                     fontStyle: FontStyle.normal,
                     fontWeight: FontWeight.w500,
-                    color: Colors.white38,
+                    color: context.adaptiveTextSecondary,
                   ),
                 ),
                 Row(
@@ -128,8 +128,8 @@ class _HistoricCardState extends State<HistoricCard> {
                         controller: _nameController,
                         focusNode: _focusNode,
                         style: context.bodyMedium!,
-                        cursorColor: AppColors.primary,
-                        backgroundCursorColor: AppColors.primary,
+                        cursorColor: context.adaptivePrimary,
+                        backgroundCursorColor: context.adaptivePrimary,
                         readOnly: widget.isEdit,
                       ),
                     ),
@@ -220,13 +220,13 @@ class _HistoricCardState extends State<HistoricCard> {
             SquircleContainer(
               onTap: widget.onTap,
               radius: innerRadius,
-              color: AppColors.primary,
+              color: context.adaptivePrimary,
               padding: EdgeInsets.symmetric(vertical: 15.0),
               child: Center(
                 child: Text(
                   context.l10n.followRoute, 
                   style: context.bodySmall?.copyWith(
-                    color: Colors.black,
+                    color: Colors.white,
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
                   ),
@@ -375,7 +375,7 @@ class _HistoricCardState extends State<HistoricCard> {
                 // Icône de l'activité
                 Icon(
                   _getActivityIcon(),
-                  color: Colors.white,
+                  color: context.adaptiveBackground,
                   size: 40,
                 ),
                 12.h,
@@ -384,7 +384,7 @@ class _HistoricCardState extends State<HistoricCard> {
                 Text(
                   widget.route.formattedDistance,
                   style: context.titleMedium?.copyWith(
-                    color: Colors.white,
+                    color: context.adaptiveTextPrimary,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -392,7 +392,7 @@ class _HistoricCardState extends State<HistoricCard> {
                 Text(
                   widget.route.parameters.activityType.title,
                   style: context.bodySmall?.copyWith(
-                    color: Colors.white70,
+                    color: context.adaptiveTextSecondary,
                     fontSize: 12,
                   ),
                 ),
@@ -408,13 +408,13 @@ class _HistoricCardState extends State<HistoricCard> {
               child: Container(
                 padding: EdgeInsets.symmetric(horizontal: 6, vertical: 3),
                 decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.6),
+                  color: context.adaptiveBackground.withValues(alpha: 0.6),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
                   context.l10n.imageUnavailable,
                   style: context.bodySmall?.copyWith(
-                    color: Colors.white70,
+                    color: context.adaptiveTextPrimary,
                     fontSize: 10,
                   ),
                 ),
@@ -452,7 +452,7 @@ class _HistoricCardState extends State<HistoricCard> {
   }) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white10,
+        color: context.adaptiveBorder.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(100),
       ),
       padding: EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
@@ -461,7 +461,7 @@ class _HistoricCardState extends State<HistoricCard> {
         children: [
           Icon(
             icon,
-            color: color ?? Colors.white,
+            color: color ?? context.adaptiveTextPrimary,
             size: 17,
           ),
           5.w,
@@ -469,7 +469,7 @@ class _HistoricCardState extends State<HistoricCard> {
             text,
             style: context.bodySmall?.copyWith(
               fontSize: 14,
-              color:Colors.white,
+              color:context.adaptiveTextPrimary,
               fontWeight: FontWeight.w500,
             ),
           ),

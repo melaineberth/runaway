@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:runaway/config/colors.dart';
 import 'package:runaway/config/extensions.dart';
 
 class ParameterSlider extends StatelessWidget {
@@ -36,13 +35,13 @@ class ParameterSlider extends StatelessWidget {
             Text(
               title,
               style: context.bodySmall?.copyWith(
-                color: Colors.white,
+                color: context.adaptiveTextPrimary,
               ),
             ),
             Text(
               '${value.toStringAsFixed(value < 10 ? 1 : 0)} $unit',
               style: context.bodyLarge?.copyWith(
-                color: AppColors.primary,
+                color: context.adaptivePrimary,
                 fontWeight: FontWeight.bold,
               ),
             ),
@@ -51,10 +50,10 @@ class ParameterSlider extends StatelessWidget {
         12.h,
         SliderTheme(
           data: SliderTheme.of(context).copyWith(
-            activeTrackColor: AppColors.primary,
-            inactiveTrackColor: Colors.white12,
-            thumbColor: AppColors.primary,
-            overlayColor: AppColors.primary.withAlpha(30),
+            activeTrackColor: context.adaptivePrimary,
+            inactiveTrackColor: context.adaptiveBorder.withValues(alpha: 0.08),
+            thumbColor: context.adaptivePrimary,
+            overlayColor: context.adaptivePrimary.withAlpha(30),
             trackHeight: 6,
             thumbShape: RoundSliderThumbShape(enabledThumbRadius: 10),
           ),

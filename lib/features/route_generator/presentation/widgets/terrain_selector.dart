@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:runaway/config/colors.dart';
 import 'package:runaway/config/extensions.dart';
 import '../../domain/models/terrain_type.dart';
 
@@ -21,14 +20,14 @@ class TerrainSelector extends StatelessWidget {
         Text(
           context.l10n.terrain,
           style: context.bodySmall?.copyWith(
-            color: Colors.white,
+            color: context.adaptiveTextPrimary,
           ),
         ),
         3.h,
         Text(
           selectedTerrain.desc(context),
           style: context.bodySmall?.copyWith(
-            color: Colors.grey.shade500,
+            color: context.adaptiveTextSecondary,
             fontSize: 15,
             fontWeight: FontWeight.w500
           ),
@@ -44,14 +43,16 @@ class TerrainSelector extends StatelessWidget {
                 label: Text(terrain.label(context)),
                 selected: isSelected,
                 onSelected: (_) => onTerrainSelected(terrain),
-                selectedColor: AppColors.primary,
-                backgroundColor: const Color.fromARGB(255, 38, 38, 38),
+                selectedColor: context.adaptivePrimary,
+                backgroundColor: context.adaptiveBorder.withValues(alpha: 0.08),
                 labelStyle: TextStyle(
-                  color: isSelected ? Colors.black : Colors.white24,
-                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                  color: isSelected ? Colors.white : context.adaptiveTextSecondary.withValues(alpha: 0.5),
                 ),
                 padding: EdgeInsets.symmetric(horizontal: 15, vertical: 10),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(100)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(100),
+                  side: BorderSide(style: BorderStyle.none),
+                ),
               ),
             );
           }).toList(),

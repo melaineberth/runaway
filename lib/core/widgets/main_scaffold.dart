@@ -39,6 +39,14 @@ class MainScaffold extends StatelessWidget {
                     decoration: BoxDecoration(
                       color: context.adaptiveBackground,
                       borderRadius: BorderRadius.circular(100),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.18),
+                          spreadRadius: 2,
+                          blurRadius: 30,
+                          offset: Offset(0, 0), // changes position of shadow
+                        ),
+                      ]
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,

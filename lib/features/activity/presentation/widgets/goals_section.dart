@@ -29,7 +29,7 @@ class GoalsSection extends StatelessWidget {
           children: [
             Text(
               context.l10n.personalGoals,
-              style: context.bodyMedium?.copyWith(color: Colors.white, fontWeight: FontWeight.w700),
+              style: context.bodyMedium?.copyWith(color: context.adaptiveTextPrimary, fontWeight: FontWeight.w700),
             ),
             IconBtn(
               padding: 8.0,
@@ -40,7 +40,7 @@ class GoalsSection extends StatelessWidget {
                 fontSize: 15,
                 fontWeight: FontWeight.w500,
               ),
-              backgroundColor: Colors.white10,
+              backgroundColor: context.adaptiveBorder.withValues(alpha: 0.05),
               onPressed: onAddGoal,
             ),
           ],
@@ -49,7 +49,7 @@ class GoalsSection extends StatelessWidget {
         SquircleContainer(
           radius: 50.0,
           padding: const EdgeInsets.all(20),
-          color: Colors.white10,
+          color: context.adaptiveBorder.withValues(alpha: 0.05),
           child: Column(
             children: [
               if (goals.isEmpty)
@@ -170,20 +170,20 @@ class GoalsSection extends StatelessWidget {
             Icon(
               HugeIcons.strokeRoundedTarget01,
               size: 48,
-              color: Colors.white30,
+              color: context.adaptiveDisabled,
             ),
             8.h,
             Text(
               context.l10n.emptyDefinedGoals,
               style: context.bodySmall?.copyWith(
-                color: Colors.white30,
+                color: context.adaptiveDisabled,
               ),
             ),
             4.h,
             Text(
               context.l10n.pressToAdd,
               style: context.bodySmall?.copyWith(
-                color: Colors.white30,
+                color: context.adaptiveDisabled,
                 fontSize: 14,
               ),
             ),

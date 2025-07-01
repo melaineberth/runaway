@@ -8,7 +8,6 @@ import 'package:runaway/core/blocs/app_data/app_data_event.dart';
 import 'package:runaway/core/blocs/app_data/app_data_state.dart';
 import 'package:runaway/core/widgets/ask_registration.dart';
 import 'package:runaway/core/widgets/blurry_page.dart';
-import 'package:runaway/core/widgets/icon_btn.dart';
 import 'package:runaway/core/widgets/squircle_container.dart';
 import 'package:runaway/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:runaway/features/auth/presentation/bloc/auth_state.dart';
@@ -569,7 +568,7 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
     return SquircleContainer(
       radius: 40.0,
       padding: EdgeInsets.all(20),
-      color: Colors.white10,
+      color: context.adaptiveBorder.withValues(alpha: 0.08),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
@@ -612,19 +611,19 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
   }) {
     return Column(
       children: [
-        Icon(icon, color: color ?? Colors.white, size: 24),
+        Icon(icon, color: color ?? context.adaptiveTextPrimary, size: 24),
         4.h,
         Text(
           value,
           style: context.bodyMedium?.copyWith(
-            color: color ?? Colors.white,
+            color: color ?? context.adaptiveTextPrimary,
             fontWeight: FontWeight.bold,
           ),
         ),
         Text(
           label,
           style: context.bodySmall?.copyWith(
-            color: (color ?? Colors.white).withAlpha(180),
+            color: (color ?? context.adaptiveTextPrimary).withAlpha(180),
             fontSize: 12,
           ),
         ),

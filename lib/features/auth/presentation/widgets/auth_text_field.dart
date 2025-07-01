@@ -44,7 +44,7 @@ class _AuthTextFieldState extends State<AuthTextField> {
   Widget build(BuildContext context) {
     return SquircleContainer(
       height: 60,
-      color: Colors.white10,
+      color: context.adaptiveBorder.withValues(alpha: 0.08),
       radius: 30,
       padding: EdgeInsets.symmetric(
         horizontal: 15.0,
@@ -66,7 +66,7 @@ class _AuthTextFieldState extends State<AuthTextField> {
               },
               controller: widget.controller,
               style: context.bodySmall?.copyWith(
-                color: widget.enabled ? Colors.white : Colors.white38,
+                color: widget.enabled ? context.adaptiveTextPrimary : context.adaptiveDisabled,
               ),
               onChanged: widget.onChanged,
               decoration: InputDecoration(
@@ -75,7 +75,7 @@ class _AuthTextFieldState extends State<AuthTextField> {
                 suffixIcon: widget.suffixIcon,
                 suffixText: widget.suffixText,
                 hintStyle: context.bodySmall?.copyWith(
-                  color: widget.enabled ? Colors.white30 : Colors.white12,
+                  color: widget.enabled ? context.adaptiveDisabled : context.adaptiveTextSecondary,
                 ),
                 errorStyle: context.bodySmall?.copyWith(
                   color: Colors.red.shade300,

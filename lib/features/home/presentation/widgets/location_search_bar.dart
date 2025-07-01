@@ -115,10 +115,10 @@ class _LocationSearchBarState extends State<LocationSearchBar> {
               borderRadius: BorderRadius.circular(20),
               boxShadow: [
                 BoxShadow(
-                  color: context.adaptiveBackground.withValues(alpha: 0.18),
+                  color: Colors.black.withValues(alpha: 0.18),
                   spreadRadius: 2,
                   blurRadius: 30,
-                  offset: Offset(0, 0),
+                  offset: Offset(0, 0), // changes position of shadow
                 ),
               ],
             ),
@@ -141,12 +141,12 @@ class _LocationSearchBarState extends State<LocationSearchBar> {
                         children: [
                           SquircleContainer(
                             radius: 20,
-                            padding: EdgeInsets.all(8),
-                            color: context.adaptiveBorder,
+                            padding: EdgeInsets.all(12),
+                            color: context.adaptiveTextSecondary.withValues(alpha: 0.1),
                             child: HugeIcon(
-                              icon: HugeIcons.strokeRoundedLocation01,
+                              icon: HugeIcons.solidRoundedLocation01,
                               size: 25,
-                              color: context.adaptiveTextSecondary,
+                              color: context.adaptiveTextSecondary.withValues(alpha: 0.5),
                             ),
                           ),
                           12.w,
@@ -221,11 +221,21 @@ class _LocationSearchBarState extends State<LocationSearchBar> {
 
   @override
   Widget build(BuildContext context) {
-    return SquircleContainer(
-      radius: 40,
+    return Container(
       padding: EdgeInsets.symmetric(horizontal: 15, vertical: 8),
       height: 60,
-      color: context.adaptiveBackground,
+      decoration: BoxDecoration(
+        color: context.adaptiveBackground,
+        borderRadius: BorderRadius.circular(100),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.18),
+            spreadRadius: 2,
+            blurRadius: 30,
+            offset: Offset(0, 0), // changes position of shadow
+          ),
+        ]
+      ),
       child: Row(
         children: [
           HugeIcon(

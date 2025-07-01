@@ -1871,6 +1871,14 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
                                       icon: HugeIcons.strokeRoundedMaterialAndTexture,
                                       iconColor: context.adaptiveTextSecondary,
                                       onPressed: _openMapStyleSelector,
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.black.withValues(alpha: 0.18),
+                                          spreadRadius: 2,
+                                          blurRadius: 30,
+                                          offset: Offset(0, 0), // changes position of shadow
+                                        ),
+                                      ]
                                     ),
       
                                     // Bouton retour position utilisateur
@@ -1884,6 +1892,14 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
                                       iconColor: _trackingMode == TrackingMode.userTracking
                                           ? AppColors.primary
                                           : context.adaptiveTextSecondary,
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.black.withValues(alpha: 0.18),
+                                          spreadRadius: 2,
+                                          blurRadius: 30,
+                                          offset: Offset(0, 0), // changes position of shadow
+                                        ),
+                                      ]
                                     ),
                                     
                                     // Bouton générateur
@@ -1893,6 +1909,14 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
                                       icon: HugeIcons.strokeRoundedAiMagic,
                                       iconColor: context.adaptiveTextSecondary,
                                       onPressed: openGenerator,
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.black.withValues(alpha: 0.18),
+                                          spreadRadius: 2,
+                                          blurRadius: 30,
+                                          offset: Offset(0, 0), // changes position of shadow
+                                        ),
+                                      ]
                                     ),
                                   ],
                                 ),

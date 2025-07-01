@@ -141,7 +141,7 @@ class _ActivityScreenState extends State<ActivityScreen> with TickerProviderStat
         child: Text(
           context.l10n.activityTitle,
           style: context.bodySmall?.copyWith(
-            color: Colors.white,
+            color: context.adaptiveTextPrimary,
             fontWeight: FontWeight.w600,
           ),
         ),
@@ -153,7 +153,7 @@ class _ActivityScreenState extends State<ActivityScreen> with TickerProviderStat
             onPressed: () => _refreshData(),
             icon: Icon(
               HugeIcons.solidRoundedRefresh,
-              color: Colors.white,
+              color: context.adaptiveTextPrimary,
             ),
           ),
         ),
@@ -162,7 +162,7 @@ class _ActivityScreenState extends State<ActivityScreen> with TickerProviderStat
           child: PopupMenuButton<String>(
             icon: Icon(
               HugeIcons.strokeRoundedMoreVertical,
-              color: Colors.white,
+              color: context.adaptiveTextPrimary,
             ),
             color: Colors.black87,
             onSelected: _handleMenuSelection,
@@ -455,7 +455,7 @@ class _ActivityScreenState extends State<ActivityScreen> with TickerProviderStat
             Text(
               context.l10n.createGoal,
               style: context.bodySmall?.copyWith(
-                color: Colors.white,
+                color: context.adaptiveTextPrimary,
               ),
             ),
             20.h,
@@ -470,6 +470,7 @@ class _ActivityScreenState extends State<ActivityScreen> with TickerProviderStat
                 _showAddGoalDialog();
               },
             ),
+            10.h,
             _buildGoalOption(
               context: context,
               icon: HugeIcons.strokeRoundedAdd01,
@@ -491,54 +492,51 @@ class _ActivityScreenState extends State<ActivityScreen> with TickerProviderStat
   }
 
   Widget _buildGoalOption({required BuildContext context, required IconData icon, Color color = Colors.white10, required String title, required String subtitle, Function()? onTap}) {    
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12.0),
-      child: SquircleContainer(
-        onTap: onTap,
-        radius: 40,
-        color: Colors.white10,
-        padding: EdgeInsets.all(12),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Row(
-              children: [
-                SquircleContainer(
-                  padding: EdgeInsets.all(8),
-                  radius: 18,
-                  color: color.withValues(alpha: 0.1),
-                  child: Icon(icon, color: color, size: 30),
-                ),
-                15.w,
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: context.bodyMedium?.copyWith(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                      ),
+    return SquircleContainer(
+      onTap: onTap,
+      radius: 40,
+      color: context.adaptiveBorder.withValues(alpha: 0.05),
+      padding: EdgeInsets.all(8),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Row(
+            children: [
+              SquircleContainer(
+                padding: EdgeInsets.all(12),
+                radius: 18,
+                color: color.withValues(alpha: 0.25),
+                child: Icon(icon, color: color, size: 30),
+              ),
+              15.w,
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: context.bodyMedium?.copyWith(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
                     ),
-                    Text(
-                      subtitle,
-                      style: context.bodySmall?.copyWith(
-                        fontSize: 14,
-                        color: Colors.white38,
-                        fontWeight: FontWeight.w500,
-                      ),
+                  ),
+                  Text(
+                    subtitle,
+                    style: context.bodySmall?.copyWith(
+                      fontSize: 14,
+                      color: context.adaptiveTextSecondary,
+                      fontWeight: FontWeight.w500,
                     ),
-                  ],
-                ),
-              ],
-            ),
-            Icon(
-              HugeIcons.strokeRoundedArrowRight01,
-              color: Colors.grey[400],
-              size: 20,
-            ),
-          ],
-        ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          Icon(
+            HugeIcons.strokeRoundedArrowRight01,
+            color: context.adaptiveTextPrimary,
+            size: 20,
+          ),
+        ],
       ),
     );
   }

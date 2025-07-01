@@ -1,0 +1,1070 @@
+{
+    "@@locale": "it",
+    "language": "Lingua",
+    "@language": {
+      "description": "Etichetta per l'impostazione di selezione della lingua"
+    },
+    "selectLanguage": "Seleziona lingua",
+    "@selectLanguage": {
+      "description": "Titolo per la finestra di selezione della lingua"
+    },
+    "currentLanguage": "Italiano",
+    "@currentLanguage": {
+      "description": "Lingua selezionata"
+    },
+    "pathGenerated": "Percorso generato",
+    "@pathGenerated": {
+      "description": "Titolo o notifica mostrata quando un percorso è stato generato con successo."
+    },
+    "pathLoop": "Anello",
+    "@pathLoop": {
+      "description": "Etichetta per selezionare un percorso circolare (ad anello)."
+    },
+    "pathSimple": "Semplice",
+    "@pathSimple": {
+      "description": "Etichetta per selezionare un percorso semplice (andata e ritorno o punto-punto)."
+    },
+    "start": "Inizia",
+    "@start": {
+      "description": "Etichetta per il pulsante di azione principale che inizia l'allenamento o la navigazione."
+    },
+    "share": "Condividi",
+    "@share": {
+      "description": "Testo del pulsante per condividere il percorso generato con altri."
+    },
+    "toTheRun": "Alla corsa",
+    "@toTheRun": {
+      "description": "Pulsante di navigazione che porta l'utente alla schermata di corsa dal vivo."
+    },
+    "pathPoint": "Punto",
+    "@pathPoint": {
+      "description": "Etichetta metrica che indica un singolo waypoint o checkpoint nei dettagli del percorso."
+    },
+    "pathTotal": "Totale",
+    "@pathTotal": {
+      "description": "Etichetta metrica che denota la distanza totale del percorso."
+    },
+    "pathTime": "Durata",
+    "@pathTime": {
+      "description": "Etichetta metrica che mostra il tempo stimato necessario per completare il percorso."
+    },
+    "pointsCount": "Punti",
+    "@pointsCount": {
+      "description": "Etichetta metrica per il numero totale di waypoint/checkpoint nel percorso generato."
+    },
+    "guide": "GUIDA",
+    "@guide": {
+      "description": "Intestazione di sezione per contenuti di guida o istruzioni nell'interfaccia."
+    },
+    "course": "PERCORSO",
+    "@course": {
+      "description": "Intestazione di sezione per la panoramica del percorso/tracciato."
+    },
+    "enterDestination": "Inserisci una destinazione",
+    "@enterDestination": {
+      "description": "Testo segnaposto in un campo di ricerca che invita l'utente a digitare l'indirizzo di destinazione o un punto di riferimento."
+    },
+    "shareMsg": "Il mio percorso RunAway di {distance} km generato con l'app RunAway",
+    "@shareMsg": {
+      "placeholders": {
+        "distance": {
+          "type": "String"
+        }
+      }
+    },
+    "currentPosition": "Posizione attuale",
+    "@currentPosition": {
+      "description": "Testo visualizzato per indicare la posizione GPS attuale dell'utente."
+    },
+    "retrySmallRay": "Riprova con un raggio più piccolo",
+    "@retrySmallRay": {
+      "description": "Messaggio di errore che invita l'utente a rilanciare la ricerca con un raggio più piccolo."
+    },
+    "noCoordinateServer": "Nessuna coordinata ricevuta dal server",
+    "@noCoordinateServer": {
+      "description": "Errore che indica che il server non ha restituito alcuna coordinata."
+    },
+    "generationError": "Errore durante la generazione",
+    "@generationError": {
+      "description": "Messaggio di errore generico quando la generazione di dati fallisce."
+    },
+    "disabledLocation": "I servizi di localizzazione sono disabilitati.",
+    "@disabledLocation": {
+      "description": "Messaggio di errore quando i servizi di localizzazione sono disabilitati sul dispositivo."
+    },
+    "deniedPermission": "I permessi di localizzazione sono negati.",
+    "@deniedPermission": {
+      "description": "Messaggio di errore quando l'utente rifiuta temporaneamente l'autorizzazione alla localizzazione."
+    },
+    "disabledAndDenied": "I permessi di localizzazione sono negati permanentemente, non possiamo richiedere l'autorizzazione.",
+    "@disabledAndDenied": {
+      "description": "Messaggio di errore quando l'utente ha rifiutato definitivamente l'autorizzazione alla localizzazione."
+    },
+    "toTheRouteNavigation": "Navigazione verso il percorso interrotto",
+    "@toTheRouteNavigation": {
+      "description": "Titolo o annuncio di navigazione per raggiungere un itinerario interrotto."
+    },
+    "completedCourseNavigation": "Navigazione del percorso completato",
+    "@completedCourseNavigation": {
+      "description": "Titolo o annuncio di navigazione di un percorso già terminato."
+    },
+    "startingPoint": "Punto di partenza raggiunto!",
+    "@startingPoint": {
+      "description": "Notifica che indica che il punto di partenza è stato raggiunto."
+    },
+    "startingPointNavigation": "Navigazione verso il punto di partenza...",
+    "@startingPointNavigation": {
+      "description": "Messaggio visualizzato durante la guida verso il punto di partenza."
+    },
+    "arrivedToStartingPoint": "Sei arrivato al punto di partenza del percorso!",
+    "@arrivedToStartingPoint": {
+      "description": "Messaggio che annuncia l'arrivo al punto di partenza del percorso."
+    },
+    "later": "Più tardi",
+    "@later": {
+      "description": "Pulsante o azione che permette di rimandare una decisione o un promemoria."
+    },
+    "startCourse": "Inizia il percorso",
+    "@startCourse": {
+      "description": "Pulsante o comando per iniziare la navigazione di un percorso."
+    },
+    "courseStarted": "Navigazione del percorso iniziata...",
+    "@courseStarted": {
+      "description": "Messaggio che indica che la navigazione del percorso è iniziata."
+    },
+    "userAreStartingPoint": "Sei al punto di partenza del percorso.",
+    "@userAreStartingPoint": {
+      "description": "Messaggio che informa l'utente che si trova già al punto di partenza."
+    },
+    "error": "Errore",
+    "@error": {
+      "description": "Etichetta generica per un errore in una finestra di dialogo o banner."
+    },
+    "routeCalculation": "Calcolo del percorso verso il tracciato...",
+    "@routeCalculation": {
+      "description": "Messaggio visualizzato durante il calcolo dell'itinerario verso il percorso."
+    },
+    "unableCalculateRoute": "Impossibile calcolare il percorso verso il tracciato",
+    "@unableCalculateRoute": {
+      "description": "Messaggio di errore quando il calcolo dell'itinerario verso il percorso fallisce."
+    },
+    "unableStartNavigation": "Impossibile avviare la navigazione: {error}",
+    "@unableStartNavigation": {
+      "placeholders": {
+        "error": {
+          "type": "Object"
+        }
+      }
+    },
+    "navigationServiceError": "Il servizio di navigazione ha restituito false",
+    "@navigationServiceError": {
+      "description": "Errore restituito quando il servizio di navigazione risponde \"false\" (fallimento della chiamata)."
+    },
+    "calculationError": "Errore nel calcolo del percorso",
+    "@calculationError": {
+      "description": "Messaggio di errore visualizzato quando il calcolo dell'itinerario fallisce."
+    },
+    "calculationRouteError": "Errore nel calcolo del percorso: {error}",
+    "@calculationRouteError": {
+      "placeholders": {
+        "error": {
+          "type": "String"
+        }
+      }
+    },
+    "navigationInitializedError": "Errore di navigazione (servizio non inizializzato)",
+    "@navigationInitializedError": {
+      "description": "Errore che indica che il servizio di navigazione non è inizializzato quando si tenta di utilizzarlo."
+    },
+    "navigationError": "Errore del servizio di navigazione",
+    "@navigationError": {
+      "description": "Messaggio generico per qualsiasi errore proveniente dal servizio di navigazione."
+    },
+    "retry": "Riprova",
+    "@retry": {
+      "description": "Testo di un pulsante o link che permette di rilanciare l'operazione dopo un fallimento."
+    },
+    "navigationToCourse": "Navigazione verso il percorso",
+    "@navigationToCourse": {
+      "description": "Titolo o intestazione che indica la navigazione verso un percorso specifico."
+    },
+    "userToStartingPoint": "Sei a {distance} dal punto di partenza.",
+    "@userToStartingPoint": {
+      "placeholders": {
+        "distance": {
+          "type": "String"
+        }
+      }
+    },
+    "askUserChooseRoute": "Cosa vuoi fare?",
+    "@askUserChooseRoute": {
+      "description": "Domanda visualizzata in una finestra di dialogo perché l'utente scelga l'azione da realizzare (es. navigazione o creazione di itinerario)."
+    },
+    "voiceInstructions": "Navigazione con istruzioni vocali",
+    "@voiceInstructions": {
+      "description": "Opzione che permette di attivare la navigazione guidata da istruzioni vocali."
+    },
+    "cancel": "Annulla",
+    "@cancel": {
+      "description": "Etichetta di un pulsante di annullamento o per chiudere una finestra di dialogo."
+    },
+    "directPath": "Percorso diretto",
+    "@directPath": {
+      "description": "Opzione che propone l'itinerario più diretto possibile verso la destinazione."
+    },
+    "guideMe": "Guidami",
+    "@guideMe": {
+      "description": "Pulsante che chiede al sistema di iniziare la guida passo-passo fino alla destinazione."
+    },
+    "readyToStart": "Pronto per iniziare la navigazione del percorso",
+    "@readyToStart": {
+      "description": "Messaggio che indica che tutto è pronto per avviare la navigazione del percorso."
+    },
+    "notAvailablePosition": "Posizione utente o percorso non disponibile",
+    "@notAvailablePosition": {
+      "description": "Avvertimento visualizzato quando la posizione dell'utente o l'itinerario non è disponibile."
+    },
+    "urbanization": "Livello di urbanizzazione",
+    "@urbanization": {
+      "description": "Etichetta di un campo o filtro che specifica il grado di urbanizzazione desiderato per il percorso."
+    },
+    "terrain": "Tipo di terreno",
+    "@terrain": {
+      "description": "Etichetta di un campo o filtro che determina il tipo di terreno del percorso."
+    },
+    "activity": "Tipo di attività",
+    "@activity": {
+      "description": "Etichetta di un campo o filtro per selezionare l'attività (camminata, corsa, bici...)."
+    },
+    "distance": "Distanza",
+    "@distance": {
+      "description": "Campo che indica la distanza totale del percorso."
+    },
+    "elevation": "Dislivello",
+    "@elevation": {
+      "description": "Campo che indica il dislivello positivo totale del percorso."
+    },
+    "generate": "Genera",
+    "@generate": {
+      "description": "Pulsante per lanciare la generazione di un itinerario su misura."
+    },
+    "advancedOptions": "Opzioni avanzate",
+    "@advancedOptions": {
+      "description": "Link o pulsante che apre impostazioni avanzate per affinare la generazione del percorso."
+    },
+    "loopCourse": "Percorso ad anello",
+    "@loopCourse": {
+      "description": "Opzione che permette di generare un percorso ad anello (partenza = arrivo)."
+    },
+    "returnStartingPoint": "Ritorna al punto di partenza",
+    "@returnStartingPoint": {
+      "description": "Opzione per richiedere una guida di ritorno verso il punto di partenza."
+    },
+    "avoidTraffic": "Evita il traffico",
+    "@avoidTraffic": {
+      "description": "Opzione di generazione itinerario che mira ad evitare le zone ad alto traffico."
+    },
+    "quietStreets": "Privilegia strade tranquille",
+    "@quietStreets": {
+      "description": "Opzione per privilegiare le strade calme nel calcolo del percorso."
+    },
+    "scenicRoute": "Percorso panoramico",
+    "@scenicRoute": {
+      "description": "Opzione che propone un itinerario pittoresco con bei punti di vista."
+    },
+    "prioritizeLandscapes": "Privilegia paesaggi belli",
+    "@prioritizeLandscapes": {
+      "description": "Opzione che privilegia i paesaggi attraenti durante la generazione dell'itinerario."
+    },
+    "walking": "Camminata",
+    "@walking": {
+      "description": "Valore di attività che rappresenta la camminata a piedi."
+    },
+    "running": "Corsa",
+    "@running": {
+      "description": "Valore di attività che rappresenta la corsa a piedi."
+    },
+    "cycling": "Ciclismo",
+    "@cycling": {
+      "description": "Valore di attività che rappresenta il ciclismo."
+    },
+    "nature": "Natura",
+    "@nature": {
+      "description": "Livello di urbanizzazione: percorso principalmente in ambiente naturale."
+    },
+    "mixedUrbanization": "Misto",
+    "@mixedUrbanization": {
+      "description": "Livello di urbanizzazione: percorso che mescola città e natura."
+    },
+    "urban": "Urbano",
+    "@urban": {
+      "description": "Livello di urbanizzazione: percorso principalmente urbano."
+    },
+    "flat": "Pianeggiante",
+    "@flat": {
+      "description": "Tipo di terreno: pianeggiante (poco o nessun dislivello)."
+    },
+    "mixedTerrain": "Misto",
+    "@mixedTerrain": {
+      "description": "Tipo di terreno: vario (combinazione di pianeggiante e pendenze moderate)."
+    },
+    "hilly": "Collinare",
+    "@hilly": {
+      "description": "Tipo di terreno: collinare / pendenze pronunciate."
+    },
+    "flatDesc": "Terreno pianeggiante con poco dislivello",
+    "@flatDesc": {
+      "description": "Descrizione breve del terreno pianeggiante, usata in tooltip o liste."
+    },
+    "mixedTerrainDesc": "Terreno vario con dislivello moderato",
+    "@mixedTerrainDesc": {
+      "description": "Descrizione breve del terreno misto, usata in tooltip o liste."
+    },
+    "hillyDesc": "Terreno con pendenze ripide",
+    "@hillyDesc": {
+      "description": "Descrizione breve del terreno collinare, usata in tooltip o liste."
+    },
+    "natureDesc": "Principalmente nella natura",
+    "@natureDesc": {
+      "description": "Descrizione breve di un percorso principalmente nella natura."
+    },
+    "mixedUrbanizationDesc": "Mescola città e natura",
+    "@mixedUrbanizationDesc": {
+      "description": "Descrizione breve di un percorso misto (città + natura)."
+    },
+    "urbanDesc": "Principalmente in città",
+    "@urbanDesc": {
+      "description": "Descrizione breve di un percorso principalmente urbano."
+    },
+    "arriveAtDestination": "Arrivi alla tua destinazione",
+    "@arriveAtDestination": {
+      "description": "Annuncio vocale o notifica che indica l'arrivo a destinazione."
+    },
+    "continueOn": "Continua dritto per {distance}m",
+    "@continueOn": {
+      "placeholders": {
+        "distance": {
+          "type": "int"
+        }
+      }
+    },
+    "followPath": "Segui il sentiero per {distance}km",
+    "@followPath": {
+      "placeholders": {
+        "distance": {
+          "type": "String"
+        }
+      }
+    },
+    "restrictedAccessTitle": "Accesso limitato",
+    "@restrictedAccessTitle": {
+      "description": "Titolo della barra dell'app mostrato quando l'utente cerca di aprire una pagina protetta senza essere autenticato."
+    },
+    "notLoggedIn": "Non sei connesso",
+    "@notLoggedIn": {
+      "description": "Titolo che informa l'utente che deve prima autenticarsi."
+    },
+    "loginOrCreateAccountHint": "Per accedere a questa pagina, effettua il login o crea un account.",
+    "@loginOrCreateAccountHint": {
+      "description": "Spiegazione mostrata sotto il titolo che dice all'utente perché è richiesta l'autenticazione."
+    },
+    "logIn": "Accedi",
+    "@logIn": {
+      "description": "Etichetta del pulsante che apre il modulo di login."
+    },
+    "createAccount": "Crea un account",
+    "@createAccount": {
+      "description": "Etichetta del pulsante che apre il modulo di registrazione."
+    },
+    "needHelpContactUs": "Hai bisogno di aiuto? Contattaci.",
+    "@needHelpContactUs": {
+      "description": "Link che invita l'utente a contattare il supporto."
+    },
+    "createAccountSubtitle": "Per creare un account fornisci i dettagli, verifica l'email e imposta una password.",
+    "@createAccountSubtitle": {
+      "description": "Sottotitolo che spiega i passaggi di registrazione"
+    },
+    "emailHint": "Indirizzo email",
+    "@emailHint": {
+      "description": "Segnaposto del campo di testo email"
+    },
+    "passwordHint": "Password",
+    "@passwordHint": {
+      "description": "Segnaposto del campo di testo password"
+    },
+    "confirmPasswordHint": "Conferma password",
+    "@confirmPasswordHint": {
+      "description": "Segnaposto del campo di testo conferma-password"
+    },
+    "passwordsDontMatchError": "Le password non corrispondono",
+    "@passwordsDontMatchError": {
+      "description": "Errore di validazione mostrato quando i due campi password differiscono"
+    },
+    "haveAccount": "Hai un account?",
+    "@haveAccount": {
+      "description": "Testo che precede il link Accedi"
+    },
+    "termsAndPrivacy": "Termini di servizio | Informativa sulla privacy",
+    "@termsAndPrivacy": {
+      "description": "Link del footer ai documenti legali"
+    },
+    "continueForms": "Continua",
+    "@continueForms": {
+      "description": "Etichetta sul pulsante principale di registrazione"
+    },
+    "apple": "Apple",
+    "@apple": {
+      "description": "Etichetta sul pulsante di login social Apple"
+    },
+    "google": "Google",
+    "@google": {
+      "description": "Etichetta sul pulsante di login social Google"
+    },
+    "orDivider": "OPPURE",
+    "@orDivider": {
+      "description": ""
+    },
+    "loginGreetingTitle": "Ciao!",
+    "@loginGreetingTitle": {
+      "description": "Titolo principale di saluto nella schermata di login"
+    },
+    "loginGreetingSubtitle": "Inserisci i dettagli richiesti.",
+    "@loginGreetingSubtitle": {
+      "description": "Sottotitolo che chiede all'utente di compilare il modulo"
+    },
+    "forgotPassword": "Password dimenticata?",
+    "@forgotPassword": {
+      "description": "Link o etichetta che porterà al flusso di reset password"
+    },
+    "createAccountQuestion": "Creare un account?",
+    "@createAccountQuestion": {
+      "description": "Testo che precede il link di registrazione"
+    },
+    "signUp": "Registrati",
+    "@signUp": {
+      "description": "Link che naviga alla schermata di registrazione"
+    },
+    "appleLoginTodo": "Login Apple – Da implementare",
+    "@appleLoginTodo": {
+      "description": "Messaggio temporaneo della snackbar mostrato quando il login Apple non è ancora implementato"
+    },
+    "googleLoginTodo": "Login Google – Da implementare",
+    "@googleLoginTodo": {
+      "description": "Messaggio temporaneo della snackbar mostrato quando il login Google non è ancora implementato"
+    },
+    "setupAccountTitle": "Configura il tuo account",
+    "@setupAccountTitle": {
+      "description": "Titolo visualizzato nella barra dell'app della schermata di onboarding"
+    },
+    "onboardingInstruction": "Completa tutte le informazioni presentate qui sotto per creare il tuo account.",
+    "@onboardingInstruction": {
+      "description": "Frase introduttiva che invita l'utente a compilare tutti i campi"
+    },
+    "fullNameHint": "Mario Rossi",
+    "@fullNameHint": {
+      "description": "Testo segnaposto per il campo nome completo"
+    },
+    "usernameHint": "@mariorossi",
+    "@usernameHint": {
+      "description": "Testo segnaposto per il campo nome utente"
+    },
+    "complete": "Completa",
+    "@complete": {
+      "description": "Etichetta del pulsante che termina la creazione del profilo"
+    },
+    "creatingProfile": "Creando il tuo profilo...",
+    "@creatingProfile": {
+      "description": "Messaggio mostrato nell'overlay di caricamento mentre il profilo viene creato"
+    },
+    "fullNameRequired": "Il nome completo è obbligatorio",
+    "@fullNameRequired": {
+      "description": "Errore di validazione quando il campo nome completo è vuoto"
+    },
+    "fullNameMinLength": "Il nome deve avere almeno 2 caratteri",
+    "@fullNameMinLength": {
+      "description": "Errore di validazione quando il nome completo è troppo corto"
+    },
+    "usernameRequired": "Il nome utente è obbligatorio",
+    "@usernameRequired": {
+      "description": "Errore di validazione quando il campo nome utente è vuoto"
+    },
+    "usernameMinLength": "Il nome utente deve avere almeno 3 caratteri",
+    "@usernameMinLength": {
+      "description": "Errore di validazione quando il nome utente è troppo corto"
+    },
+    "usernameInvalidChars": "Solo lettere, numeri e _ sono consentiti",
+    "@usernameInvalidChars": {
+      "description": "Errore di validazione quando il nome utente contiene caratteri non consentiti"
+    },
+    "imagePickError": "Errore nella selezione dell'immagine: {error}",
+    "@imagePickError": {
+      "description": "Messaggio della snackbar quando il selettore di immagini fallisce",
+      "placeholders": {
+        "error": {
+          "example": "Permesso di archiviazione negato"
+        }
+      }
+    },
+    "avatarUploadWarning": "Profilo creato ma l'avatar non è stato caricato. Puoi aggiungerlo in seguito.",
+    "@avatarUploadWarning": {
+      "description": "Avvertimento mostrato quando il profilo è salvato ma il caricamento dell'avatar è fallito"
+    },
+    "emailInvalid": "Indirizzo email non valido",
+    "@emailInvalid": {
+      "description": "Errore di validazione mostrato quando il formato email non è valido"
+    },
+    "passwordMinLength": "Almeno 6 caratteri",
+    "@passwordMinLength": {
+      "description": "Errore di validazione quando la password è più corta di 6 caratteri"
+    },
+    "currentGeneration": "Generazione in corso...",
+    "@currentGeneration": {
+      "description": "Testo visualizzato durante la generazione in corso (percorsi, statistiche, ecc.)."
+    },
+    "navigationPaused": "Navigazione in pausa",
+    "@navigationPaused": {
+      "description": "Messaggio che indica che la navigazione è stata messa in pausa."
+    },
+    "navigationResumed": "Navigazione ripresa",
+    "@navigationResumed": {
+      "description": "Messaggio che indica che la navigazione è ripresa dopo la pausa."
+    },
+    "time": "Tempo",
+    "@time": {
+      "description": "Etichetta per la durata trascorsa o l'ora corrente, secondo il contesto."
+    },
+    "pace": "Ritmo",
+    "@pace": {
+      "description": "Etichetta per il ritmo (es. min/km o min/mi) nelle statistiche di attività."
+    },
+    "speed": "Velocità",
+    "@speed": {
+      "description": "Etichetta per la velocità (es. km/h o mph) nelle statistiche di attività."
+    },
+    "elevationGain": "Dislivello",
+    "@elevationGain": {
+      "description": "Etichetta per il dislivello positivo totale (guadagno di altitudine) del percorso."
+    },
+    "remaining": "Rimanente",
+    "@remaining": {
+      "description": "Etichetta che indica la distanza o il tempo rimanente prima dell'arrivo o della fine del percorso."
+    },
+    "progress": "Progresso",
+    "@progress": {
+      "description": "Etichetta per la progressione realizzata (distanza, tempo o percentuale compiuta)."
+    },
+    "estimatedTime": "Tempo stim.",
+    "@estimatedTime": {
+      "description": "Etichetta per il tempo stimato prima di raggiungere la destinazione o di terminare l'attività."
+    },
+    "updatingPhoto": "Aggiornamento della foto…",
+    "@updatingPhoto": {
+      "description": "Messaggio della snackbar superiore mostrato mentre il nuovo avatar viene caricato e salvato."
+    },
+    "selectionError": "Errore durante la selezione: {error}",
+    "@selectionError": {
+      "description": "Messaggio della snackbar superiore mostrato quando il selettore di immagini genera un'eccezione.",
+      "placeholders": {
+        "error": {
+          "type": "String",
+          "example": "FileSystemException",
+          "description": "Testo di errore grezzo restituito dal selettore."
+        }
+      }
+    },
+    "account": "Account",
+    "@account": {
+      "description": "Titolo della schermata account (AppBar)."
+    },
+    "defaultUserName": "Utente",
+    "@defaultUserName": {
+      "description": "Nome di fallback visualizzato quando il profilo non ha un nome completo."
+    },
+    "preferences": "Preferenze",
+    "@preferences": {
+      "description": "Intestazione di sezione per le impostazioni delle preferenze utente."
+    },
+    "notifications": "Notifiche",
+    "@notifications": {
+      "description": "Etichetta per la riga di impostazione delle notifiche."
+    },
+    "theme": "Tema",
+    "@theme": {
+      "description": "Etichetta per la riga di impostazione della selezione del tema."
+    },
+    "enabled": "Abilitato",
+    "@enabled": {
+      "description": "Testo del valore che indica che un'impostazione (es. notifiche) è ATTIVA."
+    },
+    "lightTheme": "Chiaro",
+    "@lightTheme": {
+      "description": "Testo del valore per la scelta del tema chiaro."
+    },
+    "selectPreferenceTheme": "Seleziona la tua preferenza",
+    "@selectPreferenceTheme": {
+      "description": "Invito che invita l'utente a scegliere il tema preferito."
+    },
+    "autoTheme": "Auto",
+    "@autoTheme": {
+      "description": "Testo del valore per la scelta del tema automatico (tema di sistema)."
+    },
+    "darkTheme": "Scuro",
+    "@darkTheme": {
+      "description": "Testo del valore per la scelta del tema scuro."
+    },
+    "accountSection": "Account",
+    "@accountSection": {
+      "description": "Intestazione di sezione che raggruppa le azioni relative all'account come logout e cancellazione del profilo."
+    },
+    "disconnect": "Disconnetti",
+    "@disconnect": {
+      "description": "Azione che disconnette l'utente dall'applicazione."
+    },
+    "deleteProfile": "Elimina profilo",
+    "@deleteProfile": {
+      "description": "Azione che elimina permanentemente il profilo dell'utente."
+    },
+    "editProfile": "Modifica profilo",
+    "@editProfile": {
+      "description": "Pulsante che dovrebbe navigare alla schermata di modifica del profilo."
+    },
+    "editProfileTodo": "Modifica profilo – Da implementare",
+    "@editProfileTodo": {
+      "description": "Snackbar temporanea che informa che la modifica del profilo non è ancora implementata."
+    },
+    "logoutTitle": "Disconnetti",
+    "@logoutTitle": {
+      "description": "Titolo della finestra di dialogo di conferma visualizzata prima della disconnessione."
+    },
+    "logoutMessage": "Sei sicuro di volerti disconnettere?",
+    "@logoutMessage": {
+      "description": "Testo del corpo della finestra di dialogo di conferma disconnessione."
+    },
+    "logoutConfirm": "Disconnetti",
+    "@logoutConfirm": {
+      "description": "Pulsante di azione positiva nella finestra di dialogo di disconnessione."
+    },
+    "deleteAccountTitle": "Elimina account",
+    "@deleteAccountTitle": {
+      "description": "Titolo della finestra di dialogo di conferma visualizzata prima di eliminare l'account."
+    },
+    "deleteAccountMessage": "Questa azione è irreversibile. Tutti i tuoi dati saranno eliminati permanentemente.",
+    "@deleteAccountMessage": {
+      "description": "Testo di avvertimento principale nella finestra di dialogo di eliminazione account."
+    },
+    "deleteAccountWarning": "Questa azione non può essere annullata",
+    "@deleteAccountWarning": {
+      "description": "Avvertimento aggiuntivo evidenziato mostrato nella finestra di dialogo di eliminazione account."
+    },
+    "delete": "Elimina",
+    "@delete": {
+      "description": "Pulsante di azione positiva nella finestra di dialogo di eliminazione account."
+    },
+    "deleteAccountTodo": "Eliminazione account – Da implementare",
+    "@deleteAccountTodo": {
+      "description": "Snackbar temporanea che informa che l'eliminazione dell'account non è ancora implementata."
+    },
+    "editPhoto": "Modifica la foto",
+    "@editPhoto": {
+      "description": "Pulsante mostrato sotto l'avatar ingrandito che permette all'utente di scegliere una nuova immagine del profilo."
+    },
+    "availableLanguage": "Lingua disponibile",
+    "@availableLanguage": {
+      "description": "Etichetta per l'impostazione che mostra la lingua attualmente offerta all'utente."
+    },
+    "selectPreferenceLanguage": "Seleziona la tua preferenza",
+    "@selectPreferenceLanguage": {
+      "description": "Invito che invita l'utente a scegliere la lingua preferita."
+    },
+    "activityTitle": "Attività",
+    "@activityTitle": {
+      "description": "Intestazione di sezione o etichetta di campo che si riferisce al tipo di attività dell'utente."
+    },
+    "exportData": "Esporta dati",
+    "@exportData": {
+      "description": "Pulsante o voce di menu utilizzata per esportare i dati dell'utente (es. allenamenti, obiettivi)."
+    },
+    "resetGoals": "Reimposta obiettivi",
+    "@resetGoals": {
+      "description": "Pulsante o voce di menu che reimposta tutti gli obiettivi definiti dall'utente."
+    },
+    "statisticsCalculation": "Calcolo delle statistiche...",
+    "@statisticsCalculation": {
+      "description": "Messaggio di stato visualizzato mentre le statistiche vengono calcolate."
+    },
+    "loading": "Caricamento...",
+    "@loading": {
+      "description": "Indicatore di caricamento generico mostrato durante qualsiasi operazione asincrona."
+    },
+    "createGoal": "Crea un obiettivo",
+    "@createGoal": {
+      "description": "Etichetta di azione che invita l'utente a iniziare a creare un nuovo obiettivo."
+    },
+    "customGoal": "Obiettivo personalizzato",
+    "@customGoal": {
+      "description": "Etichetta che indica che un obiettivo è definito dall'utente piuttosto che predefinito."
+    },
+    "createCustomGoal": "Crea un obiettivo personalizzato",
+    "@createCustomGoal": {
+      "description": "Pulsante o link per aprire il flusso di lavoro per creare un obiettivo definito dall'utente."
+    },
+    "goalsModels": "Modelli di obiettivi",
+    "@goalsModels": {
+      "description": "Titolo per l'elenco di modelli di obiettivi preimpostati disponibili per l'utente."
+    },
+    "predefinedGoals": "Scegli tra obiettivi predefiniti",
+    "@predefinedGoals": {
+      "description": "Testo di istruzione che invita l'utente a scegliere uno dei modelli di obiettivi preimpostati."
+    },
+    "updatedGoal": "Obiettivo aggiornato",
+    "@updatedGoal": {
+      "description": "Toast o messaggio di conferma mostrato dopo che un obiettivo è stato aggiornato con successo."
+    },
+    "createdGoal": "Obiettivo creato",
+    "@createdGoal": {
+      "description": "Toast o messaggio di conferma mostrato dopo che un obiettivo è stato creato con successo."
+    },
+    "deleteGoalTitle": "Elimina obiettivo",
+    "@deleteGoalTitle": {
+      "description": "Titolo della finestra di dialogo che chiede all'utente di confermare l'eliminazione di un obiettivo."
+    },
+    "deleteGoalMessage": "Sei sicuro di voler eliminare questo obiettivo?",
+    "@deleteGoalMessage": {
+      "description": "Testo del corpo della finestra di dialogo che avverte l'utente che l'eliminazione dell'obiettivo è irreversibile."
+    },
+    "removedGoal": "Obiettivo rimosso",
+    "@removedGoal": {
+      "description": "Toast o messaggio di conferma visualizzato dopo che un obiettivo è stato eliminato."
+    },
+    "goalsResetTitle": "Reimposta gli obiettivi",
+    "@goalsResetTitle": {
+      "description": "Titolo della finestra di dialogo che chiede all'utente di confermare la reimpostazione di tutti gli obiettivi."
+    },
+    "goalsResetMessage": "Questa azione rimuoverà tutti i tuoi obiettivi. Sei sicuro?",
+    "@goalsResetMessage": {
+      "description": "Corpo della finestra di dialogo che avverte che la reimpostazione eliminerà ogni obiettivo che l'utente ha impostato."
+    },
+    "reset": "Reimposta",
+    "@reset": {
+      "description": "Etichetta del pulsante generico utilizzata per ripristinare i valori predefiniti in un modulo o impostazione."
+    },
+    "activityFilter": "Per attività",
+    "@activityFilter": {
+      "description": "Etichetta per un pulsante di filtro che limita l'elenco di elementi per tipo di attività."
+    },
+    "allFilter": "Tutto",
+    "@allFilter": {
+      "description": "Opzione di filtro che rimuove qualsiasi filtro attivo e mostra ogni elemento."
+    },
+    "totalRoutes": "{totalRoutes} percorsi",
+    "@totalRoutes": {
+      "description": "Testo di riepilogo che mostra il numero totale di percorsi disponibili. Il numero è inserito dinamicamente.",
+      "placeholders": {
+        "totalRoutes": {
+          "type": "int"
+        }
+      }
+    },
+    "emptyDataFilter": "Nessun dato per questo filtro",
+    "@emptyDataFilter": {
+      "description": "Messaggio visualizzato quando il filtro corrente non restituisce risultati."
+    },
+    "byActivityFilter": "Filtra per attività",
+    "@byActivityFilter": {
+      "description": "Titolo o tooltip per un'opzione che permette all'utente di filtrare i dati per tipo di attività."
+    },
+    "typeOfActivity": "Scegli il tipo di attività",
+    "@typeOfActivity": {
+      "description": "Invito che chiede all'utente di selezionare un tipo di attività da un elenco."
+    },
+    "allActivities": "Tutte le attività",
+    "@allActivities": {
+      "description": "Opzione del menu a discesa che rappresenta tutti i possibili tipi di attività."
+    },
+    "modifyGoal": "Modifica obiettivo",
+    "@modifyGoal": {
+      "description": "Etichetta del pulsante che apre un modulo per modificare un obiettivo esistente."
+    },
+    "newGoal": "Nuovo obiettivo",
+    "@newGoal": {
+      "description": "Etichetta del pulsante che apre un modulo per creare un nuovo obiettivo."
+    },
+    "modify": "Modifica",
+    "@modify": {
+      "description": "Etichetta di azione generica utilizzata per modificare l'elemento corrente."
+    },
+    "create": "Crea",
+    "@create": {
+      "description": "Etichetta di azione generica utilizzata per creare un nuovo elemento."
+    },
+    "goalTitle": "Titolo obiettivo",
+    "@goalTitle": {
+      "description": "Etichetta del campo per inserire il titolo di un obiettivo."
+    },
+    "titleValidator": "Dovresti inserire un titolo",
+    "@titleValidator": {
+      "description": "Errore di validazione mostrato quando il campo titolo obiettivo è vuoto."
+    },
+    "optionalDescription": "Descrizione (opzionale)",
+    "@optionalDescription": {
+      "description": "Etichetta per un campo descrizione opzionale in un modulo."
+    },
+    "goalType": "Tipo di obiettivo",
+    "@goalType": {
+      "description": "Etichetta per selezionare la categoria di obiettivo (distanza, velocità, ecc.)."
+    },
+    "optionalActivity": "Attività (opzionale)",
+    "@optionalActivity": {
+      "description": "Etichetta per un campo opzionale dove l'utente può collegare un obiettivo a un'attività specifica."
+    },
+    "targetValue": "Valore target",
+    "@targetValue": {
+      "description": "Etichetta per il valore numerico target di un obiettivo."
+    },
+    "targetValueValidator": "Inserisci un valore target",
+    "@targetValueValidator": {
+      "description": "Errore di validazione mostrato quando il campo valore target è vuoto."
+    },
+    "positiveValueValidator": "Inserisci un valore positivo",
+    "@positiveValueValidator": {
+      "description": "Errore di validazione mostrato quando il valore inserito è zero o negativo."
+    },
+    "optionalDeadline": "Scadenza (opzionale)",
+    "@optionalDeadline": {
+      "description": "Etichetta per un selettore di data opzionale che imposta una scadenza per l'obiettivo."
+    },
+    "selectDate": "Seleziona una data",
+    "@selectDate": {
+      "description": "Invito sul pulsante del selettore di data che invita l'utente a scegliere una data."
+    },
+    "distanceType": "km",
+    "@distanceType": {
+      "description": "Etichetta dell'unità per la distanza visualizzata in chilometri."
+    },
+    "routesType": "percorsi",
+    "@routesType": {
+      "description": "Etichetta dell'unità che rappresenta un conteggio di percorsi individuali."
+    },
+    "speedType": "km/h",
+    "@speedType": {
+      "description": "Etichetta dell'unità per la velocità visualizzata in chilometri all'ora."
+    },
+    "elevationType": "m",
+    "@elevationType": {
+      "description": "Etichetta dell'unità per il dislivello visualizzato in metri."
+    },
+    "goalTypeDistance": "Distanza mensile",
+    "@goalTypeDistance": {
+      "description": "Nome di una categoria di obiettivo che traccia la distanza totale per mese."
+    },
+    "goalTypeRoutes": "Numero di percorsi",
+    "@goalTypeRoutes": {
+      "description": "Nome di una categoria di obiettivo che traccia quanti percorsi sono completati."
+    },
+    "goalTypeSpeed": "Velocità media",
+    "@goalTypeSpeed": {
+      "description": "Nome di una categoria di obiettivo che traccia la velocità media durante un periodo."
+    },
+    "goalTypeElevation": "Dislivello totale",
+    "@goalTypeElevation": {
+      "description": "Nome di una categoria di obiettivo che traccia il dislivello cumulativo."
+    },
+    "monthlyRaceTitle": "Corsa mensile",
+    "@monthlyRaceTitle": {
+      "description": "Titolo predefinito per un obiettivo di esempio focalizzato sulla distanza di corsa mensile."
+    },
+    "monthlyRaceMessage": "50km al mese di corsa",
+    "@monthlyRaceMessage": {
+      "description": "Breve descrizione dell'obiettivo di distanza di corsa mensile."
+    },
+    "monthlyRaceGoal": "Corri 50km al mese",
+    "@monthlyRaceGoal": {
+      "description": "Riassunto dell'obiettivo che afferma che l'utente dovrebbe correre 50 km ogni mese."
+    },
+    "weeklyBikeTitle": "Bici settimanale",
+    "@weeklyBikeTitle": {
+      "description": "Titolo predefinito per un obiettivo di esempio focalizzato sulla distanza di ciclismo settimanale."
+    },
+    "weeklyBikeMessage": "100km a settimana in bici",
+    "@weeklyBikeMessage": {
+      "description": "Breve descrizione dell'obiettivo di distanza di ciclismo settimanale."
+    },
+    "weeklyBikeGoal": "Pedala per 100km a settimana",
+    "@weeklyBikeGoal": {
+      "description": "Riassunto dell'obiettivo che afferma che l'utente dovrebbe pedalare 100 km ogni settimana."
+    },
+    "regularTripsTitle": "Percorsi regolari",
+    "@regularTripsTitle": {
+      "description": "Titolo predefinito per un obiettivo di esempio che conta il numero di percorsi al mese."
+    },
+    "regularTripsMessage": "10 percorsi al mese",
+    "@regularTripsMessage": {
+      "description": "Breve descrizione dell'obiettivo di percorsi mensili."
+    },
+    "regularTripsGoal": "Completa 10 percorsi al mese",
+    "@regularTripsGoal": {
+      "description": "Riassunto dell'obiettivo che afferma che l'utente dovrebbe completare 10 percorsi ogni mese."
+    },
+    "mountainChallengeTitle": "Sfida Montagna",
+    "@mountainChallengeTitle": {
+      "description": "Titolo predefinito per un obiettivo di esempio focalizzato sul dislivello mensile."
+    },
+    "mountainChallengeMessage": "1000m di dislivello al mese",
+    "@mountainChallengeMessage": {
+      "description": "Breve descrizione dell'obiettivo di dislivello mensile."
+    },
+    "mountainChallengeGoal": "Scala 1000m di dislivello al mese",
+    "@mountainChallengeGoal": {
+      "description": "Riassunto dell'obiettivo che afferma che l'utente dovrebbe raggiungere 1000 m di dislivello ogni mese."
+    },
+    "averageSpeedTitle": "Velocità media",
+    "@averageSpeedTitle": {
+      "description": "Titolo predefinito per un obiettivo di esempio focalizzato sul mantenimento della velocità media."
+    },
+    "averageSpeedMessage": "Mantieni 12km/h di media",
+    "@averageSpeedMessage": {
+      "description": "Breve descrizione dell'obiettivo di velocità media."
+    },
+    "averageSpeedGoal": "Mantieni una velocità media di 12km/h",
+    "@averageSpeedGoal": {
+      "description": "Riassunto dell'obiettivo che afferma che l'utente dovrebbe mantenere una velocità media di 12 km/h."
+    },
+    "personalGoals": "Obiettivi personali",
+    "@personalGoals": {
+      "description": "Intestazione di sezione che elenca tutti gli obiettivi definiti dall'utente."
+    },
+    "add": "Aggiungi",
+    "@add": {
+      "description": "Etichetta del pulsante utilizzata per aggiungere un nuovo elemento (obiettivo, record, ecc.)."
+    },
+    "emptyDefinedGoals": "Non hai obiettivi definiti",
+    "@emptyDefinedGoals": {
+      "description": "Messaggio mostrato quando l'utente non ha ancora creato obiettivi."
+    },
+    "pressToAdd": "Premi + per crearne uno",
+    "@pressToAdd": {
+      "description": "Istruzione che dice all'utente come iniziare ad aggiungere un nuovo obiettivo."
+    },
+    "personalRecords": "Record personali",
+    "@personalRecords": {
+      "description": "Intestazione di sezione che elenca le migliori prestazioni dell'utente."
+    },
+    "empryPersonalRecords": "Completa i percorsi per stabilire i tuoi record",
+    "@empryPersonalRecords": {
+      "description": "Messaggio mostrato quando non esistono ancora record personali."
+    },
+    "overview": "Panoramica",
+    "@overview": {
+      "description": "Titolo di scheda o sezione che mostra un riassunto delle statistiche."
+    },
+    "totalDistance": "Distanza totale",
+    "@totalDistance": {
+      "description": "Etichetta per la statistica della distanza cumulativa."
+    },
+    "totalTime": "Tempo totale",
+    "@totalTime": {
+      "description": "Etichetta per la statistica del tempo cumulativo."
+    },
+    "confirmRouteDeletionTitle": "Conferma l'eliminazione",
+    "@confirmRouteDeletionTitle": {
+      "description": "Titolo della finestra di dialogo mostrata quando l'utente sta per eliminare un percorso salvato."
+    },
+    "confirmRouteDeletionMessage": "Vuoi davvero eliminare il percorso {routeName}?",
+    "@confirmRouteDeletionMessage": {
+      "description": "Messaggio di conferma che chiede se l'utente vuole davvero eliminare un percorso specifico.",
+      "placeholders": {
+        "routeName": {
+          "type": "String",
+          "example": "Corsa Mattutina"
+        }
+      }
+    },
+    "historic": "Storico",
+    "@historic": {
+      "description": "Titolo di scheda o sezione che apre l'elenco dei percorsi precedentemente completati."
+    },
+    "loadingError": "Errore di caricamento",
+    "@loadingError": {
+      "description": "Etichetta di errore generica mostrata quando il caricamento dei dati fallisce."
+    },
+    "emptySavedRouteTitle": "Nessun percorso salvato",
+    "@emptySavedRouteTitle": {
+      "description": "Titolo visualizzato quando l'utente non ha ancora salvato percorsi."
+    },
+    "emptySavedRouteMessage": "Genera il tuo primo percorso dalla homepage per vederlo apparire qui",
+    "@emptySavedRouteMessage": {
+      "description": "Messaggio che incoraggia l'utente a creare il primo percorso quando l'elenco dei percorsi salvati è vuoto."
+    },
+    "generateRoute": "Genera un percorso",
+    "@generateRoute": {
+      "description": "Testo del pulsante che innesca il processo di generazione del percorso."
+    },
+    "route": "Percorso",
+    "@route": {
+      "description": "Etichetta o intestazione di colonna che indica una singola voce di percorso."
+    },
+    "total": "Totale",
+    "@total": {
+      "description": "Etichetta per i totali (distanza, dislivello, ecc.) nelle viste di riepilogo."
+    },
+    "unsynchronized": "Non sinc",
+    "@unsynchronized": {
+      "description": "Etichetta di stato mostrata quando un percorso non è stato sincronizzato con il server."
+    },
+    "synchronized": "Sinc",
+    "@synchronized": {
+      "description": "Etichetta di stato che indica che un percorso è già sincronizzato con il server."
+    },
+    "renameRoute": "Rinomina",
+    "@renameRoute": {
+      "description": "Voce di azione che permette all'utente di rinominare un percorso salvato."
+    },
+    "synchronizeRoute": "Sincronizza",
+    "@synchronizeRoute": {
+      "description": "Voce di azione che carica o sincronizza un percorso sul server."
+    },
+    "deleteRoute": "Elimina",
+    "@deleteRoute": {
+      "description": "Voce di azione che elimina un percorso salvato."
+    },
+    "followRoute": "Segui",
+    "@followRoute": {
+      "description": "Voce di azione che inizia la guida lungo il percorso selezionato."
+    },
+    "imageUnavailable": "Immagine non disponibile",
+    "@imageUnavailable": {
+      "description": "Testo di fallback mostrato quando una miniatura o immagine di anteprima del percorso non può essere visualizzata."
+    },
+    "mapStyleTitle": "Tipo di mappa",
+    "@mapStyleTitle": {
+      "description": "Titolo per la sezione dell'interfaccia dove gli utenti scelgono uno stile di mappa."
+    },
+    "mapStyleSubtitle": "Scegli il tuo stile",
+    "@mapStyleSubtitle": {
+      "description": "Sottotitolo che invita l'utente a scegliere il proprio stile di mappa preferito."
+    },
+    "mapStyleStreet": "Stradale",
+    "@mapStyleStreet": {
+      "description": "Opzione di livello mappa che visualizza una mappa stradale classica con strade, nomi di luoghi e punti di riferimento di base."
+    },
+    "mapStyleOutdoor": "Outdoor",
+    "@mapStyleOutdoor": {
+      "description": "Opzione di livello mappa ottimizzata per attività all'aperto; evidenzia sentieri, contorni del terreno e caratteristiche naturali."
+    },
+    "mapStyleLight": "Chiaro",
+    "@mapStyleLight": {
+      "description": "Opzione di livello mappa con una palette di colori chiari, adatta per ambienti luminosi o stampa."
+    },
+    "mapStyleDark": "Scuro",
+    "@mapStyleDark": {
+      "description": "Opzione di livello mappa con una palette di colori scuri, ideale per la modalità notturna o condizioni di scarsa illuminazione."
+    },
+    "mapStyleSatellite": "Satellite",
+    "@mapStyleSatellite": {
+      "description": "Opzione di livello mappa che mostra immagini satellitari ad alta risoluzione senza etichette aggiuntive."
+    },
+    "mapStyleHybrid": "Ibrido",
+    "@mapStyleHybrid": {
+      "description": "Opzione di livello mappa che sovrappone etichette di luoghi e strade sopra le immagini satellitari."
+    }
+  }

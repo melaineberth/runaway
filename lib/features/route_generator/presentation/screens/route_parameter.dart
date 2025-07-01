@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hugeicons/hugeicons.dart';
-import 'package:runaway/config/colors.dart';
 import 'package:runaway/config/extensions.dart';
 import 'package:runaway/core/widgets/blurry_page.dart';
 import 'package:runaway/core/widgets/icon_btn.dart';
@@ -56,7 +55,7 @@ class _RouteParameterScreenState extends State<RouteParameterScreen> {
           return Stack(
             children: [
               BlurryPage(
-                color: Colors.black,
+                color: context.adaptiveBackground,
                 contentPadding: const EdgeInsets.fromLTRB(30, 30, 30, kBottomNavigationBarHeight * 2.5),
                 children: [
                   // Activité
@@ -136,8 +135,8 @@ class _RouteParameterScreenState extends State<RouteParameterScreen> {
         width: double.infinity,
         child: IconBtn(
           label: context.l10n.generate,
-          backgroundColor: AppColors.primary,
-          labelColor: Colors.black,
+          backgroundColor: context.adaptivePrimary,
+          labelColor: Colors.white,
           onPressed: () {
             if (mounted) {
               context.pop();
@@ -181,14 +180,14 @@ class _RouteParameterScreenState extends State<RouteParameterScreen> {
     return Column(
       children: [
         SwitchListTile(
-          inactiveTrackColor: Colors.white12,
-          activeColor: AppColors.primary,
+          inactiveTrackColor: context.adaptiveBorder.withValues(alpha: 0.08),
+          activeColor: context.adaptivePrimary,
           contentPadding: EdgeInsets.zero,
-          title: Text(context.l10n.loopCourse, style: context.bodySmall?.copyWith(color: Colors.white)),
+          title: Text(context.l10n.loopCourse, style: context.bodySmall?.copyWith(color: context.adaptiveTextPrimary)),
           subtitle: Text(
             context.l10n.returnStartingPoint,
             style: context.bodySmall?.copyWith(
-              color: Colors.grey.shade500,
+              color: context.adaptiveTextSecondary,
               fontSize: 15,
               fontWeight: FontWeight.w500,
             ),
@@ -199,14 +198,14 @@ class _RouteParameterScreenState extends State<RouteParameterScreen> {
           },
         ),
         SwitchListTile(
-          inactiveTrackColor: Colors.white12,
-          activeColor: AppColors.primary,
+          inactiveTrackColor: context.adaptiveBorder.withValues(alpha: 0.08),
+          activeColor: context.adaptivePrimary,
           contentPadding: EdgeInsets.zero,
-          title: Text(context.l10n.avoidTraffic, style: context.bodySmall?.copyWith(color: Colors.white)),
+          title: Text(context.l10n.avoidTraffic, style: context.bodySmall?.copyWith(color: context.adaptiveTextPrimary)),
           subtitle: Text(
             context.l10n.quietStreets,
             style: context.bodySmall?.copyWith(
-              color: Colors.grey.shade500,
+              color: context.adaptiveTextSecondary,
               fontSize: 15,
               fontWeight: FontWeight.w500,
             ),
@@ -217,14 +216,14 @@ class _RouteParameterScreenState extends State<RouteParameterScreen> {
           },
         ),
         SwitchListTile(
-          inactiveTrackColor: Colors.white12,
-          activeColor: AppColors.primary,
+          inactiveTrackColor: context.adaptiveBorder.withValues(alpha: 0.08),
+          activeColor: context.adaptivePrimary,
           contentPadding: EdgeInsets.zero,
-          title: Text(context.l10n.scenicRoute, style: context.bodySmall?.copyWith(color: Colors.white)),
+          title: Text(context.l10n.scenicRoute, style: context.bodySmall?.copyWith(color: context.adaptiveTextPrimary)),
           subtitle: Text(
             context.l10n.prioritizeLandscapes,
             style: context.bodySmall?.copyWith(
-              color: Colors.grey.shade500,
+              color: context.adaptiveTextSecondary,
               fontSize: 15,
               fontWeight: FontWeight.w500,
             ),

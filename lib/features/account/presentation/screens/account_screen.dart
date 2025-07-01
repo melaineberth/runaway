@@ -622,7 +622,7 @@ class _AvatarViewer extends StatelessWidget {
                     opacity: animation,
                     child: BackdropFilter(
                       filter: ImageFilter.blur(sigmaX: sigma, sigmaY: sigma),
-                      child: Container(color: Colors.white.withValues(alpha: veilOpacity)),
+                      child: Container(color: context.adaptiveBackground.withValues(alpha: veilOpacity)),
                     ),
                   ),
                 ),

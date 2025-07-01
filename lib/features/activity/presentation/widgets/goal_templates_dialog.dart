@@ -23,7 +23,7 @@ class GoalTemplatesDialog extends StatelessWidget {
             Text(
               context.l10n.goalsModels,
               style: context.bodySmall?.copyWith(
-                color: Colors.white,
+                color: context.adaptiveTextPrimary,
               ),
             ),
             20.h,
@@ -40,6 +40,7 @@ class GoalTemplatesDialog extends StatelessWidget {
                 ActivityType.running,
               ),
             ),
+            10.h,
             _buildTemplate(
               context,
               context.l10n.weeklyBikeTitle,
@@ -53,6 +54,7 @@ class GoalTemplatesDialog extends StatelessWidget {
                 ActivityType.cycling,
               ),
             ),
+            10.h,
             _buildTemplate(
               context,
               context.l10n.regularTripsTitle,
@@ -66,6 +68,7 @@ class GoalTemplatesDialog extends StatelessWidget {
                 null,
               ),
             ),
+            10.h,
             _buildTemplate(
               context,
               context.l10n.mountainChallengeTitle,
@@ -79,6 +82,7 @@ class GoalTemplatesDialog extends StatelessWidget {
                 null,
               ),
             ),
+            10.h,
             _buildTemplate(
               context,
               context.l10n.averageSpeedTitle,
@@ -105,58 +109,55 @@ class GoalTemplatesDialog extends StatelessWidget {
     IconData icon,
     PersonalGoal Function() createGoal,
   ) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12.0),
-      child: SquircleContainer(
-        onTap: () {
-          final goal = createGoal();
-          context.pop(goal);
-        },
-        radius: 40,
-        color: Colors.white10,
-        padding: EdgeInsets.all(12),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Row(
-              children: [
-                SquircleContainer(
-                  padding: EdgeInsets.all(8),
-                  radius: 18,
-                  color: Colors.blue.withValues(alpha: 0.1),
-                  child: Icon(icon, color: Colors.blue, size: 30),
-                  
-                ),
-                15.w,
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: context.bodyMedium?.copyWith(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                      ),
+    return SquircleContainer(
+      onTap: () {
+        final goal = createGoal();
+        context.pop(goal);
+      },
+      radius: 40,
+      color: context.adaptiveBorder.withValues(alpha: 0.08),
+      padding: EdgeInsets.all(9),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Row(
+            children: [
+              SquircleContainer(
+                padding: EdgeInsets.all(12),
+                radius: 18,
+                color: Colors.blue.withValues(alpha: 0.1),
+                child: Icon(icon, color: Colors.blue, size: 25),
+                
+              ),
+              15.w,
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: context.bodyMedium?.copyWith(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
                     ),
-                    Text(
-                      description,
-                      style: context.bodySmall?.copyWith(
-                        fontSize: 14,
-                        color: Colors.white38,
-                        fontWeight: FontWeight.w500,
-                      ),
+                  ),
+                  Text(
+                    description,
+                    style: context.bodySmall?.copyWith(
+                      fontSize: 14,
+                      color: context.adaptiveTextSecondary,
+                      fontWeight: FontWeight.w500,
                     ),
-                  ],
-                ),
-              ],
-            ),
-            Icon(
-              HugeIcons.strokeRoundedArrowRight01,
-              color: Colors.grey[400],
-              size: 20,
-            ),
-          ],
-        ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          Icon(
+            HugeIcons.strokeRoundedArrowRight01,
+            color: context.adaptiveTextPrimary,
+            size: 20,
+          ),
+        ],
       ),
     );
   }

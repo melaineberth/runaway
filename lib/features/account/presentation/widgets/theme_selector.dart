@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:hugeicons/hugeicons.dart';
-import 'package:runaway/config/colors.dart';
 import 'package:runaway/config/extensions.dart';
 import 'package:runaway/core/blocs/theme_bloc/theme_bloc.dart';
 import 'package:runaway/core/widgets/modal_sheet.dart';
@@ -35,7 +34,7 @@ class ThemeSelector extends StatelessWidget {
                     color: context.adaptiveTextPrimary,
                   ),
                 ),
-                3.h,
+                2.h,
                 Text(
                   context.l10n.selectPreferenceTheme,
                   style: context.bodySmall?.copyWith(
@@ -69,7 +68,7 @@ class ThemeSelector extends StatelessWidget {
                         ],
                         child: Padding(
                           padding: EdgeInsets.only(
-                            bottom: i == AppThemeMode.values.length - 1 ? 0 : 12,
+                            bottom: i == AppThemeMode.values.length - 1 ? 0 : 10,
                           ),
                           child: _buildThemeTile(
                             context: context, 
@@ -109,11 +108,11 @@ class ThemeSelector extends StatelessWidget {
   IconData _getThemeIcon(AppThemeMode themeMode) {
     switch (themeMode) {
       case AppThemeMode.auto:
-        return HugeIcons.strokeRoundedSmartPhone01;
+        return HugeIcons.solidRoundedSmartPhone01;
       case AppThemeMode.light:
-        return HugeIcons.strokeRoundedSun03;
+        return HugeIcons.solidRoundedSun03;
       case AppThemeMode.dark:
-        return HugeIcons.strokeRoundedMoon02;
+        return HugeIcons.solidRoundedMoon02;
     }
   }
 
@@ -127,21 +126,21 @@ class ThemeSelector extends StatelessWidget {
     return SquircleContainer(
       onTap: onTap,
       radius: 40,
-      color: context.adaptiveBorder.withValues(alpha: 0.1),
-      padding: const EdgeInsets.all(12),
+      color: context.adaptiveBorder.withValues(alpha: 0.08),
+      padding: const EdgeInsets.all(8),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Row(
             children: [
               SquircleContainer(
-                padding: const EdgeInsets.all(8),
+                padding: const EdgeInsets.all(12),
                 radius: 18,
-                color: context.adaptiveBorder.withValues(alpha: 0.1),
+                color: context.adaptivePrimary.withValues(alpha: 0.25),
                 child: Icon(
                   icon,
-                  color: context.adaptiveTextPrimary,
-                  size: 24,
+                  color: context.adaptivePrimary,
+                  size: 25,
                 ),
               ),
                 
@@ -157,29 +156,32 @@ class ThemeSelector extends StatelessWidget {
             ],
           ),
             
-          AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
-            width: 24,
-            height: 24,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: isSelected 
-                  ? AppColors.primary
-                  : Colors.transparent,
-              border: Border.all(
+          Padding(
+            padding: const EdgeInsets.only(right: 8.0),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              width: 24,
+              height: 24,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
                 color: isSelected 
-                    ? AppColors.primary
-                    : context.adaptiveBorder,
-                width: 2,
+                    ? context.adaptivePrimary
+                    : Colors.transparent,
+                border: Border.all(
+                  color: isSelected 
+                      ? context.adaptivePrimary
+                      : context.adaptiveBorder,
+                  width: 2,
+                ),
               ),
+              child: isSelected
+                  ? const Icon(
+                      HugeIcons.solidRoundedTick02,
+                      color: Colors.white,
+                      size: 20,
+                    )
+                  : null,
             ),
-            child: isSelected
-                ? const Icon(
-                    HugeIcons.solidRoundedTick02,
-                    color: Colors.white,
-                    size: 20,
-                  )
-                : null,
           ),
         ],
       ),

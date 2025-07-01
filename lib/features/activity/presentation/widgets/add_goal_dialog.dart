@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:hugeicons/hugeicons.dart';
-import 'package:runaway/config/colors.dart';
 import 'package:runaway/core/widgets/modal_sheet.dart';
 import 'package:runaway/core/widgets/squircle_container.dart';
 import 'package:runaway/features/auth/presentation/widgets/auth_text_field.dart';
@@ -68,8 +66,8 @@ class _AddGoalDialogState extends State<AddGoalDialog> {
           children: [
             Text(
               _isEditing ? context.l10n.modifyGoal : context.l10n.newGoal,
-              style: context.bodyMedium?.copyWith(
-                color: Colors.white,
+              style: context.bodySmall?.copyWith(
+                color: context.adaptiveTextPrimary,
               ),
             ),
             20.h,
@@ -96,46 +94,25 @@ class _AddGoalDialogState extends State<AddGoalDialog> {
               ),
             ),
             50.h,
-            Row(
-              children: [
-                Expanded(
-                  child: SquircleContainer(
-                    onTap: () => context.pop(),
-                    radius: 30.0,
-                    color: Colors.white10,
-                    padding: EdgeInsets.symmetric(vertical: 15.0),
-                    child: Center(
-                      child: Text(
-                        context.l10n.cancel,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
+            GestureDetector(
+              onTap: _saveGoal,
+              child: Container(
+                padding: EdgeInsets.symmetric(vertical: 15.0),
+                decoration: BoxDecoration(
+                  color: context.adaptivePrimary,
+                  borderRadius: BorderRadius.circular(100),
+                ),
+                child: Center(
+                  child: Text(
+                    _isEditing ? context.l10n.modify : context.l10n.create,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
                 ),
-                10.w,
-                Expanded(
-                  child: SquircleContainer(
-                    onTap: _saveGoal,
-                    radius: 30.0,
-                    color: AppColors.primary,
-                    padding: EdgeInsets.symmetric(vertical: 15.0),
-                    child: Center(
-                      child: Text(
-                        _isEditing ? context.l10n.modify : context.l10n.create,
-                        style: const TextStyle(
-                          color: Colors.black,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
+              ),
             ),
           ],
         ),
@@ -183,7 +160,7 @@ class _AddGoalDialogState extends State<AddGoalDialog> {
               onTap: () => setState(() => _selectedType = type),
               child: Container(
                 decoration: BoxDecoration(
-                  color: isSelected ? Colors.blue : Colors.white10,
+                  color: isSelected ? Colors.blue : context.adaptiveBorder.withValues(alpha: 0.08),
                   borderRadius: BorderRadius.circular(100),
                 ),
                 padding: EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
@@ -191,7 +168,7 @@ class _AddGoalDialogState extends State<AddGoalDialog> {
                   type.goalLabel(context),
                   style: context.bodySmall?.copyWith(
                     fontSize: 14,
-                    color:Colors.white,
+                    color: isSelected ? Colors.white : context.adaptiveTextPrimary,
                     fontWeight: FontWeight.w500,
                   ),
                 ),
@@ -233,7 +210,7 @@ class _AddGoalDialogState extends State<AddGoalDialog> {
       onTap: () => setState(() => _selectedActivity = activity),
       child: Container(
         decoration: BoxDecoration(
-          color: isSelected ? Colors.blue : Colors.white10,
+          color: isSelected ? Colors.blue : context.adaptiveBorder.withValues(alpha: 0.08),
           borderRadius: BorderRadius.circular(100),
         ),
         padding: EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
@@ -241,7 +218,7 @@ class _AddGoalDialogState extends State<AddGoalDialog> {
           label,
           style: context.bodySmall?.copyWith(
             fontSize: 14,
-            color:Colors.white,
+            color: isSelected ? Colors.white : context.adaptiveTextPrimary,
             fontWeight: FontWeight.w500,
           ),
         ),
@@ -281,13 +258,13 @@ class _AddGoalDialogState extends State<AddGoalDialog> {
           onTap: _selectDeadline,
           padding: const EdgeInsets.all(16),
           height: 60,
-          color: Colors.white10,
+          color: context.adaptiveBorder.withValues(alpha: 0.08),
           radius: 30,
           child: Row(
             children: [
               Icon(
                 HugeIcons.strokeRoundedCalendar03,
-                color: _deadline != null ? Colors.white : Colors.white30,
+                color: _deadline != null ? context.adaptiveTextPrimary : context.adaptiveDisabled,
                 size: 20,
               ),
               12.w,
@@ -297,7 +274,7 @@ class _AddGoalDialogState extends State<AddGoalDialog> {
                       ? '${_deadline!.day}/${_deadline!.month}/${_deadline!.year}'
                       : context.l10n.selectDate,
                   style: context.bodySmall?.copyWith(
-                    color: _deadline != null ? Colors.white : Colors.white30,
+                    color: _deadline != null ? context.adaptiveTextPrimary : context.adaptiveDisabled,
                   ),
                 ),
               ),
@@ -306,7 +283,7 @@ class _AddGoalDialogState extends State<AddGoalDialog> {
                   onTap: () => setState(() => _deadline = null),
                   child: Icon(
                     HugeIcons.solidRoundedCancelCircle,
-                    color: Colors.white,
+                    color: context.adaptiveTextPrimary,
                   ),
                 ),
             ],

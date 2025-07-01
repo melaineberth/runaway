@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
-import 'package:runaway/config/colors.dart';
 import 'package:runaway/core/widgets/squircle_container.dart';
 import '../../../../config/extensions.dart';
 import '../../domain/models/activity_stats.dart';
@@ -22,13 +21,13 @@ class StatsOverviewCard extends StatelessWidget {
       children: [
         Text(
           context.l10n.overview,
-          style: context.bodyMedium?.copyWith(color: Colors.white, fontWeight: FontWeight.w700),
+          style: context.bodyMedium?.copyWith(color: context.adaptiveTextPrimary, fontWeight: FontWeight.w700),
         ),
         15.h,
         SquircleContainer(
           radius: 40.0,
           padding: const EdgeInsets.all(20),
-          color: Colors.white10,
+          color: context.adaptiveBorder.withValues(alpha: 0.05),
           child: Row(
             children: [
               Expanded(
@@ -77,7 +76,7 @@ class StatsOverviewCard extends StatelessWidget {
         SquircleContainer(
           radius: 40.0,
           padding: const EdgeInsets.all(20),
-          color: AppColors.primary,
+          color: context.adaptivePrimary,
           child: Icon(
             icon, 
             color: Colors.white,
@@ -110,7 +109,7 @@ class StatsOverviewCard extends StatelessWidget {
           style: context.bodySmall?.copyWith(
             fontSize: 15,
             fontWeight: FontWeight.w500,
-            color: Colors.white54,
+            color: context.adaptiveTextSecondary,
           ),
         ),
       ],

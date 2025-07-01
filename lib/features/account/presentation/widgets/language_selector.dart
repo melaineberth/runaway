@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:hugeicons/hugeicons.dart';
-import 'package:runaway/config/colors.dart';
 import 'package:runaway/config/extensions.dart';
 import 'package:runaway/core/blocs/locale/locale_bloc.dart';
 import 'package:runaway/core/services/locale_service.dart';
@@ -38,7 +37,7 @@ class LanguageSelector extends StatelessWidget {
                     color: context.adaptiveTextPrimary,
                   ),
                 ),
-                3.h,
+                2.h,
                 Text(
                   context.l10n.selectPreferenceLanguage,
                   style: context.bodySmall?.copyWith(
@@ -74,7 +73,7 @@ class LanguageSelector extends StatelessWidget {
                         ],
                         child: Padding(
                           padding: EdgeInsets.only(
-                            bottom: i == LocaleService.supportedLocales.length - 1 ? 0 : 12,
+                            bottom: i == LocaleService.supportedLocales.length - 1 ? 0 : 10,
                           ),
                           child: _buildStyleTile(
                             context: context, 
@@ -106,6 +105,10 @@ class LanguageSelector extends StatelessWidget {
         return '🇫🇷';
       case 'en':
         return '🇺🇸';
+      case 'it':
+        return '🇮🇹';
+      case 'es':
+        return '🇪🇸';
       default:
         return '🌍';
     }
@@ -121,28 +124,23 @@ class LanguageSelector extends StatelessWidget {
     return SquircleContainer(
       onTap: onTap,
       radius: 40,
-      color: context.adaptiveBorder.withValues(alpha: 0.1),
-      padding: const EdgeInsets.all(12),
+      color: context.adaptiveBorder.withValues(alpha: 0.08),
+      padding: const EdgeInsets.all(8),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           // Icône du style
           Row(
             children: [
-              SquircleContainer(
-                width: 50,
-                padding: const EdgeInsets.all(8),
-                radius: 18,
-                color: context.adaptiveBorder,
-                child: Center(
-                  child: Text(
-                    flag,
-                    style: const TextStyle(fontSize: 24),
-                  ),
+              Padding(
+                padding: const EdgeInsets.all(12.0),
+                child: Text(
+                  flag,
+                  style: const TextStyle(fontSize: 25),
                 ),
               ),
                 
-              15.w,
+              10.w,
                 
               // Informations du style
               Text(
@@ -156,29 +154,32 @@ class LanguageSelector extends StatelessWidget {
           ),
             
           // Indicateur de sélection
-          AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
-            width: 24,
-            height: 24,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: isSelected 
-                  ? AppColors.primary
-                  : Colors.transparent,
-              border: Border.all(
+          Padding(
+            padding: const EdgeInsets.only(right: 8.0),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              width: 24,
+              height: 24,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
                 color: isSelected 
-                    ? AppColors.primary
-                    : context.adaptiveBorder,
-                width: 2,
+                    ? context.adaptivePrimary
+                    : Colors.transparent,
+                border: Border.all(
+                  color: isSelected 
+                      ? context.adaptivePrimary
+                      : context.adaptiveBorder,
+                  width: 2,
+                ),
               ),
+              child: isSelected
+                  ? const Icon(
+                      HugeIcons.solidRoundedTick02,
+                      color: Colors.white,
+                      size: 20,
+                    )
+                  : null,
             ),
-            child: isSelected
-                ? const Icon(
-                    HugeIcons.solidRoundedTick02,
-                    color: Colors.white,
-                    size: 20,
-                  )
-                : null,
           ),
         ],
       ),

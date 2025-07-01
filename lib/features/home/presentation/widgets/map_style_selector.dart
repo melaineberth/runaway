@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:hugeicons/hugeicons.dart';
-import 'package:runaway/config/colors.dart';
 import 'package:runaway/config/extensions.dart';
 import 'package:runaway/core/widgets/modal_sheet.dart';
 import 'package:runaway/core/widgets/squircle_container.dart';
@@ -49,14 +48,14 @@ class _MapStyleSelectorState extends State<MapStyleSelector> {
             Text(
               context.l10n.mapStyleTitle,
               style: context.bodySmall?.copyWith(
-                color: Colors.white,
+                color: context.adaptiveTextPrimary,
               ),
             ),
-            3.h,
+            2.h,
             Text(
               context.l10n.mapStyleSubtitle,
               style: context.bodySmall?.copyWith(
-                color: Colors.grey.shade500,
+                color: context.adaptiveTextSecondary,
                 fontSize: 15,
                 fontWeight: FontWeight.w500
               ),
@@ -70,7 +69,7 @@ class _MapStyleSelectorState extends State<MapStyleSelector> {
                 return Padding(
                   // on enlève le bas uniquement sur le dernier
                   padding: EdgeInsets.only(
-                    bottom: i == MapboxStyleConstants.availableStyles.length - 1 ? 0 : 12,
+                    bottom: i == MapboxStyleConstants.availableStyles.length - 1 ? 0 : 10,
                   ),
                   child: _buildStyleTile(
                     style: style,
@@ -94,8 +93,8 @@ class _MapStyleSelectorState extends State<MapStyleSelector> {
     return SquircleContainer(
       onTap: onTap,
       radius: 40,
-      color: Colors.white10,
-      padding: EdgeInsets.all(12),
+      color: context.adaptiveBorder.withValues(alpha: 0.08),
+      padding: EdgeInsets.all(8),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
@@ -103,17 +102,17 @@ class _MapStyleSelectorState extends State<MapStyleSelector> {
           Row(
             children: [
               SquircleContainer(
-                padding: EdgeInsets.all(8),
+                padding: EdgeInsets.all(12.0),
                 radius: 18,
-                color: style.color.withValues(alpha: 0.1),
+                color: context.adaptivePrimary.withValues(alpha: 0.25),
                 child: Icon(
                   style.icon,
-                  color: style.color,
-                  size: 24,
+                  color: context.adaptivePrimary,
+                  size: 25,
                 ),
               ),
                 
-              15.w,
+              10.w,
                 
               // Informations du style
               Text(
@@ -127,29 +126,32 @@ class _MapStyleSelectorState extends State<MapStyleSelector> {
           ),
             
           // Indicateur de sélection
-          AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
-            width: 24,
-            height: 24,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: isSelected 
-                  ? AppColors.primary
-                  : Colors.transparent,
-              border: Border.all(
+          Padding(
+            padding: const EdgeInsets.only(right: 8.0),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              width: 24,
+              height: 24,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
                 color: isSelected 
-                    ? AppColors.primary
-                    : Colors.white24,
-                width: 2,
+                    ? context.adaptivePrimary
+                    : Colors.transparent,
+                border: Border.all(
+                  color: isSelected 
+                      ? context.adaptivePrimary
+                      : context.adaptiveBorder,
+                  width: 2,
+                ),
               ),
+              child: isSelected
+                  ? Icon(
+                      HugeIcons.solidRoundedTick02,
+                      color: Colors.white,
+                      size: 20,
+                    )
+                  : null,
             ),
-            child: isSelected
-                ? Icon(
-                    HugeIcons.solidRoundedTick02,
-                    color: Colors.white,
-                    size: 20,
-                  )
-                : null,
           ),
         ],
       ),
