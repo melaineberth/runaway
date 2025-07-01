@@ -350,46 +350,28 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
   }
 
   // Gestion des changements d'état
-  void _handleRouteGenerationStateChange(RouteGenerationState state) {
-    if (!mounted) return;
-
-    // Gérer le chargement d'un parcours depuis l'historique
-    if (state.isLoadedFromHistory && state.hasGeneratedRoute) {
-      print('📂 Parcours chargé depuis l\'historique détecté');
-      
-      // Mettre à jour l'état local
+  void _handleRouteGenerationStateChange(RouteGenerationState state) async {
+    // Cas 1: Historique
+    if (state.hasGeneratedRoute && state.isLoadedFromHistory) {
       setState(() {
         generatedRouteCoordinates = state.generatedRoute;
         routeMetadata = state.routeMetadata;
-        _hasAutoSaved = true; // Marquer comme déjà sauvegardé
       });
-      
-      // Sauvegarder l'état dans le service
-      _mapStateService.saveGeneratedRoute(
-        state.generatedRoute, 
-        state.routeMetadata, 
-        true, // isAlreadySaved = true
-      );
-      
-      // Afficher le parcours sur la carte
-      if (state.generatedRoute != null) {
-        _displayRouteOnMap(state.generatedRoute!);
-      }
-      
+      _mapStateService.saveGeneratedRoute(state.generatedRoute, state.routeMetadata, _hasAutoSaved);
+      await _displayRouteOnMap(state.generatedRoute!);
       return;
     }
-
-    // Gérer les nouveaux parcours générés (logique existante)
+    
+    // Cas 2: Nouveau parcours (déjà sauvegardé automatiquement)
     if (state.isNewlyGenerated && !state.isGeneratingRoute) {
       setState(() {
         generatedRouteCoordinates = state.generatedRoute;
         routeMetadata = state.routeMetadata;
-        _hasAutoSaved = false; // Nouveau parcours, pas encore sauvé
+        _hasAutoSaved = true;
       });
-      _mapStateService.saveGeneratedRoute(state.generatedRoute, state.routeMetadata, false);
-      if (state.generatedRoute != null) {
-        _displayRouteOnMap(state.generatedRoute!);
-      }
+      _mapStateService.saveGeneratedRoute(state.generatedRoute, state.routeMetadata, _hasAutoSaved);
+      await _displayRouteOnMap(state.generatedRoute!);
+      // 🚫 PLUS BESOIN : await _autoSaveGeneratedRoute(state);
     } else if (state.errorMessage != null) {
       _showRouteGenerationError(state.errorMessage!);
       _hasAutoSaved = false;
@@ -1798,40 +1780,24 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
       return false;
     }
 
+    // Vérifier qu'on a accès à AppDataBloc
     try {
-      final routeState = context.read<RouteGenerationBloc>().state;
-      
-      // 🔥 CORRECTION : Si le parcours vient de l'historique, il est déjà sauvegardé
-      if (routeState.isLoadedFromHistory) {
-        print('✅ Parcours marqué comme chargé depuis l\'historique');
-        return true;
-      }
-      
-      // 🔥 CORRECTION : Vérifier la variable locale _hasAutoSaved
-      if (_hasAutoSaved) {
-        print('✅ Parcours marqué comme déjà sauvé localement');
-        return true;
-      }
-
       final appDataState = context.read<AppDataBloc>().state;
-      
-      // Si AppDataBloc n'a pas encore de données historiques, on ne peut pas vérifier
       if (!appDataState.hasHistoricData) {
         return false;
       }
 
       final savedRoutes = appDataState.savedRoutes;
       final currentDistance = _getGeneratedRouteDistance();
+      final routeState = context.read<RouteGenerationBloc>().state;
       
-      // Vérifier s'il existe un parcours similaire
-      final similarRoute = _findSimilarRoute(savedRoutes, currentDistance, routeState.usedParameters);
-      
-      if (similarRoute != null) {
-        print('✅ Parcours similaire trouvé: ${similarRoute.name}');
+      // Si le parcours vient de l'historique, il est déjà sauvegardé par définition
+      if (routeState.isLoadedFromHistory) {
         return true;
       }
-      
-      return false;
+
+      // Vérifier s'il existe un parcours similaire
+      return _findSimilarRoute(savedRoutes, currentDistance, routeState.usedParameters) != null;
       
     } catch (e) {
       print('❌ Erreur lors de la vérification du parcours: $e');
@@ -1904,7 +1870,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
       listener: (context, state) {
         // 🔧 Vérifier que le widget est encore monté
         if (!mounted) return;
-                
+        
         // Gérer les messages de sauvegarde
         if (state.stateId.contains('success') && 
             !state.stateId.contains('no-auto-save') && 
@@ -1957,14 +1923,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
                 );
               }
             });
-          } else if (appDataState.savedRoutes.isNotEmpty && 
-                     appDataState.lastError == null) {
-            // Vérifier si un nouveau parcours a été ajouté récemment
-            final recentRoute = appDataState.savedRoutes
-                .where((route) => DateTime.now().difference(route.createdAt).inMinutes < 1)
-                .toList();
-                
-            print(recentRoute);
           }
         },
         child: Scaffold(
