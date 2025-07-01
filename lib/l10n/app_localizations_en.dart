@@ -810,4 +810,12 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get contactUs => 'Contact us.';
+
+  @override
+  String get editGoal => 'Edit goal';
+
+  @override
+  String deadlineValid(String date) {
+    return 'Valid until the $date';
+  }
 }

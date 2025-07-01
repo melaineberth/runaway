@@ -10,15 +10,15 @@ import 'package:runaway/core/blocs/app_data/app_data_state.dart';
 import 'package:runaway/core/widgets/blurry_page.dart';
 import 'package:runaway/core/widgets/modal_sheet.dart';
 import 'package:runaway/core/widgets/squircle_container.dart';
+import 'package:runaway/core/widgets/top_snackbar.dart';
 import 'package:runaway/features/activity/data/repositories/activity_repository.dart';
 import 'package:runaway/features/activity/presentation/widgets/goal_templates_dialog.dart';
+import 'package:top_snackbar_flutter/top_snack_bar.dart';
 import '../../../../config/extensions.dart';
 import '../../../../core/widgets/ask_registration.dart';
 import '../../../auth/presentation/bloc/auth_bloc.dart';
 import '../../../auth/presentation/bloc/auth_state.dart';
 import '../../domain/models/activity_stats.dart';
-import '../blocs/activity_bloc.dart';
-import '../blocs/activity_event.dart';
 import '../blocs/activity_state.dart';
 import '../widgets/stats_overview_card.dart';
 import '../widgets/activity_type_stats_card.dart';
@@ -149,28 +149,31 @@ class _ActivityScreenState extends State<ActivityScreen> with TickerProviderStat
         ),
       ),
       actions: [
-        FadeTransition(
-          opacity: _fadeAnimation,
-          child: PullDownButton(
-            itemBuilder: (context) => [
-              PullDownMenuItem(
-                icon: HugeIcons.strokeRoundedDownloadSquare01,
-                title: context.l10n.exportData,
-                onTap: () => _handleMenuSelection("export"),
-              ),
-              PullDownMenuItem(
-                icon: HugeIcons.solidRoundedLoading03,
-                title: context.l10n.resetGoals,
-                onTap: () => _handleMenuSelection("reset_goals"),
-              ),
-            ],
-            buttonBuilder: (context, showMenu) => GestureDetector(
-              onTap: () {
-                showMenu();
-                HapticFeedback.mediumImpact();
-              },
-              child: Icon(
-                HugeIcons.strokeRoundedMoreVerticalCircle02,
+        Padding(
+          padding: const EdgeInsets.only(right: 20.0),
+          child: FadeTransition(
+            opacity: _fadeAnimation,
+            child: PullDownButton(
+              itemBuilder: (context) => [
+                PullDownMenuItem(
+                  icon: HugeIcons.strokeRoundedShare08,
+                  title: context.l10n.exportData,
+                  onTap: () => _handleMenuSelection("export"),
+                ),
+                PullDownMenuItem(
+                  icon: HugeIcons.solidRoundedLoading03,
+                  title: context.l10n.resetGoals,
+                  onTap: () => _handleMenuSelection("reset_goals"),
+                ),
+              ],
+              buttonBuilder: (context, showMenu) => GestureDetector(
+                onTap: () {
+                  showMenu();
+                  HapticFeedback.mediumImpact();
+                },
+                child: Icon(
+                  HugeIcons.strokeRoundedMoreVerticalCircle02,
+                ),
               ),
             ),
           ),
@@ -468,11 +471,8 @@ class _ActivityScreenState extends State<ActivityScreen> with TickerProviderStat
               subtitle: context.l10n.predefinedGoals,
               color: Colors.green,
               onTap: () {
-                showModalSheet(
-                  context: context, 
-                  backgroundColor: Colors.transparent,
-                  child: GoalTemplatesDialog(),
-                );
+                context.pop();
+                _showGoalTemplatesDialog();
               },
             ),
           ],
@@ -531,7 +531,7 @@ class _ActivityScreenState extends State<ActivityScreen> with TickerProviderStat
     );
   }
 
-  void _showAddGoalDialog([PersonalGoal? existingGoal]) async {
+  Future<void> _showAddGoalDialog([PersonalGoal? existingGoal]) async {
     final result = await showModalBottomSheet<PersonalGoal>(
       useRootNavigator: true,
       isScrollControlled: true,
@@ -543,10 +543,66 @@ class _ActivityScreenState extends State<ActivityScreen> with TickerProviderStat
     );
 
     if (result != null) {
+      // 🔥 UTILISER AppDataBloc AU LIEU D'ActivityBloc
       if (existingGoal != null) {
-        context.read<ActivityBloc>().add(PersonalGoalUpdated(result));
+        // Mise à jour d'un objectif existant
+        context.read<AppDataBloc>().add(PersonalGoalUpdatedInAppData(result));
+        
+        // Afficher un message de confirmation
+        if (mounted) {
+          showTopSnackBar(
+            Overlay.of(context),
+            TopSnackBar(
+              title: context.l10n.updatedGoal,
+              icon: HugeIcons.strokeRoundedCheckmarkCircle03,
+              color: Colors.green,
+            ),
+          );
+        }
       } else {
-        context.read<ActivityBloc>().add(PersonalGoalAdded(result));
+        // Ajout d'un nouvel objectif
+        context.read<AppDataBloc>().add(PersonalGoalAddedToAppData(result));
+        
+        // Afficher un message de confirmation
+        if (mounted) {
+          showTopSnackBar(
+            Overlay.of(context),
+            TopSnackBar(
+              title: context.l10n.createdGoal,
+              icon: HugeIcons.strokeRoundedCheckmarkCircle03,
+              color: Colors.green,
+            ),
+          );
+        }
+      }
+    }
+  }
+
+  Future<void> _showGoalTemplatesDialog() async {
+    final result = await showModalBottomSheet<PersonalGoal>(
+      useRootNavigator: true,
+      isScrollControlled: true,
+      isDismissible: true,
+      enableDrag: false,
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) => GoalTemplatesDialog(),
+    );
+
+    if (result != null) {
+      // 🔥 UTILISER AppDataBloc AU LIEU D'ActivityBloc
+      context.read<AppDataBloc>().add(PersonalGoalAddedToAppData(result));
+      
+      // Afficher un message de confirmation
+      if (mounted) {
+        showTopSnackBar(
+          Overlay.of(context),
+          TopSnackBar(
+            title: context.l10n.createdGoal,
+            icon: HugeIcons.strokeRoundedCheckmarkCircle03,
+            color: Colors.green,
+          ),
+        );
       }
     }
   }
@@ -573,7 +629,19 @@ class _ActivityScreenState extends State<ActivityScreen> with TickerProviderStat
           ElevatedButton(
             onPressed: () {
               Navigator.pop(context);
-              context.read<ActivityBloc>().add(PersonalGoalDeleted(goalId));
+              
+              // 🔥 UTILISER AppDataBloc AU LIEU D'ActivityBloc
+              context.read<AppDataBloc>().add(PersonalGoalDeletedFromAppData(goalId));
+              
+              // Afficher un message de confirmation
+              showTopSnackBar(
+                Overlay.of(context),
+                TopSnackBar(
+                  title: context.l10n.removedGoal,
+                  icon: HugeIcons.solidRoundedRemoveCircleHalfDot,
+                  color: Colors.orange,
+                ),
+              );
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.red,
@@ -602,7 +670,22 @@ class _ActivityScreenState extends State<ActivityScreen> with TickerProviderStat
             child: Text(context.l10n.cancel, style: TextStyle(color: Colors.white60)),
           ),
           ElevatedButton(
-            onPressed: () {},
+            onPressed: () {
+              Navigator.pop(context);
+              
+              // 🔥 UTILISER AppDataBloc AU LIEU D'ActivityBloc
+              context.read<AppDataBloc>().add(const PersonalGoalsResetInAppData());
+              
+              // Afficher un message de confirmation
+              showTopSnackBar(
+                Overlay.of(context),
+                TopSnackBar(
+                  title: 'Tous les objectifs ont été supprimés',
+                  icon: HugeIcons.solidRoundedRemoveCircleHalfDot,
+                  color: Colors.orange,
+                ),
+              );
+            },
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.orange,
               foregroundColor: Colors.white,

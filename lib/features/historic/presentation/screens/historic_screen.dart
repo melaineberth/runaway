@@ -9,6 +9,7 @@ import 'package:runaway/core/blocs/app_data/app_data_state.dart';
 import 'package:runaway/core/widgets/ask_registration.dart';
 import 'package:runaway/core/widgets/blurry_page.dart';
 import 'package:runaway/core/widgets/squircle_container.dart';
+import 'package:runaway/core/widgets/top_snackbar.dart';
 import 'package:runaway/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:runaway/features/auth/presentation/bloc/auth_state.dart';
 import 'package:runaway/features/historic/presentation/widgets/shimmer_historic_card.dart';
@@ -17,6 +18,7 @@ import 'package:runaway/features/route_generator/presentation/blocs/route_genera
 import 'package:runaway/features/route_generator/presentation/blocs/route_generation/route_generation_event.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:runaway/features/route_generator/presentation/blocs/route_generation/route_generation_state.dart';
+import 'package:top_snackbar_flutter/top_snack_bar.dart';
 
 import '../widgets/historic_card.dart';
 
@@ -60,9 +62,13 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
     super.initState();
     _initializeAnimations();
 
+    // 🔄 Charger les données si nécessaire
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _initializeCache();
-    }); 
+      final appDataState = context.read<AppDataBloc>().state;
+      if (!appDataState.hasHistoricData && !appDataState.isLoading) {
+        context.read<AppDataBloc>().add(const HistoricDataRefreshRequested());
+      }
+    });
   }
 
   /// 🎬 Initialise les contrôleurs d'animation
@@ -89,19 +95,6 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
     _staggerController.forward();
   }
 
-  /// 🚀 Initialise le cache UI avec les données existantes
-  void _initializeCache() {
-    final routeBloc = context.read<RouteGenerationBloc>();
-    final appDataBloc = context.read<AppDataBloc>();
-    
-    // Prioriser RouteGenerationBloc (plus frais)
-    if (routeBloc.state.savedRoutes.isNotEmpty) {
-      _updateUICache(routeBloc.state.savedRoutes, source: 'RouteGeneration');
-    } else if (appDataBloc.state.hasHistoricData) {
-      _updateUICache(appDataBloc.state.savedRoutes, source: 'AppData');
-    }
-  }
-
   /// ✅ Met à jour le cache UI de manière thread-safe
   void _updateUICache(List<SavedRoute> routes, {required String source}) {
     if (!mounted) return;
@@ -112,34 +105,39 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
     print('✅ Cache UI mis à jour depuis $source (${routes.length} routes)');
   }
 
-  void _updateAnimationsForRoutes(List<SavedRoute> routes) {
+  void _updateAnimationsForRoutes(int itemCount) {
+    // Clear existing animations
     _slideAnimations.clear();
     _scaleAnimations.clear();
 
-    for (int i = 0; i < routes.length; i++) {
-      final slideInterval = Interval(
-        (i * 0.1).clamp(0.0, 1.0),
-        ((i * 0.1) + 0.3).clamp(0.0, 1.0),
-        curve: Curves.easeOutBack,
-      );
-
-      final scaleInterval = Interval(
-        (i * 0.05).clamp(0.0, 1.0),
-        ((i * 0.05) + 0.4).clamp(0.0, 1.0),
-        curve: Curves.elasticOut,
-      );
-
-      _slideAnimations.add(
-        Tween<double>(begin: 50.0, end: 0.0).animate(
-          CurvedAnimation(parent: _staggerController, curve: slideInterval),
+    // Create new animations for each item
+    for (int i = 0; i < itemCount; i++) {
+      final slideAnimation = Tween<double>(
+        begin: 0.0,
+        end: 1.0,
+      ).animate(CurvedAnimation(
+        parent: _staggerController,
+        curve: Interval(
+          (i * 0.1).clamp(0.0, 1.0),
+          ((i * 0.1) + 0.3).clamp(0.0, 1.0),
+          curve: Curves.easeOut,
         ),
-      );
+      ));
 
-      _scaleAnimations.add(
-        Tween<double>(begin: 0.8, end: 1.0).animate(
-          CurvedAnimation(parent: _staggerController, curve: scaleInterval),
+      final scaleAnimation = Tween<double>(
+        begin: 0.8,
+        end: 1.0,
+      ).animate(CurvedAnimation(
+        parent: _staggerController,
+        curve: Interval(
+          (i * 0.1).clamp(0.0, 1.0),
+          ((i * 0.1) + 0.5).clamp(0.0, 1.0),
+          curve: Curves.elasticOut,
         ),
-      );
+      ));
+
+      _slideAnimations.add(slideAnimation);
+      _scaleAnimations.add(scaleAnimation);
     }
   }
 
@@ -167,7 +165,7 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
 
   /// Charge les parcours sauvegardés
   void _loadSavedRoutes() {
-    print('🔄 Chargement manuel des parcours');
+    print('🔄 Chargement manuel des parcours via AppDataBloc');
     context.read<AppDataBloc>().add(const HistoricDataRefreshRequested());
   }
 
@@ -176,23 +174,17 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
     print('🧭 === DÉBUT NAVIGATION VERS PARCOURS ===');
     print('📊 Route ID: ${route.id}');
     print('📊 Route Name: ${route.name}');
-    print('📊 Route Distance: ${route.formattedDistance}');
-    print('📊 Route Points: ${route.coordinates.length}');
-    print('📊 Created: ${route.createdAt}');
-    print('📊 Times Used: ${route.timesUsed}');
     
-    // 🔑 ÉTAPE 1: Charger le parcours dans le bloc pour l'afficher sur la carte
-    // Note: Ceci va déclencher SavedRouteLoaded dans RouteGenerationBloc
-    // qui va mettre isLoadedFromHistory = true pour éviter la double sauvegarde
+    // 🔑 ÉTAPE 1: Charger le parcours dans RouteGenerationBloc pour l'afficher sur la carte
     context.read<RouteGenerationBloc>().add(SavedRouteLoaded(route.id));
     print('✅ Événement SavedRouteLoaded envoyé au bloc');
     
-    // 🔑 ÉTAPE 2: Naviguer vers HomeScreen où le parcours sera affiché
-    // HomeScreen va détecter que isLoadedFromHistory = true et ne pas sauvegarder automatiquement
+    // 🔑 ÉTAPE 2: Mettre à jour les statistiques d'utilisation via AppDataBloc
+    context.read<AppDataBloc>().add(SavedRouteUsageUpdatedInAppData(route.id));
+    
+    // 🔑 ÉTAPE 3: Naviguer vers HomeScreen
     context.go('/home');
     print('✅ Navigation vers /home lancée');
-    
-    print('✅ Notification utilisateur affichée');
     print('🧭 === FIN NAVIGATION VERS PARCOURS ===');
   }
 
@@ -205,29 +197,22 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
   /// Suppression d'un parcours avec confirmation
   Future<void> _deleteRoute(SavedRoute route) async {
     try {
-      // ✅ CORRECTION: s'assurer que le dialog retourne un bool
       final confirmed = await _showDeleteConfirmationDialog(route.name);
-      if (confirmed != true) return; // Protection contre null
+      if (confirmed != true) return;
       
-      print('🗑️ Suppression optimisée: ${route.name}');
+      print('🗑️ Suppression via AppDataBloc: ${route.name}');
       
-      // 1. ✅ Mise à jour UI immédiate (optimistic update)
-      setState(() {
-        _uiRoutes = _uiRoutes.where((r) => r.id != route.id).toList();
-        _lastUIUpdate = DateTime.now();
-        _hasPendingSync = true;
-      });
+      // 🔥 UTILISER AppDataBloc AU LIEU DE RouteGenerationBloc
+      context.read<AppDataBloc>().add(SavedRouteDeletedFromAppData(route.id));
       
-      // 2. 🔄 Suppression effective en arrière-plan
-      context.read<RouteGenerationBloc>().add(SavedRouteDeleted(route.id));
-      
-      // 3. 🎉 Notification utilisateur
+      // Afficher un message de confirmation
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Parcours "${route.name}" supprimé'),
-            backgroundColor: Colors.green,
-            duration: const Duration(seconds: 2),
+        showTopSnackBar(
+          Overlay.of(context),
+          TopSnackBar(
+            title: 'Parcours "${route.name}" supprimé',
+            icon: HugeIcons.strokeRoundedCheckmarkCircle03,
+            color: Colors.green,
           ),
         );
       }
@@ -235,14 +220,15 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
     } catch (e) {
       print('❌ Erreur suppression: $e');
       
-      // ❌ Rollback en cas d'erreur
       if (mounted) {
-        final currentRoutes = context.read<RouteGenerationBloc>().state.savedRoutes;
-        _updateUICache(currentRoutes, source: 'Rollback');
-        
-        setState(() {
-          _hasPendingSync = false;
-        });
+        showTopSnackBar(
+          Overlay.of(context),
+          TopSnackBar(
+            title: 'Erreur lors de la suppression',
+            icon: HugeIcons.solidRoundedAlert02,
+            color: Colors.red,
+          ),
+        );
       }
     }
   }
@@ -256,13 +242,13 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
           content: Text(context.l10n.confirmRouteDeletionMessage(routeName)),
           actions: [
             TextButton(
-              onPressed: () => Navigator.of(context).pop(false), // ✅ Retourner false
+              onPressed: () => Navigator.of(context).pop(false),
               child: Text(context.l10n.cancel),
             ),
             ElevatedButton(
               onPressed: () {
-                Navigator.of(context).pop(true); // ✅ Retourner true
-                print('🗑️ Suppression confirmée - envoi de SavedRouteDeleted');
+                Navigator.of(context).pop(true);
+                print('🗑️ Suppression confirmée via AppDataBloc');
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.red,
@@ -275,7 +261,6 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
       },
     );
     
-    // ✅ Protection: retourner false si result est null
     return result ?? false;
   }
 
@@ -291,7 +276,7 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
 
     // Mettre à jour les animations en fonction du nombre de routes
     if (routes.isNotEmpty) {
-      _updateAnimationsForRoutes(routes);
+      _updateAnimationsForRoutes(routes.length);
     }
 
     return Scaffold(
@@ -683,7 +668,7 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
       
       // 🎭 Mettre à jour les animations
       if (newRoutes.isNotEmpty) {
-        _updateAnimationsForRoutes(newRoutes);
+        _updateAnimationsForRoutes(newRoutes.length);
       }
       
       print('🎯 UI mise à jour immédiatement: $oldCount -> $newCount routes');
@@ -777,41 +762,57 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
           return _buildUnauthenticatedView();
         }
 
-        // 🚀 Architecture UI-First optimisée
-        return MultiBlocListener(
-          listeners: [
-            // 1. ✅ Écoute PRIORITAIRE de RouteGenerationBloc pour UI immédiate
-            BlocListener<RouteGenerationBloc, RouteGenerationState>(
-              listener: (context, routeState) {
-                _onRouteStateChanged(context, routeState);
-              },
-            ),
-            
-            // 2. 📊 Écoute d'AppDataBloc pour synchronisation terminée
-            BlocListener<AppDataBloc, AppDataState>(
-              listener: (context, appDataState) {
-                _onAppDataChanged(appDataState);
-              },
-            ),
-          ],
-          child: BlocBuilder<AppDataBloc, AppDataState>(
-            builder: (context, appDataState) {
-              // 🎯 Utiliser les données UI optimales
-              final effectiveRoutes = _getEffectiveRoutes(appDataState);
-              
-              if (effectiveRoutes.isEmpty && !_hasPendingSync) {
-                return _buildEmptyView(appDataState);
-              }
-              
-              if (appDataState.lastError != null && effectiveRoutes.isEmpty) {
-                return _buildErrorView(appDataState.lastError!);
-              }
-              
-              return _buildMainView(appDataState, effectiveRoutes);
-            },
-          ),
+        // 🔥 UTILISER EXCLUSIVEMENT AppDataBloc
+        return BlocBuilder<AppDataBloc, AppDataState>(
+          builder: (context, appDataState) {
+            return _buildMainContent(appDataState);
+          },
         );
       },
+    );
+  }
+
+  Widget _buildMainContent(AppDataState appDataState) {
+    // États de chargement
+    if (!appDataState.isDataLoaded && appDataState.isLoading) {
+      return _buildLoadingView(appDataState);
+    }
+
+    // Erreur de chargement
+    if (appDataState.lastError != null && !appDataState.hasHistoricData) {
+      return _buildErrorView(appDataState.lastError!);
+    }
+
+    // Données disponibles
+    if (appDataState.hasHistoricData) {
+      final routes = appDataState.savedRoutes;
+      
+      if (routes.isEmpty) {
+        return _buildEmptyView(appDataState);
+      }
+
+      return _buildMainView(appDataState, routes);
+    }
+
+    // État initial
+    return _buildLoadingView(appDataState);
+  }
+
+  Widget _buildLoadingView(AppDataState appDataState) {
+    return Scaffold(
+      extendBodyBehindAppBar: true,
+      appBar: _buildAppBar(true),
+      body: BlurryPage(
+        contentPadding: EdgeInsets.only(top: kToolbarHeight + 60, left: 20, right: 20),
+        children: [
+          ...List.generate(5, (index) {
+            return Padding(
+              padding: EdgeInsets.only(bottom: 16),
+              child: ShimmerHistoricCard(),
+            );
+          })
+        ],
+      ),
     );
   }
 }

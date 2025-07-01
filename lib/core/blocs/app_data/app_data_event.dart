@@ -1,4 +1,7 @@
 import 'package:equatable/equatable.dart';
+import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart';
+import 'package:runaway/features/activity/domain/models/activity_stats.dart';
+import 'package:runaway/features/route_generator/domain/models/route_parameters.dart';
 
 abstract class AppDataEvent extends Equatable {
   const AppDataEvent();
@@ -63,4 +66,81 @@ class ForceDataSyncRequested extends AppDataEvent {
 /// Demande la suppression du cache
 class AppDataClearRequested extends AppDataEvent {
   const AppDataClearRequested();
+}
+
+/// Ajout d'un objectif personnel
+class PersonalGoalAddedToAppData extends AppDataEvent {
+  final PersonalGoal goal;
+
+  const PersonalGoalAddedToAppData(this.goal);
+
+  @override
+  List<Object?> get props => [goal];
+}
+
+/// Mise à jour d'un objectif personnel
+class PersonalGoalUpdatedInAppData extends AppDataEvent {
+  final PersonalGoal goal;
+
+  const PersonalGoalUpdatedInAppData(this.goal);
+
+  @override
+  List<Object?> get props => [goal];
+}
+
+/// Suppression d'un objectif personnel
+class PersonalGoalDeletedFromAppData extends AppDataEvent {
+  final String goalId;
+
+  const PersonalGoalDeletedFromAppData(this.goalId);
+
+  @override
+  List<Object?> get props => [goalId];
+}
+
+/// Réinitialisation de tous les objectifs
+class PersonalGoalsResetInAppData extends AppDataEvent {
+  const PersonalGoalsResetInAppData();
+}
+
+/// Sauvegarde d'un nouveau parcours
+class SavedRouteAddedToAppData extends AppDataEvent {
+  final String name;
+  final RouteParameters parameters;
+  final List<List<double>> coordinates;
+  final double? actualDistance;
+  final int? estimatedDuration;
+  final MapboxMap map;
+
+  const SavedRouteAddedToAppData({
+    required this.name,
+    required this.parameters,
+    required this.coordinates,
+    this.actualDistance,
+    this.estimatedDuration,
+    required this.map,
+  });
+
+  @override
+  List<Object?> get props => [name, parameters, coordinates, actualDistance, estimatedDuration, map];
+}
+
+/// Suppression d'un parcours sauvegardé
+class SavedRouteDeletedFromAppData extends AppDataEvent {
+  final String routeId;
+
+  const SavedRouteDeletedFromAppData(this.routeId);
+
+  @override
+  List<Object?> get props => [routeId];
+}
+
+/// Mise à jour des statistiques d'utilisation d'un parcours
+class SavedRouteUsageUpdatedInAppData extends AppDataEvent {
+  final String routeId;
+
+  const SavedRouteUsageUpdatedInAppData(this.routeId);
+
+  @override
+  List<Object?> get props => [routeId];
 }

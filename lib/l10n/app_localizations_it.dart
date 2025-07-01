@@ -794,20 +794,28 @@ class AppLocalizationsIt extends AppLocalizations {
   String get mapStyleHybrid => 'Ibrido';
 
   @override
-  String get fullNameTitle => 'Full name';
+  String get fullNameTitle => 'Nome completo';
 
   @override
-  String get usernameTitle => 'Username';
+  String get usernameTitle => 'Nome utente';
 
   @override
-  String get nonEditableUsername => 'The username cannot be modified';
+  String get nonEditableUsername => 'Il nome utente non può essere modificato';
 
   @override
-  String get profileUpdated => 'Successfully updated profile';
+  String get profileUpdated => 'Profilo aggiornato con successo';
 
   @override
-  String get profileUpdateError => 'Error updating profile';
+  String get profileUpdateError => 'Errore durante l\'aggiornamento del profilo';
 
   @override
-  String get contactUs => 'Contact us.';
+  String get contactUs => 'Contattaci.';
+
+  @override
+  String get editGoal => 'Modifica obiettivo';
+
+  @override
+  String deadlineValid(String date) {
+    return 'Valido fino al $date';
+  }
 }

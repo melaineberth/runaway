@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:runaway/core/widgets/modal_sheet.dart';
 import 'package:runaway/core/widgets/squircle_container.dart';
@@ -112,7 +111,7 @@ class GoalTemplatesDialog extends StatelessWidget {
     return SquircleContainer(
       onTap: () {
         final goal = createGoal();
-        context.pop(goal);
+        Navigator.of(context).pop(goal);
       },
       radius: 40,
       color: context.adaptiveBorder.withValues(alpha: 0.08),

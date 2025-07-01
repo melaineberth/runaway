@@ -1073,5 +1073,51 @@
   "mapStyleHybrid": "Hybride",
   "@mapStyleHybrid": {
     "description": "Map-layer option that overlays place labels and roads on top of satellite imagery."
+  },
+  "fullNameTitle": "Nom complet",
+  "@fullNameTitle": {
+    "description": "Libellé affiché à côté du champ où l'utilisateur saisit son nom complet légal."
+  },
+
+  "usernameTitle": "Nom d'utilisateur",
+  "@usernameTitle": {
+    "description": "Libellé du champ nom d'utilisateur unique (identifiant) affiché dans le formulaire de profil."
+  },
+
+  "nonEditableUsername": "Le nom d'utilisateur ne peut pas être modifié",
+  "@nonEditableUsername": {
+    "description": "Message d'information indiquant que le champ nom d'utilisateur est verrouillé et ne peut pas être modifié."
+  },
+
+  "profileUpdated": "Profil mis à jour avec succès",
+  "@profileUpdated": {
+    "description": "Notification de succès ou toast affiché après l'enregistrement des détails de l'utilisateur sans erreur."
+  },
+
+  "profileUpdateError": "Erreur lors de la mise à jour du profil",
+  "@profileUpdateError": {
+    "description": "Message d'erreur générique affiché lorsque l'enregistrement des modifications du profil échoue."
+  },
+
+  "contactUs": "Contactez-nous.",
+  "@contactUs": {
+    "description": "Lien invitant l'utilisateur à contacter le support."
+  },
+
+  "editGoal": "Modifier l'objectif",
+  "@editGoal": {
+    "description": "Libellé pour un bouton ou un lien permettant à l'utilisateur de modifier un objectif existant."
+  },
+
+  "deadlineValid": "Valable jusqu'au {date}",
+  "@deadlineValid": {
+    "description": "Message indiquant la date d'expiration d'un élément ; {date} sera remplacé par une date formatée.",
+    "placeholders": {
+      "date": {
+        "type": "String",
+        "example": "31 déc. 2025",
+        "description": "Date d'expiration dûment formatée."
+      }
+    }
   }
 }

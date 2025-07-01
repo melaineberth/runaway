@@ -8,6 +8,9 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lottie/lottie.dart';
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart' as mp;
+import 'package:runaway/core/blocs/app_data/app_data_bloc.dart';
+import 'package:runaway/core/blocs/app_data/app_data_event.dart';
+import 'package:runaway/core/blocs/app_data/app_data_state.dart';
 import 'package:runaway/core/widgets/modal_sheet.dart';
 import 'package:runaway/features/auth/presentation/widgets/auth_text_field.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' as sb;
@@ -501,9 +504,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
     _isSaveDialogOpen = true;
 
     final defaultName = generateAutoRouteName(
-                            context.read<RouteParametersBloc>().state.parameters,
-                            _getGeneratedRouteDistance(),
-                          );
+      context.read<RouteParametersBloc>().state.parameters,
+      _getGeneratedRouteDistance(),
+    );
 
     final routeName = await showModalBottomSheet<String>(
       context: context,
@@ -535,7 +538,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
       return;
     }
 
-    if (generatedRouteCoordinates == null) {
+    if (generatedRouteCoordinates == null || routeMetadata == null) {
       showTopSnackBar(
         overlay,
         TopSnackBar(
@@ -546,22 +549,32 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
       return;
     }
 
-    // Vérifier qu'on n'est pas déjà en train de sauvegarder
-    final currentState = context.read<RouteGenerationBloc>().state;
-    if (currentState.isGeneratingRoute && currentState.hasGeneratedRoute) {
-      print('⚠️ Sauvegarde déjà en cours, ignoré');
+    // Récupérer les paramètres utilisés
+    final routeState = context.read<RouteGenerationBloc>().state;
+    if (routeState.usedParameters == null) {
+      showTopSnackBar(
+        overlay,
+        TopSnackBar(
+          title: 'Paramètres de parcours manquants',
+          icon: HugeIcons.solidRoundedAlert02,
+        ),
+      );
       return;
     }
 
-    // Envoyer l'événement de sauvegarde au bloc
-    context.read<RouteGenerationBloc>().add(
-      GeneratedRouteSaved(
-        routeName,
+    // 🔥 UTILISER AppDataBloc AU LIEU DE RouteGenerationBloc
+    context.read<AppDataBloc>().add(
+      SavedRouteAddedToAppData(
+        name: routeName,
+        parameters: routeState.usedParameters!,
+        coordinates: generatedRouteCoordinates!,
+        actualDistance: _getGeneratedRouteDistance(),
+        estimatedDuration: routeMetadata!['durationMinutes'] as int?,
         map: mapboxMap!,
       ),
     );
 
-    print('🚀 Sauvegarde manuelle démarrée: $routeName');
+    print('🚀 Sauvegarde via AppDataBloc démarrée: $routeName');
     
     // Afficher feedback immédiat
     showTopSnackBar(
@@ -1809,185 +1822,229 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
           });
         }
       },
-      child: Scaffold(
-        extendBody: true,
-        resizeToAvoidBottomInset: false,
-        body: Stack(
-          alignment: Alignment.bottomCenter,
-          children: [
-            // Carte
-            SizedBox(
-              width: MediaQuery.of(context).size.width,
-              height: MediaQuery.of(context).size.height,
-              child: LocationAwareMapWidget(
-                key: ValueKey("locationAwareMapWidget"),
-                styleUri: _mapStateService.getCurrentStyleUri(),
-                onMapCreated: _onMapCreated,
-                mapKey: ValueKey("mapWidget"),
-                restoreFromCache: _mapStateService.isMapInitialized,
-              ),
-            ),
-      
-            // 🆕 MARQUEUR LOTTIE ANIMÉ
-            if (_showLottieMarker && _lottieMarkerLat != null && _lottieMarkerLng != null)
-              _buildLottieMarker(),
-      
-              // Interface normale (masquée en mode navigation OU navigation live)
-              if (!isNavigationMode && !_isInNavigationMode)
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 30.0),
-                child: SizedBox(
-                  width: MediaQuery.of(context).size.width,
-                  height: MediaQuery.of(context).size.height,
-                  child: SafeArea(
-                    child: Column(
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 15.0),
-                          child: LocationSearchBar(
-                            onLocationSelected: _onLocationSelected,
-                            userLongitude: _userLongitude,
-                            userLatitude: _userLatitude,
-                          ),
-                        ),
-      
-                        40.h,
-      
-                        Expanded(
-                          child: Padding(
-                            padding: const EdgeInsets.only(right: 15.0),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.end,
-                              crossAxisAlignment: CrossAxisAlignment.end,
-                              children: [
-                                Column(
-                                  spacing: 12.0,
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    // Map style
-                                    IconBtn(
-                                      padding: 15.0,
-                                      backgroundColor: context.adaptiveBackground,
-                                      icon: HugeIcons.strokeRoundedMaterialAndTexture,
-                                      iconColor: context.adaptiveTextSecondary,
-                                      onPressed: _openMapStyleSelector,
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: Colors.black.withValues(alpha: 0.18),
-                                          spreadRadius: 2,
-                                          blurRadius: 30,
-                                          offset: Offset(0, 0), // changes position of shadow
-                                        ),
-                                      ]
-                                    ),
-      
-                                    // Bouton retour position utilisateur
-                                    IconBtn(
-                                      padding: 15.0,
-                                      backgroundColor: context.adaptiveBackground,
-                                      icon: _trackingMode == TrackingMode.userTracking
-                                          ? HugeIcons.solidRoundedLocationShare02
-                                          : HugeIcons.strokeRoundedLocationShare02,
-                                      onPressed: _activateUserTracking,
-                                      iconColor: _trackingMode == TrackingMode.userTracking
-                                          ? AppColors.primary
-                                          : context.adaptiveTextSecondary,
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: Colors.black.withValues(alpha: 0.18),
-                                          spreadRadius: 2,
-                                          blurRadius: 30,
-                                          offset: Offset(0, 0), // changes position of shadow
-                                        ),
-                                      ]
-                                    ),
-                                    
-                                    // Bouton générateur
-                                    IconBtn(
-                                      padding: 15.0,
-                                      backgroundColor: context.adaptiveBackground,
-                                      icon: HugeIcons.strokeRoundedAiMagic,
-                                      iconColor: context.adaptiveTextSecondary,
-                                      onPressed: openGenerator,
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: Colors.black.withValues(alpha: 0.18),
-                                          spreadRadius: 2,
-                                          blurRadius: 30,
-                                          offset: Offset(0, 0), // changes position of shadow
-                                        ),
-                                      ]
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
+      child: BlocListener<AppDataBloc, AppDataState>(
+        listener: (context, appDataState) {
+          if (!mounted) return;
+          
+          // Gérer les messages de sauvegarde de parcours
+          if (appDataState.lastError != null && appDataState.lastError!.contains('sauvegarde')) {
+            // Erreur de sauvegarde
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted) {
+                showTopSnackBar(
+                  Overlay.of(context),
+                  TopSnackBar(
+                    title: 'Erreur de sauvegarde',
+                    icon: HugeIcons.solidRoundedAlert02,
+                    color: Colors.red,
                   ),
-                ),
-              ),
-      
-            // if (_isLoading) LoadingOverlay(),
-      
-            // RouteInfoCard (masqué en mode navigation)
-            if (generatedRouteCoordinates != null && routeMetadata != null && !isNavigationMode & !_isInNavigationMode)
-            Positioned(
-              top: kToolbarHeight * 1.5,
-              left: 15,
-              right: 15,
-              child: AnimatedBuilder(
-              animation: _fadeAnimation,
-              builder: (context, child) {
-                return Opacity(
-                  opacity: _fadeAnimation.value,
-                    child: Transform.translate(
-                    offset: Offset(0, 20 * (1 - _fadeAnimation.value)),
-                      child: Container(
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(20),
-                          boxShadow: [
-                            BoxShadow(
-                              color: context.adaptiveBackground.withValues(alpha: 0.3),
-                              spreadRadius: 3,
-                              blurRadius: 15,
-                              offset: Offset(0, 5),
-                            ),
-                          ],
-                        ),
-                        child: RouteInfoCard(
-                          routeName : generateAutoRouteName(
-                            context.read<RouteParametersBloc>().state.parameters,
-                            _getGeneratedRouteDistance(),
-                          ),
-                          distance: _getGeneratedRouteDistance(), // MODIFICATION : Vraie distance
-                          isLoop: routeMetadata!['is_loop'] as bool? ?? true,
-                          waypointCount: routeMetadata!['points_count'] as int? ?? generatedRouteCoordinates!.length,
-                          onClear: _clearGeneratedRoute, // MODIFICATION : Vraie fonction onClear
-                          onNavigate: () {
-                            if (generatedRouteCoordinates != null && routeMetadata != null) {
-                              final args = LiveNavigationArgs(
-                                route: generatedRouteCoordinates!,
-                                targetDistanceKm: _getGeneratedRouteDistance(),
-                                routeName: 'Parcours ${DateTime.now().day}/${DateTime.now().month}',
-                              );
-                              
-                              context.push('/live-navigation', extra: args);
-                            }
-                          },
-                          onSave: _handleSaveRoute, // 🆕 Nouveau callback
-                          isSaving: _isSavingRoute, // 🆕 État de sauvegarde
-                          onShare: _showExportDialog,
-                        ),
-                      ),
+                );
+              }
+            });
+          } else if (appDataState.savedRoutes.isNotEmpty && 
+                     appDataState.lastError == null) {
+            // Vérifier si un nouveau parcours a été ajouté récemment
+            final recentRoute = appDataState.savedRoutes
+                .where((route) => DateTime.now().difference(route.createdAt).inMinutes < 1)
+                .toList();
+                
+            if (recentRoute.isNotEmpty) {
+              // Sauvegarde réussie
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (mounted) {
+                  showTopSnackBar(
+                    Overlay.of(context),
+                    TopSnackBar(
+                      title: 'Parcours sauvegardé',
+                      icon: HugeIcons.solidRoundedCheckmarkCircle02,
+                      color: Colors.green,
                     ),
                   );
                 }
+              });
+            }
+          }
+        },
+        child: Scaffold(
+          extendBody: true,
+          resizeToAvoidBottomInset: false,
+          body: Stack(
+            alignment: Alignment.bottomCenter,
+            children: [
+              // Carte
+              SizedBox(
+                width: MediaQuery.of(context).size.width,
+                height: MediaQuery.of(context).size.height,
+                child: LocationAwareMapWidget(
+                  key: ValueKey("locationAwareMapWidget"),
+                  styleUri: _mapStateService.getCurrentStyleUri(),
+                  onMapCreated: _onMapCreated,
+                  mapKey: ValueKey("mapWidget"),
+                  restoreFromCache: _mapStateService.isMapInitialized,
+                ),
               ),
-            ),
-          ],
+        
+              // 🆕 MARQUEUR LOTTIE ANIMÉ
+              if (_showLottieMarker && _lottieMarkerLat != null && _lottieMarkerLng != null)
+                _buildLottieMarker(),
+        
+                // Interface normale (masquée en mode navigation OU navigation live)
+                if (!isNavigationMode && !_isInNavigationMode)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 30.0),
+                  child: SizedBox(
+                    width: MediaQuery.of(context).size.width,
+                    height: MediaQuery.of(context).size.height,
+                    child: SafeArea(
+                      child: Column(
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 15.0),
+                            child: LocationSearchBar(
+                              onLocationSelected: _onLocationSelected,
+                              userLongitude: _userLongitude,
+                              userLatitude: _userLatitude,
+                            ),
+                          ),
+        
+                          40.h,
+        
+                          Expanded(
+                            child: Padding(
+                              padding: const EdgeInsets.only(right: 15.0),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.end,
+                                crossAxisAlignment: CrossAxisAlignment.end,
+                                children: [
+                                  Column(
+                                    spacing: 12.0,
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      // Map style
+                                      IconBtn(
+                                        padding: 15.0,
+                                        backgroundColor: context.adaptiveBackground,
+                                        icon: HugeIcons.strokeRoundedMaterialAndTexture,
+                                        iconColor: context.adaptiveTextSecondary,
+                                        onPressed: _openMapStyleSelector,
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: Colors.black.withValues(alpha: 0.18),
+                                            spreadRadius: 2,
+                                            blurRadius: 30,
+                                            offset: Offset(0, 0), // changes position of shadow
+                                          ),
+                                        ]
+                                      ),
+        
+                                      // Bouton retour position utilisateur
+                                      IconBtn(
+                                        padding: 15.0,
+                                        backgroundColor: context.adaptiveBackground,
+                                        icon: _trackingMode == TrackingMode.userTracking
+                                            ? HugeIcons.solidRoundedLocationShare02
+                                            : HugeIcons.strokeRoundedLocationShare02,
+                                        onPressed: _activateUserTracking,
+                                        iconColor: _trackingMode == TrackingMode.userTracking
+                                            ? AppColors.primary
+                                            : context.adaptiveTextSecondary,
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: Colors.black.withValues(alpha: 0.18),
+                                            spreadRadius: 2,
+                                            blurRadius: 30,
+                                            offset: Offset(0, 0), // changes position of shadow
+                                          ),
+                                        ]
+                                      ),
+                                      
+                                      // Bouton générateur
+                                      IconBtn(
+                                        padding: 15.0,
+                                        backgroundColor: context.adaptiveBackground,
+                                        icon: HugeIcons.strokeRoundedAiMagic,
+                                        iconColor: context.adaptiveTextSecondary,
+                                        onPressed: openGenerator,
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: Colors.black.withValues(alpha: 0.18),
+                                            spreadRadius: 2,
+                                            blurRadius: 30,
+                                            offset: Offset(0, 0), // changes position of shadow
+                                          ),
+                                        ]
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+        
+              // if (_isLoading) LoadingOverlay(),
+        
+              // RouteInfoCard (masqué en mode navigation)
+              if (generatedRouteCoordinates != null && routeMetadata != null && !isNavigationMode & !_isInNavigationMode)
+              Positioned(
+                top: kToolbarHeight * 1.5,
+                left: 15,
+                right: 15,
+                child: AnimatedBuilder(
+                animation: _fadeAnimation,
+                builder: (context, child) {
+                  return Opacity(
+                    opacity: _fadeAnimation.value,
+                      child: Transform.translate(
+                      offset: Offset(0, 20 * (1 - _fadeAnimation.value)),
+                        child: Container(
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(20),
+                            boxShadow: [
+                              BoxShadow(
+                                color: context.adaptiveBackground.withValues(alpha: 0.3),
+                                spreadRadius: 3,
+                                blurRadius: 15,
+                                offset: Offset(0, 5),
+                              ),
+                            ],
+                          ),
+                          child: RouteInfoCard(
+                            routeName : generateAutoRouteName(
+                              context.read<RouteParametersBloc>().state.parameters,
+                              _getGeneratedRouteDistance(),
+                            ),
+                            distance: _getGeneratedRouteDistance(), // MODIFICATION : Vraie distance
+                            isLoop: routeMetadata!['is_loop'] as bool? ?? true,
+                            waypointCount: routeMetadata!['points_count'] as int? ?? generatedRouteCoordinates!.length,
+                            onClear: _clearGeneratedRoute, // MODIFICATION : Vraie fonction onClear
+                            onNavigate: () {
+                              if (generatedRouteCoordinates != null && routeMetadata != null) {
+                                final args = LiveNavigationArgs(
+                                  route: generatedRouteCoordinates!,
+                                  targetDistanceKm: _getGeneratedRouteDistance(),
+                                  routeName: 'Parcours ${DateTime.now().day}/${DateTime.now().month}',
+                                );
+                                
+                                context.push('/live-navigation', extra: args);
+                              }
+                            },
+                            onSave: _handleSaveRoute, // 🆕 Nouveau callback
+                            isSaving: _isSavingRoute, // 🆕 État de sauvegarde
+                            onShare: _showExportDialog,
+                          ),
+                        ),
+                      ),
+                    );
+                  }
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

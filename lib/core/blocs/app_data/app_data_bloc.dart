@@ -1,4 +1,5 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:runaway/core/services/screenshot_service.dart';
 import 'package:runaway/features/activity/data/repositories/activity_repository.dart';
 import 'package:runaway/features/route_generator/data/repositories/routes_repository.dart';
 import 'package:runaway/features/activity/domain/models/activity_stats.dart';
@@ -39,11 +40,141 @@ class AppDataBloc extends Bloc<AppDataEvent, AppDataState> {
     on<AppDataClearRequested>(_onClearRequested);
     on<ActivityDataRefreshRequested>(_onActivityDataRefresh);
     on<HistoricDataRefreshRequested>(_onHistoricDataRefresh);
-    
-    // 🆕 Événements de synchronisation optimisés
     on<RouteAddedDataSync>(_onRouteAddedSync);
     on<RouteDeletedDataSync>(_onRouteDeletedSync);
     on<ForceDataSyncRequested>(_onForceDataSync);
+
+    // Handlers d'objectifs
+    on<PersonalGoalAddedToAppData>(_onGoalAdded);
+    on<PersonalGoalUpdatedInAppData>(_onGoalUpdated);
+    on<PersonalGoalDeletedFromAppData>(_onGoalDeleted);
+    on<PersonalGoalsResetInAppData>(_onGoalsReset);
+
+    // Handlers pour les parcours
+    on<SavedRouteAddedToAppData>(_onRouteAdded);
+    on<SavedRouteDeletedFromAppData>(_onRouteDeleted);
+    on<SavedRouteUsageUpdatedInAppData>(_onRouteUsageUpdated);
+  }
+
+  Future<void> _onRouteAdded(
+    SavedRouteAddedToAppData event,
+    Emitter<AppDataState> emit,
+  ) async {
+    print('🚗 Sauvegarde de parcours via AppDataBloc: ${event.name}');
+    
+    try {
+      // 1. 📸 Capturer le screenshot de la carte
+      String? screenshotUrl;
+      try {
+        print('📸 Capture du screenshot...');
+        screenshotUrl = await ScreenshotService.captureAndUploadMapSnapshot(
+          liveMap: event.map,
+          routeCoords: event.coordinates,
+          routeId: 'temp_${DateTime.now().millisecondsSinceEpoch}',
+          userId: 'temp_user',
+        );
+
+        if (screenshotUrl != null) {
+          print('✅ Screenshot capturé avec succès: $screenshotUrl');
+        } else {
+          print('⚠️ Screenshot non capturé, sauvegarde sans image');
+        }
+      } catch (screenshotError) {
+        print('❌ Erreur capture screenshot: $screenshotError');
+        screenshotUrl = null;
+      }
+
+      // 2. 💾 Sauvegarder le parcours avec l'URL de l'image
+      final savedRoute = await _routesRepository.saveRoute(
+        name: event.name,
+        parameters: event.parameters,
+        coordinates: event.coordinates,
+        actualDistance: event.actualDistance,
+        estimatedDuration: event.estimatedDuration,
+        imageUrl: screenshotUrl,
+      );
+
+      // 3. 🔄 Recharger les données d'historique pour mettre à jour l'interface
+      await _refreshHistoricData(emit, showLoading: false);
+      
+      print('✅ Parcours sauvegardé avec succès: ${savedRoute.name}');
+    } catch (e) {
+      print('❌ Erreur lors de la sauvegarde du parcours: $e');
+      emit(state.copyWith(
+        lastError: 'Erreur lors de la sauvegarde du parcours: $e',
+      ));
+    }
+  }
+
+  Future<void> _onRouteDeleted(
+    SavedRouteDeletedFromAppData event,
+    Emitter<AppDataState> emit,
+  ) async {
+    print('🗑️ Suppression de parcours via AppDataBloc: ${event.routeId}');
+    
+    try {
+      // Supprimer le parcours
+      await _routesRepository.deleteRoute(event.routeId);
+      
+      // Recharger les données d'historique
+      await _refreshHistoricData(emit, showLoading: false);
+      
+      print('✅ Parcours supprimé avec succès');
+    } catch (e) {
+      print('❌ Erreur lors de la suppression du parcours: $e');
+      emit(state.copyWith(
+        lastError: 'Erreur lors de la suppression du parcours: $e',
+      ));
+    }
+  }
+
+  Future<void> _onRouteUsageUpdated(
+    SavedRouteUsageUpdatedInAppData event,
+    Emitter<AppDataState> emit,
+  ) async {
+    print('📊 Mise à jour statistiques d\'utilisation: ${event.routeId}');
+    
+    try {
+      // Mettre à jour les statistiques d'utilisation
+      await _routesRepository.updateRouteUsage(event.routeId);
+      
+      // Recharger les données d'historique (sans loading)
+      await _refreshHistoricData(emit, showLoading: false);
+      
+      print('✅ Statistiques d\'utilisation mises à jour');
+    } catch (e) {
+      print('❌ Erreur lors de la mise à jour des statistiques: $e');
+      emit(state.copyWith(
+        lastError: 'Erreur lors de la mise à jour des statistiques: $e',
+      ));
+    }
+  }
+
+  Future<void> _refreshHistoricData(Emitter<AppDataState> emit, {bool showLoading = true}) async {
+    if (showLoading) {
+      emit(state.copyWith(isLoading: true));
+    }
+
+    try {
+      final historicData = await _loadHistoricData();
+      
+      if (historicData != null) {
+        _lastHistoricUpdate = DateTime.now();
+        emit(state.copyWith(
+          savedRoutes: historicData,
+          isLoading: false,
+          lastError: null,
+        ));
+        
+        // Aussi rafraîchir les stats d'activité car elles dépendent des parcours
+        await _refreshActivityData(emit, showLoading: false);
+      }
+    } catch (e) {
+      emit(state.copyWith(
+        isLoading: false,
+        lastError: 'Erreur lors du rafraîchissement: $e',
+      ));
+    }
   }
 
   /// Pré-charge toutes les données nécessaires
@@ -388,6 +519,127 @@ class AppDataBloc extends Bloc<AppDataEvent, AppDataState> {
     } catch (e) {
       print('❌ Erreur chargement historique: $e');
       return null;
+    }
+  }
+
+  Future<void> _onGoalAdded(
+    PersonalGoalAddedToAppData event,
+    Emitter<AppDataState> emit,
+  ) async {
+    print('🎯 Ajout d\'objectif via AppDataBloc: ${event.goal.title}');
+    
+    try {
+      // Sauvegarder l'objectif
+      await _activityRepository.savePersonalGoal(event.goal);
+      
+      // Recharger les données d'activité pour mettre à jour l'interface
+      await _refreshActivityData(emit, showLoading: false);
+      
+      print('✅ Objectif ajouté avec succès');
+    } catch (e) {
+      print('❌ Erreur lors de l\'ajout de l\'objectif: $e');
+      emit(state.copyWith(
+        lastError: 'Erreur lors de l\'ajout de l\'objectif: $e',
+      ));
+    }
+  }
+
+  Future<void> _onGoalUpdated(
+    PersonalGoalUpdatedInAppData event,
+    Emitter<AppDataState> emit,
+  ) async {
+    print('🎯 Mise à jour d\'objectif via AppDataBloc: ${event.goal.title}');
+    
+    try {
+      // Sauvegarder l'objectif mis à jour
+      await _activityRepository.savePersonalGoal(event.goal);
+      
+      // Recharger les données d'activité
+      await _refreshActivityData(emit, showLoading: false);
+      
+      print('✅ Objectif mis à jour avec succès');
+    } catch (e) {
+      print('❌ Erreur lors de la mise à jour de l\'objectif: $e');
+      emit(state.copyWith(
+        lastError: 'Erreur lors de la mise à jour de l\'objectif: $e',
+      ));
+    }
+  }
+
+  Future<void> _onGoalDeleted(
+    PersonalGoalDeletedFromAppData event,
+    Emitter<AppDataState> emit,
+  ) async {
+    print('🎯 Suppression d\'objectif via AppDataBloc: ${event.goalId}');
+    
+    try {
+      // Supprimer l'objectif
+      await _activityRepository.deletePersonalGoal(event.goalId);
+      
+      // Recharger les données d'activité
+      await _refreshActivityData(emit, showLoading: false);
+      
+      print('✅ Objectif supprimé avec succès');
+    } catch (e) {
+      print('❌ Erreur lors de la suppression de l\'objectif: $e');
+      emit(state.copyWith(
+        lastError: 'Erreur lors de la suppression de l\'objectif: $e',
+      ));
+    }
+  }
+
+  Future<void> _onGoalsReset(
+    PersonalGoalsResetInAppData event,
+    Emitter<AppDataState> emit,
+  ) async {
+    print('🎯 Réinitialisation de tous les objectifs via AppDataBloc');
+    
+    try {
+      // Récupérer tous les objectifs existants
+      final existingGoals = await _activityRepository.getPersonalGoals();
+      
+      // Supprimer chaque objectif
+      for (final goal in existingGoals) {
+        await _activityRepository.deletePersonalGoal(goal.id);
+      }
+      
+      // Recharger les données d'activité
+      await _refreshActivityData(emit, showLoading: false);
+      
+      print('✅ Tous les objectifs réinitialisés avec succès');
+    } catch (e) {
+      print('❌ Erreur lors de la réinitialisation des objectifs: $e');
+      emit(state.copyWith(
+        lastError: 'Erreur lors de la réinitialisation des objectifs: $e',
+      ));
+    }
+  }
+
+  Future<void> _refreshActivityData(Emitter<AppDataState> emit, {bool showLoading = true}) async {
+    if (showLoading) {
+      emit(state.copyWith(isLoading: true));
+    }
+
+    try {
+      final activityData = await _loadActivityData();
+      
+      if (activityData != null) {
+        _lastActivityUpdate = DateTime.now();
+        emit(state.copyWith(
+          activityStats: activityData.generalStats,
+          activityTypeStats: activityData.typeStats,
+          periodStats: activityData.periodStats,
+          personalGoals: activityData.goals,
+          personalRecords: activityData.records,
+          isLoading: false,
+          lastError: null,
+        ));
+      }
+    } catch (e) {
+      emit(state.copyWith(
+        isLoading: false,
+        lastError: 'Erreur lors du rafraîchissement: $e',
+      ));
     }
   }
 

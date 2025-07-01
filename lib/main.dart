@@ -16,7 +16,6 @@ import 'package:runaway/core/services/app_initialization_service.dart';
 import 'package:runaway/core/services/route_data_sync_wrapper.dart';
 import 'package:runaway/core/widgets/auth_data_listener.dart';
 import 'package:runaway/features/activity/data/repositories/activity_repository.dart';
-import 'package:runaway/features/activity/presentation/blocs/activity_bloc.dart';
 import 'package:runaway/features/auth/data/repositories/auth_repository.dart';
 import 'package:runaway/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:runaway/features/auth/presentation/bloc/auth_event.dart';
@@ -128,14 +127,6 @@ class RunAway extends StatelessWidget {
             localeBloc.add(const LocaleInitialized());
             return localeBloc;
           },
-        ),
-
-        // ActivityBloc - maintenant moins critique
-        BlocProvider<ActivityBloc>(
-          create: (context) => ActivityBloc(
-            activityRepository: ActivityRepository(),
-            routesRepository: RoutesRepository(),
-          ),
         ),
 
         BlocProvider(

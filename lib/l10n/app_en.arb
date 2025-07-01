@@ -1067,8 +1067,6 @@
   "@mapStyleHybrid": {
     "description": "Map-layer option that overlays place labels and roads on top of satellite imagery."
   },
-  
-
   "fullNameTitle": "Full name",
   "@fullNameTitle": {
     "description": "Label displayed next to the field where the user enters their full legal name."
@@ -1092,5 +1090,20 @@
   "contactUs": "Contact us.",
   "@contactUs": {
     "description": "Link prompting the user to contact support."
+  },
+  "editGoal": "Edit goal",
+  "@editGoal": {
+    "description": "Label for a button or link that lets the user modify an existing goal."
+  },
+  "deadlineValid": "Valid until the {date}",
+  "@deadlineValid": {
+    "description": "Message showing the expiry date of an item; {date} will be replaced by a formatted date.",
+    "placeholders": {
+      "date": {
+        "type": "String",
+        "example": "31 Dec 2025",
+        "description": "Fully formatted expiration date."
+      }
+    }
   }
 }

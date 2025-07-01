@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:hugeicons/hugeicons.dart';
+import 'package:pull_down_button/pull_down_button.dart';
 import 'package:runaway/core/widgets/icon_btn.dart';
 import '../../../../config/extensions.dart';
 import '../../../../core/widgets/squircle_container.dart';
@@ -46,148 +48,183 @@ class GoalsSection extends StatelessWidget {
           ],
         ),
         15.h,
-        SquircleContainer(
-          radius: 50.0,
-          padding: const EdgeInsets.all(20),
-          color: context.adaptiveBorder.withValues(alpha: 0.05),
-          child: Column(
-            children: [
-              if (goals.isEmpty)
-                _buildEmptyState(context)
-              else
-                ...goals.map((goal) => _buildGoalCard(goal)),
-            ],
-          ),
+        Column(
+          children: [
+            if (goals.isEmpty)
+              _buildEmptyState(context)
+            else
+              ...goals.asMap().entries.map((entry) {
+                final i = entry.key;
+                final goal = entry.value;
+
+                return Padding(
+                  padding: EdgeInsets.only(
+                    bottom: i == goals.length - 1 ? 0 : 8,
+                  ),
+                  child: _buildGoalCard(context, goal),
+                );
+              }),
+          ],
         )
       ],
     );
   }
 
-  Widget _buildGoalCard(PersonalGoal goal) {
+  Widget _buildGoalCard(BuildContext context, PersonalGoal goal) {
     final progress = goal.progressPercentage;
     final isCompleted = goal.isCompleted;
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    goal.title,
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
+    return SquircleContainer(
+      radius: 50.0,
+      padding: const EdgeInsets.all(20),
+      color: context.adaptiveBorder.withValues(alpha: 0.05),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      goal.title,
+                      style: context.bodySmall?.copyWith(
+                        color: context.adaptiveTextPrimary,
+                      ),
                     ),
-                  ),
-                  4.h,
-                  Text(
-                    goal.description,
-                    style: TextStyle(
-                      color: Colors.white60,
-                      fontSize: 12,
+                    Text(
+                      goal.description,
+                      style: context.bodySmall?.copyWith(
+                        color: context.adaptiveTextSecondary,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w500
+                      ),
                     ),
-                  ),
-                ],
-              ),
-            ),
-            if (isCompleted)
-              Icon(
-                HugeIcons.solidRoundedCheckmarkCircle02,
-                color: Colors.green,
-                size: 24,
-              )
-            else
-              GestureDetector(
-                onTap: () => onEditGoal(goal),
-                child: Icon(
-                  HugeIcons.strokeRoundedEdit01,
-                  color: Colors.white60,
-                  size: 16,
+                  ],
                 ),
               ),
-          ],
-        ),
-        12.h,
-        Row(
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    '${goal.currentValue.toStringAsFixed(1)} / ${goal.targetValue.toStringAsFixed(1)} ${goal.type.label}',
-                    style: TextStyle(
-                      color: Colors.white70,
-                      fontSize: 12,
-                    ),
+              if (isCompleted)
+                Icon(
+                  HugeIcons.solidRoundedCheckmarkCircle02,
+                  color: Colors.green,
+                  size: 24,
+                )
+              else
+                PullDownButton(
+                itemBuilder: (context) => [
+                  PullDownMenuItem(
+                    icon: HugeIcons.strokeRoundedEdit01,
+                    title: context.l10n.editGoal,
+                    onTap: () => onEditGoal(goal),
                   ),
-                  4.h,
-                  LinearProgressIndicator(
-                    value: progress / 100,
-                    backgroundColor: Colors.white24,
-                    valueColor: AlwaysStoppedAnimation<Color>(
-                      isCompleted ? Colors.green : Colors.blue,
-                    ),
+                  PullDownMenuItem(
+                    isDestructive: true,
+                    icon: HugeIcons.strokeRoundedDelete02,
+                    title: context.l10n.deleteRoute,
+                    onTap: () => onDeleteGoal(goal.id),
                   ),
                 ],
+                buttonBuilder: (context, showMenu) => GestureDetector(
+                  onTap: () {
+                    showMenu();
+                    HapticFeedback.mediumImpact();
+                  },
+                  child: Icon(
+                    HugeIcons.strokeRoundedMoreVerticalCircle02,
+                  ),
+                ),
               ),
-            ),
-            8.w,
-            Text(
-              '${progress.toStringAsFixed(0)}%',
-              style: TextStyle(
-                color: isCompleted ? Colors.green : Colors.white,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ],
-        ),
-        if (goal.deadline != null) ...[
-          8.h,
-          Text(
-            '${goal.deadline!.day}/${goal.deadline!.month}/${goal.deadline!.year}',
-            style: TextStyle(
-              color: Colors.orange,
-              fontSize: 11,
-            ),
+            ],
           ),
-        ],
-      ],
-    );
-  }
-
-  Widget _buildEmptyState(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(20.0),
-        child: Column(
-          children: [
-            Icon(
-              HugeIcons.strokeRoundedTarget01,
-              size: 48,
-              color: context.adaptiveDisabled,
-            ),
-            8.h,
-            Text(
-              context.l10n.emptyDefinedGoals,
-              style: context.bodySmall?.copyWith(
-                color: context.adaptiveDisabled,
+          12.h,
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.only(right: 20.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        '${goal.currentValue.toStringAsFixed(1)} / ${goal.targetValue.toStringAsFixed(1)} ${goal.type.label}',
+                        style: context.bodySmall?.copyWith(
+                          color: context.adaptiveTextPrimary,
+                          fontSize: 14,
+                        ),
+                      ),
+                      8.h,
+                      LinearProgressIndicator(
+                        value: progress / 100,
+                        borderRadius: BorderRadius.circular(100),
+                        backgroundColor: context.adaptiveBorder.withValues(alpha: 0.08),
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                          isCompleted ? Colors.green : context.adaptivePrimary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),              
+              Text(
+                '${progress.toStringAsFixed(0)}%',
+                style: context.bodyMedium?.copyWith(
+                  color: isCompleted ? Colors.green : context.adaptiveTextPrimary,
+                ),
               ),
-            ),
-            4.h,
+            ],
+          ),
+          if (goal.deadline != null) ...[
+            15.h,
             Text(
-              context.l10n.pressToAdd,
+              context.l10n.deadlineValid('${goal.deadline!.day}/${goal.deadline!.month}/${goal.deadline!.year}'),
               style: context.bodySmall?.copyWith(
-                color: context.adaptiveDisabled,
+                color: Colors.orange,
                 fontSize: 14,
               ),
             ),
           ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmptyState(BuildContext context) {
+    return SquircleContainer(
+      radius: 50.0,
+      padding: const EdgeInsets.all(20),
+      color: context.adaptiveBorder.withValues(alpha: 0.05),
+      child: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(20.0),
+          child: Column(
+            children: [
+              Icon(
+                HugeIcons.strokeRoundedTarget01,
+                size: 48,
+                color: context.adaptiveDisabled,
+              ),
+              8.h,
+              Text(
+                context.l10n.emptyDefinedGoals,
+                style: context.bodySmall?.copyWith(
+                  color: context.adaptiveDisabled,
+                ),
+              ),
+              4.h,
+              Text(
+                context.l10n.pressToAdd,
+                style: context.bodySmall?.copyWith(
+                  color: context.adaptiveDisabled,
+                  fontSize: 14,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

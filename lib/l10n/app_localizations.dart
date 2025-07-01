@@ -1664,6 +1664,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Contact us.'**
   String get contactUs;
+
+  /// Label for a button or link that lets the user modify an existing goal.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit goal'**
+  String get editGoal;
+
+  /// Message showing the expiry date of an item; {date} will be replaced by a formatted date.
+  ///
+  /// In en, this message translates to:
+  /// **'Valid until the {date}'**
+  String deadlineValid(String date);
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {
