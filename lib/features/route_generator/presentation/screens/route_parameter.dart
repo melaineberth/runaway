@@ -49,6 +49,7 @@ class _RouteParameterScreenState extends State<RouteParameterScreen> {
   @override
   Widget build(BuildContext context) {
     return ModalSheet(
+      padding: 0.0,
       height: MediaQuery.of(context).size.height * 0.6,
       child: BlocBuilder<RouteParametersBloc, RouteParametersState>(
         builder: (context, state) {

@@ -12,7 +12,10 @@ import 'package:runaway/core/blocs/app_data/app_data_bloc.dart';
 import 'package:runaway/core/blocs/app_data/app_data_event.dart';
 import 'package:runaway/core/blocs/app_data/app_data_state.dart';
 import 'package:runaway/core/widgets/modal_sheet.dart';
+import 'package:runaway/core/widgets/squircle_container.dart';
 import 'package:runaway/features/auth/presentation/widgets/auth_text_field.dart';
+import 'package:runaway/features/route_generator/domain/models/route_parameters.dart';
+import 'package:runaway/features/route_generator/domain/models/saved_route.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' as sb;
 import 'package:hugeicons/hugeicons.dart';
 import 'package:geolocator/geolocator.dart' as gl;
@@ -1719,6 +1722,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
 
     showModalSheet(
       context: context, 
+      backgroundColor: Colors.transparent,
       child: ExportFormatDialog(
         onGpxSelected: () => _exportRoute(RouteExportFormat.gpx),
         onKmlSelected: () => _exportRoute(RouteExportFormat.kml),
@@ -1767,6 +1771,84 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
           ),
         );
       }
+    }
+  }
+
+  bool _isCurrentRouteAlreadySaved() {
+    // Vérifier qu'on a bien un parcours généré
+    if (generatedRouteCoordinates == null || routeMetadata == null) {
+      return false;
+    }
+
+    // Vérifier qu'on a accès à AppDataBloc
+    try {
+      final appDataState = context.read<AppDataBloc>().state;
+      if (!appDataState.hasHistoricData) {
+        return false;
+      }
+
+      final savedRoutes = appDataState.savedRoutes;
+      final currentDistance = _getGeneratedRouteDistance();
+      final routeState = context.read<RouteGenerationBloc>().state;
+      
+      // Si le parcours vient de l'historique, il est déjà sauvegardé par définition
+      if (routeState.isLoadedFromHistory) {
+        return true;
+      }
+
+      // Vérifier s'il existe un parcours similaire
+      return _findSimilarRoute(savedRoutes, currentDistance, routeState.usedParameters) != null;
+      
+    } catch (e) {
+      print('❌ Erreur lors de la vérification du parcours: $e');
+      return false;
+    }
+  }
+
+  /// Trouve un parcours similaire dans la liste sauvegardée
+  SavedRoute? _findSimilarRoute(
+    List<SavedRoute> savedRoutes, 
+    double currentDistance, 
+    RouteParameters? currentParams,
+  ) {
+    if (currentParams == null) return null;
+
+    // Tolérance pour la comparaison de distance (100m)
+    const double distanceTolerance = 0.1; // km
+
+    for (final savedRoute in savedRoutes) {
+      final savedDistance = savedRoute.actualDistance ?? savedRoute.parameters.distanceKm;
+      
+      // Vérifier la distance avec tolérance
+      if ((currentDistance - savedDistance).abs() <= distanceTolerance) {
+        // Vérifier les paramètres principaux
+        if (_areParametersSimilar(currentParams, savedRoute.parameters)) {
+          return savedRoute;
+        }
+      }
+    }
+
+    return null;
+  }
+
+  /// Compare si deux ensembles de paramètres sont similaires
+  bool _areParametersSimilar(RouteParameters current, RouteParameters saved) {
+    return current.activityType == saved.activityType &&
+           current.terrainType == saved.terrainType &&
+           current.urbanDensity == saved.urbanDensity &&
+           current.isLoop == saved.isLoop &&
+           current.avoidTraffic == saved.avoidTraffic;
+  }
+
+  /// Getter pour vérifier si on sauvegarde actuellement
+  bool get _isSavingRoute {
+    try {
+      final appDataState = context.read<AppDataBloc>().state;
+      return appDataState.isLoading && 
+             appDataState.lastError != null && 
+             appDataState.lastError!.contains('sauvegarde');
+    } catch (e) {
+      return false;
     }
   }
 
@@ -1848,21 +1930,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
                 .where((route) => DateTime.now().difference(route.createdAt).inMinutes < 1)
                 .toList();
                 
-            if (recentRoute.isNotEmpty) {
-              // Sauvegarde réussie
-              WidgetsBinding.instance.addPostFrameCallback((_) {
-                if (mounted) {
-                  showTopSnackBar(
-                    Overlay.of(context),
-                    TopSnackBar(
-                      title: 'Parcours sauvegardé',
-                      icon: HugeIcons.solidRoundedCheckmarkCircle02,
-                      color: Colors.green,
-                    ),
-                  );
-                }
-              });
-            }
+            print(recentRoute);
           }
         },
         child: Scaffold(
@@ -2006,36 +2074,41 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
                             borderRadius: BorderRadius.circular(20),
                             boxShadow: [
                               BoxShadow(
-                                color: context.adaptiveBackground.withValues(alpha: 0.3),
-                                spreadRadius: 3,
-                                blurRadius: 15,
-                                offset: Offset(0, 5),
+                                color: Colors.black.withValues(alpha: 0.18),
+                                spreadRadius: 2,
+                                blurRadius: 30,
+                                offset: Offset(0, 0), // changes position of shadow
                               ),
                             ],
                           ),
-                          child: RouteInfoCard(
-                            routeName : generateAutoRouteName(
-                              context.read<RouteParametersBloc>().state.parameters,
-                              _getGeneratedRouteDistance(),
-                            ),
-                            distance: _getGeneratedRouteDistance(), // MODIFICATION : Vraie distance
-                            isLoop: routeMetadata!['is_loop'] as bool? ?? true,
-                            waypointCount: routeMetadata!['points_count'] as int? ?? generatedRouteCoordinates!.length,
-                            onClear: _clearGeneratedRoute, // MODIFICATION : Vraie fonction onClear
-                            onNavigate: () {
-                              if (generatedRouteCoordinates != null && routeMetadata != null) {
-                                final args = LiveNavigationArgs(
-                                  route: generatedRouteCoordinates!,
-                                  targetDistanceKm: _getGeneratedRouteDistance(),
-                                  routeName: 'Parcours ${DateTime.now().day}/${DateTime.now().month}',
-                                );
-                                
-                                context.push('/live-navigation', extra: args);
-                              }
-                            },
-                            onSave: _handleSaveRoute, // 🆕 Nouveau callback
-                            isSaving: _isSavingRoute, // 🆕 État de sauvegarde
-                            onShare: _showExportDialog,
+                          child: BlocBuilder<AppDataBloc, AppDataState>(
+                            builder: (context, appDataState) {
+                              return RouteInfoCard(
+                                routeName : generateAutoRouteName(
+                                  context.read<RouteParametersBloc>().state.parameters,
+                                  _getGeneratedRouteDistance(),
+                                ),
+                                distance: _getGeneratedRouteDistance(), // MODIFICATION : Vraie distance
+                                isLoop: routeMetadata!['is_loop'] as bool? ?? true,
+                                waypointCount: routeMetadata!['points_count'] as int? ?? generatedRouteCoordinates!.length,
+                                onClear: _clearGeneratedRoute, // MODIFICATION : Vraie fonction onClear
+                                onNavigate: () {
+                                  if (generatedRouteCoordinates != null && routeMetadata != null) {
+                                    final args = LiveNavigationArgs(
+                                      route: generatedRouteCoordinates!,
+                                      targetDistanceKm: _getGeneratedRouteDistance(),
+                                      routeName: 'Parcours ${DateTime.now().day}/${DateTime.now().month}',
+                                    );
+                                    
+                                    context.push('/live-navigation', extra: args);
+                                  }
+                                },
+                                onSave: _handleSaveRoute, // 🆕 Nouveau callback
+                                isSaving: _isSavingRoute, // 🆕 État de sauvegarde
+                                onShare: _showExportDialog,
+                                isAlreadySaved: _isCurrentRouteAlreadySaved(),
+                              );
+                            }
                           ),
                         ),
                       ),
@@ -2048,19 +2121,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
         ),
       ),
     );
-  }
-
-  // 🆕 Également ajouter une méthode pour vérifier si la sauvegarde est en cours
-  bool get _isSavingRoute {
-    try {
-      final routeState = context.read<RouteGenerationBloc>().state;
-      return routeState.isGeneratingRoute && 
-            routeState.hasGeneratedRoute && 
-            !routeState.isLoadedFromHistory;
-    } catch (e) {
-      // En cas d'erreur, considérer qu'on ne sauvegarde pas
-      return false;
-    }
   }
 
   Widget _buildLottieMarker() {
@@ -2124,9 +2184,10 @@ class _SaveRouteSheetState extends State<SaveRouteSheet> {
 
   @override
   Widget build(BuildContext context) {
+
     return ModalSheet(
       child: Padding(
-        padding: const EdgeInsets.all(30),
+        padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -2134,7 +2195,16 @@ class _SaveRouteSheetState extends State<SaveRouteSheet> {
             Text(
               "Choisissez un nom",
               style: context.bodySmall?.copyWith(
-                color: Colors.white,
+                color: context.adaptiveTextPrimary,
+              ),
+            ),
+            2.h,
+            Text(
+              "Vous pourrez le modifier ultérieurement",
+              style: context.bodySmall?.copyWith(
+                color: context.adaptiveTextSecondary,
+                fontSize: 15,
+                fontWeight: FontWeight.w500
               ),
             ),
             20.h,
@@ -2143,39 +2213,29 @@ class _SaveRouteSheetState extends State<SaveRouteSheet> {
               hint: 'Nom du parcours',
               maxLines: 1,
             ),
-
-            20.h,
-            
-            Row(
-              children: [
-                Expanded(
-                  child: SizedBox(
-                    width: double.infinity,
-                    child: IconBtn(
-                      label: "Annuler",
-                      backgroundColor: Colors.white10,
-                      labelColor: Colors.white,
-                      onPressed: () => context.pop(),
-                    ),
+              
+            40.h,
+              
+            SquircleContainer(
+              width: double.infinity,
+              onTap: () {
+                final name = _ctl.text.trim();
+                if (name.isEmpty) return;
+                context.pop(name);
+              }, // 🆕 Désactiver si loading
+              padding: EdgeInsets.symmetric(vertical: 15.0, horizontal: 15.0),
+              radius: 40.0,
+              color: context.adaptivePrimary, // 🆕 Style différent si loading
+              child: Center(
+                child: Text(
+                  context.l10n.save,
+                  style: context.bodySmall?.copyWith(
+                    fontSize: 17,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
                   ),
                 ),
-                12.w,
-                Expanded(
-                  child: SizedBox(
-                    width: double.infinity,
-                    child: IconBtn(
-                      label: "Sauvegarder",
-                      backgroundColor: AppColors.primary,
-                      labelColor: Colors.black,
-                      onPressed: () {
-                        final name = _ctl.text.trim();
-                        if (name.isEmpty) return;
-                        context.pop(name);
-                      },
-                    ),
-                  ),
-                ),
-              ],
+              ),
             ),
           ],
         ),

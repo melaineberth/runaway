@@ -439,44 +439,41 @@ class _ActivityScreenState extends State<ActivityScreen> with TickerProviderStat
 
   Widget _buildGoalOptions() {
     return ModalSheet(
-      child: Padding(
-        padding: const EdgeInsets.all(30.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              context.l10n.createGoal,
-              style: context.bodySmall?.copyWith(
-                color: context.adaptiveTextPrimary,
-              ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            context.l10n.createGoal,
+            style: context.bodySmall?.copyWith(
+              color: context.adaptiveTextPrimary,
             ),
-            20.h,
-            _buildGoalOption(
-              context: context,
-              icon: HugeIcons.strokeRoundedAdd01,
-              title: context.l10n.customGoal,
-              subtitle: context.l10n.createCustomGoal,
-              color: Colors.blue,
-              onTap: () {
-                context.pop();
-                _showAddGoalDialog();
-              },
-            ),
-            10.h,
-            _buildGoalOption(
-              context: context,
-              icon: HugeIcons.strokeRoundedAdd01,
-              title: context.l10n.goalsModels,
-              subtitle: context.l10n.predefinedGoals,
-              color: Colors.green,
-              onTap: () {
-                context.pop();
-                _showGoalTemplatesDialog();
-              },
-            ),
-          ],
-        ),
+          ),
+          20.h,
+          _buildGoalOption(
+            context: context,
+            icon: HugeIcons.strokeRoundedAdd01,
+            title: context.l10n.customGoal,
+            subtitle: context.l10n.createCustomGoal,
+            color: Colors.blue,
+            onTap: () {
+              context.pop();
+              _showAddGoalDialog();
+            },
+          ),
+          10.h,
+          _buildGoalOption(
+            context: context,
+            icon: HugeIcons.strokeRoundedAdd01,
+            title: context.l10n.goalsModels,
+            subtitle: context.l10n.predefinedGoals,
+            color: Colors.green,
+            onTap: () {
+              context.pop();
+              _showGoalTemplatesDialog();
+            },
+          ),
+        ],
       ),
     );
   }
@@ -496,7 +493,7 @@ class _ActivityScreenState extends State<ActivityScreen> with TickerProviderStat
                 padding: EdgeInsets.all(12),
                 radius: 18,
                 color: color.withValues(alpha: 0.25),
-                child: Icon(icon, color: color, size: 30),
+                child: Icon(icon, color: color, size: 25),
               ),
               15.w,
               Column(

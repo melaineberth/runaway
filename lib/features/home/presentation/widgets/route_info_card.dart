@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
-import 'package:runaway/config/colors.dart';
 import 'package:runaway/config/extensions.dart';
 import 'package:runaway/core/widgets/squircle_container.dart';
 
@@ -13,8 +12,9 @@ class RouteInfoCard extends StatelessWidget {
   final VoidCallback onClear;
   final VoidCallback onNavigate;
   final VoidCallback onShare;
-  final VoidCallback onSave; // 🆕 Nouveau callback de sauvegarde
-  final bool isSaving; // 🆕 État de sauvegarde en cours
+  final VoidCallback onSave; // Callback de sauvegarde
+  final bool isSaving; // État de sauvegarde en cours
+  final bool isAlreadySaved; // Indique si le parcours est déjà sauvegardé
 
   const RouteInfoCard({
     super.key,
@@ -27,6 +27,7 @@ class RouteInfoCard extends StatelessWidget {
     required this.onShare,
     required this.onSave, // 🆕 Requis
     this.isSaving = false, // 🆕 Par défaut false
+    this.isAlreadySaved = false,
   });
 
   static const _innerRadius = 35.0;
@@ -36,16 +37,8 @@ class RouteInfoCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return SquircleContainer(
       padding: EdgeInsets.all(_padding),
-      color: Colors.black,
+      color: context.adaptiveBackground,
       radius: _innerRadius.outerRadius(_padding),
-      boxShadow: [
-        BoxShadow(
-          color: Colors.black.withValues(alpha: 0.18),
-          spreadRadius: 2,
-          blurRadius: 30,
-          offset: Offset(0, 0), // changes position of shadow
-        ),
-      ],
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -55,12 +48,12 @@ class RouteInfoCard extends StatelessWidget {
             children: [
               SquircleContainer(
                 radius: 25,
-                color: AppColors.primary.withValues(alpha: 0.3),
+                color: context.adaptivePrimary.withValues(alpha: 0.3),
                 child: Padding(
                   padding: const EdgeInsets.all(20.0),
                   child: Icon(
                     HugeIcons.solidRoundedRouteBlock, 
-                    color: AppColors.primary,
+                    color: context.adaptivePrimary,
                   ),
                 ),
               ),
@@ -97,7 +90,7 @@ class RouteInfoCard extends StatelessWidget {
                 onPressed: onClear,
                 icon: HugeIcon(
                   icon: HugeIcons.solidRoundedCancelCircle,
-                  color: Colors.grey.shade600,
+                  color: context.adaptiveTextPrimary,
                   size: 24,
                 ),
               ),
@@ -113,13 +106,12 @@ class RouteInfoCard extends StatelessWidget {
               Expanded(
                 child: _ActionButton(
                   radius: _innerRadius,
-                  icon: isSaving 
-                      ? HugeIcons.strokeRoundedLoading03 
-                      : HugeIcons.solidRoundedLocationStar01,
-                  label: isSaving ? 'Sauvegarde...' : 'Save',
-                  onTap: isSaving ? () {} : onSave, // Désactiver pendant sauvegarde
+                  icon: _getSaveIcon(),
+                  label: _getSaveLabel(context),
+                  onTap: _getSaveAction(),
                   isPrimary: false,
                   isLoading: isSaving,
+                  isDisabled: isAlreadySaved,
                 ),
               ),
 
@@ -129,7 +121,7 @@ class RouteInfoCard extends StatelessWidget {
                 child: _ActionButton(
                   radius: _innerRadius,
                   icon: HugeIcons.solidRoundedDownloadCircle01,
-                  label: "Download",
+                  label: context.l10n.download,
                   onTap: onShare,
                   isPrimary: false,
                 ),
@@ -149,6 +141,34 @@ class RouteInfoCard extends StatelessWidget {
       ),
     );
   }
+
+  dynamic _getSaveIcon() {
+    if (isSaving) {
+      return HugeIcons.strokeRoundedLoading03;
+    } else if (isAlreadySaved) {
+      return HugeIcons.solidRoundedCheckmarkCircle02;
+    } else {
+      return HugeIcons.solidRoundedLocationStar01;
+    }
+  }
+
+  String _getSaveLabel(BuildContext context) {
+    if (isSaving) {
+      return context.l10n.saving;
+    } else if (isAlreadySaved) {
+      return context.l10n.alreadySaved;
+    } else {
+      return context.l10n.save;
+    }
+  }
+
+  VoidCallback? _getSaveAction() {
+    if (isSaving || isAlreadySaved) {
+      return null; // Désactiver le bouton
+    } else {
+      return onSave;
+    }
+  }
 }
 
 /// Chip d'information
@@ -167,7 +187,7 @@ class _InfoChip extends StatelessWidget {
       padding: EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
         border: Border.all(
-          color: Colors.white38,
+          color: context.adaptiveDisabled,
           width: 1.5,
         ),
         borderRadius: BorderRadius.circular(20),
@@ -178,14 +198,14 @@ class _InfoChip extends StatelessWidget {
           HugeIcon(
             icon: icon,
             size: 16,
-            color: Colors.white38,
+            color: context.adaptiveDisabled,
           ),
           6.w,
           Text(
             label,
             style: context.bodySmall?.copyWith(
               fontSize: 14,
-              color: Colors.white38,
+              color: context.adaptiveDisabled,
             ),
           ),
         ],
@@ -198,10 +218,11 @@ class _InfoChip extends StatelessWidget {
 class _ActionButton extends StatelessWidget {
   final dynamic icon;
   final String label;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
   final bool isPrimary;
   final double radius;
   final bool isLoading; // 🆕 Indicateur de chargement
+  final bool isDisabled;
 
   const _ActionButton({
     required this.icon,
@@ -209,56 +230,80 @@ class _ActionButton extends StatelessWidget {
     required this.onTap,
     required this.isPrimary,
     required this.radius,
-    this.isLoading = false, // 🆕 Par défaut false
+    this.isLoading = false,
+    this.isDisabled = false, // 🆕 Par défaut false
   });
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: isLoading ? null : onTap, // 🆕 Désactiver si loading
-      child: SquircleContainer(
-        padding: EdgeInsets.symmetric(vertical: 15.0, horizontal: 15.0),
-        radius: radius,
-        color: isPrimary 
-            ? AppColors.primary 
-            : Colors.white.withValues(alpha: isLoading ? 0.05 : 0.1), // 🆕 Style différent si loading
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            // 🆕 Animation de rotation pour l'icône loading
-            isLoading
-                ? SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      valueColor: AlwaysStoppedAnimation<Color>(
-                        isPrimary ? Colors.black : Colors.white54,
-                      ),
-                    ),
-                  )
-                : HugeIcon(
-                    icon: icon,
-                    size: 20,
-                    color: isPrimary ? Colors.black : Colors.white,
-                  ),
-            if (label.isNotEmpty) ...[
-              10.w,
-              Text(
-                label,
-                style: context.bodySmall?.copyWith(
-                  fontSize: 17,
-                  fontWeight: FontWeight.w600,
-                  color: isPrimary 
-                      ? Colors.black 
-                      : (isLoading ? Colors.white54 : Colors.white),
-                ),
-              ),
-            ],
+    final bool isInactive = isLoading || isDisabled || onTap == null;
 
+    return SquircleContainer(
+      onTap: isInactive ? null : onTap, // 🆕 Désactiver si loading
+      padding: EdgeInsets.symmetric(vertical: 15.0, horizontal: 15.0),
+      radius: radius,
+      color: _getBackgroundColor(context), // 🆕 Style différent si loading
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          // 🆕 Animation de rotation pour l'icône loading
+          isLoading
+              ? SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      isPrimary ? Colors.white : context.adaptiveDisabled,
+                    ),
+                  ),
+                )
+              : HugeIcon(
+                  icon: icon,
+                  size: 20,
+                  color: _getIconColor(context),
+                ),
+          if (label.isNotEmpty) ...[
+            10.w,
+            Text(
+              label,
+              style: context.bodySmall?.copyWith(
+                fontSize: 17,
+                fontWeight: FontWeight.w600,
+                color: _getTextColor(context),
+              ),
+            ),
           ],
-        ),
+        ],
       ),
     );
+  }
+
+  Color _getBackgroundColor(BuildContext context) {
+    if (isPrimary) {
+      return context.adaptivePrimary;
+    } else {
+      return context.adaptiveBorder.withValues(alpha: 0.08);
+    }
+  }
+
+  Color _getIconColor(BuildContext context) {
+    if (isPrimary) {
+      return Colors.white;
+    } else if (isDisabled || isLoading) {
+      return context.adaptiveDisabled;
+    } else {
+      return context.adaptiveTextPrimary;
+    }
+  }
+
+  Color _getTextColor(BuildContext context) {
+    if (isPrimary) {
+      return Colors.white;
+    } else if (isDisabled || isLoading) {
+      return context.adaptiveDisabled;
+    } else {
+      return context.adaptiveTextPrimary;
+    }
   }
 }

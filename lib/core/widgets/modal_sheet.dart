@@ -4,8 +4,9 @@ import 'package:runaway/config/extensions.dart';
 class ModalSheet extends StatefulWidget {
   final Widget? child;
   final double? height;
+  final double? padding;
 
-  const ModalSheet({super.key, this.child, this.height});
+  const ModalSheet({super.key, this.child, this.height, this.padding});
 
   @override
   State<ModalSheet> createState() => _ModalSheetState();
@@ -53,7 +54,10 @@ class _ModalSheetState extends State<ModalSheet> {
             bottomLeft: Radius.circular(innerRadius),
             bottomRight: Radius.circular(innerRadius),
           ),
-          child: widget.child,
+          child: Padding(
+            padding: EdgeInsets.all(widget.padding ?? 30.0),
+            child: widget.child,
+          ),
         ),
       ),
     );

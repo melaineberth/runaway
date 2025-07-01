@@ -13,90 +13,87 @@ class GoalTemplatesDialog extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ModalSheet(
-      child: Padding(
-        padding: const EdgeInsets.all(30.0),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              context.l10n.goalsModels,
-              style: context.bodySmall?.copyWith(
-                color: context.adaptiveTextPrimary,
-              ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            context.l10n.goalsModels,
+            style: context.bodySmall?.copyWith(
+              color: context.adaptiveTextPrimary,
             ),
-            20.h,
-            _buildTemplate(
-              context,
+          ),
+          20.h,
+          _buildTemplate(
+            context,
+            context.l10n.monthlyRaceTitle,
+            context.l10n.monthlyRaceMessage,
+            HugeIcons.solidRoundedWorkoutRun,
+            () => _createTemplate(
               context.l10n.monthlyRaceTitle,
-              context.l10n.monthlyRaceMessage,
-              HugeIcons.solidRoundedWorkoutRun,
-              () => _createTemplate(
-                context.l10n.monthlyRaceTitle,
-                context.l10n.monthlyRaceGoal,
-                GoalType.distance,
-                50,
-                ActivityType.running,
-              ),
+              context.l10n.monthlyRaceGoal,
+              GoalType.distance,
+              50,
+              ActivityType.running,
             ),
-            10.h,
-            _buildTemplate(
-              context,
+          ),
+          10.h,
+          _buildTemplate(
+            context,
+            context.l10n.weeklyBikeTitle,
+            context.l10n.weeklyBikeMessage,
+            HugeIcons.solidRoundedBicycle01,
+            () => _createTemplate(
               context.l10n.weeklyBikeTitle,
-              context.l10n.weeklyBikeMessage,
-              HugeIcons.solidRoundedBicycle01,
-              () => _createTemplate(
-                context.l10n.weeklyBikeTitle,
-                context.l10n.weeklyBikeGoal,
-                GoalType.distance,
-                100,
-                ActivityType.cycling,
-              ),
+              context.l10n.weeklyBikeGoal,
+              GoalType.distance,
+              100,
+              ActivityType.cycling,
             ),
-            10.h,
-            _buildTemplate(
-              context,
+          ),
+          10.h,
+          _buildTemplate(
+            context,
+            context.l10n.regularTripsTitle,
+            context.l10n.regularTripsMessage,
+            HugeIcons.solidRoundedRoute01,
+            () => _createTemplate(
               context.l10n.regularTripsTitle,
-              context.l10n.regularTripsMessage,
-              HugeIcons.solidRoundedRoute01,
-              () => _createTemplate(
-                context.l10n.regularTripsTitle,
-                context.l10n.regularTripsGoal,
-                GoalType.routes,
-                10,
-                null,
-              ),
+              context.l10n.regularTripsGoal,
+              GoalType.routes,
+              10,
+              null,
             ),
-            10.h,
-            _buildTemplate(
-              context,
+          ),
+          10.h,
+          _buildTemplate(
+            context,
+            context.l10n.mountainChallengeTitle,
+            context.l10n.mountainChallengeMessage,
+            HugeIcons.solidRoundedMountain,
+            () => _createTemplate(
               context.l10n.mountainChallengeTitle,
-              context.l10n.mountainChallengeMessage,
-              HugeIcons.solidRoundedMountain,
-              () => _createTemplate(
-                context.l10n.mountainChallengeTitle,
-                context.l10n.mountainChallengeGoal,
-                GoalType.elevation,
-                1000,
-                null,
-              ),
+              context.l10n.mountainChallengeGoal,
+              GoalType.elevation,
+              1000,
+              null,
             ),
-            10.h,
-            _buildTemplate(
-              context,
+          ),
+          10.h,
+          _buildTemplate(
+            context,
+            context.l10n.averageSpeedTitle,
+            context.l10n.averageSpeedMessage,
+            HugeIcons.solidRoundedRocket01,
+            () => _createTemplate(
               context.l10n.averageSpeedTitle,
-              context.l10n.averageSpeedMessage,
-              HugeIcons.solidRoundedRocket01,
-              () => _createTemplate(
-                context.l10n.averageSpeedTitle,
-                context.l10n.averageSpeedGoal,
-                GoalType.speed,
-                12,
-                ActivityType.running,
-              ),
+              context.l10n.averageSpeedGoal,
+              GoalType.speed,
+              12,
+              ActivityType.running,
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

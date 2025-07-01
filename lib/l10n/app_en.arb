@@ -1105,5 +1105,21 @@
         "description": "Fully formatted expiration date."
       }
     }
+  },
+  "download": "Download",
+  "@download": {
+    "description": "Label for a button or link that lets the user download a file or data."
+  },
+  "save": "Save",
+  "@save": {
+    "description": "Label for a button that saves the current item, form, or changes."
+  },
+  "saving": "Saving...",
+  "@saving": {
+    "description": "Status text shown while the save operation is in progress."
+  },
+  "alreadySaved": "Already saved",
+  "@alreadySaved": {
+    "description": "Status text indicating the item has previously been saved."
   }
 }

@@ -39,48 +39,45 @@ class _MapStyleSelectorState extends State<MapStyleSelector> {
   @override
   Widget build(BuildContext context) {
     return ModalSheet(
-      child: Padding(
-        padding: const EdgeInsets.all(30.0),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              context.l10n.mapStyleTitle,
-              style: context.bodySmall?.copyWith(
-                color: context.adaptiveTextPrimary,
-              ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            context.l10n.mapStyleTitle,
+            style: context.bodySmall?.copyWith(
+              color: context.adaptiveTextPrimary,
             ),
-            2.h,
-            Text(
-              context.l10n.mapStyleSubtitle,
-              style: context.bodySmall?.copyWith(
-                color: context.adaptiveTextSecondary,
-                fontSize: 15,
-                fontWeight: FontWeight.w500
-              ),
+          ),
+          2.h,
+          Text(
+            context.l10n.mapStyleSubtitle,
+            style: context.bodySmall?.copyWith(
+              color: context.adaptiveTextSecondary,
+              fontSize: 15,
+              fontWeight: FontWeight.w500
             ),
-            20.h,
-            ...MapboxStyleConstants.availableStyles.asMap().entries.map((entry) {
-                final i = entry.key;
-                final style = entry.value;
-                final isSelected = style.id == widget.currentStyleId;
-
-                return Padding(
-                  // on enlève le bas uniquement sur le dernier
-                  padding: EdgeInsets.only(
-                    bottom: i == MapboxStyleConstants.availableStyles.length - 1 ? 0 : 10,
-                  ),
-                  child: _buildStyleTile(
-                    style: style,
-                    isSelected: isSelected,
-                    onTap: () => _selectStyle(style.id),
-                  ),
-                );
-              },
-            ),
-          ],
-        ),
+          ),
+          20.h,
+          ...MapboxStyleConstants.availableStyles.asMap().entries.map((entry) {
+              final i = entry.key;
+              final style = entry.value;
+              final isSelected = style.id == widget.currentStyleId;
+      
+              return Padding(
+                // on enlève le bas uniquement sur le dernier
+                padding: EdgeInsets.only(
+                  bottom: i == MapboxStyleConstants.availableStyles.length - 1 ? 0 : 10,
+                ),
+                child: _buildStyleTile(
+                  style: style,
+                  isSelected: isSelected,
+                  onTap: () => _selectStyle(style.id),
+                ),
+              );
+            },
+          ),
+        ],
       ),
     );
   }
@@ -93,7 +90,7 @@ class _MapStyleSelectorState extends State<MapStyleSelector> {
     return SquircleContainer(
       onTap: onTap,
       radius: 40,
-      color: context.adaptiveBorder.withValues(alpha: 0.08),
+      color: context.adaptiveBorder.withValues(alpha: 0.05),
       padding: EdgeInsets.all(8),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,

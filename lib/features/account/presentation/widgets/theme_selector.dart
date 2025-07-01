@@ -22,72 +22,69 @@ class ThemeSelector extends StatelessWidget {
           );
         }
         return ModalSheet(
-          child: Padding(
-            padding: const EdgeInsets.all(30.0),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  context.l10n.theme,
-                  style: context.bodySmall?.copyWith(
-                    color: context.adaptiveTextPrimary,
-                  ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                context.l10n.theme,
+                style: context.bodySmall?.copyWith(
+                  color: context.adaptiveTextPrimary,
                 ),
-                2.h,
-                Text(
-                  context.l10n.selectPreferenceTheme,
-                  style: context.bodySmall?.copyWith(
-                    color: context.adaptiveTextSecondary,
-                    fontSize: 15,
-                    fontWeight: FontWeight.w500
-                  ),
+              ),
+              2.h,
+              Text(
+                context.l10n.selectPreferenceTheme,
+                style: context.bodySmall?.copyWith(
+                  color: context.adaptiveTextSecondary,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w500
                 ),
-                20.h,
-                Column(
-                  children: [
-                    ...AppThemeMode.values.asMap().entries.map((entry) {
-                      final i = entry.key;
-                      final themeMode = entry.value;
-                      final isSelected = themeMode == state.themeMode;
-                      final themeName = _getThemeName(context, themeMode);
-                      
-                      return MultiBlocListener(
-                        listeners: [
-                          BlocListener<ThemeBloc, ThemeState>(
-                            listenWhen: (previous, current) => 
-                                previous.themeMode != current.themeMode && !current.isLoading,
-                            listener: (context, state) {
-                              SchedulerBinding.instance.addPostFrameCallback((_) {
-                                if (context.mounted && Navigator.of(context).canPop()) {
-                                  Navigator.of(context).pop();
-                                }
-                              });
-                            },
-                          ),
-                        ],
-                        child: Padding(
-                          padding: EdgeInsets.only(
-                            bottom: i == AppThemeMode.values.length - 1 ? 0 : 10,
-                          ),
-                          child: _buildThemeTile(
-                            context: context, 
-                            name: themeName, 
-                            icon: _getThemeIcon(themeMode),
-                            isSelected: isSelected, 
-                            onTap: () {
-                              if (!isSelected) {
-                                context.read<ThemeBloc>().add(ThemeChanged(themeMode));
+              ),
+              20.h,
+              Column(
+                children: [
+                  ...AppThemeMode.values.asMap().entries.map((entry) {
+                    final i = entry.key;
+                    final themeMode = entry.value;
+                    final isSelected = themeMode == state.themeMode;
+                    final themeName = _getThemeName(context, themeMode);
+                    
+                    return MultiBlocListener(
+                      listeners: [
+                        BlocListener<ThemeBloc, ThemeState>(
+                          listenWhen: (previous, current) => 
+                              previous.themeMode != current.themeMode && !current.isLoading,
+                          listener: (context, state) {
+                            SchedulerBinding.instance.addPostFrameCallback((_) {
+                              if (context.mounted && Navigator.of(context).canPop()) {
+                                Navigator.of(context).pop();
                               }
-                            },
-                          ),
+                            });
+                          },
                         ),
-                      );
-                    })
-                  ],
-                )
-              ],
-            ),
+                      ],
+                      child: Padding(
+                        padding: EdgeInsets.only(
+                          bottom: i == AppThemeMode.values.length - 1 ? 0 : 10,
+                        ),
+                        child: _buildThemeTile(
+                          context: context, 
+                          name: themeName, 
+                          icon: _getThemeIcon(themeMode),
+                          isSelected: isSelected, 
+                          onTap: () {
+                            if (!isSelected) {
+                              context.read<ThemeBloc>().add(ThemeChanged(themeMode));
+                            }
+                          },
+                        ),
+                      ),
+                    );
+                  })
+                ],
+              )
+            ],
           ),
         );
       }

@@ -178,35 +178,32 @@ class ActivityTypeStatsCard extends StatelessWidget {
       context: context, 
       backgroundColor: Colors.transparent,
       child: ModalSheet(
-        child: Padding(
-          padding: const EdgeInsets.all(30.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                context.l10n.byActivityFilter,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              context.l10n.byActivityFilter,
+              style: context.bodySmall?.copyWith(
+                color: context.adaptiveTextPrimary,
+              ),
+            ),
+            Text(
+                context.l10n.typeOfActivity,
                 style: context.bodySmall?.copyWith(
-                  color: context.adaptiveTextPrimary,
+                  color: context.adaptiveTextSecondary,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w500
                 ),
               ),
-              Text(
-                  context.l10n.typeOfActivity,
-                  style: context.bodySmall?.copyWith(
-                    color: context.adaptiveTextSecondary,
-                    fontSize: 15,
-                    fontWeight: FontWeight.w500
-                  ),
-                ),
-                
-                20.h,
-                        
-              _buildFilterOption(context, null, context.l10n.allActivities),
-              ...ActivityType.values.map(
-                (type) => _buildFilterOption(context, type, type.label(context)),
-              ),
-            ],
-          ),
+              
+              20.h,
+                      
+            _buildFilterOption(context, null, context.l10n.allActivities),
+            ...ActivityType.values.map(
+              (type) => _buildFilterOption(context, type, type.label(context)),
+            ),
+          ],
         ),
       ),
     );

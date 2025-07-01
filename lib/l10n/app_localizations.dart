@@ -1676,6 +1676,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Valid until the {date}'**
   String deadlineValid(String date);
+
+  /// Label for a button or link that lets the user download a file or data.
+  ///
+  /// In en, this message translates to:
+  /// **'Download'**
+  String get download;
+
+  /// Label for a button that saves the current item, form, or changes.
+  ///
+  /// In en, this message translates to:
+  /// **'Save'**
+  String get save;
+
+  /// Status text shown while the save operation is in progress.
+  ///
+  /// In en, this message translates to:
+  /// **'Saving...'**
+  String get saving;
+
+  /// Status text indicating the item has previously been saved.
+  ///
+  /// In en, this message translates to:
+  /// **'Already saved'**
+  String get alreadySaved;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

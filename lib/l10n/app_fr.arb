@@ -1119,5 +1119,21 @@
         "description": "Date d'expiration dûment formatée."
       }
     }
+  },
+  "download": "Télécharger",
+  "@download": {
+    "description": "Étiquette d’un bouton ou d’un lien permettant à l’utilisateur de télécharger un fichier ou des données."
+  },
+  "save": "Enregistrer",
+  "@save": {
+    "description": "Étiquette d’un bouton qui enregistre l’élément, le formulaire ou les modifications en cours."
+  },
+  "saving": "Enregistrement...",
+  "@saving": {
+    "description": "Texte d’état affiché pendant que l’opération d’enregistrement est en cours."
+  },
+  "alreadySaved": "Déjà enregistré",
+  "@alreadySaved": {
+    "description": "Texte d’état indiquant que l’élément a déjà été enregistré."
   }
 }

@@ -58,64 +58,61 @@ class _AddGoalDialogState extends State<AddGoalDialog> {
   @override
   Widget build(BuildContext context) {
     return ModalSheet(
-      child: Padding(
-        padding: const EdgeInsets.all(30.0),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              _isEditing ? context.l10n.modifyGoal : context.l10n.newGoal,
-              style: context.bodySmall?.copyWith(
-                color: context.adaptiveTextPrimary,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            _isEditing ? context.l10n.modifyGoal : context.l10n.newGoal,
+            style: context.bodySmall?.copyWith(
+              color: context.adaptiveTextPrimary,
+            ),
+          ),
+          20.h,
+          Form(
+            key: _formKey,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildTitleField(),
+                  10.h,
+                  _buildDescriptionField(),
+                  30.h,
+                  _buildTypeSelector(),
+                  30.h,
+                  _buildActivitySelector(),
+                  30.h,
+                  _buildTargetValueField(),
+                  30.h,
+                  _buildDeadlineSelector(),
+                ],
               ),
             ),
-            20.h,
-            Form(
-              key: _formKey,
-              child: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildTitleField(),
-                    10.h,
-                    _buildDescriptionField(),
-                    30.h,
-                    _buildTypeSelector(),
-                    30.h,
-                    _buildActivitySelector(),
-                    30.h,
-                    _buildTargetValueField(),
-                    30.h,
-                    _buildDeadlineSelector(),
-                  ],
-                ),
+          ),
+          50.h,
+          GestureDetector(
+            onTap: _saveGoal,
+            child: Container(
+              padding: EdgeInsets.symmetric(vertical: 15.0),
+              decoration: BoxDecoration(
+                color: context.adaptivePrimary,
+                borderRadius: BorderRadius.circular(100),
               ),
-            ),
-            50.h,
-            GestureDetector(
-              onTap: _saveGoal,
-              child: Container(
-                padding: EdgeInsets.symmetric(vertical: 15.0),
-                decoration: BoxDecoration(
-                  color: context.adaptivePrimary,
-                  borderRadius: BorderRadius.circular(100),
-                ),
-                child: Center(
-                  child: Text(
-                    _isEditing ? context.l10n.modify : context.l10n.create,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                    ),
+              child: Center(
+                child: Text(
+                  _isEditing ? context.l10n.modify : context.l10n.create,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

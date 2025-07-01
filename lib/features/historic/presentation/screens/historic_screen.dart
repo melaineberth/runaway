@@ -17,7 +17,6 @@ import 'package:runaway/features/route_generator/domain/models/saved_route.dart'
 import 'package:runaway/features/route_generator/presentation/blocs/route_generation/route_generation_bloc.dart';
 import 'package:runaway/features/route_generator/presentation/blocs/route_generation/route_generation_event.dart';
 import 'package:hugeicons/hugeicons.dart';
-import 'package:runaway/features/route_generator/presentation/blocs/route_generation/route_generation_state.dart';
 import 'package:top_snackbar_flutter/top_snack_bar.dart';
 
 import '../widgets/historic_card.dart';
@@ -50,12 +49,7 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
   final bool _shouldShowLoading = false;
 
   // ✅ Cache local optimisé pour l'UI
-  List<SavedRoute> _uiRoutes = [];
   bool _hasPendingSync = false;
-  DateTime? _lastUIUpdate;
-  
-  // 🛡️ Protection contre les doublons de sync
-  bool _isSyncInProgress = false;
   
   @override
   void initState() {
@@ -93,16 +87,6 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
 
     _fadeController.forward();
     _staggerController.forward();
-  }
-
-  /// ✅ Met à jour le cache UI de manière thread-safe
-  void _updateUICache(List<SavedRoute> routes, {required String source}) {
-    if (!mounted) return;
-    
-    _uiRoutes = List.from(routes);
-    _lastUIUpdate = DateTime.now();
-    
-    print('✅ Cache UI mis à jour depuis $source (${routes.length} routes)');
   }
 
   void _updateAnimationsForRoutes(int itemCount) {
@@ -186,12 +170,6 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
     context.go('/home');
     print('✅ Navigation vers /home lancée');
     print('🧭 === FIN NAVIGATION VERS PARCOURS ===');
-  }
-
-   /// ⏰ Vérifie si le cache UI est encore frais (5 minutes)
-  bool _isUICacheFresh() {
-    if (_lastUIUpdate == null) return false;
-    return DateTime.now().difference(_lastUIUpdate!) < const Duration(minutes: 5);
   }
 
   /// Suppression d'un parcours avec confirmation
@@ -627,10 +605,7 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
 
   void _refreshData() async {
     print('🔄 Refresh manuel optimisé');
-    
-    // Réinitialiser les verrous
-    _isSyncInProgress = false;
-    
+        
     setState(() {
       _hasPendingSync = true;
     });
@@ -654,104 +629,6 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
         context.read<AppDataBloc>().add(const HistoricDataRefreshRequested());
       }
     });
-  }
-
-  // 🚀 LOGIQUE UI-FIRST : Mise à jour immédiate depuis RouteGenerationBloc
-  void _onRouteStateChanged(BuildContext context, RouteGenerationState routeState) {
-    final newRoutes = routeState.savedRoutes;
-    final oldCount = _uiRoutes.length;
-    final newCount = newRoutes.length;
-    
-    // ✅ ÉTAPE 1: Mise à jour IMMÉDIATE de l'UI
-    if (_shouldUpdateUI(newRoutes)) {
-      _updateUICache(newRoutes, source: 'RouteGeneration');
-      
-      // 🎭 Mettre à jour les animations
-      if (newRoutes.isNotEmpty) {
-        _updateAnimationsForRoutes(newRoutes.length);
-      }
-      
-      print('🎯 UI mise à jour immédiatement: $oldCount -> $newCount routes');
-    }
-    
-    // ✅ ÉTAPE 2: Synchronisation EN ARRIÈRE-PLAN (protégée contre les doublons)
-    if (oldCount != newCount && !_isSyncInProgress) {
-      _triggerBackgroundSync(context, oldCount, newCount);
-    }
-  }
-
-  // 🔄 Synchronisation intelligente en arrière-plan
-  void _triggerBackgroundSync(BuildContext context, int oldCount, int newCount) {
-    _isSyncInProgress = true;
-    
-    setState(() {
-      _hasPendingSync = true;
-    });
-    
-    // Utiliser Future.delayed pour ne pas bloquer l'UI
-    Future.delayed(const Duration(milliseconds: 100), () {
-      if (!mounted) return;
-      
-      print('🔄 Sync arrière-plan protégée ($oldCount -> $newCount)');
-      
-      if (newCount > oldCount) {
-        // Route ajoutée - sync statistiques seulement
-        context.read<AppDataBloc>().add(const ActivityDataRefreshRequested());
-        print('➕ Sync statistiques (route ajoutée)');
-      } else if (newCount < oldCount) {
-        // Route supprimée - sync historique seulement (pas complète)
-        context.read<AppDataBloc>().add(const HistoricDataRefreshRequested());
-        print('➖ Sync historique (route supprimée)');
-      }
-      
-      // Libérer le verrou après un délai
-      Future.delayed(const Duration(seconds: 2), () {
-        _isSyncInProgress = false;
-      });
-    });
-  }
-
-  // 📊 Gestion des changements d'AppDataBloc
-  void _onAppDataChanged(AppDataState appDataState) {
-    // Marquer la sync comme terminée
-    if (_hasPendingSync && !appDataState.isLoading) {
-      setState(() {
-        _hasPendingSync = false;
-      });
-      print('✅ Synchronisation arrière-plan terminée');
-    }
-  }
-
-  // 🎯 Détermine les meilleures données à utiliser pour l'UI
-  List<SavedRoute> _getEffectiveRoutes(AppDataState appDataState) {
-    // Priorité : cache UI frais > données AppData > vide
-    if (_uiRoutes.isNotEmpty && _isUICacheFresh()) {
-      return _uiRoutes;
-    }
-    
-    if (appDataState.hasHistoricData) {
-      // Initialiser avec les données d'AppData si cache UI vide
-      if (_uiRoutes.isEmpty) {
-        _updateUICache(appDataState.savedRoutes, source: 'AppData-Init');
-      }
-      return _uiRoutes.isNotEmpty ? _uiRoutes : appDataState.savedRoutes;
-    }
-    
-    return _uiRoutes;
-  }
-
-  // 🔍 Vérifie si le contenu des routes a changé (pas seulement la longueur)
-  bool _shouldUpdateUI(List<SavedRoute> newRoutes) {
-    if (_uiRoutes.length != newRoutes.length) return true;
-    
-    // Vérification rapide des IDs
-    for (int i = 0; i < _uiRoutes.length; i++) {
-      if (i >= newRoutes.length || _uiRoutes[i].id != newRoutes[i].id) {
-        return true;
-      }
-    }
-    
-    return false;
   }
 
   @override
@@ -795,7 +672,7 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
     }
 
     // État initial
-    return _buildLoadingView(appDataState);
+    return _buildEmptyView(appDataState);
   }
 
   Widget _buildLoadingView(AppDataState appDataState) {

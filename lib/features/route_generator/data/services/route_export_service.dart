@@ -272,7 +272,7 @@ class RouteExportService {
 
 /// Formats d'export disponibles
 enum RouteExportFormat {
-  gpx('gpx', 'GPX', 'Format standard GPS (Garmin, Strava, Komoot)'),
+  gpx('gpx', 'GPX', 'Format standard GPS'),
   kml('kml', 'KML', 'Google Earth / Google Maps'),
   json('json', 'JSON', 'Format universel de données');
 

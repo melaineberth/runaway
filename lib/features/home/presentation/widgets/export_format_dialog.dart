@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:runaway/config/extensions.dart';
+import 'package:runaway/core/widgets/modal_sheet.dart';
 import 'package:runaway/core/widgets/squircle_container.dart';
 import 'package:runaway/features/route_generator/data/services/route_export_service.dart';
 
@@ -18,16 +19,15 @@ class ExportFormatDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(30.0),
+    return ModalSheet(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             'Exporter le parcours',
-            style: context.bodyMedium?.copyWith(
-              color: Colors.white,
+            style: context.bodySmall?.copyWith(
+              color: context.adaptiveTextPrimary,
             ),
           ),
           Column(
@@ -36,27 +36,43 @@ class ExportFormatDialog extends StatelessWidget {
               Text(
                 'Choisissez le format d\'export :',
                 style: context.bodySmall?.copyWith(
-                  color: Colors.white38,
+                  color: context.adaptiveTextSecondary,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w500
                 ),
               ),
-
+            
               20.h,
           
-              ...RouteExportFormat.values.map(
-                (format) => _buildFormatOption(context, format, () {
-                  Navigator.of(context).pop();
-                  switch (format) {
-                    case RouteExportFormat.gpx:
-                      onGpxSelected();
-                      break;
-                    case RouteExportFormat.kml:
-                      onKmlSelected();
-                      break;
-                    case RouteExportFormat.json:
-                      onJsonSelected();
-                      break;
-                  }
-                }),
+              ...RouteExportFormat.values.asMap().entries.map(
+                (entry) {
+                  final i = entry.key;
+                  final format = entry.value;
+      
+                  return Padding(
+                    padding: EdgeInsets.only(
+                      bottom: i == RouteExportFormat.values.length - 1 ? 0 : 10,
+                    ),
+                    child: _buildFormatOption(
+                      context, 
+                      format: format, 
+                      onTap: () {
+                      Navigator.of(context).pop();
+                        switch (format) {
+                          case RouteExportFormat.gpx:
+                            onGpxSelected();
+                            break;
+                          case RouteExportFormat.kml:
+                            onKmlSelected();
+                            break;
+                          case RouteExportFormat.json:
+                            onJsonSelected();
+                            break;
+                        }
+                      },
+                    ),
+                  );
+                },
               ),
             ],
           ),
@@ -65,11 +81,7 @@ class ExportFormatDialog extends StatelessWidget {
     );
   }
 
-  Widget _buildFormatOption(
-    BuildContext context,
-    RouteExportFormat format,
-    VoidCallback onTap,
-  ) {
+  Widget _buildFormatOption(BuildContext context, {required RouteExportFormat format, required VoidCallback onTap}) {
     IconData icon;
     Color color;
 
@@ -88,52 +100,49 @@ class ExportFormatDialog extends StatelessWidget {
         break;
     }
 
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12.0),
-      child: SquircleContainer(
-        onTap: onTap,
-        radius: 40,
-        color: Colors.white10,
-        padding: EdgeInsets.all(12),
-        child: Row(
-          children: [
-            SquircleContainer(
-              padding: EdgeInsets.all(8),
-              radius: 18,
-              color: color.withValues(alpha: 0.1),
-              child: Icon(icon, color: color, size: 30),
-            ),
-            SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    format.displayName,
-                    style: context.bodyMedium?.copyWith(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                    ),
+    return SquircleContainer(
+      onTap: onTap,
+      radius: 40,
+      color: context.adaptiveBorder.withValues(alpha: 0.05),
+      padding: EdgeInsets.all(8),
+      child: Row(
+        children: [
+          SquircleContainer(
+            padding: EdgeInsets.all(12),
+            radius: 18,
+            color: color.withValues(alpha: 0.25),
+            child: Icon(icon, color: color, size: 25),
+          ),
+          15.w,
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  format.displayName,
+                  style: context.bodyMedium?.copyWith(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
                   ),
-                  SizedBox(height: 4),
-                  Text(
-                    format.description,
-                    style: context.bodySmall?.copyWith(
-                      fontSize: 14,
-                      color: Colors.white38,
-                      fontWeight: FontWeight.w500,
-                    ),
+                ),
+                SizedBox(height: 4),
+                Text(
+                  format.description,
+                  style: context.bodySmall?.copyWith(
+                    fontSize: 14,
+                    color: context.adaptiveTextSecondary,
+                    fontWeight: FontWeight.w500,
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
-            Icon(
-              HugeIcons.strokeRoundedArrowRight01,
-              color: Colors.grey[400],
-              size: 20,
-            ),
-          ],
-        ),
+          ),
+          Icon(
+            HugeIcons.strokeRoundedArrowRight01,
+            color: context.adaptiveTextPrimary,
+            size: 20,
+          ),
+        ],
       ),
     );
   }

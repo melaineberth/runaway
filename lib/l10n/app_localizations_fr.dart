@@ -818,4 +818,16 @@ class AppLocalizationsFr extends AppLocalizations {
   String deadlineValid(String date) {
     return 'Valable jusqu\'au $date';
   }
+
+  @override
+  String get download => 'Télécharger';
+
+  @override
+  String get save => 'Enregistrer';
+
+  @override
+  String get saving => 'Enregistrement...';
+
+  @override
+  String get alreadySaved => 'Déjà enregistré';
 }

@@ -25,75 +25,72 @@ class LanguageSelector extends StatelessWidget {
           );
         }
         return ModalSheet(
-          child: Padding(
-            padding: const EdgeInsets.all(30.0),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  context.l10n.availableLanguage,
-                  style: context.bodySmall?.copyWith(
-                    color: context.adaptiveTextPrimary,
-                  ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                context.l10n.availableLanguage,
+                style: context.bodySmall?.copyWith(
+                  color: context.adaptiveTextPrimary,
                 ),
-                2.h,
-                Text(
-                  context.l10n.selectPreferenceLanguage,
-                  style: context.bodySmall?.copyWith(
-                    color: context.adaptiveTextSecondary,
-                    fontSize: 15,
-                    fontWeight: FontWeight.w500
-                  ),
+              ),
+              2.h,
+              Text(
+                context.l10n.selectPreferenceLanguage,
+                style: context.bodySmall?.copyWith(
+                  color: context.adaptiveTextSecondary,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w500
                 ),
-                20.h,
-                Column(
-                  children: [
-                    ...LocaleService.supportedLocales.asMap().entries.map((entry) {
-                      final i = entry.key;
-                      final locale = entry.value;
-
-                      final isSelected = state.locale.languageCode == locale.languageCode;
-                      final languageName = LocaleService().getLanguageNativeName(locale);
+              ),
+              20.h,
+              Column(
+                children: [
+                  ...LocaleService.supportedLocales.asMap().entries.map((entry) {
+                    final i = entry.key;
+                    final locale = entry.value;
           
-                      return MultiBlocListener(
-                        listeners: [
-                          // 🔧 FIX: Gestion séparée du changement de langue
-                          BlocListener<LocaleBloc, LocaleState>(
-                            listenWhen: (previous, current) => 
-                                previous.locale != current.locale && !current.isLoading,
-                            listener: (context, state) {
-                              // 🔧 Attendre la fin du frame avant de fermer la modal
-                              SchedulerBinding.instance.addPostFrameCallback((_) {
-                                if (context.mounted && Navigator.of(context).canPop()) {
-                                  Navigator.of(context).pop();
-                                }
-                              });
-                            },
-                          ),
-                        ],
-                        child: Padding(
-                          padding: EdgeInsets.only(
-                            bottom: i == LocaleService.supportedLocales.length - 1 ? 0 : 10,
-                          ),
-                          child: _buildStyleTile(
-                            context: context, 
-                            name: languageName, 
-                            flag: _getLanguageFlag(locale),
-                            isSelected: isSelected, 
-                            onTap: () {
-                              if (!isSelected) {
-                                context.read<LocaleBloc>().add(LocaleChanged(locale));
+                    final isSelected = state.locale.languageCode == locale.languageCode;
+                    final languageName = LocaleService().getLanguageNativeName(locale);
+                    
+                    return MultiBlocListener(
+                      listeners: [
+                        // 🔧 FIX: Gestion séparée du changement de langue
+                        BlocListener<LocaleBloc, LocaleState>(
+                          listenWhen: (previous, current) => 
+                              previous.locale != current.locale && !current.isLoading,
+                          listener: (context, state) {
+                            // 🔧 Attendre la fin du frame avant de fermer la modal
+                            SchedulerBinding.instance.addPostFrameCallback((_) {
+                              if (context.mounted && Navigator.of(context).canPop()) {
+                                Navigator.of(context).pop();
                               }
-                            },
-                          ),
+                            });
+                          },
                         ),
-                      );
-                    })
-                  ],
-                )
-              ],
-            ),
+                      ],
+                      child: Padding(
+                        padding: EdgeInsets.only(
+                          bottom: i == LocaleService.supportedLocales.length - 1 ? 0 : 10,
+                        ),
+                        child: _buildStyleTile(
+                          context: context, 
+                          name: languageName, 
+                          flag: _getLanguageFlag(locale),
+                          isSelected: isSelected, 
+                          onTap: () {
+                            if (!isSelected) {
+                              context.read<LocaleBloc>().add(LocaleChanged(locale));
+                            }
+                          },
+                        ),
+                      ),
+                    );
+                  })
+                ],
+              )
+            ],
           ),
         );
       }
