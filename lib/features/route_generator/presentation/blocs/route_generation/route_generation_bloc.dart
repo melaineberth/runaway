@@ -271,18 +271,42 @@ class RouteGenerationBloc extends HydratedBloc<RouteGenerationEvent, RouteGenera
   }
 
   /// Chargement d'un parcours sauvegardé
-  void _onSavedRouteLoaded(
+  Future<void> _onSavedRouteLoaded(
     SavedRouteLoaded event,
     Emitter<RouteGenerationState> emit,
-  ) {
+  ) async {
     final loadId = DateTime.now().millisecondsSinceEpoch.toString();
     print('📂 === DÉBUT CHARGEMENT HISTORIQUE (ID: $loadId) ===');
     print('📂 Route ID demandé: ${event.routeId}');
 
     try {
+      // 🔥 CORRECTION : Charger d'abord les parcours sauvegardés si nécessaire
+      if (state.savedRoutes.isEmpty) {
+        print('📂 Liste des parcours vide, chargement depuis le repository...');
+        emit(state.copyWith(isAnalyzingZone: true));
+        
+        try {
+          final routes = await _routesRepository.getUserRoutes();
+          emit(state.copyWith(
+            savedRoutes: routes,
+            isAnalyzingZone: false,
+          ));
+          print('✅ ${routes.length} parcours chargés dans RouteGenerationBloc');
+        } catch (e) {
+          print('❌ Erreur chargement parcours: $e');
+          emit(state.copyWith(
+            isAnalyzingZone: false,
+            errorMessage: 'Erreur lors du chargement des parcours: $e',
+            stateId: '$loadId-load-error',
+          ));
+          return;
+        }
+      }
+
+      // Maintenant chercher le parcours dans la liste mise à jour
       final route = state.savedRoutes.firstWhere(
         (r) => r.id == event.routeId,
-        orElse: () => throw Exception('Parcours non trouvé'),
+        orElse: () => throw Exception('Parcours non trouvé: ${event.routeId}'),
       );
 
       print('📂 Parcours trouvé: ${route.name} (${route.coordinates.length} points)');

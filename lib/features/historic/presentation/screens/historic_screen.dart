@@ -154,22 +154,52 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
   }
 
   /// 🧭 Navigation vers le parcours sélectionné - Chargement dans HomeScreen
-  void _navigateToRoute(SavedRoute route) {
+  void _navigateToRoute(SavedRoute route) async {
     print('🧭 === DÉBUT NAVIGATION VERS PARCOURS ===');
     print('📊 Route ID: ${route.id}');
     print('📊 Route Name: ${route.name}');
     
-    // 🔑 ÉTAPE 1: Charger le parcours dans RouteGenerationBloc pour l'afficher sur la carte
-    context.read<RouteGenerationBloc>().add(SavedRouteLoaded(route.id));
-    print('✅ Événement SavedRouteLoaded envoyé au bloc');
-    
-    // 🔑 ÉTAPE 2: Mettre à jour les statistiques d'utilisation via AppDataBloc
-    context.read<AppDataBloc>().add(SavedRouteUsageUpdatedInAppData(route.id));
-    
-    // 🔑 ÉTAPE 3: Naviguer vers HomeScreen
-    context.go('/home');
-    print('✅ Navigation vers /home lancée');
-    print('🧭 === FIN NAVIGATION VERS PARCOURS ===');
+    try {
+      // 🔑 ÉTAPE 1: S'assurer que RouteGenerationBloc a les données nécessaires
+      final routeGenerationBloc = context.read<RouteGenerationBloc>();
+      
+      // Vérifier si RouteGenerationBloc a déjà les parcours sauvegardés
+      if (routeGenerationBloc.state.savedRoutes.isEmpty) {
+        print('🔄 Chargement des parcours dans RouteGenerationBloc...');
+        routeGenerationBloc.add(const SavedRoutesRequested());
+        
+        // Attendre un peu que les données se chargent
+        await Future.delayed(const Duration(milliseconds: 500));
+      }
+      
+      // 🔑 ÉTAPE 2: Charger le parcours spécifique
+      routeGenerationBloc.add(SavedRouteLoaded(route.id));
+      print('✅ Événement SavedRouteLoaded envoyé au bloc');
+      
+      // 🔑 ÉTAPE 3: Mettre à jour les statistiques d'utilisation via AppDataBloc
+      context.read<AppDataBloc>().add(SavedRouteUsageUpdatedInAppData(route.id));
+      
+      // 🔑 ÉTAPE 4: Naviguer vers HomeScreen
+      if (mounted) {
+        context.go('/home');
+        print('✅ Navigation vers /home lancée');
+      }
+      
+      print('🧭 === FIN NAVIGATION VERS PARCOURS ===');
+      
+    } catch (e) {
+      print('❌ Erreur lors de la navigation: $e');
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erreur lors du chargement du parcours'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    }
   }
 
   /// Suppression d'un parcours avec confirmation
