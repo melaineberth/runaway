@@ -73,7 +73,7 @@ class IconBtn extends StatelessWidget {
             if (trailling != null) ...[
               HugeIcon(
                 icon: trailling, 
-                size: iconSize ?? 28, 
+                size: iconSize ?? 30, 
                 color: iconColor ?? context.adaptiveTextSecondary,
               ),
             ],

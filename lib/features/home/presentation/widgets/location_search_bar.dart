@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:runaway/config/extensions.dart';
+import 'package:runaway/core/widgets/blurry_page.dart';
 import 'package:runaway/core/widgets/squircle_container.dart';
 
 import '../../../../core/services/geocoding_service.dart';
@@ -124,34 +125,35 @@ class _LocationSearchBarState extends State<LocationSearchBar> {
             ),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(20),
-              child: ListView.builder(
-                padding: EdgeInsets.symmetric(vertical: 8),
-                shrinkWrap: true,
-                itemCount: _suggestions.length,
-                itemBuilder: (context, index) {
-                  final suggestion = _suggestions[index];
-                  return InkWell(
-                    onTap: () => _selectSuggestion(suggestion),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 25,
-                        vertical: 12,
-                      ),
-                      child: Row(
-                        children: [
-                          SquircleContainer(
-                            radius: 20,
-                            padding: EdgeInsets.all(12),
-                            color: context.adaptiveTextSecondary.withValues(alpha: 0.1),
-                            child: HugeIcon(
-                              icon: HugeIcons.solidRoundedLocation01,
-                              size: 25,
-                              color: context.adaptiveTextSecondary.withValues(alpha: 0.5),
+              child: BlurryPage(
+                shrinkWrap: false,
+                contentPadding: EdgeInsets.all(0.0),
+                children: [
+                  10.h,
+                  ...List.generate(_suggestions.length, (index) {
+                    final suggestion = _suggestions[index];
+                    return InkWell(
+                      onTap: () => _selectSuggestion(suggestion),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 25,
+                          vertical: 12,
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            SquircleContainer(
+                              radius: 20,
+                              padding: EdgeInsets.all(12),
+                              color: context.adaptiveTextSecondary.withValues(alpha: 0.1),
+                              child: HugeIcon(
+                                icon: HugeIcons.solidRoundedLocation01,
+                                size: 25,
+                                color: context.adaptiveTextSecondary.withValues(alpha: 0.5),
+                              ),
                             ),
-                          ),
-                          12.w,
-                          Expanded(
-                            child: Column(
+                            12.w,
+                            Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
@@ -178,12 +180,13 @@ class _LocationSearchBarState extends State<LocationSearchBar> {
                                 ],
                               ],
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
-                    ),
-                  );
-                },
+                    );
+                  }),
+                  80.h,
+                ],
               ),
             ),
           ),

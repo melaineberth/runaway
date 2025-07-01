@@ -338,18 +338,24 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
       centerTitle: true,
       forceMaterialTransparency: true,
       backgroundColor: Colors.transparent,
-      title: Text(
-        context.l10n.historic,
-        style: context.bodySmall?.copyWith(color: context.adaptiveTextPrimary),
+      title: FadeTransition(
+        opacity: _fadeAnimation,
+        child: Text(
+          context.l10n.historic,
+          style: context.bodySmall?.copyWith(color: context.adaptiveTextPrimary),
+        ),
       ),
       actions: [
         if (pendingSync) ...[
-          Container(
-            width: 8,
-            height: 8,
-            decoration: const BoxDecoration(
-              color: Colors.orange,
-              shape: BoxShape.circle,
+          FadeTransition(
+            opacity: _fadeAnimation,
+            child: Container(
+              width: 8,
+              height: 8,
+              decoration: const BoxDecoration(
+                color: Colors.orange,
+                shape: BoxShape.circle,
+              ),
             ),
           ),
         ],
@@ -513,43 +519,46 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
       appBar: _buildAppBar(
         isLoading,
       ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            SquircleContainer(              
-              color: AppColors.primary.withValues(alpha: 0.3),
-              padding: EdgeInsets.all(30.0),
-              child: Icon(
-                HugeIcons.strokeRoundedRoute01,
-                size: 64,
-                color: AppColors.primary,
-              ),
-            ),
-            30.h,
-            Text(
-              context.l10n.emptySavedRouteTitle,
-              style: context.bodyLarge?.copyWith(
-                color: context.adaptiveTextPrimary,
-                fontSize: 25,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            8.h,
-            Padding(
-              padding: EdgeInsets.symmetric(horizontal: 40),
-              child: Text(
-                context.l10n.emptySavedRouteMessage,
-                style: context.bodyMedium?.copyWith(
-                  color: context.adaptiveTextSecondary,
-                  fontWeight: FontWeight.w500,
-                  fontSize: 17,
-                  height: 1.3,
+      body: FadeTransition(
+        opacity: _fadeAnimation,
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              SquircleContainer(              
+                color: AppColors.primary.withValues(alpha: 0.3),
+                padding: EdgeInsets.all(30.0),
+                child: Icon(
+                  HugeIcons.strokeRoundedRoute01,
+                  size: 64,
+                  color: AppColors.primary,
                 ),
-                textAlign: TextAlign.center,
               ),
-            ),
-          ],
+              30.h,
+              Text(
+                context.l10n.emptySavedRouteTitle,
+                style: context.bodyLarge?.copyWith(
+                  color: context.adaptiveTextPrimary,
+                  fontSize: 25,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              8.h,
+              Padding(
+                padding: EdgeInsets.symmetric(horizontal: 40),
+                child: Text(
+                  context.l10n.emptySavedRouteMessage,
+                  style: context.bodyMedium?.copyWith(
+                    color: context.adaptiveTextSecondary,
+                    fontWeight: FontWeight.w500,
+                    fontSize: 17,
+                    height: 1.3,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

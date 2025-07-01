@@ -25,7 +25,7 @@ class RecordsSection extends StatelessWidget {
         SquircleContainer(
           radius: 50.0,
           padding: const EdgeInsets.all(10),
-          color: context.adaptiveBorder.withValues(alpha: 0.08),
+          color: context.adaptiveBorder.withValues(alpha: 0.05),
           child: Column(
             children: [
               if (records.isEmpty)
@@ -52,7 +52,7 @@ class RecordsSection extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: Colors.amber.withOpacity(0.2),
+              color: Colors.amber.withValues(alpha: 0.2),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Icon(

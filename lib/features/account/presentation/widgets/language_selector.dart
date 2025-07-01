@@ -52,7 +52,8 @@ class LanguageSelector extends StatelessWidget {
                     ...LocaleService.supportedLocales.asMap().entries.map((entry) {
                       final i = entry.key;
                       final locale = entry.value;
-                      final isSelected = locale == state.locale;
+
+                      final isSelected = state.locale.languageCode == locale.languageCode;
                       final languageName = LocaleService().getLanguageNativeName(locale);
           
                       return MultiBlocListener(

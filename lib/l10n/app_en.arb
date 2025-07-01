@@ -376,8 +376,8 @@
   "@createAccount": {
     "description": "Label of the button that opens the sign-up form."
   },
-  "needHelpContactUs": "Need help? Contact us.",
-  "@needHelpContactUs": {
+  "needHelp": "Need help? ",
+  "@needHelp": {
     "description": "Link prompting the user to contact support."
   },
   "createAccountSubtitle": "To create an account provide details, verify email and set a password.",
@@ -1066,5 +1066,31 @@
   "mapStyleHybrid": "Hybrid",
   "@mapStyleHybrid": {
     "description": "Map-layer option that overlays place labels and roads on top of satellite imagery."
+  },
+  
+
+  "fullNameTitle": "Full name",
+  "@fullNameTitle": {
+    "description": "Label displayed next to the field where the user enters their full legal name."
+  },
+  "usernameTitle": "Username",
+  "@usernameTitle": {
+    "description": "Label for the unique username (handle) field shown in the profile form."
+  },
+  "nonEditableUsername": "The username cannot be modified",
+  "@nonEditableUsername": {
+    "description": "Informational message shown when the username field is locked and cannot be altered."
+  },
+  "profileUpdated": "Successfully updated profile",
+  "@profileUpdated": {
+    "description": "Success toast or alert shown after the user details are saved without errors."
+  },
+  "profileUpdateError": "Error updating profile",
+  "@profileUpdateError": {
+    "description": "Generic error message displayed when saving profile changes fails."
+  },
+  "contactUs": "Contact us.",
+  "@contactUs": {
+    "description": "Link prompting the user to contact support."
   }
 }

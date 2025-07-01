@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:runaway/config/colors.dart';
 import 'package:runaway/config/extensions.dart';
 import 'package:smooth_gradient/smooth_gradient.dart';
 
@@ -8,8 +7,9 @@ class BlurryPage extends StatefulWidget {
   final EdgeInsetsGeometry? padding;
   final EdgeInsetsGeometry? contentPadding;
   final Color? color;
+  final bool shrinkWrap;
   
-  const BlurryPage({super.key, required this.children, this.padding, this.contentPadding, this.color});
+  const BlurryPage({super.key, required this.children, this.padding, this.contentPadding, this.color, this.shrinkWrap = true});
 
   @override
   State<BlurryPage> createState() => _BlurryPageState();
@@ -41,6 +41,7 @@ class _BlurryPageState extends State<BlurryPage> {
   @override
   Widget build(BuildContext context) {
     return Stack(
+      fit: StackFit.loose,
       children: [
         Stack(
           alignment: Alignment.bottomCenter,
@@ -48,10 +49,10 @@ class _BlurryPageState extends State<BlurryPage> {
             Padding(
               padding: widget.padding ?? EdgeInsets.zero,
               child: ListView(
-                shrinkWrap: true,
+                shrinkWrap: widget.shrinkWrap,
                 padding: widget.contentPadding,
                 controller: _scrollController,
-                children: widget.children
+                children: widget.children,
               ),
             ),
           

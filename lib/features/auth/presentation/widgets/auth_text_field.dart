@@ -4,8 +4,8 @@ import 'package:runaway/config/extensions.dart';
 import 'package:runaway/core/widgets/squircle_container.dart';
 
 class AuthTextField extends StatefulWidget {
-  final TextEditingController controller;
-  final String hint;
+  final TextEditingController? controller;
+  final String? hint;
   final bool obscureText;
   final Function(String)? onChanged;
   final String? Function(String?)? validator;
@@ -16,11 +16,12 @@ class AuthTextField extends StatefulWidget {
   final TextCapitalization? textCapitalization;
   final int? maxLines;
   final String? suffixText;
+  final String? initialValue;
   
   const AuthTextField({
     super.key,
-    required this.controller,
-    required this.hint,
+    this.controller,
+    this.hint,
     this.onChanged,
     this.obscureText = false,
     this.validator,
@@ -31,6 +32,7 @@ class AuthTextField extends StatefulWidget {
     this.textCapitalization,
     this.maxLines = 1,
     this.suffixText,
+    this.initialValue,
   });
 
   @override
@@ -54,6 +56,7 @@ class _AuthTextFieldState extends State<AuthTextField> {
         children: [
           Expanded(
             child: TextFormField(
+              initialValue: widget.initialValue,
               textCapitalization: widget.textCapitalization ?? TextCapitalization.none,
               autocorrect: false,
               validator: widget.validator,
@@ -72,7 +75,6 @@ class _AuthTextFieldState extends State<AuthTextField> {
               decoration: InputDecoration(
                 hintText: widget.hint,
                 border: InputBorder.none,
-                suffixIcon: widget.suffixIcon,
                 suffixText: widget.suffixText,
                 hintStyle: context.bodySmall?.copyWith(
                   color: widget.enabled ? context.adaptiveDisabled : context.adaptiveTextSecondary,
@@ -85,6 +87,8 @@ class _AuthTextFieldState extends State<AuthTextField> {
               maxLines: widget.maxLines,
             ),
           ),
+          if(widget.suffixIcon != null) 
+            widget.suffixIcon!,
           if (widget.obscureText)
             hidePassword 
               ? IconButton(onPressed: () {

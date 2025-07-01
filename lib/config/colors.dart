@@ -7,7 +7,7 @@ class AppColors {
   static const Color background = Color(0xFFF9F9F9); // Gris très clair
   static const Color surface = Color(0xFFFFFFFF); // Blanc
   static const Color textPrimary = Color(0xFF2D3436); // Noir-gris foncé
-  static const Color textSecondary = Color(0xFF636E72); // Gris moyen
+  static const Color textSecondary = Color.fromARGB(255, 145, 145, 145); // Gris moyen
   static const Color success = Color(0xFF00CEC9); // Turquoise
   static const Color danger = Color(0xFFD63031); // Rouge
 }
@@ -19,7 +19,7 @@ class AppColorsDark {
   static const Color background = Color(0xFF121212); // Noir très sombre
   static const Color surface = Color(0xFF1E1E1E); // Gris très sombre
   static const Color textPrimary = Color(0xFFECECEC); // Blanc cassé
-  static const Color textSecondary = Color(0xFFB0BEC5); // Gris clair
+  static const Color textSecondary = Color.fromARGB(255, 118, 118, 118); // Gris clair
   static const Color success = Color(0xFF4DD0E1); // Turquoise plus claire
   static const Color danger = Color(0xFFFF5252); // Rouge plus claire
 }

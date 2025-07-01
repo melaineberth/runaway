@@ -630,8 +630,8 @@ abstract class AppLocalizations {
   /// Link prompting the user to contact support.
   ///
   /// In en, this message translates to:
-  /// **'Need help? Contact us.'**
-  String get needHelpContactUs;
+  /// **'Need help? '**
+  String get needHelp;
 
   /// Subtitle explaining the sign-up steps
   ///
@@ -1628,6 +1628,42 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Hybrid'**
   String get mapStyleHybrid;
+
+  /// Label displayed next to the field where the user enters their full legal name.
+  ///
+  /// In en, this message translates to:
+  /// **'Full name'**
+  String get fullNameTitle;
+
+  /// Label for the unique username (handle) field shown in the profile form.
+  ///
+  /// In en, this message translates to:
+  /// **'Username'**
+  String get usernameTitle;
+
+  /// Informational message shown when the username field is locked and cannot be altered.
+  ///
+  /// In en, this message translates to:
+  /// **'The username cannot be modified'**
+  String get nonEditableUsername;
+
+  /// Success toast or alert shown after the user details are saved without errors.
+  ///
+  /// In en, this message translates to:
+  /// **'Successfully updated profile'**
+  String get profileUpdated;
+
+  /// Generic error message displayed when saving profile changes fails.
+  ///
+  /// In en, this message translates to:
+  /// **'Error updating profile'**
+  String get profileUpdateError;
+
+  /// Link prompting the user to contact support.
+  ///
+  /// In en, this message translates to:
+  /// **'Contact us.'**
+  String get contactUs;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

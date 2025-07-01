@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'dart:ui';
 
 import 'package:cached_network_image/cached_network_image.dart';
@@ -6,22 +5,20 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hugeicons/hugeicons.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:runaway/config/colors.dart';
 import 'package:runaway/config/extensions.dart';
 import 'package:runaway/core/blocs/theme_bloc/theme_bloc.dart';
 import 'package:runaway/core/widgets/ask_registration.dart';
 import 'package:runaway/core/widgets/blurry_page.dart';
 import 'package:runaway/core/widgets/icon_btn.dart';
-import 'package:runaway/core/widgets/top_snackbar.dart';
 import 'package:runaway/features/account/presentation/widgets/language_selector.dart';
 import 'package:runaway/features/account/presentation/widgets/theme_selector.dart';
+import 'package:runaway/features/auth/domain/models/profile.dart';
 import 'package:runaway/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:runaway/features/auth/presentation/bloc/auth_event.dart';
 import 'package:runaway/features/auth/presentation/bloc/auth_state.dart';
 import 'dart:math' as math;
 
-import 'package:top_snackbar_flutter/top_snack_bar.dart';
 
 class AccountScreen extends StatefulWidget {
   const AccountScreen({super.key});
@@ -53,50 +50,6 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
   void dispose() {
     _fadeController.dispose();
     super.dispose();
-  }
-
-  // Dans la classe _AccountScreenState, ajouter cette méthode :
-  Future<void> _pickAndUpdateAvatar(BuildContext context) async {
-    try {
-      final ImagePicker picker = ImagePicker();
-      final XFile? pickedFile = await picker.pickImage(
-        source: ImageSource.gallery,
-        maxWidth: 512,
-        maxHeight: 512,
-        imageQuality: 80,
-      );
-      
-      if (pickedFile != null && context.mounted) {
-        final File avatarFile = File(pickedFile.path);
-        
-        // Déclencher la mise à jour du profil avec la nouvelle photo
-        context.read<AuthBloc>().add(
-          UpdateProfileRequested(avatar: avatarFile),
-        );
-
-        // Afficher un message de confirmation
-        showTopSnackBar(
-          Overlay.of(context),
-          TopSnackBar(
-            title: context.l10n.updatingPhoto,
-            icon: HugeIcons.solidRoundedLoading03,
-            color: Colors.orange,
-          ),
-        );
-      }
-    } catch (e) {
-      if (context.mounted) {
-        showTopSnackBar(
-          Overlay.of(context),
-          TopSnackBar(
-            title: context.l10n.selectionError(e.toString()),
-            icon: HugeIcons.solidRoundedAlert02,
-            color: Colors.red,
-          ),
-        );
-        print(e.toString());
-      }
-    }
   }
 
   @override
@@ -140,10 +93,7 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
         children: [
           _buildHeaderAccount(
             ctx: context,
-            name: user.fullName ?? context.l10n.defaultUserName,
-            username: "@${user.username}",
-            avatarUrl: user.avatarUrl,
-            initials: user.initials,
+            user: user,
             color: Colors.primaries[initialColor],
           ),
     
@@ -159,15 +109,15 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
                       context,
                       label: context.l10n.language,
                       icon: HugeIcons.strokeRoundedLanguageSkill,
+                      onTap: () => showModalSheet(
+                        context: context, 
+                        backgroundColor: Colors.transparent,
+                        child: LanguageSelector(),
+                      ), 
                       child: IconBtn(
                         padding: 0.0,
                         backgroundColor: Colors.transparent,
                         label: context.l10n.currentLanguage,
-                        onPressed: () => showModalSheet(
-                          context: context, 
-                          backgroundColor: Colors.transparent,
-                          child: LanguageSelector(),
-                        ), 
                         iconSize: 19,
                         labelColor: context.adaptiveTextSecondary,
                         iconColor: context.adaptiveTextSecondary,
@@ -178,11 +128,11 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
                       context,
                       label: context.l10n.notifications,
                       icon: HugeIcons.strokeRoundedNotification02,
+                      onTap: () {}, 
                       child: IconBtn(
                         padding: 0.0,
                         backgroundColor: Colors.transparent,
                         label: context.l10n.enabled,
-                        onPressed: () {}, 
                         iconSize: 19,
                         labelColor: context.adaptiveTextSecondary,
                         iconColor: context.adaptiveTextSecondary,
@@ -193,6 +143,11 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
                       context,
                       label: context.l10n.theme,
                       icon: HugeIcons.strokeRoundedPaintBoard,
+                      onTap: () => showModalSheet(
+                        context: context, 
+                        backgroundColor: Colors.transparent,
+                        child: const ThemeSelector(),
+                      ), 
                       child: BlocBuilder<ThemeBloc, ThemeState>(
                         builder: (context, themeState) {
                           String currentThemeLabel;
@@ -212,11 +167,6 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
                             padding: 0.0,
                             backgroundColor: Colors.transparent,
                             label: currentThemeLabel,
-                            onPressed: () => showModalSheet(
-                              context: context, 
-                              backgroundColor: Colors.transparent,
-                              child: const ThemeSelector(),
-                            ), 
                             iconSize: 19,
                             labelColor: context.adaptiveTextSecondary,
                             iconColor: context.adaptiveTextSecondary,
@@ -269,10 +219,10 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
                       context,
                       label: context.l10n.disconnect,
                       icon: HugeIcons.strokeRoundedLogoutSquare02,
+                      onTap: () => _showLogoutDialog(context), 
                       child: IconBtn(
                         padding: 0.0,
                         backgroundColor: Colors.transparent,
-                        onPressed: () => _showLogoutDialog(context), 
                         iconSize: 19,
                         labelColor: context.adaptiveTextSecondary,
                         iconColor: context.adaptiveTextSecondary,
@@ -285,10 +235,10 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
                       icon: HugeIcons.strokeRoundedDelete02,
                       iconColor: Colors.red,
                       labelColor: Colors.red,
+                      onTap: () => _showDeleteAccountDialog(context),
                       child: IconBtn(
                         padding: 0.0,
                         backgroundColor: Colors.transparent,
-                        onPressed: () => _showDeleteAccountDialog(context), 
                         iconSize: 19,
                         iconColor: Colors.red,
                         trailling: HugeIcons.strokeStandardArrowRight01,
@@ -314,7 +264,7 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
           title, 
           style: context.bodyMedium?.copyWith(
             fontSize: 18,
-            color: Colors.white54, 
+            color: context.adaptiveTextSecondary, 
             fontWeight: FontWeight.w600,
           ),
         ),
@@ -328,29 +278,32 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
     );
   }
 
-  Widget _buildSettingTile(BuildContext context, {required String label, Color? labelColor, required IconData icon, Color? iconColor, required Widget child}) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Row(
-          children: [
-            IconBtn(
-              icon: icon,
-              iconSize: 25.0, 
-              iconColor: iconColor ?? context.adaptiveTextSecondary,
-              padding: 12.0,
-              backgroundColor: context.adaptiveBorder.withValues(alpha: 0.07),
-            ),
-            15.w,
-            Text(label, style: context.bodySmall?.copyWith(color: labelColor ?? context.adaptiveTextPrimary)),
-          ],
-        ),
-        child,
-      ],
+  Widget _buildSettingTile(BuildContext context, {required String label, Color? labelColor, required IconData icon, Color? iconColor, required Widget child, required Function()? onTap}) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Row(
+            children: [
+              IconBtn(
+                icon: icon,
+                iconSize: 25.0, 
+                iconColor: iconColor ?? context.adaptiveTextSecondary,
+                padding: 12.0,
+                backgroundColor: context.adaptiveBorder.withValues(alpha: 0.07),
+              ),
+              15.w,
+              Text(label, style: context.bodySmall?.copyWith(color: labelColor ?? context.adaptiveTextPrimary)),
+            ],
+          ),
+          child,
+        ],
+      ),
     );
   }
 
-  void _openAvatar(BuildContext context, String url) {
+  void _openAvatar(BuildContext context, Profile user) {
     Navigator.of(context, rootNavigator: true).push(
       PageRouteBuilder(
         opaque: false,
@@ -360,9 +313,12 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
 
         pageBuilder: (_, Animation<double> animation, __) {
           return _AvatarViewer(
-            url: url, 
+            url: user.avatarUrl!, 
             animation: animation, 
-            onTap: () => _pickAndUpdateAvatar(context),
+            onTap: () {
+              context.pop();
+              _navigateToEditProfile(context, user);
+            },
           );
         },
       ),
@@ -371,10 +327,7 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
 
   Widget _buildHeaderAccount({
     required BuildContext ctx, 
-    required String name, 
-    required String username,
-    String? avatarUrl,
-    required String initials,
+    required Profile user,
     required Color color,
   }) {
     return Padding(
@@ -387,15 +340,23 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
             decoration: BoxDecoration(
               color: HSLColor.fromColor(color).withLightness(0.8).toColor(),
               shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.15),
+                  spreadRadius: 2,
+                  blurRadius: 30,
+                  offset: Offset(0, 0), // changes position of shadow
+                ),
+              ]
             ),
-            child: avatarUrl != null
+            child: user.avatarUrl != null
                 ? GestureDetector(
                   onTap: () {
                     // Show pop-up dialog
-                    _openAvatar(context, avatarUrl);
+                    _openAvatar(context, user);
                   },
                   child: Hero(
-                    tag: avatarUrl,
+                    tag: user.avatarUrl!,
                   
                     // ✅ 1. garder la forme ronde pendant l’attente
                     placeholderBuilder: (_, __, child) => ClipOval(child: child),
@@ -410,7 +371,7 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
                   
                     child: ClipOval(          // <-- ou CircleAvatar, comme vous préférez
                       child: CachedNetworkImage(
-                        imageUrl: avatarUrl,
+                        imageUrl: user.avatarUrl!,
                         fit: BoxFit.cover,
                       ),
                     ),
@@ -418,7 +379,7 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
                 )
                 : Center(
                     child: Text(
-                      initials,
+                      user.initials,
                       style: TextStyle(
                         fontSize: 32,
                         fontWeight: FontWeight.bold,
@@ -428,19 +389,19 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
                   ),
           ),
 
-          8.h,
+          10.h,
 
           Column(
             children: [
               Text(
-                name,
+                user.fullName ?? context.l10n.defaultUserName,
                 style: ctx.bodyMedium?.copyWith(
-                  fontSize: 25,
+                  fontSize: 22,
                   color: context.adaptiveTextPrimary,
                 ),
               ),
               Text(
-                username,
+                "@${user.username}",
                 style: ctx.bodySmall?.copyWith(
                   fontWeight: FontWeight.w500,
                   color: context.adaptiveTextSecondary,
@@ -454,26 +415,23 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
           IconBtn(
             padding: 10,
             trailling: HugeIcons.strokeStandardArrowRight01,
-            iconSize: 19,
+            iconSize: 20,
             label: context.l10n.editProfile,
             textStyle: ctx.bodySmall?.copyWith(
               fontWeight: FontWeight.w500,
-              color: context.adaptiveBackground,
+              color: Colors.white,
             ),
-            iconColor: context.adaptiveBackground,
-            backgroundColor: AppColors.primary,
-            onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(context.l10n.editProfileTodo),
-                  backgroundColor: Colors.orange,
-                ),
-              );
-            }, 
+            iconColor: Colors.white,
+            backgroundColor: context.adaptivePrimary,
+            onPressed: () => _navigateToEditProfile(context, user), // Nouvelle méthode 
           )
         ],
       ),
     );
+  }
+
+  void _navigateToEditProfile(BuildContext context, Profile profile) {
+    context.push('/edit-profile', extra: profile);
   }
 
   void _showLogoutDialog(BuildContext context) {

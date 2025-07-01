@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:runaway/core/widgets/main_scaffold.dart';
 import 'package:runaway/features/account/presentation/screens/account_screen.dart';
+import 'package:runaway/features/account/presentation/screens/edit_profile_screen.dart';
 import 'package:runaway/features/activity/presentation/screens/activity_screen.dart';
 import 'package:runaway/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:runaway/features/auth/presentation/bloc/auth_state.dart';
@@ -109,7 +110,24 @@ final GoRouter router = GoRouter(
         );
       },
     ),
-    
+    GoRoute(
+      path: '/edit-profile',
+      builder: (context, state) {
+        // Récupérer le profil depuis l'état d'authentification
+        final authBloc = context.read<AuthBloc>();
+        final authState = authBloc.state;
+        
+        if (authState is Authenticated) {
+          return EditProfileScreen(profile: authState.profile);
+        }
+        
+        // Rediriger si pas authentifié
+        return const Scaffold(
+          body: Center(child: Text('Non autorisé')),
+        );
+      },
+    ),
+
     // Routes principales avec shell (navigation bottom)
     ShellRoute(
       builder: (BuildContext context, GoRouterState state, Widget child) {

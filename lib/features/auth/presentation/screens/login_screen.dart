@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hugeicons/hugeicons.dart';
-import 'package:runaway/config/colors.dart';
 import 'package:runaway/config/extensions.dart';
 import 'package:runaway/core/widgets/label_divider.dart';
 import 'package:runaway/core/widgets/squircle_container.dart';
@@ -97,7 +96,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             context.l10n.forgotPassword,
                             style: context.bodySmall?.copyWith(
                               fontSize: 14,
-                              color: Colors.white,
+                              color: context.adaptiveTextPrimary,
                               fontWeight: FontWeight.w600,
                             ),
                           ),
@@ -112,7 +111,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                 text: context.l10n.createAccountQuestion,
                                 style: context.bodySmall?.copyWith(
                                   fontSize: 15,
-                                  color: Colors.white54,
+                                  color: context.adaptiveTextPrimary,
                                   fontWeight: FontWeight.w500,
                                 ),
                               ),
@@ -120,7 +119,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                 text: ' ${context.l10n.signUp}',
                                 style: context.bodySmall?.copyWith(
                                   fontSize: 15,
-                                  color: Colors.white,
+                                  color: context.adaptivePrimary,
                                   fontWeight: FontWeight.w700,
                                 ),
                                 recognizer: TapGestureRecognizer()..onTap = () => context.pushReplacement("/signup"),
@@ -133,7 +132,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           context.l10n.termsAndPrivacy, 
                           style: context.bodySmall?.copyWith(
                             fontSize: 15,
-                            color: Colors.white24,
+                            color: context.adaptiveTextSecondary,
                           ),
                         ),
                         15.h,
@@ -156,7 +155,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     },
                     child: Icon(
                       HugeIcons.solidRoundedCancelCircle,
-                      color: Colors.white,
+                      color: context.adaptiveTextPrimary,
                       size: 25,
                     ),
                   ),
@@ -169,7 +168,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 color: Colors.black.withValues(alpha: 0.5),
                 child: Center(
                   child: CircularProgressIndicator(
-                    valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
+                    valueColor: AlwaysStoppedAnimation<Color>(context.adaptivePrimary),
                   ),
                 ),
               ),
@@ -186,7 +185,7 @@ class _LoginScreenState extends State<LoginScreen> {
         Text(
           context.l10n.loginGreetingTitle,
           style: context.bodyLarge?.copyWith(
-            color: Colors.white,
+            color: context.adaptiveTextPrimary,
             fontSize: 25,
             fontWeight: FontWeight.w700,
           ),
@@ -196,7 +195,7 @@ class _LoginScreenState extends State<LoginScreen> {
         Text(
           context.l10n.loginGreetingSubtitle,
           style: context.bodyMedium?.copyWith(
-            color: Colors.white,
+            color: context.adaptiveTextSecondary,
             fontWeight: FontWeight.w500,
             fontSize: 17,
             height: 1.3,
@@ -213,7 +212,7 @@ class _LoginScreenState extends State<LoginScreen> {
       child: SquircleContainer(
         onTap: isLoading ? null : _handleSignIn,
         height: 60,
-        color: isLoading ? AppColors.primary.withValues(alpha: 0.5) : AppColors.primary,
+        color: context.adaptivePrimary,
         radius: 30,
         padding: EdgeInsets.symmetric(
           horizontal: 15.0,
@@ -226,13 +225,13 @@ class _LoginScreenState extends State<LoginScreen> {
                 height: 20,
                 child: CircularProgressIndicator(
                   strokeWidth: 2,
-                  valueColor: AlwaysStoppedAnimation<Color>(Colors.black),
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                 ),
               )
             : Text(
                 context.l10n.continueForms,
                 style: context.bodySmall?.copyWith(
-                  color: Colors.black,
+                  color: Colors.white,
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -254,7 +253,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 child: SquircleContainer(
                   onTap: isLoading ? null : _handleAppleSignIn,
                   height: 60,
-                  color: isLoading ? AppColors.primary.withValues(alpha: 0.5) : AppColors.primary,
+                  color: isLoading ? context.adaptivePrimary.withValues(alpha: 0.5) : context.adaptivePrimary,
                   radius: 30,
                   padding: EdgeInsets.symmetric(
                     horizontal: 15.0,
@@ -266,13 +265,13 @@ class _LoginScreenState extends State<LoginScreen> {
                       children: [
                         Icon(
                           HugeIcons.solidSharpApple,
-                          color: isLoading ? Colors.black38 : Colors.black,
+                          color: Colors.white,
                         ),
                         5.w,
                         Text(
                           context.l10n.apple,
                           style: context.bodySmall?.copyWith(
-                            color: isLoading ? Colors.black38 : Colors.black,
+                            color: Colors.white,
                           ),
                         ),
                       ],
@@ -285,7 +284,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 child: SquircleContainer(
                   onTap: isLoading ? null : _handleGoogleSignIn,
                   height: 60,
-                  color: isLoading ? AppColors.primary.withValues(alpha: 0.5) : AppColors.primary,
+                  color: isLoading ? context.adaptivePrimary.withValues(alpha: 0.5) : context.adaptivePrimary,
                   radius: 30,
                   padding: EdgeInsets.symmetric(
                     horizontal: 15.0,
@@ -297,13 +296,13 @@ class _LoginScreenState extends State<LoginScreen> {
                       children: [
                         Icon(
                           HugeIcons.solidSharpGoogle,
-                          color: isLoading ? Colors.black38 : Colors.black,
+                          color: Colors.white,
                         ),
                         5.w,
                         Text(
                           context.l10n.google,
                           style: context.bodySmall?.copyWith(
-                            color: isLoading ? Colors.black38 : Colors.black,
+                            color: Colors.white,
                           ),
                         ),
                       ],

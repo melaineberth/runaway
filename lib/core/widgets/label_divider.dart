@@ -26,7 +26,7 @@ class LabelDivider extends StatelessWidget {
             horizontal: 15.0,
           ),
           child: Text(
-            label ?? "OR",
+            label ?? context.l10n.orDivider,
             style: context.bodySmall?.copyWith(
               color: color ?? Colors.white24,
             ),

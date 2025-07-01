@@ -376,8 +376,8 @@
   "@createAccount": {
     "description": "Libellé du bouton qui ouvre le formulaire d'inscription."
   },
-  "needHelpContactUs": "Besoin d'aide ? Contactez-nous.",
-  "@needHelpContactUs": {
+  "needHelp": "Besoin d'aide ? ",
+  "@needHelp": {
     "description": "Lien invitant l'utilisateur à contacter le support."
   },
   "createAccountSubtitle": "Pour créer un compte, fournissez vos détails, vérifiez votre email et définissez un mot de passe.",

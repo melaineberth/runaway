@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hugeicons/hugeicons.dart';
+import 'package:pull_down_button/pull_down_button.dart';
 import 'package:runaway/core/blocs/app_data/app_data_bloc.dart';
 import 'package:runaway/core/blocs/app_data/app_data_event.dart';
 import 'package:runaway/core/blocs/app_data/app_data_state.dart';
@@ -149,45 +151,28 @@ class _ActivityScreenState extends State<ActivityScreen> with TickerProviderStat
       actions: [
         FadeTransition(
           opacity: _fadeAnimation,
-          child: IconButton(
-            onPressed: () => _refreshData(),
-            icon: Icon(
-              HugeIcons.solidRoundedRefresh,
-              color: context.adaptiveTextPrimary,
-            ),
-          ),
-        ),
-        FadeTransition(
-          opacity: _fadeAnimation,
-          child: PopupMenuButton<String>(
-            icon: Icon(
-              HugeIcons.strokeRoundedMoreVertical,
-              color: context.adaptiveTextPrimary,
-            ),
-            color: Colors.black87,
-            onSelected: _handleMenuSelection,
+          child: PullDownButton(
             itemBuilder: (context) => [
-              PopupMenuItem(
-                value: 'export',
-                child: Row(
-                  children: [
-                    Icon(HugeIcons.strokeRoundedDownload01, color: Colors.white, size: 20),
-                    SizedBox(width: 8),
-                    Text(context.l10n.exportData, style: TextStyle(color: Colors.white)),
-                  ],
-                ),
+              PullDownMenuItem(
+                icon: HugeIcons.strokeRoundedDownloadSquare01,
+                title: context.l10n.exportData,
+                onTap: () => _handleMenuSelection("export"),
               ),
-              PopupMenuItem(
-                value: 'reset_goals',
-                child: Row(
-                  children: [
-                    Icon(HugeIcons.strokeRoundedRefresh, color: Colors.orange, size: 20),
-                    SizedBox(width: 8),
-                    Text(context.l10n.resetGoals, style: TextStyle(color: Colors.orange)),
-                  ],
-                ),
+              PullDownMenuItem(
+                icon: HugeIcons.solidRoundedLoading03,
+                title: context.l10n.resetGoals,
+                onTap: () => _handleMenuSelection("reset_goals"),
               ),
             ],
+            buttonBuilder: (context, showMenu) => GestureDetector(
+              onTap: () {
+                showMenu();
+                HapticFeedback.mediumImpact();
+              },
+              child: Icon(
+                HugeIcons.strokeRoundedMoreVerticalCircle02,
+              ),
+            ),
           ),
         ),
       ],
@@ -332,91 +317,96 @@ class _ActivityScreenState extends State<ActivityScreen> with TickerProviderStat
       selectedActivityFilter: null,
     );
 
-    return BlurryPage(
-      padding: EdgeInsets.symmetric(horizontal: 20.0),
-      children: [      
-        20.h,
+    return RefreshIndicator(
+      onRefresh: () async {
+        _refreshData();
+      },
+      child: BlurryPage(
+        padding: EdgeInsets.symmetric(horizontal: 20.0),
+        children: [      
+          20.h,
+            
+          // Vue d'ensemble
+          AnimatedBuilder(
+            animation: _fadeAnimation,
+            builder: (context, child) {
+              return Opacity(
+                opacity: _fadeAnimation.value,
+                child: Transform.translate(
+                  offset: Offset(0, 20 * (1 - _fadeAnimation.value)),
+                  child: StatsOverviewCard(
+                    stats: virtualState.generalStats,
+                  ),
+                ),
+              );
+            }
+          ),
           
-        // Vue d'ensemble
-        AnimatedBuilder(
-          animation: _fadeAnimation,
-          builder: (context, child) {
-            return Opacity(
-              opacity: _fadeAnimation.value,
-              child: Transform.translate(
-                offset: Offset(0, 20 * (1 - _fadeAnimation.value)),
-                child: StatsOverviewCard(
-                  stats: virtualState.generalStats,
+          40.h,
+          
+          // Statistiques par activité
+          AnimatedBuilder(
+            animation: _fadeAnimation,
+            builder: (context, child) {
+              return Opacity(
+                opacity: _fadeAnimation.value,
+                child: Transform.translate(
+                  offset: Offset(0, 20 * (1 - _fadeAnimation.value)),
+                  child: ActivityTypeStatsCard(
+                    stats: virtualState.typeStats,
+                    selectedType: virtualState.selectedActivityFilter,
+                    onTypeSelected: (type) {
+                      // Pour l'instant, on garde simple - on pourrait améliorer plus tard
+                      print('🏃 Filtrage par type demandé: $type');
+                    },
+                  ),
                 ),
-              ),
-            );
-          }
-        ),
-        
-        40.h,
-        
-        // Statistiques par activité
-        AnimatedBuilder(
-          animation: _fadeAnimation,
-          builder: (context, child) {
-            return Opacity(
-              opacity: _fadeAnimation.value,
-              child: Transform.translate(
-                offset: Offset(0, 20 * (1 - _fadeAnimation.value)),
-                child: ActivityTypeStatsCard(
-                  stats: virtualState.typeStats,
-                  selectedType: virtualState.selectedActivityFilter,
-                  onTypeSelected: (type) {
-                    // Pour l'instant, on garde simple - on pourrait améliorer plus tard
-                    print('🏃 Filtrage par type demandé: $type');
-                  },
+              );
+            }
+          ),
+          
+          40.h,
+          
+          // Objectifs personnels
+          AnimatedBuilder(
+            animation: _fadeAnimation,
+            builder: (context, child) {
+              return Opacity(
+                opacity: _fadeAnimation.value,
+                child: Transform.translate(
+                  offset: Offset(0, 20 * (1 - _fadeAnimation.value)),
+                  child: GoalsSection(
+                    goals: virtualState.goals,
+                    onAddGoal: _showAddGoalOptions,
+                    onEditGoal: _editGoal,
+                    onDeleteGoal: _deleteGoal,
+                  ),
                 ),
-              ),
-            );
-          }
-        ),
-        
-        40.h,
-        
-        // Objectifs personnels
-        AnimatedBuilder(
-          animation: _fadeAnimation,
-          builder: (context, child) {
-            return Opacity(
-              opacity: _fadeAnimation.value,
-              child: Transform.translate(
-                offset: Offset(0, 20 * (1 - _fadeAnimation.value)),
-                child: GoalsSection(
-                  goals: virtualState.goals,
-                  onAddGoal: _showAddGoalOptions,
-                  onEditGoal: _editGoal,
-                  onDeleteGoal: _deleteGoal,
+              );
+            }
+          ),
+          
+          40.h,
+          
+          // Records personnels
+          AnimatedBuilder(
+            animation: _fadeAnimation,
+            builder: (context, child) {
+              return Opacity(
+                opacity: _fadeAnimation.value,
+                child: Transform.translate(
+                  offset: Offset(0, 20 * (1 - _fadeAnimation.value)),
+                  child: RecordsSection(
+                    records: virtualState.records,
+                  ),
                 ),
-              ),
-            );
-          }
-        ),
-        
-        40.h,
-        
-        // Records personnels
-        AnimatedBuilder(
-          animation: _fadeAnimation,
-          builder: (context, child) {
-            return Opacity(
-              opacity: _fadeAnimation.value,
-              child: Transform.translate(
-                offset: Offset(0, 20 * (1 - _fadeAnimation.value)),
-                child: RecordsSection(
-                  records: virtualState.records,
-                ),
-              ),
-            );
-          }
-        ),
-        
-        50.h,
-      ],
+              );
+            }
+          ),
+          
+          50.h,
+        ],
+      ),
     );
   }
 

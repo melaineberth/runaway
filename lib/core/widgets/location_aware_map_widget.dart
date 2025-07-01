@@ -202,9 +202,9 @@ class _LocationAwareMapWidgetState extends State<LocationAwareMapWidget>
                   height: 80,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: Colors.blue.withOpacity(0.2),
+                    color: Colors.blue.withValues(alpha: 0.2),
                     border: Border.all(
-                      color: Colors.blue.withOpacity(_pulseAnimation.value),
+                      color: Colors.blue.withValues(alpha: _pulseAnimation.value),
                       width: 2,
                     ),
                   ),
@@ -217,7 +217,7 @@ class _LocationAwareMapWidgetState extends State<LocationAwareMapWidget>
                         color: Colors.blue,
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.blue.withOpacity(0.3),
+                            color: Colors.blue.withValues(alpha: 0.3),
                             blurRadius: 10,
                             spreadRadius: 2,
                           ),
@@ -240,7 +240,7 @@ class _LocationAwareMapWidgetState extends State<LocationAwareMapWidget>
             Text(
               'Localisation...',
               style: TextStyle(
-                color: Colors.white.withOpacity(0.8),
+                color: Colors.white.withValues(alpha: 0.8),
                 fontSize: 16,
                 fontWeight: FontWeight.w500,
               ),
@@ -251,7 +251,7 @@ class _LocationAwareMapWidgetState extends State<LocationAwareMapWidget>
             Text(
               'Recherche de votre position',
               style: TextStyle(
-                color: Colors.white.withOpacity(0.5),
+                color: Colors.white.withValues(alpha: 0.5),
                 fontSize: 13,
               ),
             ),
@@ -291,7 +291,7 @@ class _LocationAwareMapWidgetState extends State<LocationAwareMapWidget>
             Text(
               _errorMessage ?? 'Erreur de localisation',
               style: TextStyle(
-                color: Colors.white.withOpacity(0.8),
+                color: Colors.white.withValues(alpha: 0.8),
                 fontSize: 16,
                 fontWeight: FontWeight.w500,
               ),

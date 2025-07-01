@@ -1,5 +1,3 @@
-// lib/features/auth/presentation/screens/onboarding_screen.dart
-
 import 'dart:io';
 import 'dart:ui';
 
@@ -8,7 +6,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:runaway/config/colors.dart';
 import 'package:runaway/config/extensions.dart';
 import 'package:runaway/core/widgets/squircle_container.dart';
 import 'package:runaway/features/auth/presentation/bloc/auth_bloc.dart';
@@ -129,7 +126,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   title: Text(
                     context.l10n.setupAccountTitle,
                     style: context.bodySmall?.copyWith(
-                      color: Colors.white,
+                      color: context.adaptiveTextPrimary,
                     ),
                   ),
                 ),
@@ -152,13 +149,13 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                                     width: 200,
                                     height: 200,
                                     decoration: BoxDecoration(
-                                      color: Colors.white12,
+                                      color: context.adaptiveBorder,
                                       shape: BoxShape.circle,
                                     ),
                                     child: _avatar == null 
                                     ? Icon(
                                       HugeIcons.solidRoundedCenterFocus,
-                                      color: Colors.white38,
+                                      color: context.adaptiveDisabled,
                                       size: 80,
                                     ) 
                                     : ClipRRect(
@@ -175,8 +172,12 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                                     child: Container(
                                       padding: EdgeInsets.all(10.0),
                                       decoration: BoxDecoration(
-                                        color: AppColors.primary,
+                                        color: context.adaptivePrimary,
                                         shape: BoxShape.circle,
+                                        border: Border.all(
+                                          color: context.adaptiveBackground,
+                                          width: 3,
+                                        ),
                                       ),
                                       child: Icon(HugeIcons.solidRoundedCamera01),
                                     ),
@@ -188,7 +189,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                             Text(
                               context.l10n.onboardingInstruction,
                               style: context.bodySmall?.copyWith(
-                                color: Colors.white,
+                                color: context.adaptiveTextPrimary,
                                 fontWeight: FontWeight.w500,
                                 fontSize: 15,
                                 height: 1.3,
@@ -235,24 +236,25 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   ),
                 ),
               ),
-                                  // Overlay de chargement
+              
+              // Overlay de chargement
               if (isLoading)
               BackdropFilter(
                 filter: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
                 child: Container(
-                  color: Colors.black.withValues(alpha: 0.8),
+                  color: context.adaptiveBackground.withValues(alpha: 0.8),
                   child: Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         CircularProgressIndicator(
-                          valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
+                          valueColor: AlwaysStoppedAnimation<Color>(context.adaptivePrimary),
                         ),
                         20.h,
                         Text(
                           context.l10n.creatingProfile,
                           style: context.bodyMedium?.copyWith(
-                            color: Colors.white,
+                            color: context.adaptiveTextPrimary,
                             fontSize: 17
                           ),
                         ),
@@ -272,7 +274,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     return SquircleContainer(
       onTap: isLoading ? null : _handleCompleteProfile,
       height: 60,
-      color: isLoading ? AppColors.primary.withValues(alpha: 0.5) : AppColors.primary,
+      color: isLoading ? context.adaptivePrimary.withValues(alpha: 0.5) : context.adaptivePrimary,
       radius: 30,
       padding: EdgeInsets.symmetric(
         horizontal: 15.0,
@@ -291,7 +293,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         : Text(
             context.l10n.complete,
             style: context.bodySmall?.copyWith(
-              color: Colors.black,
+              color: Colors.white,
               fontWeight: FontWeight.w600,
             ),
           ),

@@ -285,7 +285,7 @@ class AppLocalizationsIt extends AppLocalizations {
   String get createAccount => 'Crea un account';
 
   @override
-  String get needHelpContactUs => 'Hai bisogno di aiuto? Contattaci.';
+  String get needHelp => 'Hai bisogno di aiuto? ';
 
   @override
   String get createAccountSubtitle => 'Per creare un account fornisci i dettagli, verifica l\'email e imposta una password.';
@@ -792,4 +792,22 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get mapStyleHybrid => 'Ibrido';
+
+  @override
+  String get fullNameTitle => 'Full name';
+
+  @override
+  String get usernameTitle => 'Username';
+
+  @override
+  String get nonEditableUsername => 'The username cannot be modified';
+
+  @override
+  String get profileUpdated => 'Successfully updated profile';
+
+  @override
+  String get profileUpdateError => 'Error updating profile';
+
+  @override
+  String get contactUs => 'Contact us.';
 }
