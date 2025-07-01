@@ -728,7 +728,7 @@ class AppLocalizationsFr extends AppLocalizations {
   }
 
   @override
-  String get historic => 'Historique';
+  String get historic => 'Trajet';
 
   @override
   String get loadingError => 'Erreur de chargement';
@@ -830,4 +830,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get alreadySaved => 'Déjà enregistré';
+
+  @override
+  String get home => 'Accueil';
 }

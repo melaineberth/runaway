@@ -979,7 +979,7 @@
       }
     }
   },
-  "historic": "Historic",
+  "historic": "Route",
   "@historic": {
     "description": "Tab or section title that opens the list of previously completed routes."
   },
@@ -1121,5 +1121,9 @@
   "alreadySaved": "Already saved",
   "@alreadySaved": {
     "description": "Status text indicating the item has previously been saved."
+  },
+  "home": "Home",
+  "@home": {
+    "description": "Tab or section title that opens the home view."
   }
 }

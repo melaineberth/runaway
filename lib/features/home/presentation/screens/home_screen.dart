@@ -1959,7 +1959,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
                       child: Column(
                         children: [
                           Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 15.0),
+                            padding: const EdgeInsets.symmetric(horizontal: 20.0),
                             child: LocationSearchBar(
                               onLocationSelected: _onLocationSelected,
                               userLongitude: _userLongitude,
@@ -1971,7 +1971,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
         
                           Expanded(
                             child: Padding(
-                              padding: const EdgeInsets.only(right: 15.0),
+                              padding: const EdgeInsets.only(right: 20.0),
                               child: Row(
                                 mainAxisAlignment: MainAxisAlignment.end,
                                 crossAxisAlignment: CrossAxisAlignment.end,

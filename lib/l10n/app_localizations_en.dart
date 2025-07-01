@@ -728,7 +728,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get historic => 'Historic';
+  String get historic => 'Route';
 
   @override
   String get loadingError => 'Loading error';
@@ -830,4 +830,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get alreadySaved => 'Already saved';
+
+  @override
+  String get home => 'Home';
 }

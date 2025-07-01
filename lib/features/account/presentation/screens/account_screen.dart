@@ -129,15 +129,13 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
                       label: context.l10n.notifications,
                       icon: HugeIcons.strokeRoundedNotification02,
                       onTap: () {}, 
-                      child: IconBtn(
-                        padding: 0.0,
-                        backgroundColor: Colors.transparent,
-                        label: context.l10n.enabled,
-                        iconSize: 19,
-                        labelColor: context.adaptiveTextSecondary,
-                        iconColor: context.adaptiveTextSecondary,
-                        trailling: HugeIcons.strokeStandardArrowRight01,
-                      ),
+                      child: Switch(
+                        value: true, 
+                        inactiveThumbColor: context.adaptiveDisabled,
+                        onChanged: (value) {
+                          // TODO: Implémenter la gestion des notifications push
+                        },
+                      )
                     ),
                     _buildSettingTile(
                       context,
@@ -177,37 +175,6 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
                     ),
                   ]
                 ),
-        
-                // _buildSettingCategory(
-                //   context,
-                //   title: "Notifications",
-                //   children: [
-                //     _buildSettingTile(
-                //       context,
-                //       label: "Push notifications",
-                //       icon: HugeIcons.strokeRoundedNotificationSquare,
-                //       child: Switch(
-                //         value: true, 
-                //         onChanged: (value) {
-                //           // TODO: Implémenter la gestion des notifications push
-                //         },
-                //       )
-                //     ),
-                //     20.h,
-                //     _buildSettingTile(
-                //       context,
-                //       label: "Email notifications",
-                //       icon: HugeIcons.strokeRoundedMail01,
-                //       child: Switch(
-                //         value: true,
-                //         padding: EdgeInsets.zero, 
-                //         onChanged: (value) {
-                //           // TODO: Implémenter la gestion des notifications email
-                //         },
-                //       )
-                //     ),
-                //   ]
-                // ),
     
                 50.h,
     

@@ -830,4 +830,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get alreadySaved => 'Already saved';
+
+  @override
+  String get home => 'Home';
 }

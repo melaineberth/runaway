@@ -1500,7 +1500,7 @@ abstract class AppLocalizations {
   /// Tab or section title that opens the list of previously completed routes.
   ///
   /// In en, this message translates to:
-  /// **'Historic'**
+  /// **'Route'**
   String get historic;
 
   /// Generic error label shown when data fails to load.
@@ -1700,6 +1700,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Already saved'**
   String get alreadySaved;
+
+  /// Tab or section title that opens the home view.
+  ///
+  /// In en, this message translates to:
+  /// **'Home'**
+  String get home;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

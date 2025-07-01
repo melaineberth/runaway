@@ -979,7 +979,7 @@
       }
     }
   },
-  "historic": "Historique",
+  "historic": "Trajet",
   "@historic": {
     "description": "Titre d'onglet ou de section qui ouvre la liste des parcours précédemment complétés."
   },
@@ -1135,5 +1135,9 @@
   "alreadySaved": "Déjà enregistré",
   "@alreadySaved": {
     "description": "Texte d’état indiquant que l’élément a déjà été enregistré."
+  },
+  "home": "Accueil",
+  "@home": {
+    "description": "Tab or section title that opens the home view."
   }
 }
