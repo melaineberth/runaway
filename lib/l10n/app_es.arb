@@ -636,7 +636,7 @@
   "@logoutTitle": {
     "description": "Título del diálogo de confirmación mostrado antes de cerrar sesión."
   },
-  "logoutMessage": "¿Estás seguro de que quieres cerrar sesión?",
+  "logoutMessage": "Usted será desconectado de Trailix, pero todos sus datos y preferencias guardados permanecerán seguros",
   "@logoutMessage": {
     "description": "Texto del cuerpo del diálogo de confirmación de cerrar sesión."
   },
@@ -648,7 +648,7 @@
   "@deleteAccountTitle": {
     "description": "Título del diálogo de confirmación mostrado antes de eliminar la cuenta."
   },
-  "deleteAccountMessage": "Esta acción es irreversible. Todos tus datos serán eliminados permanentemente.",
+  "deleteAccountMessage": "Esto eliminará permanentemente su cuenta de Trailix, así como todas las rutas y preferencias guardadas, esta acción no se puede deshacer",
   "@deleteAccountMessage": {
     "description": "Texto de advertencia principal en el diálogo de eliminar cuenta."
   },
@@ -1105,5 +1105,49 @@
         "description": "Fecha de expiración totalmente formateada."
       }
     }
+  },
+  "download": "Descargar",
+  "@download": {
+    "description": "Label for a button or link that lets the user download a file or data."
+  },
+  "save": "Guardar",
+  "@save": {
+    "description": "Label for a button that saves the current item, form, or changes."
+  },
+  "saving": "Guardando...",
+  "@saving": {
+    "description": "Status text shown while the save operation is in progress."
+  },
+  "alreadySaved": "Ya guardado",
+  "@alreadySaved": {
+    "description": "Status text indicating the item has previously been saved."
+  },
+  "home": "Inicio",
+  "@home": {
+    "description": "Tab or section title that opens the home view."
+  },
+  "resources": "Recursos",
+  "@resources": {
+    "description": "Label for a screen, menu item, or tab that lists helpful resources such as documentation, tutorials, or FAQs."
+  },
+  "contactSupport": "Contactar con soporte",
+  "@contactSupport": {
+    "description": "Button or link that opens a channel (e-mail, chat, form) for the user to reach technical support."
+  },
+  "rateInStore": "Valorar en la tienda",
+  "@rateInStore": {
+    "description": "Call-to-action inviting the user to leave a rating or review in the app store."
+  },
+  "followOnX": "Seguir a @Trailix",
+  "@followOnX": {
+    "description": "Button or link encouraging the user to follow the official @Trailix account on the X (formerly Twitter) social network."
+  },
+  "supportEmailSubject": "Problema con tu aplicación",
+  "@supportEmailSubject": {
+    "description": "Asunto del correo de soporte."
+  },
+  "supportEmailBody": "Hola soporte de Trailix,\n\nEstoy teniendo problemas en la aplicación.\n¿Podrían ayudarme a resolver esto?\n\nGracias.",
+  "@supportEmailBody": {
+    "description": "Cuerpo del correo de soporte."
   }
 }

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:runaway/config/colors.dart';
@@ -9,6 +10,7 @@ import 'package:runaway/core/blocs/app_data/app_data_state.dart';
 import 'package:runaway/core/services/conversion_triggers.dart';
 import 'package:runaway/core/widgets/ask_registration.dart';
 import 'package:runaway/core/widgets/blurry_page.dart';
+import 'package:runaway/core/widgets/modal_dialog.dart';
 import 'package:runaway/core/widgets/squircle_container.dart';
 import 'package:runaway/core/widgets/top_snackbar.dart';
 import 'package:runaway/features/auth/presentation/bloc/auth_bloc.dart';
@@ -245,29 +247,27 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
   }
 
   Future<bool> _showDeleteConfirmationDialog(String routeName) async {
-    final result = await showDialog<bool>(
+    final result = await showModalBottomSheet<bool>(
+      useRootNavigator: true,
+      isScrollControlled: true,
+      isDismissible: true,
+      enableDrag: false,
       context: context,
+      backgroundColor: Colors.transparent,
+      clipBehavior: Clip.antiAliasWithSaveLayer,
       builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text(context.l10n.confirmRouteDeletionTitle),
-          content: Text(context.l10n.confirmRouteDeletionMessage(routeName)),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(false),
-              child: Text(context.l10n.cancel),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.of(context).pop(true);
-                print('🗑️ Suppression confirmée via AppDataBloc');
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red,
-                foregroundColor: Colors.white,
-              ),
-              child: Text(context.l10n.delete),
-            ),
-          ],
+        return ModalDialog(
+          isDestructive: true,
+          title: context.l10n.confirmRouteDeletionTitle,
+          subtitle: context.l10n.confirmRouteDeletionMessage(routeName),
+          validLabel: context.l10n.delete,
+          onCancel: () => Navigator.of(context).pop(false),
+          onValid: () {
+            HapticFeedback.mediumImpact();
+            
+            Navigator.of(context).pop(true);
+            print('🗑️ Suppression confirmée via AppDataBloc');
+          },
         );
       },
     );

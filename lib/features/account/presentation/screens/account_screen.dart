@@ -10,7 +10,6 @@ import 'package:flutter_svg/svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:package_info_plus/package_info_plus.dart';
-import 'package:runaway/config/colors.dart';
 import 'package:runaway/config/extensions.dart';
 import 'package:runaway/core/blocs/notification/notification_bloc.dart';
 import 'package:runaway/core/blocs/notification/notification_event.dart';
@@ -19,6 +18,7 @@ import 'package:runaway/core/blocs/theme_bloc/theme_bloc.dart';
 import 'package:runaway/core/widgets/ask_registration.dart';
 import 'package:runaway/core/widgets/blurry_page.dart';
 import 'package:runaway/core/widgets/icon_btn.dart';
+import 'package:runaway/core/widgets/modal_dialog.dart';
 import 'package:runaway/core/widgets/top_snackbar.dart';
 import 'package:runaway/features/account/presentation/widgets/language_selector.dart';
 import 'package:runaway/features/account/presentation/widgets/theme_selector.dart';
@@ -31,7 +31,6 @@ import 'dart:math' as math;
 
 import 'package:url_launcher/url_launcher.dart';
 
-
 class AccountScreen extends StatefulWidget {
   const AccountScreen({super.key});
 
@@ -39,7 +38,8 @@ class AccountScreen extends StatefulWidget {
   State<AccountScreen> createState() => _AccountScreenState();
 }
 
-class _AccountScreenState extends State<AccountScreen> with TickerProviderStateMixin {
+class _AccountScreenState extends State<AccountScreen>
+    with TickerProviderStateMixin {
   late AnimationController _fadeController;
 
   @override
@@ -54,7 +54,6 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
       vsync: this,
     );
 
-
     _fadeController.forward();
   }
 
@@ -65,7 +64,7 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
   }
 
   void launchURL() async {
-   final Uri url = Uri.parse('https://x.com/elonmusk');
+    final Uri url = Uri.parse('https://x.com/elonmusk');
     if (!await launchUrl(url)) {
       throw Exception('Could not launch $url');
     }
@@ -73,49 +72,35 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
 
   void openStore() {
     if (Platform.isAndroid || Platform.isIOS) {
-      final appId = Platform.isAndroid ? 'YOUR_ANDROID_PACKAGE_ID' : '6748111941';
+      final appId =
+          Platform.isAndroid ? 'YOUR_ANDROID_PACKAGE_ID' : '6748111941';
       final url = Uri.parse(
         Platform.isAndroid
             ? "market://details?id=$appId"
             : "https://apps.apple.com/app/id$appId",
       );
-      launchUrl(
-        url,
-        mode: LaunchMode.externalApplication,
-      );
+      launchUrl(url, mode: LaunchMode.externalApplication);
     }
   }
 
   void launchEmail() async {
-    final String email   = 'service@trailix.app';
+    final String email = 'service@trailix.app';
     final String subject = Uri.encodeComponent(
-      'Issue with your app'
+      context.l10n.supportEmailSubject,
     );
 
-    final String body = Uri.encodeComponent(
-      '''
-        Hello Trailix Support,
-
-        I’m having trouble in the app.  
-        Could you please help me resolve this?
-
-        Thank you.
-      '''
-    );
+    final String body = Uri.encodeComponent(context.l10n.supportEmailBody);
 
     final String url = 'mailto:$email?subject=$subject&body=$body';
 
     try {
-      await launchUrl(
-        Uri.parse(url),
-        mode: LaunchMode.platformDefault,
-      );
+      await launchUrl(Uri.parse(url), mode: LaunchMode.platformDefault);
     } catch (e) {
       if (mounted) {
         showTopSnackBar(
-          Overlay.of(context), 
+          Overlay.of(context),
           TopSnackBar(
-            title: 'Could not launch email app', 
+            title: 'Could not launch email app',
             icon: HugeIcons.solidRoundedCancelCircle,
             color: Colors.red,
           ),
@@ -150,7 +135,7 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
           }
 
           return AskRegistration();
-        }
+        },
       ),
     );
   }
@@ -177,28 +162,27 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
             user: user,
             color: Colors.primaries[initialColor],
           ),
-    
+
           Padding(
             padding: const EdgeInsets.all(20.0),
             child: Column(
               children: [
-
                 // Preferences settings
                 _buildSettingCategory(
                   context,
                   title: context.l10n.preferences,
                   children: [
-
                     // Language selector
                     _buildSettingTile(
                       context,
                       label: context.l10n.language,
                       icon: HugeIcons.strokeRoundedLanguageSkill,
-                      onTap: () => showModalSheet(
-                        context: context, 
-                        backgroundColor: Colors.transparent,
-                        child: LanguageSelector(),
-                      ), 
+                      onTap:
+                          () => showModalSheet(
+                            context: context,
+                            backgroundColor: Colors.transparent,
+                            child: LanguageSelector(),
+                          ),
                       child: IconBtn(
                         padding: 0.0,
                         backgroundColor: Colors.transparent,
@@ -218,44 +202,53 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
                       child: BlocBuilder<NotificationBloc, NotificationState>(
                         builder: (context, notificationState) {
                           // Afficher un indicateur de chargement si en cours d'initialisation
-                          if (notificationState.isLoading && !notificationState.isInitialized) {
+                          if (notificationState.isLoading &&
+                              !notificationState.isInitialized) {
                             return SizedBox(
                               width: 20,
                               height: 20,
                               child: CircularProgressIndicator(
                                 strokeWidth: 2,
-                                valueColor: AlwaysStoppedAnimation<Color>(context.adaptivePrimary),
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                  context.adaptivePrimary,
+                                ),
                               ),
                             );
                           }
-                          
+
                           return Switch(
                             value: notificationState.notificationsEnabled,
                             inactiveThumbColor: context.adaptiveDisabled,
                             activeColor: context.adaptivePrimary,
-                            onChanged: notificationState.isLoading ? null : (value) {
-                              HapticFeedback.mediumImpact();
+                            onChanged:
+                                notificationState.isLoading
+                                    ? null
+                                    : (value) {
+                                      HapticFeedback.mediumImpact();
 
-                              // Déclencher l'événement pour basculer les notifications
-                              context.read<NotificationBloc>().add(
-                                NotificationToggleRequested(enabled: value),
-                              );
-                            },
+                                      // Déclencher l'événement pour basculer les notifications
+                                      context.read<NotificationBloc>().add(
+                                        NotificationToggleRequested(
+                                          enabled: value,
+                                        ),
+                                      );
+                                    },
                           );
                         },
                       ),
                     ),
-                    
+
                     // Theme selector
                     _buildSettingTile(
                       context,
                       label: context.l10n.theme,
                       icon: HugeIcons.strokeRoundedPaintBoard,
-                      onTap: () => showModalSheet(
-                        context: context, 
-                        backgroundColor: Colors.transparent,
-                        child: const ThemeSelector(),
-                      ), 
+                      onTap:
+                          () => showModalSheet(
+                            context: context,
+                            backgroundColor: Colors.transparent,
+                            child: const ThemeSelector(),
+                          ),
                       child: BlocBuilder<ThemeBloc, ThemeState>(
                         builder: (context, themeState) {
                           String currentThemeLabel;
@@ -270,7 +263,7 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
                               currentThemeLabel = context.l10n.darkTheme;
                               break;
                           }
-                          
+
                           return IconBtn(
                             padding: 0.0,
                             backgroundColor: Colors.transparent,
@@ -280,14 +273,15 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
                             iconColor: context.adaptiveTextSecondary,
                             trailling: HugeIcons.strokeStandardArrowRight01,
                           );
-                        }
+                        },
                       ),
                     ),
-                  ]
+                  ],
                 ),
-    
+
                 50.h,
 
+                // Resources settings
                 _buildSettingCategory(
                   context,
                   title: context.l10n.resources,
@@ -296,7 +290,7 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
                       context,
                       label: context.l10n.contactSupport,
                       icon: HugeIcons.strokeRoundedMail02,
-                      onTap: () => launchEmail(), 
+                      onTap: () => launchEmail(),
                       child: HugeIcon(
                         icon: HugeIcons.strokeStandardArrowRight01,
                         color: context.adaptiveTextSecondary,
@@ -307,7 +301,7 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
                       context,
                       label: context.l10n.rateInStore,
                       icon: HugeIcons.strokeRoundedStar,
-                      onTap: () => openStore(), 
+                      onTap: () => openStore(),
                       child: IconBtn(
                         padding: 0.0,
                         backgroundColor: Colors.transparent,
@@ -320,7 +314,7 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
                       context,
                       label: context.l10n.followOnX,
                       icon: HugeIcons.strokeRoundedNewTwitter,
-                      onTap: () => launchURL(), 
+                      onTap: () => launchURL(),
                       child: IconBtn(
                         padding: 0.0,
                         backgroundColor: Colors.transparent,
@@ -329,20 +323,22 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
                         trailling: HugeIcons.strokeStandardArrowRight01,
                       ),
                     ),
-                  ]
+                  ],
                 ),
-    
+
                 50.h,
-    
+
+                // Account settings
                 _buildSettingCategory(
                   context,
                   title: context.l10n.account,
                   children: [
+                    // Disconnect user
                     _buildSettingTile(
                       context,
                       label: context.l10n.disconnect,
                       icon: HugeIcons.strokeRoundedLogoutSquare02,
-                      onTap: () => _showLogoutDialog(context), 
+                      onTap: () => _showLogoutDialog(context),
                       child: IconBtn(
                         padding: 0.0,
                         backgroundColor: Colors.transparent,
@@ -352,6 +348,8 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
                         trailling: HugeIcons.strokeStandardArrowRight01,
                       ),
                     ),
+
+                    // Delete account
                     _buildSettingTile(
                       context,
                       label: context.l10n.deleteProfile,
@@ -367,19 +365,19 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
                         trailling: HugeIcons.strokeStandardArrowRight01,
                       ),
                     ),
-                  ]
+                  ],
                 ),
-    
+
                 80.h,
 
                 _buildAppVersion(),
-                
+
                 80.h,
               ],
             ),
-          )
+          ),
         ],
-      )
+      ),
     );
   }
 
@@ -391,7 +389,10 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
           height: 45,
           child: SvgPicture.asset(
             "assets/img/LOGO_SYMBOLE.svg",
-            colorFilter: ColorFilter.mode(context.adaptiveBorder.withValues(alpha: 0.2), BlendMode.srcIn),
+            colorFilter: ColorFilter.mode(
+              context.adaptiveBorder.withValues(alpha: 0.2),
+              BlendMode.srcIn,
+            ),
             semanticsLabel: 'Trailix Logo',
           ),
         ),
@@ -423,7 +424,9 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
         Text.rich(
           TextSpan(
             text: context.l10n.termsAndPrivacy,
-            recognizer: TapGestureRecognizer()..onTap = () => print('Open Terms & Policy'),
+            recognizer:
+                TapGestureRecognizer()
+                  ..onTap = () => print('Open Terms & Policy'),
           ),
           style: context.bodySmall?.copyWith(
             fontSize: 13,
@@ -435,15 +438,19 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
     );
   }
 
-  Widget _buildSettingCategory(BuildContext context, {required String title, required List<Widget> children}) {
+  Widget _buildSettingCategory(
+    BuildContext context, {
+    required String title,
+    required List<Widget> children,
+  }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          title, 
+          title,
           style: context.bodyMedium?.copyWith(
             fontSize: 18,
-            color: context.adaptiveTextSecondary, 
+            color: context.adaptiveTextSecondary,
             fontWeight: FontWeight.w600,
           ),
         ),
@@ -452,12 +459,20 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
           spacing: 20.0,
           mainAxisSize: MainAxisSize.min,
           children: children,
-        )
+        ),
       ],
     );
   }
 
-  Widget _buildSettingTile(BuildContext context, {required String label, Color? labelColor, required IconData icon, Color? iconColor, required Widget child, Function()? onTap}) {
+  Widget _buildSettingTile(
+    BuildContext context, {
+    required String label,
+    Color? labelColor,
+    required IconData icon,
+    Color? iconColor,
+    required Widget child,
+    Function()? onTap,
+  }) {
     return GestureDetector(
       onTap: onTap,
       child: Row(
@@ -467,13 +482,18 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
             children: [
               IconBtn(
                 icon: icon,
-                iconSize: 25.0, 
+                iconSize: 25.0,
                 iconColor: iconColor ?? context.adaptiveTextSecondary,
                 padding: 12.0,
                 backgroundColor: context.adaptiveBorder.withValues(alpha: 0.07),
               ),
               15.w,
-              Text(label, style: context.bodySmall?.copyWith(color: labelColor ?? context.adaptiveTextPrimary)),
+              Text(
+                label,
+                style: context.bodySmall?.copyWith(
+                  color: labelColor ?? context.adaptiveTextPrimary,
+                ),
+              ),
             ],
           ),
           child,
@@ -492,8 +512,8 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
 
         pageBuilder: (_, Animation<double> animation, __) {
           return _AvatarViewer(
-            url: user.avatarUrl!, 
-            animation: animation, 
+            url: user.avatarUrl!,
+            animation: animation,
             onTap: () {
               context.pop();
               _navigateToEditProfile(context, user);
@@ -505,7 +525,7 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
   }
 
   Widget _buildHeaderAccount({
-    required BuildContext ctx, 
+    required BuildContext ctx,
     required Profile user,
     required Color color,
   }) {
@@ -526,46 +546,57 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
                   blurRadius: 30,
                   offset: Offset(0, 0), // changes position of shadow
                 ),
-              ]
+              ],
             ),
-            child: user.avatarUrl != null
-                ? GestureDetector(
-                  onTap: () {
-                    // Show pop-up dialog
-                    _openAvatar(context, user);
-                  },
-                  child: Hero(
-                    tag: user.avatarUrl!,
-                  
-                    // ✅ 1. garder la forme ronde pendant l’attente
-                    placeholderBuilder: (_, __, child) => ClipOval(child: child),
-                  
-                    // ✅ 2. forcer aussi le shuttle à rester rond (push & pop)
-                    flightShuttleBuilder: (context, animation, direction, fromCtx, toCtx) {
-                      final shuttle = direction == HeroFlightDirection.push
-                          ? toCtx.widget   // agrandissement
-                          : fromCtx.widget; // réduction
-                      return ClipOval(child: shuttle);
-                    },
-                  
-                    child: ClipOval(          // <-- ou CircleAvatar, comme vous préférez
-                      child: CachedNetworkImage(
-                        imageUrl: user.avatarUrl!,
-                        fit: BoxFit.cover,
+            child:
+                user.avatarUrl != null
+                    ? GestureDetector(
+                      onTap: () {
+                        // Show pop-up dialog
+                        _openAvatar(context, user);
+                      },
+                      child: Hero(
+                        tag: user.avatarUrl!,
+
+                        // ✅ 1. garder la forme ronde pendant l’attente
+                        placeholderBuilder:
+                            (_, __, child) => ClipOval(child: child),
+
+                        // ✅ 2. forcer aussi le shuttle à rester rond (push & pop)
+                        flightShuttleBuilder: (
+                          context,
+                          animation,
+                          direction,
+                          fromCtx,
+                          toCtx,
+                        ) {
+                          final shuttle =
+                              direction == HeroFlightDirection.push
+                                  ? toCtx
+                                      .widget // agrandissement
+                                  : fromCtx.widget; // réduction
+                          return ClipOval(child: shuttle);
+                        },
+
+                        child: ClipOval(
+                          // <-- ou CircleAvatar, comme vous préférez
+                          child: CachedNetworkImage(
+                            imageUrl: user.avatarUrl!,
+                            fit: BoxFit.cover,
+                          ),
+                        ),
+                      ),
+                    )
+                    : Center(
+                      child: Text(
+                        user.initials,
+                        style: TextStyle(
+                          fontSize: 32,
+                          fontWeight: FontWeight.bold,
+                          color: color,
+                        ),
                       ),
                     ),
-                  ),
-                )
-                : Center(
-                    child: Text(
-                      user.initials,
-                      style: TextStyle(
-                        fontSize: 32,
-                        fontWeight: FontWeight.bold,
-                        color: color,
-                      ),
-                    ),
-                  ),
           ),
 
           10.h,
@@ -602,8 +633,9 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
             ),
             iconColor: Colors.white,
             backgroundColor: context.adaptivePrimary,
-            onPressed: () => _navigateToEditProfile(context, user), // Nouvelle méthode 
-          )
+            onPressed:
+                () => _navigateToEditProfile(context, user), // Nouvelle méthode
+          ),
         ],
       ),
     );
@@ -614,119 +646,58 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
   }
 
   void _showLogoutDialog(BuildContext context) {
-    showDialog(
+    showModalSheet(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        backgroundColor: Colors.black,
-        title: Text(
-          context.l10n.logoutTitle,
-          style: context.titleMedium?.copyWith(color: Colors.white),
-        ),
-        content: Text(
-          context.l10n.logoutMessage,
-          style: context.bodyMedium?.copyWith(color: Colors.white70),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(),
-            child: Text(
-              context.l10n.cancel, 
-              style: TextStyle(color: Colors.white70),
-            ),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.of(dialogContext).pop();
-              context.read<AuthBloc>().add(LogOutRequested());
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary,
-              foregroundColor: Colors.black,
-            ),
-            child: Text(context.l10n.logoutConfirm),
-          ),
-        ],
+      backgroundColor: Colors.transparent,
+      child: ModalDialog(
+        title: context.l10n.logoutTitle,
+        subtitle: context.l10n.logoutMessage,
+        validLabel: context.l10n.logoutConfirm,
+        onValid: () {
+          HapticFeedback.mediumImpact();
+
+          context.pop();
+
+          context.read<AuthBloc>().add(LogOutRequested());
+        },
       ),
     );
   }
 
   void _showDeleteAccountDialog(BuildContext context) {
-    showDialog(
+    showModalSheet(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        backgroundColor: Colors.black,
-        title: Text(
-          context.l10n.deleteAccountTitle,
-          style: context.titleMedium?.copyWith(color: Colors.red),
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              context.l10n.deleteAccountMessage,
-              style: context.bodyMedium?.copyWith(color: Colors.white70),
-            ),
-            16.h,
-            Container(
-              padding: EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.red.withAlpha(20),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Row(
-                children: [
-                  HugeIcon(
-                    icon: HugeIcons.strokeRoundedAlert02,
-                    color: Colors.red,
-                    size: 16,
-                  ),
-                  8.w,
-                  Expanded(
-                    child: Text(
-                      context.l10n.deleteAccountWarning,
-                      style: context.bodySmall?.copyWith(
-                        color: Colors.red,
-                        fontSize: 12,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(),
-            child: Text(
-              context.l10n.cancel, 
-              style: TextStyle(color: Colors.white70),
-            ),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.of(dialogContext).pop();
-              context.read<AuthBloc>().add(DeleteAccountRequested());
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
-              foregroundColor: Colors.white,
-            ),
-            child: Text(context.l10n.delete),
-          ),
-        ],
+      backgroundColor: Colors.transparent,
+      child: ModalDialog(
+        isDestructive: true,
+        activeCancel: false,
+        title: context.l10n.deleteAccountTitle,
+        subtitle: context.l10n.deleteAccountMessage,
+        validLabel: context.l10n.delete,
+        onValid: () {
+          HapticFeedback.mediumImpact();
+
+          context.pop();
+
+          context.read<AuthBloc>().add(DeleteAccountRequested());
+        },
       ),
     );
   }
 }
+
+
 
 class _AvatarViewer extends StatelessWidget {
   final String url;
   final Animation<double> animation;
   final VoidCallback? onTap;
 
-  const _AvatarViewer({required this.url, required this.animation, required this.onTap});
+  const _AvatarViewer({
+    required this.url,
+    required this.animation,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -747,18 +718,22 @@ class _AvatarViewer extends StatelessWidget {
               // fond flouté / assombri
               Positioned.fill(
                 child: GestureDetector(
-                  behavior: HitTestBehavior.opaque,     // capte toute la surface
+                  behavior: HitTestBehavior.opaque, // capte toute la surface
                   onTap: () => Navigator.of(context).pop(),
                   child: FadeTransition(
                     opacity: animation,
                     child: BackdropFilter(
                       filter: ImageFilter.blur(sigmaX: sigma, sigmaY: sigma),
-                      child: Container(color: context.adaptiveBackground.withValues(alpha: veilOpacity)),
+                      child: Container(
+                        color: context.adaptiveBackground.withValues(
+                          alpha: veilOpacity,
+                        ),
+                      ),
                     ),
                   ),
                 ),
               ),
-        
+
               // l’image agrandie (la destination du Hero)
               Center(
                 child: SizedBox(
@@ -776,7 +751,7 @@ class _AvatarViewer extends StatelessWidget {
                   ),
                 ),
               ),
-        
+
               Positioned(
                 bottom: 50,
                 child: FadeTransition(
@@ -787,11 +762,11 @@ class _AvatarViewer extends StatelessWidget {
                     icon: HugeIcons.strokeRoundedImage02,
                   ),
                 ),
-              )
+              ),
             ],
           ),
         );
-      }
+      },
     );
   }
 
@@ -806,4 +781,3 @@ class _AvatarViewer extends StatelessWidget {
     return FadeTransition(opacity: animation, child: toHero.widget);
   }
 }
-  

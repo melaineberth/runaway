@@ -636,7 +636,7 @@
   "@logoutTitle": {
     "description": "Title of the confirmation dialog displayed before logging out."
   },
-  "logoutMessage": "Are you sure you want to log out?",
+  "logoutMessage": "You’ll be signed out of Trailix, but all your saved data and preferences will remain secure",
   "@logoutMessage": {
     "description": "Body text of the log-out confirmation dialog."
   },
@@ -648,7 +648,7 @@
   "@deleteAccountTitle": {
     "description": "Title of the confirmation dialog displayed before deleting the account."
   },
-  "deleteAccountMessage": "This action is irreversible. All your data will be permanently deleted.",
+  "deleteAccountMessage": "This will permanently delete your Trailix account as well as all saved routes and preferences, this action cannot be undone",
   "@deleteAccountMessage": {
     "description": "Primary warning text in the delete-account dialog."
   },
@@ -1141,5 +1141,13 @@
   "followOnX": "Follow @Trailix",
   "@followOnX": {
     "description": "Button or link encouraging the user to follow the official @Trailix account on the X (formerly Twitter) social network."
+  },
+  "supportEmailSubject": "Issue with your app",
+  "@supportEmailSubject": {
+    "description": "Subject line for the support email."
+  },
+  "supportEmailBody": "Hello Trailix Support,\n\nI'm having trouble in the app.\nCould you please help me resolve this?\n\nThank you.",
+  "@supportEmailBody": {
+    "description": "Body content for the support email."
   }
 }

@@ -12,6 +12,7 @@ import 'package:runaway/core/blocs/app_data/app_data_bloc.dart';
 import 'package:runaway/core/blocs/app_data/app_data_event.dart';
 import 'package:runaway/core/blocs/app_data/app_data_state.dart';
 import 'package:runaway/core/services/conversion_triggers.dart';
+import 'package:runaway/core/widgets/modal_dialog.dart';
 import 'package:runaway/core/widgets/modal_sheet.dart';
 import 'package:runaway/core/widgets/squircle_container.dart';
 import 'package:runaway/features/auth/presentation/widgets/auth_text_field.dart';
@@ -593,39 +594,20 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
 
   /// 🆕 Dialogue pour demander la connexion
   void _showLoginRequiredDialog() {
-    showDialog(
-      context: context,
-      useRootNavigator: true, // 🔧 Utiliser root navigator
-      builder: (BuildContext dialogContext) => AlertDialog(
-        backgroundColor: Colors.black,
-        title: Text(
-          'Connexion requise',
-          style: context.titleMedium?.copyWith(color: Colors.white),
-        ),
-        content: Text(
-          'Vous devez être connecté pour sauvegarder vos parcours.',
-          style: context.bodyMedium?.copyWith(color: Colors.white70),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext), // 🔧 Utiliser dialogContext
-            child: Text(
-              'Annuler',
-              style: TextStyle(color: Colors.white70),
-            ),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(dialogContext); // 🔧 Fermer le dialogue d'abord
-              context.go('/profile'); // 🔧 Puis naviguer
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary,
-              foregroundColor: Colors.black,
-            ),
-            child: Text('Se connecter'),
-          ),
-        ],
+    showModalSheet(
+      context: context, 
+      backgroundColor: Colors.transparent,
+      child: ModalDialog(
+        isDestructive: true,
+        title: 'Connexion requise',
+        subtitle: 'Vous devez être connecté pour sauvegarder vos parcours.',
+        validLabel: 'Se connecter',
+        onValid: () {
+          HapticFeedback.mediumImpact();
+          
+          context.pop; // 🔧 Fermer le dialogue d'abord
+          context.go('/profile'); // 🔧 Puis naviguer
+        },
       ),
     );
   }

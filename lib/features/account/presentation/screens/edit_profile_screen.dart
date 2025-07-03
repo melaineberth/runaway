@@ -3,11 +3,13 @@ import 'dart:math' as math;
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:runaway/config/extensions.dart';
+import 'package:runaway/core/widgets/squircle_container.dart';
 import 'package:runaway/core/widgets/top_snackbar.dart';
 import 'package:runaway/features/auth/domain/models/profile.dart';
 import 'package:runaway/features/auth/presentation/bloc/auth_bloc.dart';
@@ -28,8 +30,7 @@ class EditProfileScreen extends StatefulWidget {
   State<EditProfileScreen> createState() => _EditProfileScreenState();
 }
 
-class _EditProfileScreenState extends State<EditProfileScreen>
-    with TickerProviderStateMixin {
+class _EditProfileScreenState extends State<EditProfileScreen> with TickerProviderStateMixin {
   late final TextEditingController _fullNameController;
   late final GlobalKey<FormState> _formKey;
   late final AnimationController _fadeController;
@@ -42,6 +43,11 @@ class _EditProfileScreenState extends State<EditProfileScreen>
     super.initState();
     _fullNameController = TextEditingController(text: widget.profile.fullName);
     _formKey = GlobalKey<FormState>();
+
+    // Ajouter le listener pour détecter les changements
+    _fullNameController.addListener(() {
+      setState(() {}); // Rebuild pour mettre à jour l'état du bouton
+    });
     
     _fadeController = AnimationController(
       duration: const Duration(milliseconds: 800),
@@ -94,9 +100,11 @@ class _EditProfileScreenState extends State<EditProfileScreen>
     // Vérifier s'il y a des changements
     final hasNameChange = fullName != widget.profile.fullName;
     final hasAvatarChange = _selectedAvatar != null;
-    
+
     if (!hasNameChange && !hasAvatarChange) {
-      context.pop();
+      if (mounted) {
+        context.pop();
+      }
       return;
     }
 
@@ -104,12 +112,16 @@ class _EditProfileScreenState extends State<EditProfileScreen>
       _isLoading = true;
     });
 
-    context.read<AuthBloc>().add(
-      UpdateProfileRequested(
-        fullName: hasNameChange ? fullName : null,
-        avatar: _selectedAvatar,
-      ),
-    );
+    Future.delayed(const Duration(seconds: 3), () {
+      if (mounted) {
+        context.read<AuthBloc>().add(
+          UpdateProfileRequested(
+            fullName: hasNameChange ? fullName : null,
+            avatar: _selectedAvatar,
+          ),
+        );
+      }
+    });
   }
 
   Widget _buildAvatarSection() {
@@ -263,6 +275,12 @@ class _EditProfileScreenState extends State<EditProfileScreen>
     );
   }
 
+  bool get _hasChanges {
+    final nameChanged = _fullNameController.text.trim() != widget.profile.fullName;
+    final avatarChanged = _selectedAvatar != null;
+    return nameChanged || avatarChanged;
+  }
+
   @override
   Widget build(BuildContext context) {
     return BlocListener<AuthBloc, AuthState>(
@@ -299,81 +317,105 @@ class _EditProfileScreenState extends State<EditProfileScreen>
           );
         }
       },
-      child: Scaffold(
-        appBar: AppBar(
-          forceMaterialTransparency: true,
-          backgroundColor: Colors.transparent,
-          title: Text(
-            context.l10n.editProfile,
-            style: context.bodySmall?.copyWith(
-              color: context.adaptiveTextPrimary,
+      child: Stack(
+        children: [
+          Scaffold(
+            appBar: AppBar(
+              forceMaterialTransparency: true,
+              backgroundColor: Colors.transparent,
+              title: Text(
+                context.l10n.editProfile,
+                style: context.bodySmall?.copyWith(
+                  color: context.adaptiveTextPrimary,
+                ),
+              ),
+              leading: IconButton(
+                onPressed: _isLoading ? null : context.pop,
+                icon: Icon(
+                  HugeIcons.strokeSharpArrowLeft02,
+                  color: _isLoading ? context.adaptiveDisabled : context.adaptiveTextPrimary,
+                ),
+              ),
             ),
-          ),
-          leading: IconButton(
-            onPressed: context.pop,
-            icon: Icon(
-              HugeIcons.strokeSharpArrowLeft02,
-              color: context.adaptiveTextPrimary,
-            ),
-          ),
-          actions: [
-            if (_isLoading)
-              Padding(
-                padding: const EdgeInsets.only(right: 16),
-                child: SizedBox(
-                  width: 24,
-                  height: 24,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    valueColor: AlwaysStoppedAnimation<Color>(
-                      context.adaptivePrimary,
+            body: Padding(
+              padding: const EdgeInsets.all(20.0),
+              child: ListView(
+                physics: const NeverScrollableScrollPhysics(),
+                children: [
+                  FadeTransition(
+                    opacity: _fadeController,
+                    child: Form(
+                      key: _formKey,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [                      
+                          // Section Avatar
+                          _buildAvatarSection(),
+                          
+                          50.h,
+                          
+                          // Section Nom complet
+                          _buildFullNameField(),
+                          
+                          30.h,
+                          
+                          // Section Username (désactivé)
+                          _buildUsernameField(),
+                          
+                          40.h,
+                        ],
+                      ),
                     ),
                   ),
-                ),
-              )
-            else
-              IconButton(
-                onPressed: _saveProfile,
-                icon: Icon(
-                  HugeIcons.strokeRoundedTick01,
-                  color: context.adaptivePrimary,
-                ),
-                iconSize: 24,
+                ],
               ),
-          ],
-        ),
-        body: Padding(
-          padding: const EdgeInsets.all(30.0),
-          child: ListView(
-            physics: const NeverScrollableScrollPhysics(),
-            children: [
-              FadeTransition(
-                opacity: _fadeController,
-                child: Form(
-                  key: _formKey,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [                      
-                      // Section Avatar
-                      _buildAvatarSection(),
-                      
-                      50.h,
-                      
-                      // Section Nom complet
-                      _buildFullNameField(),
-                      
-                      30.h,
-                      
-                      // Section Username (désactivé)
-                      _buildUsernameField(),
-                      
-                      40.h,
-                    ],
-                  ),
-                ),
-              ),
-            ],
+            ),
           ),
+
+          // Bouton en bas
+          Positioned(
+            left: 20,
+            right: 20,
+            bottom: 40,
+            child: _buildCompleteButton(_isLoading),
+          ),                
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCompleteButton(bool isLoading) {
+    return SquircleContainer(
+      onTap: _hasChanges ? _saveProfile : null,
+      height: 60,
+      color: isLoading || !_hasChanges ? context.adaptiveDisabled.withValues(alpha: 0.03) : context.adaptivePrimary,
+      radius: 30,
+      padding: EdgeInsets.symmetric(
+        horizontal: 15.0,
+        vertical: 5.0,
+      ),
+      child: AnimatedSwitcher(
+        duration: Duration(milliseconds: 300),
+        child: Center(
+          child: isLoading
+          ? Text(
+              "Modification en cours...",
+              style: context.bodySmall?.copyWith(
+                fontSize: 19,
+                color: Colors.black54,
+                fontWeight: FontWeight.w600,
+              ),
+            )
+            .animate(onPlay: (controller) => controller.loop())
+            .shimmer(color: Colors.white54, duration: Duration(seconds: 2))
+          : Text(
+              context.l10n.complete,
+              style: context.bodySmall?.copyWith(
+                fontSize: 19,
+                color: !_hasChanges ? Colors.white24 : Colors.white,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
         ),
       ),
     );

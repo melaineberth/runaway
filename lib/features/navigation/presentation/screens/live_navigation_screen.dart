@@ -10,6 +10,7 @@ import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart' as mp;
 import 'package:hugeicons/hugeicons.dart';
 import 'package:runaway/config/colors.dart';
 import 'package:runaway/core/widgets/icon_btn.dart';
+import 'package:runaway/core/widgets/modal_dialog.dart';
 import 'package:runaway/core/widgets/squircle_container.dart';
 import 'package:runaway/features/navigation/blocs/navigation_bloc.dart';
 import 'package:runaway/features/navigation/blocs/navigation_event.dart';
@@ -885,34 +886,19 @@ class _LiveNavigationScreenState extends State<LiveNavigationScreen> with Ticker
 
   /// Afficher la confirmation d'arrêt
   void _showStopConfirmation() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: Colors.grey[900],
-        title: const Text(
-          'Arrêter la navigation ?',
-          style: TextStyle(color: Colors.white),
-        ),
-        content: const Text(
-          'Voulez-vous vraiment arrêter la navigation en cours ?',
-          style: TextStyle(color: Colors.white70),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Annuler'),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.of(context).pop();
-              _stopNavigation();
-            },
-            child: const Text(
-              'Arrêter',
-              style: TextStyle(color: Colors.red),
-            ),
-          ),
-        ],
+    showModalSheet(
+      context: context, 
+      backgroundColor: Colors.transparent,
+      child: ModalDialog(
+        title: 'Arrêter la navigation ?',
+        subtitle: 'Voulez-vous vraiment arrêter la navigation en cours ?',
+        validLabel: 'Arrêter',
+        onValid: () {
+          HapticFeedback.mediumImpact();
+          
+          Navigator.pop(context); // 🔧 Fermer le dialogue d'abord
+          _stopNavigation();
+        },
       ),
     );
   }

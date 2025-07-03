@@ -59,7 +59,7 @@ class _BlurryPageState extends State<BlurryPage> {
             IgnorePointer(
               ignoring: true,
               child: Container(
-                height: MediaQuery.of(context).size.height / 4,
+                height: MediaQuery.of(context).size.height / 3,
                 decoration: BoxDecoration(
                   gradient: SmoothGradient(
                     from: widget.color?.withValues(alpha: 0) ?? context.adaptiveBackground.withValues(alpha: 0),
@@ -80,7 +80,7 @@ class _BlurryPageState extends State<BlurryPage> {
           child: IgnorePointer(
               ignoring: true,
               child: Container(
-                height: MediaQuery.of(context).size.height / 3,
+                height: MediaQuery.of(context).size.height / 2.5,
                 decoration: BoxDecoration(
                   gradient: SmoothGradient(
                     from: widget.color ?? context.adaptiveBackground,

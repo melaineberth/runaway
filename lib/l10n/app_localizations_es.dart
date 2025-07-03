@@ -475,7 +475,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get logoutTitle => 'Cerrar sesión';
 
   @override
-  String get logoutMessage => '¿Estás seguro de que quieres cerrar sesión?';
+  String get logoutMessage => 'Usted será desconectado de Trailix, pero todos sus datos y preferencias guardados permanecerán seguros';
 
   @override
   String get logoutConfirm => 'Cerrar sesión';
@@ -484,7 +484,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get deleteAccountTitle => 'Eliminar cuenta';
 
   @override
-  String get deleteAccountMessage => 'Esta acción es irreversible. Todos tus datos serán eliminados permanentemente.';
+  String get deleteAccountMessage => 'Esto eliminará permanentemente su cuenta de Trailix, así como todas las rutas y preferencias guardadas, esta acción no se puede deshacer';
 
   @override
   String get deleteAccountWarning => 'Esta acción no se puede deshacer';
@@ -820,29 +820,35 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
-  String get download => 'Download';
+  String get download => 'Descargar';
 
   @override
-  String get save => 'Save';
+  String get save => 'Guardar';
 
   @override
-  String get saving => 'Saving...';
+  String get saving => 'Guardando...';
 
   @override
-  String get alreadySaved => 'Already saved';
+  String get alreadySaved => 'Ya guardado';
 
   @override
-  String get home => 'Home';
+  String get home => 'Inicio';
 
   @override
-  String get resources => 'Resources';
+  String get resources => 'Recursos';
 
   @override
-  String get contactSupport => 'Contact support';
+  String get contactSupport => 'Contactar con soporte';
 
   @override
-  String get rateInStore => 'Rate in store';
+  String get rateInStore => 'Valorar en la tienda';
 
   @override
-  String get followOnX => 'Follow @Trailix';
+  String get followOnX => 'Seguir a @Trailix';
+
+  @override
+  String get supportEmailSubject => 'Problema con tu aplicación';
+
+  @override
+  String get supportEmailBody => 'Hola soporte de Trailix,\n\nEstoy teniendo problemas en la aplicación.\n¿Podrían ayudarme a resolver esto?\n\nGracias.';
 }

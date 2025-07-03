@@ -475,7 +475,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get logoutTitle => 'Log out';
 
   @override
-  String get logoutMessage => 'Are you sure you want to log out?';
+  String get logoutMessage => 'You’ll be signed out of Trailix, but all your saved data and preferences will remain secure';
 
   @override
   String get logoutConfirm => 'Log out';
@@ -484,7 +484,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get deleteAccountTitle => 'Delete account';
 
   @override
-  String get deleteAccountMessage => 'This action is irreversible. All your data will be permanently deleted.';
+  String get deleteAccountMessage => 'This will permanently delete your Trailix account as well as all saved routes and preferences, this action cannot be undone';
 
   @override
   String get deleteAccountWarning => 'This action cannot be undone';
@@ -845,4 +845,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get followOnX => 'Follow @Trailix';
+
+  @override
+  String get supportEmailSubject => 'Issue with your app';
+
+  @override
+  String get supportEmailBody => 'Hello Trailix Support,\n\nI\'m having trouble in the app.\nCould you please help me resolve this?\n\nThank you.';
 }

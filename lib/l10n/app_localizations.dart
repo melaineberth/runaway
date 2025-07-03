@@ -1002,7 +1002,7 @@ abstract class AppLocalizations {
   /// Body text of the log-out confirmation dialog.
   ///
   /// In en, this message translates to:
-  /// **'Are you sure you want to log out?'**
+  /// **'You’ll be signed out of Trailix, but all your saved data and preferences will remain secure'**
   String get logoutMessage;
 
   /// Positive-action button in the log-out dialog.
@@ -1020,7 +1020,7 @@ abstract class AppLocalizations {
   /// Primary warning text in the delete-account dialog.
   ///
   /// In en, this message translates to:
-  /// **'This action is irreversible. All your data will be permanently deleted.'**
+  /// **'This will permanently delete your Trailix account as well as all saved routes and preferences, this action cannot be undone'**
   String get deleteAccountMessage;
 
   /// Additional highlighted warning shown inside the delete-account dialog.
@@ -1730,6 +1730,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Follow @Trailix'**
   String get followOnX;
+
+  /// Subject line for the support email.
+  ///
+  /// In en, this message translates to:
+  /// **'Issue with your app'**
+  String get supportEmailSubject;
+
+  /// Body content for the support email.
+  ///
+  /// In en, this message translates to:
+  /// **'Hello Trailix Support,\n\nI\'m having trouble in the app.\nCould you please help me resolve this?\n\nThank you.'**
+  String get supportEmailBody;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

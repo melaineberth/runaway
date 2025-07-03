@@ -9,6 +9,7 @@ import 'package:runaway/core/blocs/app_data/app_data_event.dart';
 import 'package:runaway/core/blocs/app_data/app_data_state.dart';
 import 'package:runaway/core/services/conversion_triggers.dart';
 import 'package:runaway/core/widgets/blurry_page.dart';
+import 'package:runaway/core/widgets/modal_dialog.dart';
 import 'package:runaway/core/widgets/modal_sheet.dart';
 import 'package:runaway/core/widgets/squircle_container.dart';
 import 'package:runaway/core/widgets/top_snackbar.dart';
@@ -615,87 +616,63 @@ class _ActivityScreenState extends State<ActivityScreen> with TickerProviderStat
   }
 
   void _deleteGoal(String goalId) {
-    showDialog(
+    showModalSheet(
       context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: Colors.black87,
-        title: Text(context.l10n.deleteGoalTitle, style: TextStyle(color: Colors.white)),
-        content: Text(
-          context.l10n.deleteGoalMessage,
-          style: TextStyle(color: Colors.white70),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(context.l10n.cancel, style: TextStyle(color: Colors.white60)),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
+      backgroundColor: Colors.transparent,
+      child: ModalDialog(
+        isDestructive: true,
+        activeCancel: false,
+        title: context.l10n.deleteGoalTitle,
+        subtitle: context.l10n.deleteGoalMessage,
+        validLabel: context.l10n.delete,
+        onValid: () {
+          HapticFeedback.mediumImpact();
+          
+          context.pop(context);
               
-              // 🔥 UTILISER AppDataBloc AU LIEU D'ActivityBloc
-              context.read<AppDataBloc>().add(PersonalGoalDeletedFromAppData(goalId));
-              
-              // Afficher un message de confirmation
-              showTopSnackBar(
-                Overlay.of(context),
-                TopSnackBar(
-                  title: context.l10n.removedGoal,
-                  icon: HugeIcons.solidRoundedRemoveCircleHalfDot,
-                  color: Colors.orange,
-                ),
-              );
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
-              foregroundColor: Colors.white,
+          context.read<AppDataBloc>().add(PersonalGoalDeletedFromAppData(goalId));
+          
+          // Afficher un message de confirmation
+          showTopSnackBar(
+            Overlay.of(context),
+            TopSnackBar(
+              title: context.l10n.removedGoal,
+              icon: HugeIcons.solidRoundedRemoveCircleHalfDot,
+              color: Colors.orange,
             ),
-            child: Text(context.l10n.delete),
-          ),
-        ],
+          );
+        },
       ),
     );
   }
 
   void _showResetGoalsDialog() {
-    showDialog(
+    showModalSheet(
       context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: Colors.black87,
-        title: Text(context.l10n.goalsResetTitle, style: TextStyle(color: Colors.white)),
-        content: Text(
-          context.l10n.goalsResetMessage,
-          style: TextStyle(color: Colors.white70),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(context.l10n.cancel, style: TextStyle(color: Colors.white60)),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
+      backgroundColor: Colors.transparent,
+      child: ModalDialog(
+        isDestructive: true,
+        activeCancel: false,
+        title: context.l10n.goalsResetTitle,
+        subtitle: context.l10n.goalsResetMessage,
+        validLabel: context.l10n.reset,
+        onValid: () {
+          HapticFeedback.mediumImpact();
+          
+          context.pop(context);
               
-              // 🔥 UTILISER AppDataBloc AU LIEU D'ActivityBloc
-              context.read<AppDataBloc>().add(const PersonalGoalsResetInAppData());
+          context.read<AppDataBloc>().add(const PersonalGoalsResetInAppData());
               
-              // Afficher un message de confirmation
-              showTopSnackBar(
-                Overlay.of(context),
-                TopSnackBar(
-                  title: 'Tous les objectifs ont été supprimés',
-                  icon: HugeIcons.solidRoundedRemoveCircleHalfDot,
-                  color: Colors.orange,
-                ),
-              );
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.orange,
-              foregroundColor: Colors.white,
+          // Afficher un message de confirmation
+          showTopSnackBar(
+            Overlay.of(context),
+            TopSnackBar(
+              title: 'Tous les objectifs ont été supprimés',
+              icon: HugeIcons.solidRoundedRemoveCircleHalfDot,
+              color: Colors.orange,
             ),
-            child: Text(context.l10n.reset),
-          ),
-        ],
+          );
+        },
       ),
     );
   }

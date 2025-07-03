@@ -1,15 +1,10 @@
-// Fichier : lib/features/auth/presentation/widgets/conversion_prompt_modal.dart
-
-import 'dart:math' as math;
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:runaway/config/extensions.dart';
 import 'package:runaway/core/services/conversion_service.dart';
 import 'package:runaway/core/widgets/squircle_container.dart';
 import 'package:runaway/features/auth/presentation/screens/login_screen.dart';
 import 'package:runaway/features/auth/presentation/screens/signup_screen.dart';
-import 'package:runaway/core/widgets/modal_sheet.dart';
 
 class ConversionPromptModal extends StatefulWidget {
   final String? context; // Pour personnaliser le message selon le contexte

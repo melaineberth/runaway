@@ -475,7 +475,7 @@ class AppLocalizationsIt extends AppLocalizations {
   String get logoutTitle => 'Disconnetti';
 
   @override
-  String get logoutMessage => 'Sei sicuro di volerti disconnettere?';
+  String get logoutMessage => 'Sarai disconnesso da Trailix, ma tutti i tuoi dati e le tue preferenze salvate rimarranno al sicuro';
 
   @override
   String get logoutConfirm => 'Disconnetti';
@@ -484,7 +484,7 @@ class AppLocalizationsIt extends AppLocalizations {
   String get deleteAccountTitle => 'Elimina account';
 
   @override
-  String get deleteAccountMessage => 'Questa azione è irreversibile. Tutti i tuoi dati saranno eliminati permanentemente.';
+  String get deleteAccountMessage => 'Questo eliminerà definitivamente il tuo account Trailix e tutti i percorsi e le preferenze salvate, questa azione non può essere annullata';
 
   @override
   String get deleteAccountWarning => 'Questa azione non può essere annullata';
@@ -820,29 +820,35 @@ class AppLocalizationsIt extends AppLocalizations {
   }
 
   @override
-  String get download => 'Download';
+  String get download => 'Scarica';
 
   @override
-  String get save => 'Save';
+  String get save => 'Salva';
 
   @override
-  String get saving => 'Saving...';
+  String get saving => 'Salvataggio in corso…';
 
   @override
-  String get alreadySaved => 'Already saved';
+  String get alreadySaved => 'Già salvato';
 
   @override
   String get home => 'Home';
 
   @override
-  String get resources => 'Resources';
+  String get resources => 'Risorse';
 
   @override
-  String get contactSupport => 'Contact support';
+  String get contactSupport => 'Contatta il supporto';
 
   @override
-  String get rateInStore => 'Rate in store';
+  String get rateInStore => 'Valuta nello store';
 
   @override
-  String get followOnX => 'Follow @Trailix';
+  String get followOnX => 'Segui @Trailix';
+
+  @override
+  String get supportEmailSubject => 'Problema con la tua app';
+
+  @override
+  String get supportEmailBody => 'Ciao supporto Trailix,\n\nSto avendo problemi nell\'app.\nPotreste aiutarmi a risolvere questo?\n\nGrazie.';
 }

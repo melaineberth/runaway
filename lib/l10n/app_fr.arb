@@ -636,7 +636,7 @@
   "@logoutTitle": {
     "description": "Titre de la boîte de dialogue de confirmation affichée avant la déconnexion."
   },
-  "logoutMessage": "Êtes-vous sûr de vouloir vous déconnecter ?",
+  "logoutMessage": "Vous serez déconnecté de Trailix, mais toutes vos données et préférences sauvegardées resteront sécurisées",
   "@logoutMessage": {
     "description": "Texte du corps de la boîte de dialogue de confirmation de déconnexion."
   },
@@ -648,7 +648,7 @@
   "@deleteAccountTitle": {
     "description": "Titre de la boîte de dialogue de confirmation affichée avant la suppression du compte."
   },
-  "deleteAccountMessage": "Cette action est irréversible. Toutes vos données seront définitivement supprimées.",
+  "deleteAccountMessage": "Cela supprimera définitivement votre compte Trailix ainsi que toutes les routes et préférences sauvegardées, cette action ne peut pas être annulée",
   "@deleteAccountMessage": {
     "description": "Texte d'avertissement principal dans la boîte de dialogue de suppression du compte."
   },
@@ -1141,5 +1141,13 @@
   "followOnX": "Suivre @Trailix",
   "@followOnX": {
     "description": "Bouton ou lien encourageant l’utilisateur à suivre le compte officiel @Trailix sur le réseau social X (anciennement Twitter)."
+  },
+  "supportEmailSubject": "Problème avec votre application",
+  "@supportEmailSubject": {
+    "description": "Objet du mail de support."
+  },
+  "supportEmailBody": "Bonjour le support Trailix,\n\nJ'ai des difficultés avec l'application.\nPourriez-vous m'aider à résoudre ce problème ?\n\nMerci.",
+  "@supportEmailBody": {
+    "description": "Corps du mail de support."
   }
 }
