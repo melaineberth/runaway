@@ -38,8 +38,7 @@ class AccountScreen extends StatefulWidget {
   State<AccountScreen> createState() => _AccountScreenState();
 }
 
-class _AccountScreenState extends State<AccountScreen>
-    with TickerProviderStateMixin {
+class _AccountScreenState extends State<AccountScreen> with TickerProviderStateMixin {
   late AnimationController _fadeController;
 
   @override
@@ -145,9 +144,9 @@ class _AccountScreenState extends State<AccountScreen>
     final initialColor = math.Random().nextInt(Colors.primaries.length);
 
     return Scaffold(
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
         forceMaterialTransparency: true,
-        backgroundColor: Colors.transparent,
         title: Text(
           context.l10n.account,
           style: context.bodySmall?.copyWith(
@@ -162,7 +161,7 @@ class _AccountScreenState extends State<AccountScreen>
             user: user,
             color: Colors.primaries[initialColor],
           ),
-
+      
           Padding(
             padding: const EdgeInsets.all(20.0),
             child: Column(
@@ -193,7 +192,7 @@ class _AccountScreenState extends State<AccountScreen>
                         trailling: HugeIcons.strokeStandardArrowRight01,
                       ),
                     ),
-
+      
                     // Notification switch
                     _buildSettingTile(
                       context,
@@ -215,7 +214,7 @@ class _AccountScreenState extends State<AccountScreen>
                               ),
                             );
                           }
-
+      
                           return Switch(
                             value: notificationState.notificationsEnabled,
                             inactiveThumbColor: context.adaptiveDisabled,
@@ -225,7 +224,7 @@ class _AccountScreenState extends State<AccountScreen>
                                     ? null
                                     : (value) {
                                       HapticFeedback.mediumImpact();
-
+      
                                       // Déclencher l'événement pour basculer les notifications
                                       context.read<NotificationBloc>().add(
                                         NotificationToggleRequested(
@@ -237,7 +236,7 @@ class _AccountScreenState extends State<AccountScreen>
                         },
                       ),
                     ),
-
+      
                     // Theme selector
                     _buildSettingTile(
                       context,
@@ -263,7 +262,7 @@ class _AccountScreenState extends State<AccountScreen>
                               currentThemeLabel = context.l10n.darkTheme;
                               break;
                           }
-
+      
                           return IconBtn(
                             padding: 0.0,
                             backgroundColor: Colors.transparent,
@@ -278,9 +277,9 @@ class _AccountScreenState extends State<AccountScreen>
                     ),
                   ],
                 ),
-
+      
                 50.h,
-
+      
                 // Resources settings
                 _buildSettingCategory(
                   context,
@@ -325,9 +324,9 @@ class _AccountScreenState extends State<AccountScreen>
                     ),
                   ],
                 ),
-
+      
                 50.h,
-
+      
                 // Account settings
                 _buildSettingCategory(
                   context,
@@ -348,7 +347,7 @@ class _AccountScreenState extends State<AccountScreen>
                         trailling: HugeIcons.strokeStandardArrowRight01,
                       ),
                     ),
-
+      
                     // Delete account
                     _buildSettingTile(
                       context,
@@ -367,11 +366,11 @@ class _AccountScreenState extends State<AccountScreen>
                     ),
                   ],
                 ),
-
+      
                 80.h,
-
+      
                 _buildAppVersion(),
-
+      
                 80.h,
               ],
             ),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:progressive_blur/progressive_blur.dart';
 import 'package:runaway/config/extensions.dart';
 import 'package:smooth_gradient/smooth_gradient.dart';
 
@@ -43,35 +44,44 @@ class _BlurryPageState extends State<BlurryPage> {
     return Stack(
       fit: StackFit.loose,
       children: [
-        Stack(
-          alignment: Alignment.bottomCenter,
-          children: [
-            Padding(
-              padding: widget.padding ?? EdgeInsets.zero,
-              child: ListView(
-                shrinkWrap: widget.shrinkWrap,
-                padding: widget.contentPadding,
-                controller: _scrollController,
-                children: widget.children,
+        ProgressiveBlurWidget(
+          sigma: _isCutByTop ? 50.0 : 0,
+          linearGradientBlur: const LinearGradientBlur(
+            values: [1, 0], // 0 - no blur, 1 - full blur
+            stops: [0.1, 0.55],
+            start: Alignment.topCenter,
+            end: Alignment.center,
+          ),
+          child: Stack(
+            alignment: Alignment.bottomCenter,
+            children: [
+              Padding(
+                padding: widget.padding ?? EdgeInsets.zero,
+                child: ListView(
+                  shrinkWrap: widget.shrinkWrap,
+                  padding: widget.contentPadding,
+                  controller: _scrollController,
+                  children: widget.children,
+                ),
               ),
-            ),
-          
-            IgnorePointer(
-              ignoring: true,
-              child: Container(
-                height: MediaQuery.of(context).size.height / 3,
-                decoration: BoxDecoration(
-                  gradient: SmoothGradient(
-                    from: widget.color?.withValues(alpha: 0) ?? context.adaptiveBackground.withValues(alpha: 0),
-                    to: widget.color ?? context.adaptiveBackground,
-                    curve: Curves.linear,
-                    begin: Alignment.center,
-                    end: Alignment.bottomCenter,
+            
+              IgnorePointer(
+                ignoring: true,
+                child: Container(
+                  height: MediaQuery.of(context).size.height / 3,
+                  decoration: BoxDecoration(
+                    gradient: SmoothGradient(
+                      from: widget.color?.withValues(alpha: 0) ?? Colors.red.withValues(alpha: 0),
+                      to: widget.color ?? Colors.red,
+                      curve: Curves.linear,
+                      begin: Alignment.center,
+                      end: Alignment.bottomCenter,
+                    ),
                   ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
         AnimatedOpacity(
           opacity: _isCutByTop ? 1.0 : 0.0,
@@ -83,8 +93,8 @@ class _BlurryPageState extends State<BlurryPage> {
                 height: MediaQuery.of(context).size.height / 2.5,
                 decoration: BoxDecoration(
                   gradient: SmoothGradient(
-                    from: widget.color ?? context.adaptiveBackground,
-                    to: widget.color?.withValues(alpha: 0) ?? context.adaptiveBackground.withValues(alpha: 0),
+                    from: widget.color ?? Colors.green,
+                    to: widget.color?.withValues(alpha: 0) ?? Colors.green.withValues(alpha: 0),
                     curve: Curves.linear,
                     begin: Alignment.topCenter,
                     end: Alignment.center,
