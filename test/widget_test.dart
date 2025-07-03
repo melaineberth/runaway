@@ -13,7 +13,7 @@ import 'package:runaway/main.dart';
 void main() {
   testWidgets('Counter increments smoke test', (WidgetTester tester) async {
     // Build our app and trigger a frame.
-    await tester.pumpWidget(const RunAway());
+    await tester.pumpWidget(const Trailix());
 
     // Verify that our counter starts at 0.
     expect(find.text('0'), findsOneWidget);

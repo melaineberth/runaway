@@ -1,5 +1,3 @@
-// lib/features/auth/presentation/bloc/auth_bloc.dart
-
 import 'dart:async';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:runaway/features/auth/data/repositories/auth_repository.dart';
@@ -21,6 +19,8 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     on<AppleSignInRequested>(_onAppleSignIn);
     on<LogOutRequested>(_onLogout);
     on<UpdateProfileRequested>(_onUpdateProfile);
+    on<DeleteAccountRequested>(_onDeleteAccount);
+    on<NotificationSettingsToggleRequested>(_onNotificationSettingsToggle);
 
     // handlers internes
     on<_InternalProfileLoaded>((e, emit) => emit(Authenticated(e.profile)));
@@ -94,6 +94,52 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         emit(Authenticated(currentState.profile));
       });
     }
+  }
+
+  Future<void> _onDeleteAccount(
+    DeleteAccountRequested event,
+    Emitter<AuthState> emit,
+  ) async {
+    if (state is! Authenticated) return;
+    
+    emit(AuthLoading());
+    
+    try {
+      print('🗑️ Suppression du compte demandée...');
+      
+      // Utiliser la méthode existante du repository
+      await _repo.deleteAccount();
+      
+      print('✅ Compte supprimé avec succès');
+      
+      // L'utilisateur sera automatiquement déconnecté par le stream listener
+      // qui détectera que la session n'existe plus
+      
+    } catch (e) {
+      print('❌ Erreur suppression compte: $e');
+      
+      // Retourner à l'état précédent en cas d'erreur
+      final currentState = state;
+      if (currentState is Authenticated) {
+        emit(currentState);
+      } else {
+        emit(Unauthenticated());
+      }
+      
+      // Propager l'erreur pour l'affichage dans l'UI
+      emit(AuthError(
+        e.toString(),
+      ));
+    }
+  }
+
+  Future<void> _onNotificationSettingsToggle(
+    NotificationSettingsToggleRequested event,
+    Emitter<AuthState> emit,
+  ) async {
+    // Cette méthode est gérée par le NotificationBloc
+    // On peut l'utiliser ici pour des actions supplémentaires si nécessaire
+    print('🔔 Paramètres de notification modifiés: ${event.enabled}');
   }
 
   Future<void> _onStart(AppStarted e, Emitter<AuthState> emit) async {

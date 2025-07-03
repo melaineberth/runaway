@@ -404,7 +404,7 @@
   "@haveAccount": {
     "description": "Text preceding the Log in link"
   },
-  "termsAndPrivacy": "Terms of Service | Privacy Policy",
+  "termsAndPrivacy": "Terms & Privacy",
   "@termsAndPrivacy": {
     "description": "Footer link to legal documents"
   },
@@ -1125,5 +1125,21 @@
   "home": "Home",
   "@home": {
     "description": "Tab or section title that opens the home view."
+  },
+  "resources": "Resources",
+  "@resources": {
+    "description": "Label for a screen, menu item, or tab that lists helpful resources such as documentation, tutorials, or FAQs."
+  },
+  "contactSupport": "Contact support",
+  "@contactSupport": {
+    "description": "Button or link that opens a channel (e-mail, chat, form) for the user to reach technical support."
+  },
+  "rateInStore": "Rate in store",
+  "@rateInStore": {
+    "description": "Call-to-action inviting the user to leave a rating or review in the app store."
+  },
+  "followOnX": "Follow @Trailix",
+  "@followOnX": {
+    "description": "Button or link encouraging the user to follow the official @Trailix account on the X (formerly Twitter) social network."
   }
 }

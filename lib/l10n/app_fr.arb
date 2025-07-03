@@ -404,7 +404,7 @@
   "@haveAccount": {
     "description": "Texte précédant le lien de connexion"
   },
-  "termsAndPrivacy": "Conditions d'utilisation | Politique de confidentialité",
+  "termsAndPrivacy": "Conditions & Confidentialité",
   "@termsAndPrivacy": {
     "description": "Lien de pied de page vers les documents légaux"
   },
@@ -1039,37 +1039,30 @@
   "@mapStyleTitle": {
     "description": "Title for the UI section where users choose a map style."
   },
-
   "mapStyleSubtitle": "Choisissez votre style",
   "@mapStyleSubtitle": {
     "description": "Subtitle prompting the user to pick their preferred map style."
   },
-
   "mapStyleStreet": "Rue",
   "@mapStyleStreet": {
     "description": "Map-layer option that displays a classic street map with roads, place names and basic landmarks."
   },
-
   "mapStyleOutdoor": "Extérieur",
   "@mapStyleOutdoor": {
     "description": "Map-layer option optimized for outdoor activities; highlights trails, terrain contours and natural features."
   },
-
   "mapStyleLight": "Clair",
   "@mapStyleLight": {
     "description": "Map-layer option with a light color palette, suitable for bright environments or printing."
   },
-
   "mapStyleDark": "Sombre",
   "@mapStyleDark": {
     "description": "Map-layer option with a dark color palette, ideal for night mode or low-light conditions."
   },
-
   "mapStyleSatellite": "Satellite",
   "@mapStyleSatellite": {
     "description": "Map-layer option that shows high-resolution satellite imagery without additional labels."
   },
-
   "mapStyleHybrid": "Hybride",
   "@mapStyleHybrid": {
     "description": "Map-layer option that overlays place labels and roads on top of satellite imagery."
@@ -1078,37 +1071,30 @@
   "@fullNameTitle": {
     "description": "Libellé affiché à côté du champ où l'utilisateur saisit son nom complet légal."
   },
-
   "usernameTitle": "Nom d'utilisateur",
   "@usernameTitle": {
     "description": "Libellé du champ nom d'utilisateur unique (identifiant) affiché dans le formulaire de profil."
   },
-
   "nonEditableUsername": "Le nom d'utilisateur ne peut pas être modifié",
   "@nonEditableUsername": {
     "description": "Message d'information indiquant que le champ nom d'utilisateur est verrouillé et ne peut pas être modifié."
   },
-
   "profileUpdated": "Profil mis à jour avec succès",
   "@profileUpdated": {
     "description": "Notification de succès ou toast affiché après l'enregistrement des détails de l'utilisateur sans erreur."
   },
-
   "profileUpdateError": "Erreur lors de la mise à jour du profil",
   "@profileUpdateError": {
     "description": "Message d'erreur générique affiché lorsque l'enregistrement des modifications du profil échoue."
   },
-
   "contactUs": "Contactez-nous.",
   "@contactUs": {
     "description": "Lien invitant l'utilisateur à contacter le support."
   },
-
   "editGoal": "Modifier l'objectif",
   "@editGoal": {
     "description": "Libellé pour un bouton ou un lien permettant à l'utilisateur de modifier un objectif existant."
   },
-
   "deadlineValid": "Valable jusqu'au {date}",
   "@deadlineValid": {
     "description": "Message indiquant la date d'expiration d'un élément ; {date} sera remplacé par une date formatée.",
@@ -1139,5 +1125,21 @@
   "home": "Accueil",
   "@home": {
     "description": "Tab or section title that opens the home view."
+  },
+  "resources": "Ressources",
+  "@resources": {
+    "description": "Libellé d’un écran, menu ou onglet répertoriant les ressources utiles : documentation, didacticiels, FAQ, etc."
+  },
+  "contactSupport": "Contacter le support",
+  "@contactSupport": {
+    "description": "Bouton ou lien ouvrant un canal (e-mail, chat, formulaire) pour joindre l’assistance technique."
+  },
+  "rateInStore": "Noter dans la boutique",
+  "@rateInStore": {
+    "description": "Appel à l’action invitant l’utilisateur à laisser une note ou un avis dans la boutique d’applications."
+  },
+  "followOnX": "Suivre @Trailix",
+  "@followOnX": {
+    "description": "Bouton ou lien encourageant l’utilisateur à suivre le compte officiel @Trailix sur le réseau social X (anciennement Twitter)."
   }
 }

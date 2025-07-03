@@ -10,11 +10,16 @@ import 'package:runaway/config/router.dart';
 import 'package:runaway/config/theme.dart';
 import 'package:runaway/core/blocs/app_data/app_data_bloc.dart';
 import 'package:runaway/core/blocs/locale/locale_bloc.dart';
+import 'package:runaway/core/blocs/notification/notification_bloc.dart';
+import 'package:runaway/core/blocs/notification/notification_event.dart';
 import 'package:runaway/core/blocs/theme_bloc/theme_bloc.dart';
 import 'package:runaway/core/services/app_data_initialization_service.dart';
 import 'package:runaway/core/services/app_initialization_service.dart';
+import 'package:runaway/core/services/conversion_service.dart';
+import 'package:runaway/core/services/notification_service.dart';
 import 'package:runaway/core/services/route_data_sync_wrapper.dart';
 import 'package:runaway/core/widgets/auth_data_listener.dart';
+import 'package:runaway/core/widgets/conversion_listener.dart';
 import 'package:runaway/features/activity/data/repositories/activity_repository.dart';
 import 'package:runaway/features/auth/data/repositories/auth_repository.dart';
 import 'package:runaway/features/auth/presentation/bloc/auth_bloc.dart';
@@ -60,8 +65,12 @@ void main() async {
     String mapBoxToken = dotenv.get('MAPBOX_TOKEN');
     MapboxOptions.setAccessToken(mapBoxToken);
     print('✅ Mapbox configuré');
+
+    await NotificationService.instance.initialize();
+
+    await ConversionService.instance.initializeSession();
     
-    runApp(const RunAway());
+    runApp(const Trailix());
     
   } catch (e) {
     print('❌ Erreur lors de l\'initialisation: $e');
@@ -69,13 +78,29 @@ void main() async {
   }
 }
 
-class RunAway extends StatelessWidget {
-  const RunAway({super.key});
+class Trailix extends StatefulWidget {
+  const Trailix({super.key});
+
+  @override
+  State<Trailix> createState() => _TrailixState();
+}
+
+class _TrailixState extends State<Trailix> {
+  @override
+  void dispose() {
+    // Nettoyer les services
+    NotificationService.instance.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     return MultiBlocProvider(
       providers: [
+        BlocProvider<NotificationBloc>(
+          create: (context) => NotificationBloc()..add(NotificationInitializeRequested()),
+        ),
+
         // AppDataBloc - DOIT être créé EN PREMIER
         BlocProvider<AppDataBloc>(
           create: (context) {
@@ -143,22 +168,24 @@ class RunAway extends StatelessWidget {
             builder: (context, localeState) {
               return BlocBuilder<ThemeBloc, ThemeState>(
                 builder: (context, themeState) {
-                  return MaterialApp.router(
-                    title: 'Trailix',
-                    debugShowCheckedModeBanner: false,
-                    routerConfig: router,
-                    theme: getAppTheme(Brightness.light),
-                    darkTheme: getAppTheme(Brightness.dark),
-                    themeMode: themeState.themeMode.toThemeMode(), // ← Changement ici
-                    locale: localeState.locale,
-                    localizationsDelegates: AppLocalizations.localizationsDelegates,
-                    supportedLocales: AppLocalizations.supportedLocales,
-                    builder: (context, child) {
-                      return MediaQuery(
-                        data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(1.0)),
-                        child: child ?? Container(),
-                      );
-                    },
+                  return ConversionListener(
+                    child: MaterialApp.router(
+                      title: 'Trailix',
+                      debugShowCheckedModeBanner: false,
+                      routerConfig: router,
+                      theme: getAppTheme(Brightness.light),
+                      darkTheme: getAppTheme(Brightness.dark),
+                      themeMode: themeState.themeMode.toThemeMode(), // ← Changement ici
+                      locale: localeState.locale,
+                      localizationsDelegates: AppLocalizations.localizationsDelegates,
+                      supportedLocales: AppLocalizations.supportedLocales,
+                      builder: (context, child) {
+                        return MediaQuery(
+                          data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(1.0)),
+                          child: child ?? Container(),
+                        );
+                      },
+                    ),
                   );
                 }
               );

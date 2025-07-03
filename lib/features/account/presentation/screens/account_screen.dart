@@ -1,23 +1,35 @@
+import 'dart:io';
 import 'dart:ui';
 
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_svg/svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hugeicons/hugeicons.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:runaway/config/colors.dart';
 import 'package:runaway/config/extensions.dart';
+import 'package:runaway/core/blocs/notification/notification_bloc.dart';
+import 'package:runaway/core/blocs/notification/notification_event.dart';
+import 'package:runaway/core/blocs/notification/notification_state.dart';
 import 'package:runaway/core/blocs/theme_bloc/theme_bloc.dart';
 import 'package:runaway/core/widgets/ask_registration.dart';
 import 'package:runaway/core/widgets/blurry_page.dart';
 import 'package:runaway/core/widgets/icon_btn.dart';
+import 'package:runaway/core/widgets/top_snackbar.dart';
 import 'package:runaway/features/account/presentation/widgets/language_selector.dart';
 import 'package:runaway/features/account/presentation/widgets/theme_selector.dart';
 import 'package:runaway/features/auth/domain/models/profile.dart';
 import 'package:runaway/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:runaway/features/auth/presentation/bloc/auth_event.dart';
 import 'package:runaway/features/auth/presentation/bloc/auth_state.dart';
+import 'package:top_snackbar_flutter/top_snack_bar.dart';
 import 'dart:math' as math;
+
+import 'package:url_launcher/url_launcher.dart';
 
 
 class AccountScreen extends StatefulWidget {
@@ -52,6 +64,66 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
     super.dispose();
   }
 
+  void launchURL() async {
+   final Uri url = Uri.parse('https://x.com/elonmusk');
+    if (!await launchUrl(url)) {
+      throw Exception('Could not launch $url');
+    }
+  }
+
+  void openStore() {
+    if (Platform.isAndroid || Platform.isIOS) {
+      final appId = Platform.isAndroid ? 'YOUR_ANDROID_PACKAGE_ID' : '6748111941';
+      final url = Uri.parse(
+        Platform.isAndroid
+            ? "market://details?id=$appId"
+            : "https://apps.apple.com/app/id$appId",
+      );
+      launchUrl(
+        url,
+        mode: LaunchMode.externalApplication,
+      );
+    }
+  }
+
+  void launchEmail() async {
+    final String email   = 'service@trailix.app';
+    final String subject = Uri.encodeComponent(
+      'Issue with your app'
+    );
+
+    final String body = Uri.encodeComponent(
+      '''
+        Hello Trailix Support,
+
+        I’m having trouble in the app.  
+        Could you please help me resolve this?
+
+        Thank you.
+      '''
+    );
+
+    final String url = 'mailto:$email?subject=$subject&body=$body';
+
+    try {
+      await launchUrl(
+        Uri.parse(url),
+        mode: LaunchMode.platformDefault,
+      );
+    } catch (e) {
+      if (mounted) {
+        showTopSnackBar(
+          Overlay.of(context), 
+          TopSnackBar(
+            title: 'Could not launch email app', 
+            icon: HugeIcons.solidRoundedCancelCircle,
+            color: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return BlocListener<AuthBloc, AuthState>(
@@ -59,6 +131,15 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
         if (authState is Unauthenticated) {
           // L'utilisateur s'est déconnecté, rediriger vers l'accueil
           context.go('/home');
+        } else if (authState is AuthError) {
+          // Afficher l'erreur de suppression de compte
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Erreur: ${authState.message}'),
+              backgroundColor: Colors.red,
+              duration: Duration(seconds: 4),
+            ),
+          );
         }
       },
       child: BlocBuilder<AuthBloc, AuthState>(
@@ -101,10 +182,14 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
             padding: const EdgeInsets.all(20.0),
             child: Column(
               children: [
+
+                // Preferences settings
                 _buildSettingCategory(
                   context,
                   title: context.l10n.preferences,
                   children: [
+
+                    // Language selector
                     _buildSettingTile(
                       context,
                       label: context.l10n.language,
@@ -124,19 +209,44 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
                         trailling: HugeIcons.strokeStandardArrowRight01,
                       ),
                     ),
+
+                    // Notification switch
                     _buildSettingTile(
                       context,
                       label: context.l10n.notifications,
                       icon: HugeIcons.strokeRoundedNotification02,
-                      onTap: () {}, 
-                      child: Switch(
-                        value: true, 
-                        inactiveThumbColor: context.adaptiveDisabled,
-                        onChanged: (value) {
-                          // TODO: Implémenter la gestion des notifications push
+                      child: BlocBuilder<NotificationBloc, NotificationState>(
+                        builder: (context, notificationState) {
+                          // Afficher un indicateur de chargement si en cours d'initialisation
+                          if (notificationState.isLoading && !notificationState.isInitialized) {
+                            return SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                valueColor: AlwaysStoppedAnimation<Color>(context.adaptivePrimary),
+                              ),
+                            );
+                          }
+                          
+                          return Switch(
+                            value: notificationState.notificationsEnabled,
+                            inactiveThumbColor: context.adaptiveDisabled,
+                            activeColor: context.adaptivePrimary,
+                            onChanged: notificationState.isLoading ? null : (value) {
+                              HapticFeedback.mediumImpact();
+
+                              // Déclencher l'événement pour basculer les notifications
+                              context.read<NotificationBloc>().add(
+                                NotificationToggleRequested(enabled: value),
+                              );
+                            },
+                          );
                         },
-                      )
+                      ),
                     ),
+                    
+                    // Theme selector
                     _buildSettingTile(
                       context,
                       label: context.l10n.theme,
@@ -171,6 +281,52 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
                             trailling: HugeIcons.strokeStandardArrowRight01,
                           );
                         }
+                      ),
+                    ),
+                  ]
+                ),
+    
+                50.h,
+
+                _buildSettingCategory(
+                  context,
+                  title: context.l10n.resources,
+                  children: [
+                    _buildSettingTile(
+                      context,
+                      label: context.l10n.contactSupport,
+                      icon: HugeIcons.strokeRoundedMail02,
+                      onTap: () => launchEmail(), 
+                      child: HugeIcon(
+                        icon: HugeIcons.strokeStandardArrowRight01,
+                        color: context.adaptiveTextSecondary,
+                        size: 19,
+                      ),
+                    ),
+                    _buildSettingTile(
+                      context,
+                      label: context.l10n.rateInStore,
+                      icon: HugeIcons.strokeRoundedStar,
+                      onTap: () => openStore(), 
+                      child: IconBtn(
+                        padding: 0.0,
+                        backgroundColor: Colors.transparent,
+                        iconSize: 19,
+                        iconColor: context.adaptiveTextSecondary,
+                        trailling: HugeIcons.strokeStandardArrowRight01,
+                      ),
+                    ),
+                    _buildSettingTile(
+                      context,
+                      label: context.l10n.followOnX,
+                      icon: HugeIcons.strokeRoundedNewTwitter,
+                      onTap: () => launchURL(), 
+                      child: IconBtn(
+                        padding: 0.0,
+                        backgroundColor: Colors.transparent,
+                        iconSize: 19,
+                        iconColor: context.adaptiveTextSecondary,
+                        trailling: HugeIcons.strokeStandardArrowRight01,
                       ),
                     ),
                   ]
@@ -215,11 +371,67 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
                 ),
     
                 80.h,
+
+                _buildAppVersion(),
+                
+                80.h,
               ],
             ),
           )
         ],
       )
+    );
+  }
+
+  Widget _buildAppVersion() {
+    return Column(
+      children: [
+        SizedBox(
+          width: 45,
+          height: 45,
+          child: SvgPicture.asset(
+            "assets/img/LOGO_SYMBOLE.svg",
+            colorFilter: ColorFilter.mode(context.adaptiveBorder.withValues(alpha: 0.2), BlendMode.srcIn),
+            semanticsLabel: 'Trailix Logo',
+          ),
+        ),
+        15.h,
+        FutureBuilder<PackageInfo>(
+          future: PackageInfo.fromPlatform(),
+          builder: (context, snapshot) {
+            if (snapshot.hasData) {
+              final packageInfo = snapshot.data!;
+              return Text(
+                "Version ${packageInfo.version} (${packageInfo.buildNumber})",
+                style: context.bodySmall?.copyWith(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                  color: context.adaptiveBorder.withValues(alpha: 0.2),
+                ),
+              );
+            }
+            return Text(
+              "Version --",
+              style: context.bodySmall?.copyWith(
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+                color: context.adaptiveBorder.withValues(alpha: 0.2),
+              ),
+            );
+          },
+        ),
+        Text.rich(
+          TextSpan(
+            text: context.l10n.termsAndPrivacy,
+            recognizer: TapGestureRecognizer()..onTap = () => print('Open Terms & Policy'),
+          ),
+          style: context.bodySmall?.copyWith(
+            fontSize: 13,
+            fontWeight: FontWeight.w500,
+            color: context.adaptiveBorder.withValues(alpha: 0.2),
+          ),
+        ),
+      ],
     );
   }
 
@@ -245,7 +457,7 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
     );
   }
 
-  Widget _buildSettingTile(BuildContext context, {required String label, Color? labelColor, required IconData icon, Color? iconColor, required Widget child, required Function()? onTap}) {
+  Widget _buildSettingTile(BuildContext context, {required String label, Color? labelColor, required IconData icon, Color? iconColor, required Widget child, Function()? onTap}) {
     return GestureDetector(
       onTap: onTap,
       child: Row(
@@ -495,13 +707,7 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
           ElevatedButton(
             onPressed: () {
               Navigator.of(dialogContext).pop();
-              // TODO: Implémenter la suppression du compte
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(context.l10n.deleteAccountTodo),
-                  backgroundColor: Colors.red,
-                ),
-              );
+              context.read<AuthBloc>().add(DeleteAccountRequested());
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.red,

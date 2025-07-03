@@ -7,6 +7,7 @@ import 'package:pull_down_button/pull_down_button.dart';
 import 'package:runaway/core/blocs/app_data/app_data_bloc.dart';
 import 'package:runaway/core/blocs/app_data/app_data_event.dart';
 import 'package:runaway/core/blocs/app_data/app_data_state.dart';
+import 'package:runaway/core/services/conversion_triggers.dart';
 import 'package:runaway/core/widgets/blurry_page.dart';
 import 'package:runaway/core/widgets/modal_sheet.dart';
 import 'package:runaway/core/widgets/squircle_container.dart';
@@ -41,7 +42,12 @@ class _ActivityScreenState extends State<ActivityScreen> with TickerProviderStat
   @override
   void initState() {
     super.initState();
-    _initializeAnimations();    
+    _initializeAnimations();  
+
+    // 🆕 DÉCLENCHER l'événement de consultation d'activité
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ConversionTriggers.onActivityViewed(context);
+    });  
   }
 
   void _initializeAnimations() {

@@ -6,6 +6,7 @@ import 'package:runaway/config/extensions.dart';
 import 'package:runaway/core/blocs/app_data/app_data_bloc.dart';
 import 'package:runaway/core/blocs/app_data/app_data_event.dart';
 import 'package:runaway/core/blocs/app_data/app_data_state.dart';
+import 'package:runaway/core/services/conversion_triggers.dart';
 import 'package:runaway/core/widgets/ask_registration.dart';
 import 'package:runaway/core/widgets/blurry_page.dart';
 import 'package:runaway/core/widgets/squircle_container.dart';
@@ -62,6 +63,8 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
       if (!appDataState.hasHistoricData && !appDataState.isLoading) {
         context.read<AppDataBloc>().add(const HistoricDataRefreshRequested());
       }
+
+      ConversionTriggers.onActivityViewed(context);
     });
   }
 

@@ -306,7 +306,7 @@ class AppLocalizationsFr extends AppLocalizations {
   String get haveAccount => 'Avez-vous un compte ?';
 
   @override
-  String get termsAndPrivacy => 'Conditions d\'utilisation | Politique de confidentialité';
+  String get termsAndPrivacy => 'Conditions & Confidentialité';
 
   @override
   String get continueForms => 'Continuer';
@@ -833,4 +833,16 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get home => 'Accueil';
+
+  @override
+  String get resources => 'Ressources';
+
+  @override
+  String get contactSupport => 'Contacter le support';
+
+  @override
+  String get rateInStore => 'Noter dans la boutique';
+
+  @override
+  String get followOnX => 'Suivre @Trailix';
 }

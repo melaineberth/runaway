@@ -11,6 +11,7 @@ import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart' as mp;
 import 'package:runaway/core/blocs/app_data/app_data_bloc.dart';
 import 'package:runaway/core/blocs/app_data/app_data_event.dart';
 import 'package:runaway/core/blocs/app_data/app_data_state.dart';
+import 'package:runaway/core/services/conversion_triggers.dart';
 import 'package:runaway/core/widgets/modal_sheet.dart';
 import 'package:runaway/core/widgets/squircle_container.dart';
 import 'package:runaway/features/auth/presentation/widgets/auth_text_field.dart';
@@ -1704,6 +1705,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
         mapboxMap: mapboxMap,
       ),
     );
+
+    if (mounted) {
+      ConversionTriggers.onRouteGenerated(context);
+    }
 
     print('🚀 Génération demandée: ${parameters.distanceKm}km, ${parameters.activityType.name}');
   }

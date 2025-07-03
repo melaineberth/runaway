@@ -121,9 +121,9 @@ class LanguageSelector extends StatelessWidget {
   }) {
     return SquircleContainer(
       onTap: onTap,
-      radius: 40,
+      radius: 50,
       color: context.adaptiveBorder.withValues(alpha: 0.08),
-      padding: const EdgeInsets.all(8),
+      padding: const EdgeInsets.all(5),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [

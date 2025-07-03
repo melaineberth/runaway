@@ -52,3 +52,14 @@ class UpdateProfileRequested extends AuthEvent {
   @override
   List<Object?> get props => [fullName, username, avatar];
 }
+
+class DeleteAccountRequested extends AuthEvent {}
+
+class NotificationSettingsToggleRequested extends AuthEvent {
+  final bool enabled;
+  
+  NotificationSettingsToggleRequested({required this.enabled});
+  
+  @override
+  List<Object?> get props => [enabled];
+}

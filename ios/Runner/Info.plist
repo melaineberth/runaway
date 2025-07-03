@@ -42,6 +42,16 @@
 		<key>NSAllowsArbitraryLoads</key>
 		<true/>
 	</dict>
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>mail</string>
+		<string>email</string>
+		<string>mailto</string>
+		<string>googlegmail</string>
+		<string>ms-outlook</string>
+		<string>ymail</string>
+		<string>readdle-spark</string>
+	</array>
 	<key>NSDocumentsFolderUsageDescription</key>
 	<string>Cette application enregistre des fichiers dans le dossier Documents.</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>

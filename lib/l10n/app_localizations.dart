@@ -672,7 +672,7 @@ abstract class AppLocalizations {
   /// Footer link to legal documents
   ///
   /// In en, this message translates to:
-  /// **'Terms of Service | Privacy Policy'**
+  /// **'Terms & Privacy'**
   String get termsAndPrivacy;
 
   /// Label on the primary sign-up button
@@ -1706,6 +1706,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Home'**
   String get home;
+
+  /// Label for a screen, menu item, or tab that lists helpful resources such as documentation, tutorials, or FAQs.
+  ///
+  /// In en, this message translates to:
+  /// **'Resources'**
+  String get resources;
+
+  /// Button or link that opens a channel (e-mail, chat, form) for the user to reach technical support.
+  ///
+  /// In en, this message translates to:
+  /// **'Contact support'**
+  String get contactSupport;
+
+  /// Call-to-action inviting the user to leave a rating or review in the app store.
+  ///
+  /// In en, this message translates to:
+  /// **'Rate in store'**
+  String get rateInStore;
+
+  /// Button or link encouraging the user to follow the official @Trailix account on the X (formerly Twitter) social network.
+  ///
+  /// In en, this message translates to:
+  /// **'Follow @Trailix'**
+  String get followOnX;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

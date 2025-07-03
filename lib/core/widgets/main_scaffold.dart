@@ -30,53 +30,62 @@ class MainScaffold extends StatelessWidget {
               extendBody: true,
               body: child,
               bottomNavigationBar: SafeArea(
-                child: Container(
-                  margin: EdgeInsets.symmetric(horizontal: 50),
-                  decoration: BoxDecoration(
-                    color: context.adaptiveBackground,
-                    borderRadius: BorderRadius.circular(100),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.18),
-                        spreadRadius: 2,
-                        blurRadius: 30,
-                        offset: Offset(0, 0), // changes position of shadow
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(2.0),
+                      decoration: BoxDecoration(
+                        color: context.adaptiveBackground,
+                        borderRadius: BorderRadius.circular(100),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.18),
+                            spreadRadius: 2,
+                            blurRadius: 30,
+                            offset: Offset(0, 0), // changes position of shadow
+                          ),
+                        ]
                       ),
-                    ]
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.all(5.0),
-                    child: GNav(
-                      activeColor: Colors.white,
-                      iconSize: 25,
-                      color: context.adaptiveTextPrimary.withValues(alpha: 0.5),
-                      tabBackgroundColor: context.adaptivePrimary,
-                      tabShadow: [BoxShadow(color: context.adaptiveTextPrimary.withValues(alpha: 0.1), blurRadius: 0)], // tab button shadow
-                      padding: EdgeInsetsGeometry.symmetric(
-                        horizontal: 15.0,
-                        vertical: 15.0,
-                      ),
-                      tabs: [
-                        ...NavItemModel.values.asMap().entries.map((entry) {
-                          final i = entry.key;
-                          final item = entry.value;
-
-                          final bool isSelected = i == selectedIndex;
-
-                          return GButton(
-                            gap: 8,
-                            icon: isSelected ? item.activeIcon : item.inactiveIcon,
-                            text: item.title(context),
-                            textStyle: context.bodySmall?.copyWith(
-                              fontSize: 17,
-                              color: Colors.white,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          GNav(
+                            activeColor: Colors.white,
+                            iconSize: 25,
+                            color: context.adaptiveTextPrimary.withValues(alpha: 0.5),
+                            tabBackgroundColor: context.adaptivePrimary,
+                            tabShadow: [BoxShadow(color: context.adaptiveTextPrimary.withValues(alpha: 0.1), blurRadius: 0)], // tab button shadow
+                            padding: EdgeInsetsGeometry.symmetric(
+                              horizontal: 15.0,
+                              vertical: 15.0,
                             ),
-                            onPressed: () => context.go(item.route),
-                          );
-                        }), 
-                      ],
+                            tabs: [
+                              ...NavItemModel.values.asMap().entries.map((entry) {
+                                final i = entry.key;
+                                final item = entry.value;
+                          
+                                final bool isSelected = i == selectedIndex;
+                          
+                                return GButton(
+                                  gap: 8,
+                                  margin: EdgeInsets.all(4.0),
+                                  icon: isSelected ? item.activeIcon : item.inactiveIcon,
+                                  text: item.title(context),
+                                  textStyle: context.bodySmall?.copyWith(
+                                    fontSize: 17,
+                                    color: Colors.white,
+                                  ),
+                                  onPressed: () => context.go(item.route),
+                                );
+                              }), 
+                            ],
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
+                  ],
                 ),
               ),
             ),

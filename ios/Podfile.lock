@@ -63,6 +63,10 @@ PODS:
     - MapboxCommon (= 24.13.0)
     - MapboxCoreMaps (= 11.13.0)
     - Turf (= 4.0.0)
+  - open_mail_launcher (0.0.1):
+    - Flutter
+  - package_info_plus (0.4.5):
+    - Flutter
   - path_provider_foundation (0.0.1):
     - Flutter
     - FlutterMacOS
@@ -95,6 +99,8 @@ DEPENDENCIES:
   - google_sign_in_ios (from `.symlinks/plugins/google_sign_in_ios/darwin`)
   - image_picker_ios (from `.symlinks/plugins/image_picker_ios/ios`)
   - mapbox_maps_flutter (from `.symlinks/plugins/mapbox_maps_flutter/ios`)
+  - open_mail_launcher (from `.symlinks/plugins/open_mail_launcher/ios`)
+  - package_info_plus (from `.symlinks/plugins/package_info_plus/ios`)
   - path_provider_foundation (from `.symlinks/plugins/path_provider_foundation/darwin`)
   - permission_handler_apple (from `.symlinks/plugins/permission_handler_apple/ios`)
   - sensors_plus (from `.symlinks/plugins/sensors_plus/ios`)
@@ -137,6 +143,10 @@ EXTERNAL SOURCES:
     :path: ".symlinks/plugins/image_picker_ios/ios"
   mapbox_maps_flutter:
     :path: ".symlinks/plugins/mapbox_maps_flutter/ios"
+  open_mail_launcher:
+    :path: ".symlinks/plugins/open_mail_launcher/ios"
+  package_info_plus:
+    :path: ".symlinks/plugins/package_info_plus/ios"
   path_provider_foundation:
     :path: ".symlinks/plugins/path_provider_foundation/darwin"
   permission_handler_apple:
@@ -173,6 +183,8 @@ SPEC CHECKSUMS:
   MapboxCommon: 5f918338024f4f33a07013dbc51ab222a1d41a7c
   MapboxCoreMaps: 8bf3572e446be27508bfba0b4580ad5e9b1a577d
   MapboxMaps: c553f390b0e0eed0cc68710a6cee7ba5fa3143b3
+  open_mail_launcher: 774e9a51f2844b39e36cd79b82b5924c72dc2652
+  package_info_plus: af8e2ca6888548050f16fa2f1938db7b5a5df499
   path_provider_foundation: 080d55be775b7414fd5a5ef3ac137b97b097e564
   permission_handler_apple: 4ed2196e43d0651e8ff7ca3483a069d469701f2d
   PromisesObjC: f5707f49cb48b9636751c5b2e7d227e43fba9f47

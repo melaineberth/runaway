@@ -833,4 +833,16 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get home => 'Home';
+
+  @override
+  String get resources => 'Resources';
+
+  @override
+  String get contactSupport => 'Contact support';
+
+  @override
+  String get rateInStore => 'Rate in store';
+
+  @override
+  String get followOnX => 'Follow @Trailix';
 }

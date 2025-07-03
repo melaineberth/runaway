@@ -122,7 +122,7 @@ class ThemeSelector extends StatelessWidget {
   }) {
     return SquircleContainer(
       onTap: onTap,
-      radius: 40,
+      radius: 50,
       color: context.adaptiveBorder.withValues(alpha: 0.08),
       padding: const EdgeInsets.all(8),
       child: Row(
@@ -131,8 +131,8 @@ class ThemeSelector extends StatelessWidget {
           Row(
             children: [
               SquircleContainer(
-                padding: const EdgeInsets.all(12),
-                radius: 18,
+                padding: const EdgeInsets.all(15),
+                radius: 30,
                 color: context.adaptivePrimary.withValues(alpha: 0.25),
                 child: Icon(
                   icon,
