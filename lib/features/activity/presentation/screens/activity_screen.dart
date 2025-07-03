@@ -101,6 +101,7 @@ class _ActivityScreenState extends State<ActivityScreen> with TickerProviderStat
           return BlocBuilder<AppDataBloc, AppDataState>(
             builder: (context, appDataState) {
               return Scaffold(
+                extendBodyBehindAppBar: true,
                 appBar: _buildAppBar(),
                 body: _buildBody(appDataState),
               );
@@ -144,14 +145,12 @@ class _ActivityScreenState extends State<ActivityScreen> with TickerProviderStat
     return AppBar(
       forceMaterialTransparency: true,
       backgroundColor: Colors.transparent,
-      centerTitle: true,
       title: FadeTransition(
         opacity: _fadeAnimation,
         child: Text(
           context.l10n.activityTitle,
           style: context.bodySmall?.copyWith(
             color: context.adaptiveTextPrimary,
-            fontWeight: FontWeight.w600,
           ),
         ),
       ),
@@ -459,10 +458,9 @@ class _ActivityScreenState extends State<ActivityScreen> with TickerProviderStat
           20.h,
           _buildGoalOption(
             context: context,
-            icon: HugeIcons.strokeRoundedAdd01,
+            icon: HugeIcons.solidRoundedAddCircle,
             title: context.l10n.customGoal,
             subtitle: context.l10n.createCustomGoal,
-            color: Colors.blue,
             onTap: () {
               context.pop();
               _showAddGoalDialog();
@@ -471,10 +469,9 @@ class _ActivityScreenState extends State<ActivityScreen> with TickerProviderStat
           10.h,
           _buildGoalOption(
             context: context,
-            icon: HugeIcons.strokeRoundedAdd01,
+            icon: HugeIcons.solidRoundedGridView,
             title: context.l10n.goalsModels,
             subtitle: context.l10n.predefinedGoals,
-            color: Colors.green,
             onTap: () {
               context.pop();
               _showGoalTemplatesDialog();
@@ -488,21 +485,28 @@ class _ActivityScreenState extends State<ActivityScreen> with TickerProviderStat
   Widget _buildGoalOption({required BuildContext context, required IconData icon, Color color = Colors.white10, required String title, required String subtitle, Function()? onTap}) {    
     return SquircleContainer(
       onTap: onTap,
-      radius: 40,
-      color: context.adaptiveBorder.withValues(alpha: 0.05),
-      padding: EdgeInsets.all(8),
+      radius: 50,
+      color: context.adaptiveBorder.withValues(alpha: 0.08),
+      padding: const EdgeInsets.all(8),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Row(
             children: [
               SquircleContainer(
-                padding: EdgeInsets.all(12),
-                radius: 18,
-                color: color.withValues(alpha: 0.25),
-                child: Icon(icon, color: color, size: 25),
+                radius: 30,
+                isGlow: true,
+                color: context.adaptivePrimary,
+                padding: const EdgeInsets.all(15),
+                child: Icon(
+                  icon, 
+                  color: Colors.white, 
+                  size: 25,
+                ),
               ),
+
               15.w,
+
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -525,10 +529,14 @@ class _ActivityScreenState extends State<ActivityScreen> with TickerProviderStat
               ),
             ],
           ),
-          Icon(
-            HugeIcons.strokeRoundedArrowRight01,
-            color: context.adaptiveTextPrimary,
-            size: 20,
+          
+          Padding(
+            padding: const EdgeInsets.only(right: 8.0),
+            child: Icon(
+              HugeIcons.strokeRoundedArrowRight01,
+              color: context.adaptiveTextPrimary,
+              size: 20,
+            ),
           ),
         ],
       ),
@@ -549,11 +557,10 @@ class _ActivityScreenState extends State<ActivityScreen> with TickerProviderStat
     if (result != null) {
       // 🔥 UTILISER AppDataBloc AU LIEU D'ActivityBloc
       if (existingGoal != null) {
-        // Mise à jour d'un objectif existant
-        context.read<AppDataBloc>().add(PersonalGoalUpdatedInAppData(result));
-        
         // Afficher un message de confirmation
         if (mounted) {
+          context.read<AppDataBloc>().add(PersonalGoalUpdatedInAppData(result));
+          
           showTopSnackBar(
             Overlay.of(context),
             TopSnackBar(
@@ -563,12 +570,11 @@ class _ActivityScreenState extends State<ActivityScreen> with TickerProviderStat
             ),
           );
         }
-      } else {
-        // Ajout d'un nouvel objectif
-        context.read<AppDataBloc>().add(PersonalGoalAddedToAppData(result));
-        
+      } else {        
         // Afficher un message de confirmation
         if (mounted) {
+          context.read<AppDataBloc>().add(PersonalGoalAddedToAppData(result));
+          
           showTopSnackBar(
             Overlay.of(context),
             TopSnackBar(
@@ -594,11 +600,10 @@ class _ActivityScreenState extends State<ActivityScreen> with TickerProviderStat
     );
 
     if (result != null) {
-      // 🔥 UTILISER AppDataBloc AU LIEU D'ActivityBloc
-      context.read<AppDataBloc>().add(PersonalGoalAddedToAppData(result));
-      
       // Afficher un message de confirmation
       if (mounted) {
+        context.read<AppDataBloc>().add(PersonalGoalAddedToAppData(result));
+        
         showTopSnackBar(
           Overlay.of(context),
           TopSnackBar(

@@ -19,7 +19,11 @@ class RecordsSection extends StatelessWidget {
       children: [
         Text(
           context.l10n.personalRecords,
-          style: context.bodyMedium?.copyWith(color: context.adaptiveTextPrimary, fontWeight: FontWeight.w700),
+          style: context.bodyMedium?.copyWith(
+            fontSize: 18,
+            color: context.adaptiveTextSecondary,
+            fontWeight: FontWeight.w600,
+          ),
         ),
         15.h,
         SquircleContainer(

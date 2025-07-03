@@ -92,22 +92,18 @@ class _AddGoalDialogState extends State<AddGoalDialog> {
             ),
           ),
           50.h,
-          GestureDetector(
+          SquircleContainer(
             onTap: _saveGoal,
-            child: Container(
-              padding: EdgeInsets.symmetric(vertical: 15.0),
-              decoration: BoxDecoration(
-                color: context.adaptivePrimary,
-                borderRadius: BorderRadius.circular(100),
-              ),
-              child: Center(
-                child: Text(
-                  _isEditing ? context.l10n.modify : context.l10n.create,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                  ),
+            height: 65,
+            color: context.adaptivePrimary,
+            radius: 50.0,
+            child: Center(
+              child: Text(
+                _isEditing ? context.l10n.modify : context.l10n.create,
+                style: context.bodySmall?.copyWith(
+                  fontSize: 19,
+                  color: Colors.white,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
             ),
@@ -157,7 +153,7 @@ class _AddGoalDialogState extends State<AddGoalDialog> {
               onTap: () => setState(() => _selectedType = type),
               child: Container(
                 decoration: BoxDecoration(
-                  color: isSelected ? Colors.blue : context.adaptiveBorder.withValues(alpha: 0.08),
+                  color: isSelected ? context.adaptivePrimary : context.adaptiveBorder.withValues(alpha: 0.08),
                   borderRadius: BorderRadius.circular(100),
                 ),
                 padding: EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
@@ -207,7 +203,7 @@ class _AddGoalDialogState extends State<AddGoalDialog> {
       onTap: () => setState(() => _selectedActivity = activity),
       child: Container(
         decoration: BoxDecoration(
-          color: isSelected ? Colors.blue : context.adaptiveBorder.withValues(alpha: 0.08),
+          color: isSelected ? context.adaptivePrimary : context.adaptiveBorder.withValues(alpha: 0.08),
           borderRadius: BorderRadius.circular(100),
         ),
         padding: EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),

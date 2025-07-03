@@ -642,7 +642,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get goalTypeRoutes => 'Número de rutas';
 
   @override
-  String get goalTypeSpeed => 'Velocidad promedio';
+  String get goalTypeSpeed => 'Velo. promedio';
 
   @override
   String get goalTypeElevation => 'Ganancia total de elevación';

@@ -642,7 +642,7 @@ class AppLocalizationsIt extends AppLocalizations {
   String get goalTypeRoutes => 'Numero di percorsi';
 
   @override
-  String get goalTypeSpeed => 'Velocità media';
+  String get goalTypeSpeed => 'Velo. media';
 
   @override
   String get goalTypeElevation => 'Dislivello totale';

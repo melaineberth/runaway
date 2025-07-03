@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:pull_down_button/pull_down_button.dart';
 import 'package:runaway/config/colors.dart';
 import 'package:runaway/config/extensions.dart';
 import 'package:runaway/core/blocs/app_data/app_data_bloc.dart';
@@ -10,6 +11,7 @@ import 'package:runaway/core/blocs/app_data/app_data_state.dart';
 import 'package:runaway/core/services/conversion_triggers.dart';
 import 'package:runaway/core/widgets/ask_registration.dart';
 import 'package:runaway/core/widgets/blurry_page.dart';
+import 'package:runaway/core/widgets/icon_btn.dart';
 import 'package:runaway/core/widgets/modal_dialog.dart';
 import 'package:runaway/core/widgets/squircle_container.dart';
 import 'package:runaway/core/widgets/top_snackbar.dart';
@@ -50,9 +52,6 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
   
   // ⏱️ Gestion du loading minimum
   final bool _shouldShowLoading = false;
-
-  // ✅ Cache local optimisé pour l'UI
-  bool _hasPendingSync = false;
   
   @override
   void initState() {
@@ -282,9 +281,6 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
 
   /// 🎭 Interface principale avec animations intégrées
   Widget _buildMainView(AppDataState appDataState, List<SavedRoute> routes) {
-    final isLoading = appDataState.isLoading;
-    final hasBackground = _hasPendingSync && !isLoading;
-
     // Mettre à jour les animations en fonction du nombre de routes
     if (routes.isNotEmpty) {
       _updateAnimationsForRoutes(routes.length);
@@ -292,48 +288,30 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
 
     return Scaffold(
       extendBodyBehindAppBar: true,
-      appBar: _buildAppBar(isLoading, pendingSync: hasBackground),
-      body: Padding(
-        padding: EdgeInsets.fromLTRB(20.0, kTextTabBarHeight * 3, 20.0, 0.0),
-        child: Column(
-          children: [
-            // Stats card avec animation si plus d'un parcours
-            AnimatedBuilder(
-              animation: _fadeAnimation,
-              builder: (context, child) {
-                return Opacity(
-                  opacity: _fadeAnimation.value,
-                  child: Transform.translate(
-                    offset: Offset(0, 20 * (1 - _fadeAnimation.value)),
-                    child: _buildStatsCard(routes),
-                  ),
-                );
-              },
-            ),
-            Expanded(
-              child: RefreshIndicator(
-                onRefresh: () async {
-                  _refreshData();
-                },
-                child: BlurryPage(
-                  contentPadding: EdgeInsets.only(top: 20.0, bottom: 40.0),
-                  children: [
-                    _buildAnimatedRoutesList(routes),
-                  ],
+      appBar: _buildAppBar(),
+      body: BlurryPage(
+        children: [
+          AnimatedBuilder(
+            animation: _fadeAnimation,
+            builder: (context, child) {
+              return Opacity(
+                opacity: _fadeAnimation.value,
+                child: Transform.translate(
+                  offset: Offset(0, 20 * (1 - _fadeAnimation.value)),
+                  child: _buildStatsCard(routes),
                 ),
-              ),
-            ),
-          ],
-        ),
+              );
+            },
+          ),
+          _buildAnimatedRoutesList(routes),
+        ],
       ),
     );
   }
 
-  PreferredSizeWidget _buildAppBar(bool isLoading, {bool pendingSync = false}) {
+  PreferredSizeWidget _buildAppBar() {
     return AppBar(
-      centerTitle: true,
       forceMaterialTransparency: true,
-      backgroundColor: Colors.transparent,
       title: FadeTransition(
         opacity: _fadeAnimation,
         child: Text(
@@ -341,21 +319,6 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
           style: context.bodySmall?.copyWith(color: context.adaptiveTextPrimary),
         ),
       ),
-      actions: [
-        if (pendingSync) ...[
-          FadeTransition(
-            opacity: _fadeAnimation,
-            child: Container(
-              width: 8,
-              height: 8,
-              decoration: const BoxDecoration(
-                color: Colors.orange,
-                shape: BoxShape.circle,
-              ),
-            ),
-          ),
-        ],
-      ],
     );
   }
 
@@ -400,52 +363,57 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
   Widget _buildLoadedList(List<SavedRoute> routes) {
     final sortedRoutes = routes.sortByCreationDate();
     
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      key: const ValueKey('loaded'),
-      children: [
-        // Parcours avec animations décalées
-        ...sortedRoutes.asMap().entries.map((entry) {
-          final index = entry.key;
-          final route = entry.value;
-          
-          return AnimatedBuilder(
-            animation: _staggerController,
-            builder: (context, child) {
-              // Animations avec fallback sécurisé
-              final slideValue = index < _slideAnimations.length 
-                  ? _slideAnimations[index].value 
-                  : 0.0;
-              final scaleValue = index < _scaleAnimations.length 
-                  ? _scaleAnimations[index].value 
-                  : 1.0;
-              
-              return Opacity(
-                opacity: _fadeAnimation.value,
-                child: Transform.translate(
-                  offset: Offset(0, slideValue),
-                  child: Transform.scale(
-                    scale: scaleValue,
-                    child: Padding(
-                      padding: EdgeInsets.only(
-                        bottom: index >= sortedRoutes.length - 1 ? 90.0 : 20.0,
-                      ),
-                      child: HistoricCard(
-                        route: route,
-                        isEdit: isEditMode,
-                        onTap: () => _navigateToRoute(route),
-                        onDelete: () => _deleteRoute(route),
-                        onSync: routes == routes.unsyncedRoutes ? _syncData : null,
-                        onRename: _toggleEditMode,
+    return Padding(
+      padding: const EdgeInsets.symmetric(
+        horizontal: 20.0,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        key: const ValueKey('loaded'),
+        children: [
+          // Parcours avec animations décalées
+          ...sortedRoutes.asMap().entries.map((entry) {
+            final index = entry.key;
+            final route = entry.value;
+            
+            return AnimatedBuilder(
+              animation: _staggerController,
+              builder: (context, child) {
+                // Animations avec fallback sécurisé
+                final slideValue = index < _slideAnimations.length 
+                    ? _slideAnimations[index].value 
+                    : 0.0;
+                final scaleValue = index < _scaleAnimations.length 
+                    ? _scaleAnimations[index].value 
+                    : 1.0;
+                
+                return Opacity(
+                  opacity: _fadeAnimation.value,
+                  child: Transform.translate(
+                    offset: Offset(0, slideValue),
+                    child: Transform.scale(
+                      scale: scaleValue,
+                      child: Padding(
+                        padding: EdgeInsets.only(
+                          bottom: index >= sortedRoutes.length - 1 ? 90.0 : 20.0,
+                        ),
+                        child: HistoricCard(
+                          route: route,
+                          isEdit: isEditMode,
+                          onTap: () => _navigateToRoute(route),
+                          onDelete: () => _deleteRoute(route),
+                          onSync: routes == routes.unsyncedRoutes ? _syncData : null,
+                          onRename: _toggleEditMode,
+                        ),
                       ),
                     ),
                   ),
-                ),
-              );
-            },
-          );
-        }),
-      ],
+                );
+              },
+            );
+          }),
+        ],
+      ),
     );
   }
 
@@ -508,13 +476,9 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
 
   /// Interface vide (aucun parcours)
   Widget _buildEmptyView(AppDataState appDataState) {
-    final isLoading = appDataState.isLoading;
-
     return Scaffold(
       extendBodyBehindAppBar: true,
-      appBar: _buildAppBar(
-        isLoading,
-      ),
+      appBar: _buildAppBar(),
       body: FadeTransition(
         opacity: _fadeAnimation,
         child: Center(
@@ -570,39 +534,42 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
     final unsyncedCount = routes.unsyncedRoutes.length;
     final syncedCount = totalRoutes - unsyncedCount;
     
-    return SquircleContainer(
-      radius: 40.0,
-      padding: EdgeInsets.all(20),
-      color: context.adaptiveBorder.withValues(alpha: 0.08),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
-        children: [
-          _buildStatItem(
-            icon: HugeIcons.strokeRoundedRoute01,
-            value: totalRoutes.toString(),
-            label: context.l10n.route,
-          ),
-          _buildStatItem(
-            icon: HugeIcons.strokeRoundedNavigator01,
-            value: '${totalDistance.toStringAsFixed(1)}km',
-            label: context.l10n.total,
-          ),
-          if (unsyncedCount > 0)
-          _buildStatItem(
-            icon: HugeIcons.strokeRoundedWifiOff01,
-            value: unsyncedCount.toString(),
-            label: context.l10n.unsynchronized,
-            color: Colors.orange,
-          )
-        else
-          _buildStatItem(
-            icon: HugeIcons.strokeRoundedWifi01,
-            value: syncedCount.toString(),
-            label: context.l10n.synchronized,
-            color: Colors.green,
-          ),
-
-        ],
+    return Padding(
+      padding: const EdgeInsets.all(20.0),
+      child: SquircleContainer(
+        radius: 40.0,
+        padding: EdgeInsets.all(20),
+        color: context.adaptiveBorder.withValues(alpha: 0.08),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceAround,
+          children: [
+            _buildStatItem(
+              icon: HugeIcons.strokeRoundedRoute01,
+              value: totalRoutes.toString(),
+              label: context.l10n.route,
+            ),
+            _buildStatItem(
+              icon: HugeIcons.strokeRoundedNavigator01,
+              value: '${totalDistance.toStringAsFixed(1)}km',
+              label: context.l10n.total,
+            ),
+            if (unsyncedCount > 0)
+            _buildStatItem(
+              icon: HugeIcons.strokeRoundedWifiOff01,
+              value: unsyncedCount.toString(),
+              label: context.l10n.unsynchronized,
+              color: Colors.orange,
+            )
+          else
+            _buildStatItem(
+              icon: HugeIcons.strokeRoundedWifi01,
+              value: syncedCount.toString(),
+              label: context.l10n.synchronized,
+              color: Colors.green,
+            ),
+      
+          ],
+        ),
       ),
     );
   }
@@ -638,10 +605,6 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
 
   void _refreshData() async {
     print('🔄 Refresh manuel optimisé');
-        
-    setState(() {
-      _hasPendingSync = true;
-    });
     
     // Déclencher les updates en parallèle
     final context = this.context;
@@ -711,7 +674,7 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
   Widget _buildLoadingView(AppDataState appDataState) {
     return Scaffold(
       extendBodyBehindAppBar: true,
-      appBar: _buildAppBar(true),
+      appBar: _buildAppBar(),
       body: BlurryPage(
         contentPadding: EdgeInsets.only(top: kToolbarHeight + 60, left: 20, right: 20),
         children: [

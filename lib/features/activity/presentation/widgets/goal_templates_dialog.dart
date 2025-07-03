@@ -110,22 +110,28 @@ class GoalTemplatesDialog extends StatelessWidget {
         final goal = createGoal();
         Navigator.of(context).pop(goal);
       },
-      radius: 40,
+      radius: 50,
       color: context.adaptiveBorder.withValues(alpha: 0.08),
-      padding: EdgeInsets.all(9),
+      padding: const EdgeInsets.all(8),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Row(
             children: [
               SquircleContainer(
-                padding: EdgeInsets.all(12),
-                radius: 18,
-                color: Colors.blue.withValues(alpha: 0.1),
-                child: Icon(icon, color: Colors.blue, size: 25),
-                
+                radius: 30,
+                isGlow: true,
+                color: context.adaptivePrimary,
+                padding: const EdgeInsets.all(15),
+                child: Icon(
+                  icon, 
+                  color: Colors.white, 
+                  size: 25,
+                ),
               ),
+
               15.w,
+
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -148,10 +154,14 @@ class GoalTemplatesDialog extends StatelessWidget {
               ),
             ],
           ),
-          Icon(
-            HugeIcons.strokeRoundedArrowRight01,
-            color: context.adaptiveTextPrimary,
-            size: 20,
+
+          Padding(
+            padding: const EdgeInsets.only(right: 8.0),
+            child: Icon(
+              HugeIcons.strokeRoundedArrowRight01,
+              color: context.adaptiveTextPrimary,
+              size: 20,
+            ),
           ),
         ],
       ),

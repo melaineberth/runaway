@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hugeicons/hugeicons.dart';
+import 'package:runaway/config/colors.dart';
 import 'package:runaway/core/widgets/modal_sheet.dart';
 import 'package:runaway/core/widgets/squircle_container.dart';
 import '../../../../config/extensions.dart';
@@ -33,7 +34,11 @@ class ActivityTypeStatsCard extends StatelessWidget {
           children: [
             Text(
               context.l10n.activityFilter,
-              style: context.bodyMedium?.copyWith(color: context.adaptiveTextPrimary, fontWeight: FontWeight.w700),
+              style: context.bodyMedium?.copyWith(
+                fontSize: 18,
+                color: context.adaptiveTextSecondary,
+                fontWeight: FontWeight.w600,
+              ),
             ),
             _buildFilterButton(context),
           ],
@@ -92,6 +97,7 @@ class ActivityTypeStatsCard extends StatelessWidget {
         children: [
           SquircleContainer(
             radius: 30.0,
+            isGlow: true,
             padding: const EdgeInsets.all(20),
             color: context.adaptivePrimary,
             child: Icon(
@@ -114,9 +120,9 @@ class ActivityTypeStatsCard extends StatelessWidget {
                 Text(
                   context.l10n.totalRoutes(stat.totalRoutes),
                   style: context.bodySmall?.copyWith(
-                    fontSize: 14,
+                    fontSize: 15,
                     fontWeight: FontWeight.w500,
-                    color: context.adaptiveTextSecondary,
+                    color: context.adaptiveTextPrimary.withValues(alpha: 0.7),
                   ),
                 ),
               ],
@@ -219,25 +225,28 @@ class ActivityTypeStatsCard extends StatelessWidget {
           onTypeSelected(type);
           context.pop();
         },
-        radius: 40,
-        color: context.adaptiveBorder.withValues(alpha: 0.05),
-        padding: EdgeInsets.all(8),
+        radius: 50,
+        color: context.adaptiveBorder.withValues(alpha: 0.08),
+        padding: const EdgeInsets.all(8),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Row(
               children: [
                 SquircleContainer(
-                  padding: const EdgeInsets.all(12),
-                  radius: 18,
-                  color: context.adaptivePrimary.withValues(alpha: 0.25),
+                  radius: 30,
+                  isGlow: true,
+                  color: context.adaptivePrimary,
+                  padding: const EdgeInsets.all(15),
                   child: Icon(
                     type?.icon ?? HugeIcons.solidRoundedMenu01,
-                    color: context.adaptivePrimary,
+                    color: Colors.white,
                     size: 25,
                   ),
                 ),
-                10.w,
+
+                15.w,
+                
                 Text(
                   label,
                   style: context.bodyMedium?.copyWith(
@@ -258,6 +267,7 @@ class ActivityTypeStatsCard extends StatelessWidget {
                 height: 24,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
+                  boxShadow: [],
                   color: isSelected 
                       ? context.adaptivePrimary
                       : Colors.transparent,

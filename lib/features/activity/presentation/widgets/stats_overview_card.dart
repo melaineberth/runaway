@@ -21,7 +21,11 @@ class StatsOverviewCard extends StatelessWidget {
       children: [
         Text(
           context.l10n.overview,
-          style: context.bodyMedium?.copyWith(color: context.adaptiveTextPrimary, fontWeight: FontWeight.w700),
+          style: context.bodyMedium?.copyWith(
+            fontSize: 18,
+            color: context.adaptiveTextSecondary,
+            fontWeight: FontWeight.w600,
+          ),
         ),
         15.h,
         SquircleContainer(
@@ -53,7 +57,7 @@ class StatsOverviewCard extends StatelessWidget {
                   context: context,
                   icon: HugeIcons.solidRoundedDashboardSpeed02,
                   value: stats.averageSpeedKmh.toStringAsFixed(1),
-                  label: context.l10n.averageSpeedTitle,
+                  label: context.l10n.goalTypeSpeed,
                   indicator: " km/h"
                 ),
               ),
@@ -74,6 +78,7 @@ class StatsOverviewCard extends StatelessWidget {
     return Column(
       children: [
         SquircleContainer(
+          isGlow: true,
           radius: 40.0,
           padding: const EdgeInsets.all(20),
           color: context.adaptivePrimary,

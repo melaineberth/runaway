@@ -1332,7 +1332,7 @@ abstract class AppLocalizations {
   /// Name of a goal category that tracks the average speed over a period.
   ///
   /// In en, this message translates to:
-  /// **'Average speed'**
+  /// **'Aver. speed'**
   String get goalTypeSpeed;
 
   /// Name of a goal category that tracks cumulative elevation gain.

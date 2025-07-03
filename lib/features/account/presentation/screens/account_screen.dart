@@ -40,6 +40,7 @@ class AccountScreen extends StatefulWidget {
 
 class _AccountScreenState extends State<AccountScreen> with TickerProviderStateMixin {
   late AnimationController _fadeController;
+  late Animation<double> _fadeAnimation;
 
   @override
   void initState() {
@@ -52,6 +53,14 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
       duration: const Duration(milliseconds: 800),
       vsync: this,
     );
+
+    _fadeAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(
+      parent: _fadeController,
+      curve: Curves.easeOut,
+    ));
 
     _fadeController.forward();
   }
@@ -147,10 +156,13 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
       extendBodyBehindAppBar: true,
       appBar: AppBar(
         forceMaterialTransparency: true,
-        title: Text(
-          context.l10n.account,
-          style: context.bodySmall?.copyWith(
-            color: context.adaptiveTextPrimary,
+        title: FadeTransition(
+          opacity: _fadeAnimation,
+          child: Text(
+            context.l10n.account,
+            style: context.bodySmall?.copyWith(
+              color: context.adaptiveTextPrimary,
+            ),
           ),
         ),
       ),

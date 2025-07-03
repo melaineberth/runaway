@@ -861,7 +861,7 @@
   "@goalTypeRoutes": {
     "description": "Nombre de una categoría de objetivo que rastrea cuántas rutas se completan."
   },
-  "goalTypeSpeed": "Velocidad promedio",
+  "goalTypeSpeed": "Velo. promedio",
   "@goalTypeSpeed": {
     "description": "Nombre de una categoría de objetivo que rastrea la velocidad promedio durante un período."
   },

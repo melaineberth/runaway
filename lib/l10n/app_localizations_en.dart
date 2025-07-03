@@ -642,7 +642,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get goalTypeRoutes => 'Number of routes';
 
   @override
-  String get goalTypeSpeed => 'Average speed';
+  String get goalTypeSpeed => 'Aver. speed';
 
   @override
   String get goalTypeElevation => 'Total elevation gain';

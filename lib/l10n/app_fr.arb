@@ -861,7 +861,7 @@
   "@goalTypeRoutes": {
     "description": "Nom d'une catégorie d'objectif qui suit le nombre de parcours complétés."
   },
-  "goalTypeSpeed": "Vitesse moyenne",
+  "goalTypeSpeed": "Vitesse moy.",
   "@goalTypeSpeed": {
     "description": "Nom d'une catégorie d'objectif qui suit la vitesse moyenne sur une période."
   },

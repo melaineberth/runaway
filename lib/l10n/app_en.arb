@@ -861,7 +861,7 @@
   "@goalTypeRoutes": {
     "description": "Name of a goal category that tracks how many routes are completed."
   },
-  "goalTypeSpeed": "Average speed",
+  "goalTypeSpeed": "Aver. speed",
   "@goalTypeSpeed": {
     "description": "Name of a goal category that tracks the average speed over a period."
   },

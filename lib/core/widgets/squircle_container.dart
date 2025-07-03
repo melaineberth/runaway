@@ -10,6 +10,7 @@ class SquircleContainer extends StatelessWidget {
   final double? width;
   final double? height;
   final Function()? onTap;
+  final bool isGlow;
   final bool isBorder;
 
   const SquircleContainer({
@@ -24,29 +25,42 @@ class SquircleContainer extends StatelessWidget {
     this.height,
     this.onTap,
     this.isBorder = false,
+    this.isGlow = false,
   });
 
   @override
   Widget build(BuildContext context) {
-    return ClipPath(
-      clipper: ShapeBorderClipper(
-        shape: ContinuousRectangleBorder(
-          borderRadius: BorderRadius.all(
-            Radius.circular(radius ?? 60)),
-        ),
-      ),
-      child: GestureDetector(
-        onTap: onTap,
-        child: Container(
-          width: width,
-          height: height,
-          margin: margin,
-          padding: padding ?? EdgeInsets.zero,
-          decoration: BoxDecoration(
-            color: color,
-            boxShadow: boxShadow,
+    return Container(
+      decoration: isGlow ? BoxDecoration(
+        boxShadow: [
+          BoxShadow(
+            color: color!.withValues(alpha: 0.4),
+            blurRadius: 30.0,
+            spreadRadius: 1.0,
+            offset: const Offset(0.0, 0.0),
           ),
-          child: child,
+        ],
+      ) : null,
+      child: ClipPath(
+        clipper: ShapeBorderClipper(
+          shape: ContinuousRectangleBorder(
+            borderRadius: BorderRadius.all(
+              Radius.circular(radius ?? 60)),
+          ),
+        ),
+        child: GestureDetector(
+          onTap: onTap,
+          child: Container(
+            width: width,
+            height: height,
+            margin: margin,
+            padding: padding ?? EdgeInsets.zero,
+            decoration: BoxDecoration(
+              color: color,
+              boxShadow: boxShadow,
+            ),
+            child: child,
+          ),
         ),
       ),
     );
