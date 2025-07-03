@@ -101,7 +101,6 @@ class _TrailixState extends State<Trailix> {
           create: (context) => NotificationBloc()..add(NotificationInitializeRequested()),
         ),
 
-        // AppDataBloc - DOIT être créé EN PREMIER
         BlocProvider<AppDataBloc>(
           create: (context) {
             print('🔧 Création du AppDataBloc...');
@@ -118,7 +117,6 @@ class _TrailixState extends State<Trailix> {
           },
         ),
         
-        // AuthBloc - créé APRÈS AppDataBloc
         BlocProvider(
           create: (context) {
             print('🔧 Création du AuthBloc...');
@@ -136,7 +134,6 @@ class _TrailixState extends State<Trailix> {
           ),
         ),
         
-        // RouteGenerationBloc - IMPORTANT pour la synchronisation
         BlocProvider(
           create: (_) {
             print('🔧 Création du RouteGenerationBloc...');

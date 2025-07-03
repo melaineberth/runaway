@@ -1,12 +1,9 @@
-// lib/features/navigation/domain/models/navigation_models.dart
 import 'package:equatable/equatable.dart';
 import 'dart:math' as math;
 
 import 'package:geolocator/geolocator.dart';
 
 /// Point de tracking GPS avec timestamp
-// lib/features/navigation/domain/models/navigation_models.dart (partie TrackingPoint)
-
 class TrackingPoint {
   final double latitude;
   final double longitude;

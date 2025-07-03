@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -151,6 +153,14 @@ class _ActivityScreenState extends State<ActivityScreen> with TickerProviderStat
           context.l10n.activityTitle,
           style: context.bodySmall?.copyWith(
             color: context.adaptiveTextPrimary,
+          ),
+        ),
+      ),
+      flexibleSpace: FlexibleSpaceBar(
+        background: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 50, sigmaY: 50),
+          child: Container(
+            color: context.adaptiveBackground.withValues(alpha: 0.3),
           ),
         ),
       ),
@@ -482,7 +492,7 @@ class _ActivityScreenState extends State<ActivityScreen> with TickerProviderStat
     );
   }
 
-  Widget _buildGoalOption({required BuildContext context, required IconData icon, Color color = Colors.white10, required String title, required String subtitle, Function()? onTap}) {    
+  Widget _buildGoalOption({required BuildContext context, required IconData icon, required String title, required String subtitle, Function()? onTap}) {    
     return SquircleContainer(
       onTap: onTap,
       radius: 50,

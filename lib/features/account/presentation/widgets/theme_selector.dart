@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:hugeicons/hugeicons.dart';
-import 'package:runaway/config/colors.dart';
 import 'package:runaway/config/extensions.dart';
 import 'package:runaway/core/blocs/theme_bloc/theme_bloc.dart';
 import 'package:runaway/core/widgets/modal_sheet.dart';
@@ -134,7 +133,7 @@ class ThemeSelector extends StatelessWidget {
               SquircleContainer(
                 radius: 30,
                 isGlow: true,
-                color: AppColors.primary,
+                color: context.adaptivePrimary,
                 padding: const EdgeInsets.all(15),
                 child: Icon(
                   icon, 

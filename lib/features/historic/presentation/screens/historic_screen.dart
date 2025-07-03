@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -319,6 +321,14 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
           style: context.bodySmall?.copyWith(color: context.adaptiveTextPrimary),
         ),
       ),
+      flexibleSpace: FlexibleSpaceBar(
+        background: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 50, sigmaY: 50),
+          child: Container(
+            color: context.adaptiveBackground.withValues(alpha: 0.3),
+          ),
+        ),
+      ),
     );
   }
 
@@ -427,6 +437,14 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
         title: Text(
           context.l10n.historic,
           style: context.bodySmall?.copyWith(color: context.adaptiveTextPrimary),
+        ),
+        flexibleSpace: FlexibleSpaceBar(
+          background: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 50, sigmaY: 50),
+            child: Container(
+              color: context.adaptiveBackground.withValues(alpha: 0.3),
+            ),
+          ),
         ),
         actions: [
           IconButton(

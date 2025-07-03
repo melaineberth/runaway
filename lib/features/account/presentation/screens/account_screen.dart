@@ -165,6 +165,14 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
             ),
           ),
         ),
+        flexibleSpace: FlexibleSpaceBar(
+          background: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 50, sigmaY: 50),
+            child: Container(
+              color: context.adaptiveBackground.withValues(alpha: 0.3),
+            ),
+          ),
+        ),
       ),
       body: BlurryPage(
         children: [

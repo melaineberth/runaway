@@ -89,9 +89,9 @@ class _MapStyleSelectorState extends State<MapStyleSelector> {
   }) {
     return SquircleContainer(
       onTap: onTap,
-      radius: 40,
-      color: context.adaptiveBorder.withValues(alpha: 0.05),
-      padding: EdgeInsets.all(8),
+      radius: 50,
+      color: context.adaptiveBorder.withValues(alpha: 0.08),
+      padding: const EdgeInsets.all(8),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
@@ -99,12 +99,13 @@ class _MapStyleSelectorState extends State<MapStyleSelector> {
           Row(
             children: [
               SquircleContainer(
-                padding: EdgeInsets.all(12.0),
-                radius: 18,
-                color: context.adaptivePrimary.withValues(alpha: 0.25),
+                radius: 30,
+                isGlow: true,
+                color: context.adaptivePrimary,
+                padding: const EdgeInsets.all(15),
                 child: Icon(
                   style.icon,
-                  color: context.adaptivePrimary,
+                  color: Colors.white,
                   size: 25,
                 ),
               ),

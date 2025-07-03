@@ -52,6 +52,7 @@
 		<string>ymail</string>
 		<string>readdle-spark</string>
 	</array>
+
 	<key>NSDocumentsFolderUsageDescription</key>
 	<string>Cette application enregistre des fichiers dans le dossier Documents.</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
@@ -60,6 +61,12 @@
 	<string>Cette application a besoin de votre localisation pour la navigation GPS en arrière-plan</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Cette application a besoin de votre localisation pour la navigation GPS</string>
+
+	<key>NSCameraUsageDescription</key>
+	<string>your usage description here</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>your usage description here</string>
+
 	<key>NSMotionUsageDescription</key>
 	<string>This app requires access to the barometer to provide altitude information.</string>
 	<key>UIApplicationSupportsIndirectInputEvents</key>

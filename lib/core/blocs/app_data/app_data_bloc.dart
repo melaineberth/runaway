@@ -528,10 +528,7 @@ class AppDataBloc extends Bloc<AppDataEvent, AppDataState> {
   ) async {
     print('🎯 Ajout d\'objectif via AppDataBloc: ${event.goal.title}');
     
-    try {
-      // Sauvegarder l'objectif
-      await _activityRepository.savePersonalGoal(event.goal);
-      
+    try {      
       // Recharger les données d'activité pour mettre à jour l'interface
       await _refreshActivityData(emit, showLoading: false);
       
@@ -550,10 +547,7 @@ class AppDataBloc extends Bloc<AppDataEvent, AppDataState> {
   ) async {
     print('🎯 Mise à jour d\'objectif via AppDataBloc: ${event.goal.title}');
     
-    try {
-      // Sauvegarder l'objectif mis à jour
-      await _activityRepository.savePersonalGoal(event.goal);
-      
+    try {      
       // Recharger les données d'activité
       await _refreshActivityData(emit, showLoading: false);
       

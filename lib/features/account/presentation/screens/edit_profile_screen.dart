@@ -9,6 +9,7 @@ import 'package:go_router/go_router.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:runaway/config/extensions.dart';
+import 'package:runaway/core/widgets/modal_dialog.dart';
 import 'package:runaway/core/widgets/squircle_container.dart';
 import 'package:runaway/core/widgets/top_snackbar.dart';
 import 'package:runaway/features/auth/domain/models/profile.dart';
@@ -63,11 +64,11 @@ class _EditProfileScreenState extends State<EditProfileScreen> with TickerProvid
     super.dispose();
   }
 
-  Future<void> _pickAvatar() async {
+  Future<void> _pickAvatar(ImageSource source) async {
     try {
       final ImagePicker picker = ImagePicker();
       final XFile? pickedFile = await picker.pickImage(
-        source: ImageSource.gallery,
+        source: source,
         maxWidth: 512,
         maxHeight: 512,
         imageQuality: 80,
@@ -124,6 +125,21 @@ class _EditProfileScreenState extends State<EditProfileScreen> with TickerProvid
     });
   }
 
+  void chooseTypePicture() {
+    showModalSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      child: ModalDialog(
+        title: "Changer de photo", 
+        subtitle: "Avant de continuer, veuillez choisir le mode de selection souhaité", 
+        validLabel: "Camera",
+        cancelLabel: "Gallery",
+        onValid: () => _pickAvatar(ImageSource.camera),
+        onCancel: () => _pickAvatar(ImageSource.gallery),
+      )
+    );
+  }
+
   Widget _buildAvatarSection() {
     final initialColor = math.Random().nextInt(Colors.primaries.length);
     final avatarSize = 200.0;
@@ -132,7 +148,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> with TickerProvid
       child: Stack(
         children: [
           GestureDetector(
-            onTap: _pickAvatar,
+            onTap: chooseTypePicture,
             child: Container(
               width: avatarSize,
               height: avatarSize,
