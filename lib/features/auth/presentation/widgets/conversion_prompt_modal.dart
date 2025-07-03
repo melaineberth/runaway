@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:runaway/config/extensions.dart';
 import 'package:runaway/core/services/conversion_service.dart';
+import 'package:runaway/core/widgets/modal_sheet.dart';
 import 'package:runaway/core/widgets/squircle_container.dart';
 import 'package:runaway/features/auth/presentation/screens/login_screen.dart';
 import 'package:runaway/features/auth/presentation/screens/signup_screen.dart';
@@ -18,8 +19,7 @@ class ConversionPromptModal extends StatefulWidget {
   State<ConversionPromptModal> createState() => _ConversionPromptModalState();
 }
 
-class _ConversionPromptModalState extends State<ConversionPromptModal>
-    with TickerProviderStateMixin {
+class _ConversionPromptModalState extends State<ConversionPromptModal> with TickerProviderStateMixin {
   late AnimationController _slideController;
   late AnimationController _pulseController;
   late Animation<Offset> _slideAnimation;
@@ -74,37 +74,13 @@ class _ConversionPromptModalState extends State<ConversionPromptModal>
 
   @override
   Widget build(BuildContext context) {
-    return SlideTransition(
-      position: _slideAnimation,
-      child: Container(
-        decoration: BoxDecoration(
-          color: context.adaptiveBackground,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.2),
-              blurRadius: 20,
-              offset: const Offset(0, -5),
-            ),
-          ],
-        ),
+    return ModalSheet(
+      child: SlideTransition(
+        position: _slideAnimation,
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // Handle bar
-              Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: context.adaptiveTextSecondary.withValues(alpha: 0.3),
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              
-              24.h,
-              
               // Icône animée et header
               _buildHeader(),
               
@@ -118,15 +94,6 @@ class _ConversionPromptModalState extends State<ConversionPromptModal>
               // Boutons d'action
               _buildActionButtons(),
               
-              16.h,
-              
-              // Bouton "Plus tard"
-              _buildLaterButton(),
-              
-              // Espacement pour la safe area
-              MediaQuery.of(context).padding.bottom > 0 
-                  ? (MediaQuery.of(context).padding.bottom / 2).h
-                  : 8.h,
             ],
           ),
         ),
@@ -143,29 +110,14 @@ class _ConversionPromptModalState extends State<ConversionPromptModal>
           builder: (context, child) {
             return Transform.scale(
               scale: _pulseAnimation.value,
-              child: Container(
+              child: SquircleContainer(
                 width: 80,
                 height: 80,
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      context.adaptivePrimary,
-                      context.adaptivePrimary.withValues(alpha: 0.7),
-                    ],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  borderRadius: BorderRadius.circular(20),
-                  boxShadow: [
-                    BoxShadow(
-                      color: context.adaptivePrimary.withValues(alpha: 0.3),
-                      blurRadius: 15,
-                      offset: const Offset(0, 5),
-                    ),
-                  ],
-                ),
+                radius: 50.0,
+                isGlow: true,
+                color: context.adaptivePrimary,
                 child: Icon(
-                  HugeIcons.strokeRoundedUserStar01,
+                  HugeIcons.solidRoundedUserStar01,
                   color: Colors.white,
                   size: 36,
                 ),
@@ -179,9 +131,9 @@ class _ConversionPromptModalState extends State<ConversionPromptModal>
         // Titre principal
         Text(
           _getContextualTitle(),
-          style: context.titleLarge?.copyWith(
+          style: context.bodyLarge?.copyWith(
             fontWeight: FontWeight.w700,
-            fontSize: 24,
+            fontSize: 25,
           ),
           textAlign: TextAlign.center,
         ),
@@ -193,6 +145,7 @@ class _ConversionPromptModalState extends State<ConversionPromptModal>
           _getContextualSubtitle(),
           style: context.bodyMedium?.copyWith(
             color: context.adaptiveTextSecondary,
+            fontSize: 18,
             height: 1.4,
           ),
           textAlign: TextAlign.center,
@@ -202,49 +155,32 @@ class _ConversionPromptModalState extends State<ConversionPromptModal>
   }
   
   Widget _buildContent() {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: context.adaptiveBorder.withValues(alpha: 0.05),
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Column(
-        children: [
-          Text(
-            'Avec un compte, débloquez :',
-            style: context.bodyMedium?.copyWith(
-              fontWeight: FontWeight.w600,
-              color: context.adaptiveTextPrimary,
-            ),
-          ),
-          
-          16.h,
-          
-          ..._buildBenefitsList(),
-        ],
-      ),
+    return Column(
+      children: [          
+        ..._buildBenefitsList(),
+      ],
     );
   }
   
   List<Widget> _buildBenefitsList() {
     final benefits = [
       {
-        'icon': HugeIcons.strokeRoundedBookmark01,
+        'icon': HugeIcons.solidRoundedBookmark01,
         'title': 'Sauvegarde de vos parcours',
         'subtitle': 'Retrouvez vos routes favorites à tout moment',
       },
       {
-        'icon': HugeIcons.strokeRoundedTarget03,
+        'icon': HugeIcons.solidRoundedTarget03,
         'title': 'Objectifs personnalisés',
         'subtitle': 'Suivez vos progrès et atteignez vos buts',
       },
       {
-        'icon': HugeIcons.strokeRoundedAnalytics01,
+        'icon': HugeIcons.solidRoundedAnalytics01,
         'title': 'Statistiques détaillées',
         'subtitle': 'Analysez vos performances au fil du temps',
       },
       {
-        'icon': HugeIcons.strokeRoundedAnalytics01,
+        'icon': HugeIcons.solidRoundedAnalytics01,
         'title': 'Synchronisation multi-appareils',
         'subtitle': 'Accédez à vos données partout',
       },
@@ -255,46 +191,51 @@ class _ConversionPromptModalState extends State<ConversionPromptModal>
       final benefit = entry.value;
       
       return Container(
-        margin: EdgeInsets.only(bottom: index < benefits.length - 1 ? 12 : 0),
-        child: Row(
-          children: [
-            Container(
-              width: 36,
-              height: 36,
-              decoration: BoxDecoration(
-                color: context.adaptivePrimary.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Icon(
-                benefit['icon'] as IconData,
+        margin: EdgeInsets.only(bottom: index < benefits.length - 1 ? 8 : 0),
+        child: SquircleContainer(
+          radius: 50.0,
+          gradient: false,
+          padding: EdgeInsets.all(8.0),
+          color: context.adaptiveDisabled.withValues(alpha: 0.08),
+          child: Row(
+            children: [
+              SquircleContainer(
+                radius: 30.0,
+                gradient: false,
+                isGlow: true,
+                padding: EdgeInsets.all(15.0),
                 color: context.adaptivePrimary,
-                size: 18,
+                child: Icon(
+                  benefit['icon'] as IconData,
+                  color: Colors.white,
+                ),
               ),
-            ),
-            
-            12.w,
-            
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    benefit['title'] as String,
-                    style: context.bodySmall?.copyWith(
-                      fontWeight: FontWeight.w600,
+              
+              15.w,
+              
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      benefit['title'] as String,
+                      style: context.bodySmall?.copyWith(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 15,
+                      ),
                     ),
-                  ),
-                  Text(
-                    benefit['subtitle'] as String,
-                    style: context.bodySmall?.copyWith(
-                      color: context.adaptiveTextSecondary,
-                      fontSize: 12,
+                    Text(
+                      benefit['subtitle'] as String,
+                      style: context.bodySmall?.copyWith(
+                        color: context.adaptiveTextSecondary,
+                        fontSize: 13,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       );
     }).toList();
@@ -311,31 +252,22 @@ class _ConversionPromptModalState extends State<ConversionPromptModal>
               Navigator.of(context).pop();
               _showAuthModal(const SignupScreen());
             },
-            height: 56,
+            height: 60,
             color: context.adaptivePrimary,
-            radius: 16,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  HugeIcons.strokeRoundedUserAdd01,
+            radius: 40.0,
+            child: Center(
+              child: Text(
+                'Créer un compte gratuit',
+                style: context.bodySmall?.copyWith(
                   color: Colors.white,
-                  size: 20,
+                  fontWeight: FontWeight.w600,
                 ),
-                8.w,
-                Text(
-                  'Créer un compte gratuit',
-                  style: context.bodyMedium?.copyWith(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
+              ),
             ),
           ),
         ),
         
-        12.h,
+        10.h,
         
         // Bouton secondaire - Se connecter
         SizedBox(
@@ -345,47 +277,22 @@ class _ConversionPromptModalState extends State<ConversionPromptModal>
               Navigator.of(context).pop();
               _showAuthModal(const LoginScreen());
             },
-            height: 48,
-            color: Colors.transparent,
-            radius: 16,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  HugeIcons.strokeRoundedLogin01,
-                  color: context.adaptivePrimary,
-                  size: 18,
+            height: 60,
+            gradient: false,
+            color: context.adaptiveDisabled.withValues(alpha: 0),
+            radius: 40.0,
+            child: Center(
+              child: Text(
+                'J\'ai déjà un compte',
+                style: context.bodySmall?.copyWith(
+                  color: context.adaptiveDisabled,
+                  fontWeight: FontWeight.w600,
                 ),
-                8.w,
-                Text(
-                  'J\'ai déjà un compte',
-                  style: context.bodyMedium?.copyWith(
-                    color: context.adaptivePrimary,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ],
+              ),
             ),
           ),
         ),
       ],
-    );
-  }
-  
-  Widget _buildLaterButton() {
-    return TextButton(
-      onPressed: () {
-        // Enregistrer que l'utilisateur a refusé
-        ConversionService.instance.recordUserDeclined();
-        Navigator.of(context).pop();
-      },
-      child: Text(
-        'Plus tard',
-        style: context.bodySmall?.copyWith(
-          color: context.adaptiveTextSecondary,
-          fontWeight: FontWeight.w500,
-        ),
-      ),
     );
   }
   

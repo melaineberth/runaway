@@ -12,6 +12,7 @@ class SquircleContainer extends StatelessWidget {
   final Function()? onTap;
   final bool isGlow;
   final bool isBorder;
+  final bool gradient;
 
   const SquircleContainer({
     super.key,
@@ -26,6 +27,7 @@ class SquircleContainer extends StatelessWidget {
     this.onTap,
     this.isBorder = false,
     this.isGlow = false,
+    this.gradient = true,
   });
 
   @override
@@ -58,6 +60,14 @@ class SquircleContainer extends StatelessWidget {
             decoration: BoxDecoration(
               color: color,
               boxShadow: boxShadow,
+              gradient: gradient ? LinearGradient(
+                colors: [
+                  color!,
+                  color!.withValues(alpha: 0.7),
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ) : null,
             ),
             child: child,
           ),

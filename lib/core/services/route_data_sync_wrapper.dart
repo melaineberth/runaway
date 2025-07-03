@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:runaway/core/blocs/app_data/app_data_bloc.dart';
+import 'package:runaway/core/di/bloc_provider_extension.dart';
 import 'package:runaway/core/services/route_data_sync_service.dart';
 import 'package:runaway/features/route_generator/presentation/blocs/route_generation/route_generation_bloc.dart';
 
@@ -34,8 +35,8 @@ class _RouteDataSyncWrapperState extends State<RouteDataSyncWrapper> {
   void _initializeSyncService() {
     try {
       // Récupérer les BLoCs depuis le contexte
-      final routeGenerationBloc = context.read<RouteGenerationBloc>();
-      final appDataBloc = context.read<AppDataBloc>();
+      final routeGenerationBloc = context.routeGenerationBloc;
+      final appDataBloc = context.appDataBloc;
 
       // Initialiser le service de synchronisation
       RouteDataSyncService.instance.initialize(

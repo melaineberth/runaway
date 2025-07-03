@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:runaway/config/extensions.dart';
 import 'package:runaway/core/blocs/theme_bloc/theme_bloc.dart';
+import 'package:runaway/core/di/bloc_provider_extension.dart';
 import 'package:runaway/core/widgets/modal_sheet.dart';
 import 'package:runaway/core/widgets/squircle_container.dart';
 
@@ -75,7 +76,7 @@ class ThemeSelector extends StatelessWidget {
                           isSelected: isSelected, 
                           onTap: () {
                             if (!isSelected) {
-                              context.read<ThemeBloc>().add(ThemeChanged(themeMode));
+                              context.themeBloc.add(ThemeChanged(themeMode));
                             }
                           },
                         ),

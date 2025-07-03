@@ -71,7 +71,7 @@ class MapboxStyleConstants {
     );
   }
 
-  static String getDefaultStyleId() => 'dark';
+  static String getDefaultStyleId() => 'outdoors';
 }
 
 extension MapboxStyleL10n on MapboxStyleData {

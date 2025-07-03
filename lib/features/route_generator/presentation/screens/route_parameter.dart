@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:runaway/config/extensions.dart';
+import 'package:runaway/core/di/bloc_provider_extension.dart';
 import 'package:runaway/core/widgets/blurry_page.dart';
 import 'package:runaway/core/widgets/icon_btn.dart';
 import 'package:runaway/core/widgets/modal_sheet.dart';
@@ -38,7 +39,7 @@ class _RouteParameterScreenState extends State<RouteParameterScreen> {
   void initState() {
     super.initState();
 
-    context.read<RouteParametersBloc>().add(
+    context.routeParametersBloc.add(
       StartLocationUpdated(
         longitude: widget.startLongitude,
         latitude: widget.startLatitude,
@@ -63,7 +64,7 @@ class _RouteParameterScreenState extends State<RouteParameterScreen> {
                   ActivitySelector(
                     selectedActivity: state.parameters.activityType,
                     onActivitySelected: (type) {
-                      context.read<RouteParametersBloc>().add(ActivityTypeChanged(type));
+                      context.routeParametersBloc.add(ActivityTypeChanged(type));
                     },
                   ),
                   30.h,
@@ -72,7 +73,7 @@ class _RouteParameterScreenState extends State<RouteParameterScreen> {
                   TerrainSelector(
                     selectedTerrain: state.parameters.terrainType,
                     onTerrainSelected: (terrain) {
-                      context.read<RouteParametersBloc>().add(TerrainTypeChanged(terrain));
+                      context.routeParametersBloc.add(TerrainTypeChanged(terrain));
                     },
                   ),
                   30.h,
@@ -81,7 +82,7 @@ class _RouteParameterScreenState extends State<RouteParameterScreen> {
                   UrbanDensitySelector(
                     selectedDensity: state.parameters.urbanDensity,
                     onDensitySelected: (density) {
-                      context.read<RouteParametersBloc>().add(UrbanDensityChanged(density));
+                      context.routeParametersBloc.add(UrbanDensityChanged(density));
                     },
                   ),
                   30.h,
@@ -95,7 +96,7 @@ class _RouteParameterScreenState extends State<RouteParameterScreen> {
                     unit: "km",
                     icon: HugeIcons.strokeRoundedRoute03,
                     onChanged: (value) {
-                      context.read<RouteParametersBloc>().add(DistanceChanged(value));
+                      context.routeParametersBloc.add(DistanceChanged(value));
                     },
                   ),
                   30.h,
@@ -109,7 +110,7 @@ class _RouteParameterScreenState extends State<RouteParameterScreen> {
                     unit: "m",
                     icon: HugeIcons.strokeRoundedMountain,
                     onChanged:  (value) {
-                      context.read<RouteParametersBloc>().add(ElevationGainChanged(value));
+                      context.routeParametersBloc.add(ElevationGainChanged(value));
                     },
                   ),
                   30.h,
@@ -195,7 +196,7 @@ class _RouteParameterScreenState extends State<RouteParameterScreen> {
           ),
           value: state.parameters.isLoop,
           onChanged: (value) {
-            context.read<RouteParametersBloc>().add(LoopToggled(value));
+            context.routeParametersBloc.add(LoopToggled(value));
           },
         ),
         SwitchListTile(
@@ -213,7 +214,7 @@ class _RouteParameterScreenState extends State<RouteParameterScreen> {
           ),
           value: state.parameters.avoidTraffic,
           onChanged: (value) {
-            context.read<RouteParametersBloc>().add(AvoidTrafficToggled(value));
+            context.routeParametersBloc.add(AvoidTrafficToggled(value));
           },
         ),
         SwitchListTile(
@@ -231,7 +232,7 @@ class _RouteParameterScreenState extends State<RouteParameterScreen> {
           ),
           value: state.parameters.preferScenic,
           onChanged: (value) {
-            context.read<RouteParametersBloc>().add(PreferScenicToggled(value));
+            context.routeParametersBloc.add(PreferScenicToggled(value));
           },
         ),
       ],

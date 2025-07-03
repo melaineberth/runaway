@@ -15,6 +15,7 @@ import 'package:runaway/core/blocs/notification/notification_bloc.dart';
 import 'package:runaway/core/blocs/notification/notification_event.dart';
 import 'package:runaway/core/blocs/notification/notification_state.dart';
 import 'package:runaway/core/blocs/theme_bloc/theme_bloc.dart';
+import 'package:runaway/core/di/bloc_provider_extension.dart';
 import 'package:runaway/core/widgets/ask_registration.dart';
 import 'package:runaway/core/widgets/blurry_page.dart';
 import 'package:runaway/core/widgets/icon_btn.dart';
@@ -246,7 +247,7 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
                                       HapticFeedback.mediumImpact();
       
                                       // Déclencher l'événement pour basculer les notifications
-                                      context.read<NotificationBloc>().add(
+                                      context.notificationBloc.add(
                                         NotificationToggleRequested(
                                           enabled: value,
                                         ),
@@ -677,7 +678,7 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
 
           context.pop();
 
-          context.read<AuthBloc>().add(LogOutRequested());
+          context.authBloc.add(LogOutRequested());
         },
       ),
     );
@@ -698,7 +699,7 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
 
           context.pop();
 
-          context.read<AuthBloc>().add(DeleteAccountRequested());
+          context.authBloc.add(DeleteAccountRequested());
         },
       ),
     );

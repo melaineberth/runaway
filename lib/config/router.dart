@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:runaway/core/di/bloc_provider_extension.dart';
+import 'package:runaway/core/widgets/conversion_listener.dart';
 import 'package:runaway/core/widgets/main_scaffold.dart';
 import 'package:runaway/features/account/presentation/screens/account_screen.dart';
 import 'package:runaway/features/account/presentation/screens/edit_profile_screen.dart';
@@ -17,6 +19,7 @@ import '../features/home/presentation/screens/home_screen.dart';
 
 // Clé globale pour accéder au contexte du router
 final GlobalKey<NavigatorState> _rootNavigatorKey = GlobalKey<NavigatorState>();
+final GlobalKey<NavigatorState> _shellNavigatorKey = GlobalKey<NavigatorState>();
 
 final GoRouter router = GoRouter(
   navigatorKey: _rootNavigatorKey,
@@ -24,7 +27,7 @@ final GoRouter router = GoRouter(
   
   // Redirection globale basée sur l'état d'authentification
   redirect: (BuildContext context, GoRouterState state) {
-    final authBloc = context.read<AuthBloc>();
+    final authBloc = context.authBloc;
     final authState = authBloc.state;
     
     final String currentLocation = state.matchedLocation;
@@ -114,7 +117,7 @@ final GoRouter router = GoRouter(
       path: '/edit-profile',
       builder: (context, state) {
         // Récupérer le profil depuis l'état d'authentification
-        final authBloc = context.read<AuthBloc>();
+        final authBloc = context.authBloc;
         final authState = authBloc.state;
         
         if (authState is Authenticated) {
@@ -130,43 +133,51 @@ final GoRouter router = GoRouter(
 
     // Routes principales avec shell (navigation bottom)
     ShellRoute(
-      builder: (BuildContext context, GoRouterState state, Widget child) {
-        return AuthWrapper(child: MainScaffold(child: child));
+      navigatorKey: _shellNavigatorKey,
+      builder: (context, state, child) {
+        return ConversionListener(child: child);
       },
       routes: [
-        // Route d'accueil - accessible à tous
-        GoRoute(
-          path: '/home',
-          pageBuilder: (context, state) => NoTransitionPage(
-            key: state.pageKey,
-            child: const HomeScreen(),
-          ),
+        ShellRoute(
+          builder: (BuildContext context, GoRouterState state, Widget child) {
+            return AuthWrapper(child: MainScaffold(child: child));
+          },
+          routes: [
+            // Route d'accueil - accessible à tous
+            GoRoute(
+              path: '/home',
+              pageBuilder: (context, state) => NoTransitionPage(
+                key: state.pageKey,
+                child: const HomeScreen(),
+              ),
+            ),
+            
+            // Routes protégées - nécessitent une authentification
+            GoRoute(
+              path: '/activity',
+              pageBuilder: (context, state) => NoTransitionPage(
+                key: state.pageKey,
+                child: ActivityScreen(),
+              ),
+            ),
+            GoRoute(
+              path: '/historic',
+              pageBuilder: (context, state) => NoTransitionPage(
+                key: state.pageKey,
+                child: HistoricScreen(),
+              ),
+            ),
+            GoRoute(
+              path: '/account',
+              pageBuilder: (context, state) => NoTransitionPage(
+                key: state.pageKey,
+                child: AccountScreen(),
+              ),
+            ),
+          ],
         ),
-        
-        // Routes protégées - nécessitent une authentification
-        GoRoute(
-          path: '/activity',
-          pageBuilder: (context, state) => NoTransitionPage(
-            key: state.pageKey,
-            child: ActivityScreen(),
-          ),
-        ),
-        GoRoute(
-          path: '/historic',
-          pageBuilder: (context, state) => NoTransitionPage(
-            key: state.pageKey,
-            child: HistoricScreen(),
-          ),
-        ),
-        GoRoute(
-          path: '/account',
-          pageBuilder: (context, state) => NoTransitionPage(
-            key: state.pageKey,
-            child: AccountScreen(),
-          ),
-        ),
-      ],
-    ),
+      ]
+    )
   ],
   
   // Gestion des erreurs de route

@@ -11,20 +11,15 @@ import 'package:runaway/config/theme.dart';
 import 'package:runaway/core/blocs/app_data/app_data_bloc.dart';
 import 'package:runaway/core/blocs/locale/locale_bloc.dart';
 import 'package:runaway/core/blocs/notification/notification_bloc.dart';
-import 'package:runaway/core/blocs/notification/notification_event.dart';
 import 'package:runaway/core/blocs/theme_bloc/theme_bloc.dart';
-import 'package:runaway/core/services/app_data_initialization_service.dart';
+import 'package:runaway/core/di/service_locator.dart';
 import 'package:runaway/core/services/app_initialization_service.dart';
 import 'package:runaway/core/services/conversion_service.dart';
 import 'package:runaway/core/services/notification_service.dart';
 import 'package:runaway/core/services/route_data_sync_wrapper.dart';
 import 'package:runaway/core/widgets/auth_data_listener.dart';
 import 'package:runaway/core/widgets/conversion_listener.dart';
-import 'package:runaway/features/activity/data/repositories/activity_repository.dart';
-import 'package:runaway/features/auth/data/repositories/auth_repository.dart';
 import 'package:runaway/features/auth/presentation/bloc/auth_bloc.dart';
-import 'package:runaway/features/auth/presentation/bloc/auth_event.dart';
-import 'package:runaway/features/route_generator/data/repositories/routes_repository.dart';
 import 'package:runaway/l10n/app_localizations.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'core/blocs/app_bloc_observer.dart';
@@ -58,7 +53,7 @@ void main() async {
     );
     print('✅ Supabase initialisé');
     
-    // ✅ NOUVEAU: Initialiser les services avec pré-chargement de géolocalisation
+    // Initialiser les services avec pré-chargement de géolocalisation
     await AppInitializationService.initialize();
 
     // Configurer Mapbox
@@ -67,8 +62,11 @@ void main() async {
     print('✅ Mapbox configuré');
 
     await NotificationService.instance.initialize();
-
     await ConversionService.instance.initializeSession();
+
+    // Initialiser l'injection de dépendances
+    await ServiceLocator.init();
+    print('✅ ServiceLocator initialisé');
     
     runApp(const Trailix());
     
@@ -86,10 +84,12 @@ class Trailix extends StatefulWidget {
 }
 
 class _TrailixState extends State<Trailix> {
+
   @override
   void dispose() {
     // Nettoyer les services
     NotificationService.instance.dispose();
+    ServiceLocator.dispose();
     super.dispose();
   }
 
@@ -97,67 +97,16 @@ class _TrailixState extends State<Trailix> {
   Widget build(BuildContext context) {
     return MultiBlocProvider(
       providers: [
-        BlocProvider<NotificationBloc>(
-          create: (context) => NotificationBloc()..add(NotificationInitializeRequested()),
-        ),
-
-        BlocProvider<AppDataBloc>(
-          create: (context) {
-            print('🔧 Création du AppDataBloc...');
-            final appDataBloc = AppDataBloc(
-              activityRepository: ActivityRepository(),
-              routesRepository: RoutesRepository(),
-            );
-            
-            // Initialiser le service IMMÉDIATEMENT après création du BLoC
-            AppDataInitializationService.initialize(appDataBloc);
-            print('✅ AppDataInitializationService initialisé');
-            
-            return appDataBloc;
-          },
-        ),
+        // Utilisation de GetIt pour récupérer les instances
+        BlocProvider<NotificationBloc>.value(value: sl<NotificationBloc>()),
+        BlocProvider<AppDataBloc>.value(value: sl<AppDataBloc>()),
+        BlocProvider<AuthBloc>.value(value: sl<AuthBloc>()),
+        BlocProvider<LocaleBloc>.value(value: sl<LocaleBloc>()),
+        BlocProvider<ThemeBloc>.value(value: sl<ThemeBloc>()),
         
-        BlocProvider(
-          create: (context) {
-            print('🔧 Création du AuthBloc...');
-            final authBloc = AuthBloc(AuthRepository());
-            // Déclencher l'initialisation de l'authentification
-            authBloc.add(AppStarted());
-            return authBloc;
-          },
-        ),
-        
-        BlocProvider(
-          create: (_) => RouteParametersBloc(
-            startLongitude: 0.0, // Sera mis à jour avec la position réelle
-            startLatitude: 0.0,
-          ),
-        ),
-        
-        BlocProvider(
-          create: (_) {
-            print('🔧 Création du RouteGenerationBloc...');
-            return RouteGenerationBloc(
-              routesRepository: RoutesRepository(),
-            );
-          },
-        ),
-
-        BlocProvider(
-          create: (_) {
-            final localeBloc = LocaleBloc();
-            localeBloc.add(const LocaleInitialized());
-            return localeBloc;
-          },
-        ),
-
-        BlocProvider(
-          create: (_) {
-            final themeBloc = ThemeBloc();
-            themeBloc.add(const ThemeInitialized());
-            return themeBloc;
-          },
-        ),
+        // Factory pour les blocs qui peuvent avoir plusieurs instances
+        BlocProvider<RouteParametersBloc>(create: (_) => sl<RouteParametersBloc>()),
+        BlocProvider<RouteGenerationBloc>(create: (_) => sl<RouteGenerationBloc>()),
       ],
       child: AuthDataListener(
         child: RouteDataSyncWrapper(
@@ -165,24 +114,22 @@ class _TrailixState extends State<Trailix> {
             builder: (context, localeState) {
               return BlocBuilder<ThemeBloc, ThemeState>(
                 builder: (context, themeState) {
-                  return ConversionListener(
-                    child: MaterialApp.router(
-                      title: 'Trailix',
-                      debugShowCheckedModeBanner: false,
-                      routerConfig: router,
-                      theme: getAppTheme(Brightness.light),
-                      darkTheme: getAppTheme(Brightness.dark),
-                      themeMode: themeState.themeMode.toThemeMode(), // ← Changement ici
-                      locale: localeState.locale,
-                      localizationsDelegates: AppLocalizations.localizationsDelegates,
-                      supportedLocales: AppLocalizations.supportedLocales,
-                      builder: (context, child) {
-                        return MediaQuery(
-                          data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(1.0)),
-                          child: child ?? Container(),
-                        );
-                      },
-                    ),
+                  return MaterialApp.router(
+                    title: 'Trailix',
+                    debugShowCheckedModeBanner: false,
+                    routerConfig: router,
+                    theme: getAppTheme(Brightness.light),
+                    darkTheme: getAppTheme(Brightness.dark),
+                    themeMode: themeState.themeMode.toThemeMode(),
+                    locale: localeState.locale,
+                    localizationsDelegates: AppLocalizations.localizationsDelegates,
+                    supportedLocales: AppLocalizations.supportedLocales,
+                    builder: (context, child) {
+                      return MediaQuery(
+                        data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(1.0)),
+                        child: child ?? Container(),
+                      );
+                    },
                   );
                 }
               );
@@ -194,7 +141,6 @@ class _TrailixState extends State<Trailix> {
   }
 }
 
-/// 🆕 Widget d'erreur en cas d'échec d'initialisation
 class ErrorApp extends StatelessWidget {
   final String error;
   
@@ -203,44 +149,18 @@ class ErrorApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      debugShowCheckedModeBanner: false,
       home: Scaffold(
         body: Center(
-          child: Padding(
-            padding: EdgeInsets.all(20),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  Icons.error_outline,
-                  size: 64,
-                  color: Colors.red,
-                ),
-                SizedBox(height: 16),
-                Text(
-                  context.l10n.error,
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                SizedBox(height: 8),
-                Text(
-                  error,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: Colors.grey[600],
-                  ),
-                ),
-                SizedBox(height: 24),
-                ElevatedButton(
-                  onPressed: () {
-                    // Redémarrer l'app
-                    main();
-                  },
-                  child: Text(context.l10n.retry),
-                ),
-              ],
-            ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.error, size: 64, color: Colors.red),
+              const SizedBox(height: 16),
+              const Text('Erreur d\'initialisation'),
+              const SizedBox(height: 8),
+              Text(error, textAlign: TextAlign.center),
+            ],
           ),
         ),
       ),

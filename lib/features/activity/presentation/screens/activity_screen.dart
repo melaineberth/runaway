@@ -9,6 +9,7 @@ import 'package:pull_down_button/pull_down_button.dart';
 import 'package:runaway/core/blocs/app_data/app_data_bloc.dart';
 import 'package:runaway/core/blocs/app_data/app_data_event.dart';
 import 'package:runaway/core/blocs/app_data/app_data_state.dart';
+import 'package:runaway/core/di/bloc_provider_extension.dart';
 import 'package:runaway/core/services/conversion_triggers.dart';
 import 'package:runaway/core/widgets/blurry_page.dart';
 import 'package:runaway/core/widgets/modal_dialog.dart';
@@ -134,7 +135,7 @@ class _ActivityScreenState extends State<ActivityScreen> with TickerProviderStat
     if (!appDataState.isDataLoaded && !appDataState.isLoading) {
       print('📊 Déclenchement du pré-chargement depuis ActivityScreen');
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        context.read<AppDataBloc>().add(const AppDataPreloadRequested());
+        context.appDataBloc.add(const AppDataPreloadRequested());
       });
       return _buildLoadingState();
     }
@@ -431,7 +432,7 @@ class _ActivityScreenState extends State<ActivityScreen> with TickerProviderStat
 
   void _refreshData() {
     print('🔄 Rafraîchissement des données d\'activité demandé depuis ActivityScreen');
-    context.read<AppDataBloc>().add(const ActivityDataRefreshRequested());
+    context.appDataBloc.add(const ActivityDataRefreshRequested());
   }
 
   void _handleMenuSelection(String value) {
@@ -569,7 +570,7 @@ class _ActivityScreenState extends State<ActivityScreen> with TickerProviderStat
       if (existingGoal != null) {
         // Afficher un message de confirmation
         if (mounted) {
-          context.read<AppDataBloc>().add(PersonalGoalUpdatedInAppData(result));
+          context.appDataBloc.add(PersonalGoalUpdatedInAppData(result));
           
           showTopSnackBar(
             Overlay.of(context),
@@ -583,7 +584,7 @@ class _ActivityScreenState extends State<ActivityScreen> with TickerProviderStat
       } else {        
         // Afficher un message de confirmation
         if (mounted) {
-          context.read<AppDataBloc>().add(PersonalGoalAddedToAppData(result));
+          context.appDataBloc.add(PersonalGoalAddedToAppData(result));
           
           showTopSnackBar(
             Overlay.of(context),
@@ -612,7 +613,7 @@ class _ActivityScreenState extends State<ActivityScreen> with TickerProviderStat
     if (result != null) {
       // Afficher un message de confirmation
       if (mounted) {
-        context.read<AppDataBloc>().add(PersonalGoalAddedToAppData(result));
+        context.appDataBloc.add(PersonalGoalAddedToAppData(result));
         
         showTopSnackBar(
           Overlay.of(context),
@@ -645,7 +646,7 @@ class _ActivityScreenState extends State<ActivityScreen> with TickerProviderStat
           
           context.pop(context);
               
-          context.read<AppDataBloc>().add(PersonalGoalDeletedFromAppData(goalId));
+          context.appDataBloc.add(PersonalGoalDeletedFromAppData(goalId));
           
           // Afficher un message de confirmation
           showTopSnackBar(
@@ -676,7 +677,7 @@ class _ActivityScreenState extends State<ActivityScreen> with TickerProviderStat
           
           context.pop(context);
               
-          context.read<AppDataBloc>().add(const PersonalGoalsResetInAppData());
+          context.appDataBloc.add(const PersonalGoalsResetInAppData());
               
           // Afficher un message de confirmation
           showTopSnackBar(

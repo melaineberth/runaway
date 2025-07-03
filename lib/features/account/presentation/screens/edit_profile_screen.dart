@@ -9,6 +9,7 @@ import 'package:go_router/go_router.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:runaway/config/extensions.dart';
+import 'package:runaway/core/di/bloc_provider_extension.dart';
 import 'package:runaway/core/widgets/modal_dialog.dart';
 import 'package:runaway/core/widgets/squircle_container.dart';
 import 'package:runaway/core/widgets/top_snackbar.dart';
@@ -115,7 +116,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> with TickerProvid
 
     Future.delayed(const Duration(seconds: 3), () {
       if (mounted) {
-        context.read<AuthBloc>().add(
+        context.authBloc.add(
           UpdateProfileRequested(
             fullName: hasNameChange ? fullName : null,
             avatar: _selectedAvatar,

@@ -5,6 +5,7 @@ import 'package:runaway/config/extensions.dart';
 import 'package:runaway/core/blocs/notification/notification_bloc.dart';
 import 'package:runaway/core/blocs/notification/notification_event.dart';
 import 'package:runaway/core/blocs/notification/notification_state.dart';
+import 'package:runaway/core/di/bloc_provider_extension.dart';
 import 'package:runaway/core/widgets/squircle_container.dart';
 
 class NotificationSettingsDialog extends StatelessWidget {
@@ -149,7 +150,7 @@ class _NotificationSettingsContent extends StatelessWidget {
             Switch(
               value: state.notificationsEnabled,
               onChanged: (value) {
-                context.read<NotificationBloc>().add(
+                context.notificationBloc.add(
                   NotificationToggleRequested(enabled: value),
                 );
               },

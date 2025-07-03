@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:runaway/core/blocs/app_data/app_data_bloc.dart';
 import 'package:runaway/core/blocs/app_data/app_data_event.dart';
+import 'package:runaway/core/di/bloc_provider_extension.dart';
 import 'package:runaway/core/services/route_data_sync_service.dart';
 
 /// Utilitaires pour déclencher facilement la synchronisation des données
@@ -10,7 +11,7 @@ class DataSyncUtils {
   /// Déclenche une mise à jour complète des données depuis n'importe où
   static void refreshAllData(BuildContext context) {
     try {
-      context.read<AppDataBloc>().add(const AppDataRefreshRequested());
+      context.appDataBloc.add(const AppDataRefreshRequested());
       print('🔄 Rafraîchissement complet déclenché');
     } catch (e) {
       print('❌ Erreur rafraîchissement complet: $e');
@@ -20,7 +21,7 @@ class DataSyncUtils {
   /// Déclenche une mise à jour des statistiques d'activité uniquement
   static void refreshActivityData(BuildContext context) {
     try {
-      context.read<AppDataBloc>().add(const ActivityDataRefreshRequested());
+      context.appDataBloc.add(const ActivityDataRefreshRequested());
       print('📊 Rafraîchissement activité déclenché');
     } catch (e) {
       print('❌ Erreur rafraîchissement activité: $e');
@@ -30,7 +31,7 @@ class DataSyncUtils {
   /// Déclenche une mise à jour de l'historique uniquement
   static void refreshHistoricData(BuildContext context) {
     try {
-      context.read<AppDataBloc>().add(const HistoricDataRefreshRequested());
+      context.appDataBloc.add(const HistoricDataRefreshRequested());
       print('📚 Rafraîchissement historique déclenché');
     } catch (e) {
       print('❌ Erreur rafraîchissement historique: $e');
@@ -40,7 +41,7 @@ class DataSyncUtils {
   /// Force une synchronisation complète en ignorant le cache
   static void forceDataSync(BuildContext context) {
     try {
-      context.read<AppDataBloc>().add(const ForceDataSyncRequested());
+      context.appDataBloc.add(const ForceDataSyncRequested());
       print('🔄 Synchronisation forcée déclenchée');
     } catch (e) {
       print('❌ Erreur synchronisation forcée: $e');
@@ -50,7 +51,7 @@ class DataSyncUtils {
   /// Notifie l'ajout d'une route
   static void notifyRouteAdded(BuildContext context, String routeId, String routeName) {
     try {
-      context.read<AppDataBloc>().add(RouteAddedDataSync(
+      context.appDataBloc.add(RouteAddedDataSync(
         routeId: routeId,
         routeName: routeName,
       ));
@@ -63,7 +64,7 @@ class DataSyncUtils {
   /// Notifie la suppression d'une route
   static void notifyRouteDeleted(BuildContext context, String routeId, String routeName) {
     try {
-      context.read<AppDataBloc>().add(RouteDeletedDataSync(
+      context.appDataBloc.add(RouteDeletedDataSync(
         routeId: routeId,
         routeName: routeName,
       ));
@@ -76,7 +77,7 @@ class DataSyncUtils {
   /// Vide le cache des données
   static void clearDataCache(BuildContext context) {
     try {
-      context.read<AppDataBloc>().add(const AppDataClearRequested());
+      context.appDataBloc.add(const AppDataClearRequested());
       print('🗑️ Cache vidé');
     } catch (e) {
       print('❌ Erreur vidage cache: $e');
@@ -86,7 +87,7 @@ class DataSyncUtils {
   /// Vérifie si les données sont prêtes
   static bool isDataReady(BuildContext context) {
     try {
-      final appDataBloc = context.read<AppDataBloc>();
+      final appDataBloc = context.appDataBloc;
       return appDataBloc.isDataReady;
     } catch (e) {
       print('❌ Erreur vérification données: $e');

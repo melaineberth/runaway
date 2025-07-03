@@ -10,6 +10,7 @@ import 'package:runaway/config/extensions.dart';
 import 'package:runaway/core/blocs/app_data/app_data_bloc.dart';
 import 'package:runaway/core/blocs/app_data/app_data_event.dart';
 import 'package:runaway/core/blocs/app_data/app_data_state.dart';
+import 'package:runaway/core/di/bloc_provider_extension.dart';
 import 'package:runaway/core/services/conversion_triggers.dart';
 import 'package:runaway/core/widgets/ask_registration.dart';
 import 'package:runaway/core/widgets/blurry_page.dart';
@@ -62,9 +63,9 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
 
     // 🔄 Charger les données si nécessaire
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final appDataState = context.read<AppDataBloc>().state;
+      final appDataState = context.appDataBloc.state;
       if (!appDataState.hasHistoricData && !appDataState.isLoading) {
-        context.read<AppDataBloc>().add(const HistoricDataRefreshRequested());
+        context.appDataBloc.add(const HistoricDataRefreshRequested());
       }
 
       ConversionTriggers.onActivityViewed(context);
@@ -156,7 +157,7 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
   /// Charge les parcours sauvegardés
   void _loadSavedRoutes() {
     print('🔄 Chargement manuel des parcours via AppDataBloc');
-    context.read<AppDataBloc>().add(const HistoricDataRefreshRequested());
+    context.appDataBloc.add(const HistoricDataRefreshRequested());
   }
 
   /// 🧭 Navigation vers le parcours sélectionné - Chargement dans HomeScreen
@@ -167,7 +168,7 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
     
     try {
       // 🔑 ÉTAPE 1: S'assurer que RouteGenerationBloc a les données nécessaires
-      final routeGenerationBloc = context.read<RouteGenerationBloc>();
+      final routeGenerationBloc = context.routeGenerationBloc;
       
       // Vérifier si RouteGenerationBloc a déjà les parcours sauvegardés
       if (routeGenerationBloc.state.savedRoutes.isEmpty) {
@@ -183,7 +184,7 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
       print('✅ Événement SavedRouteLoaded envoyé au bloc');
       
       // 🔑 ÉTAPE 3: Mettre à jour les statistiques d'utilisation via AppDataBloc
-      context.read<AppDataBloc>().add(SavedRouteUsageUpdatedInAppData(route.id));
+      context.appDataBloc.add(SavedRouteUsageUpdatedInAppData(route.id));
       
       // 🔑 ÉTAPE 4: Naviguer vers HomeScreen
       if (mounted) {
@@ -217,7 +218,7 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
       print('🗑️ Suppression via AppDataBloc: ${route.name}');
       
       // 🔥 UTILISER AppDataBloc AU LIEU DE RouteGenerationBloc
-      context.read<AppDataBloc>().add(SavedRouteDeletedFromAppData(route.id));
+      context.appDataBloc.add(SavedRouteDeletedFromAppData(route.id));
       
       // Afficher un message de confirmation
       if (mounted) {
@@ -626,8 +627,8 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
     
     // Déclencher les updates en parallèle
     final context = this.context;
-    context.read<RouteGenerationBloc>().add(const SavedRoutesRequested());
-    context.read<AppDataBloc>().add(const AppDataRefreshRequested());
+    context.routeGenerationBloc.add(const SavedRoutesRequested());
+    context.appDataBloc.add(const AppDataRefreshRequested());
     
     // Petite pause pour l'animation
     await Future.delayed(const Duration(milliseconds: 800));
@@ -635,12 +636,12 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
 
   void _syncData() {
     print('☁️ Synchronisation des données demandée');
-    context.read<RouteGenerationBloc>().add(SyncPendingRoutesRequested());
+    context.routeGenerationBloc.add(SyncPendingRoutesRequested());
     
     // Ensuite rafraîchir les données
     Future.delayed(Duration(seconds: 2), () {
       if (mounted) {
-        context.read<AppDataBloc>().add(const HistoricDataRefreshRequested());
+        context.appDataBloc.add(const HistoricDataRefreshRequested());
       }
     });
   }

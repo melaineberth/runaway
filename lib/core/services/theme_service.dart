@@ -28,8 +28,8 @@ class ThemeService {
       }
     }
     
-    print('📱 Utilisation du theme par défaut: dark');
-    return AppThemeMode.dark;
+    print('📱 Utilisation du theme par défaut: light');
+    return AppThemeMode.light;
   }
 
   /// Efface la préférence de thème sauvegardée

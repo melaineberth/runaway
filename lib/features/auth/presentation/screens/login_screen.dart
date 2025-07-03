@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:runaway/config/extensions.dart';
+import 'package:runaway/core/di/bloc_provider_extension.dart';
 import 'package:runaway/core/widgets/label_divider.dart';
 import 'package:runaway/core/widgets/squircle_container.dart';
 import 'package:runaway/features/auth/presentation/bloc/auth_bloc.dart';
@@ -319,7 +320,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   void _handleSignIn() {
     if (_formKey.currentState!.validate()) {
-      context.read<AuthBloc>().add(
+      context.authBloc.add(
         LogInRequested(
           email: _emailController.text.trim(),
           password: _passwordController.text,
@@ -329,10 +330,10 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   void _handleGoogleSignIn() {
-    context.read<AuthBloc>().add(GoogleSignInRequested());
+    context.authBloc.add(GoogleSignInRequested());
   }
 
   void _handleAppleSignIn() {
-    context.read<AuthBloc>().add(AppleSignInRequested());
+    context.authBloc.add(AppleSignInRequested());
   }
 }

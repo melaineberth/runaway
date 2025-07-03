@@ -11,6 +11,7 @@ import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart' as mp;
 import 'package:runaway/core/blocs/app_data/app_data_bloc.dart';
 import 'package:runaway/core/blocs/app_data/app_data_event.dart';
 import 'package:runaway/core/blocs/app_data/app_data_state.dart';
+import 'package:runaway/core/di/bloc_provider_extension.dart';
 import 'package:runaway/core/services/conversion_triggers.dart';
 import 'package:runaway/core/widgets/modal_dialog.dart';
 import 'package:runaway/core/widgets/modal_sheet.dart';
@@ -40,7 +41,6 @@ import 'package:runaway/features/route_generator/presentation/blocs/route_genera
 import 'package:top_snackbar_flutter/top_snack_bar.dart';
 import '../../../route_generator/presentation/screens/route_parameter.dart' as gen;
 import '../../../../core/widgets/icon_btn.dart';
-import '../blocs/route_parameters_bloc.dart';
 import '../blocs/route_parameters_event.dart';
 import '../widgets/location_search_bar.dart';
 
@@ -279,7 +279,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
   // Configuration de l'écoute de génération
   void _setupRouteGenerationListener() {
     // Écouter les changements du bloc de génération
-    context.read<RouteGenerationBloc>().stream.listen((state) {
+    context.routeGenerationBloc.stream.listen((state) {
       if (mounted) {
         _handleRouteGenerationStateChange(state);
       }
@@ -345,7 +345,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
 
     // Mettre à jour le BLoC
     if (mounted) {
-      context.read<RouteParametersBloc>().add(
+      context.routeParametersBloc.add(
         StartLocationUpdated(longitude: newLng, latitude: newLat),
       );
     }
@@ -509,7 +509,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
     _isSaveDialogOpen = true;
 
     final defaultName = generateAutoRouteName(
-      context.read<RouteParametersBloc>().state.parameters,
+      context.routeParametersBloc.state.parameters,
       _getGeneratedRouteDistance(),
     );
 
@@ -555,7 +555,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
     }
 
     // Récupérer les paramètres utilisés
-    final routeState = context.read<RouteGenerationBloc>().state;
+    final routeState = context.routeGenerationBloc.state;
     if (routeState.usedParameters == null) {
       showTopSnackBar(
         overlay,
@@ -568,7 +568,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
     }
 
     // 🔥 UTILISER AppDataBloc AU LIEU DE RouteGenerationBloc
-    context.read<AppDataBloc>().add(
+    context.appDataBloc.add(
       SavedRouteAddedToAppData(
         name: routeName,
         parameters: routeState.usedParameters!,
@@ -634,7 +634,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
 
   // 2. Réinitialiser l'état du bloc
   if (mounted) {
-    context.read<RouteGenerationBloc>().add(const RouteStateReset());
+    context.routeGenerationBloc.add(const RouteStateReset());
     print('✅ État du bloc RouteGeneration reseté');
   }
 
@@ -729,7 +729,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
           center: mp.Point(
             coordinates: mp.Position(_userLongitude!, _userLatitude!)
           ),
-          zoom: 15,
+          zoom: 12,
         ),
         mp.MapAnimationOptions(duration: 1200),
       );
@@ -774,7 +774,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
           center: mp.Point(
             coordinates: mp.Position(lastSelectedLng, lastSelectedLat)
           ),
-          zoom: 15,
+          zoom: 12,
         ),
         mp.MapAnimationOptions(duration: 1200),
       );
@@ -1033,7 +1033,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
     _mapStateService.saveSelectedPosition(latitude, longitude);
 
     // Mettre à jour le BLoC
-    context.read<RouteParametersBloc>().add(
+    context.routeParametersBloc.add(
       StartLocationUpdated(longitude: longitude, latitude: latitude),
     );
 
@@ -1042,7 +1042,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
       mapboxMap?.flyTo(
         mp.CameraOptions(
           center: mp.Point(coordinates: mp.Position(longitude, latitude)),
-          zoom: 13,
+          zoom: 12,
           pitch: 0,
           bearing: 0,
         ),
@@ -1249,7 +1249,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
     await _placeMarkerWithLottie(longitude, latitude);
 
     if (mounted) {
-      context.read<RouteParametersBloc>().add(
+      context.routeParametersBloc.add(
         StartLocationUpdated(longitude: longitude, latitude: latitude),
       );
     }
@@ -1275,7 +1275,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
       }
       
       if (mounted) {
-        context.read<RouteGenerationBloc>().add(const RouteStateReset());
+        context.routeGenerationBloc.add(const RouteStateReset());
       }
       
       setState(() {
@@ -1308,7 +1308,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
       await mapboxMap!.flyTo(
         mp.CameraOptions(
           center: mp.Point(coordinates: mp.Position(longitude, latitude)),
-          zoom: 15,
+          zoom: 12,
         ),
         mp.MapAnimationOptions(duration: 1000),
       );
@@ -1417,7 +1417,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
     try {
       final cameraOptions = mp.CameraOptions(
         center: mp.Point(coordinates: mp.Position(_userLongitude!, _userLatitude!)),
-        zoom: 15,
+        zoom: 12,
         pitch: 0,
         bearing: 0,
       );
@@ -1541,7 +1541,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
         }
         
         if (mounted) {
-          context.read<RouteGenerationBloc>().add(const RouteStateReset());
+          context.routeGenerationBloc.add(const RouteStateReset());
         }
         
         setState(() {
@@ -1574,7 +1574,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
         await mapboxMap!.flyTo(
           mp.CameraOptions(
             center: mp.Point(coordinates: mp.Position(longitude, latitude)),
-            zoom: 15,
+            zoom: 12,
           ),
           mp.MapAnimationOptions(duration: 1000),
         );
@@ -1582,7 +1582,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
 
       // Mettre à jour le BLoC
       if (mounted) {
-        context.read<RouteParametersBloc>().add(
+        context.routeParametersBloc.add(
           StartLocationUpdated(longitude: longitude, latitude: latitude),
         );
       }
@@ -1653,9 +1653,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
       context: context, 
       backgroundColor: Colors.transparent,
       child: BlocProvider.value(
-        value: context.read<RouteParametersBloc>(),
+        value: context.routeParametersBloc,
         child: BlocProvider.value(
-          value: context.read<RouteGenerationBloc>(),
+          value: context.routeGenerationBloc,
           child: gen.RouteParameterScreen(
             startLongitude: _selectedLongitude ?? _userLongitude ?? 0.0,
             startLatitude: _selectedLatitude ?? _userLatitude ?? 0.0,
@@ -1672,7 +1672,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
       _hasAutoSaved = false;
     });
 
-    final parametersState = context.read<RouteParametersBloc>().state;
+    final parametersState = context.routeParametersBloc.state;
     final parameters = parametersState.parameters;
 
     if (!parameters.isValid) {
@@ -1681,7 +1681,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
     }
 
     // 🆕 Passer mapboxMap pour la sauvegarde automatique
-    context.read<RouteGenerationBloc>().add(
+    context.routeGenerationBloc.add(
       RouteGenerationRequested(
         parameters,
         mapboxMap: mapboxMap,
@@ -1769,14 +1769,14 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
 
     // Vérifier qu'on a accès à AppDataBloc
     try {
-      final appDataState = context.read<AppDataBloc>().state;
+      final appDataState = context.appDataBloc.state;
       if (!appDataState.hasHistoricData) {
         return false;
       }
 
       final savedRoutes = appDataState.savedRoutes;
       final currentDistance = _getGeneratedRouteDistance();
-      final routeState = context.read<RouteGenerationBloc>().state;
+      final routeState = context.routeGenerationBloc.state;
       
       // Si le parcours vient de l'historique, il est déjà sauvegardé par définition
       if (routeState.isLoadedFromHistory) {
@@ -1830,7 +1830,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
   /// Getter pour vérifier si on sauvegarde actuellement
   bool get _isSavingRoute {
     try {
-      final appDataState = context.read<AppDataBloc>().state;
+      final appDataState = context.appDataBloc.state;
       return appDataState.isLoading && 
              appDataState.lastError != null && 
              appDataState.lastError!.contains('sauvegarde');
@@ -2064,7 +2064,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
                             builder: (context, appDataState) {
                               return RouteInfoCard(
                                 routeName : generateAutoRouteName(
-                                  context.read<RouteParametersBloc>().state.parameters,
+                                  context.routeParametersBloc.state.parameters,
                                   _getGeneratedRouteDistance(),
                                 ),
                                 distance: _getGeneratedRouteDistance(), // MODIFICATION : Vraie distance

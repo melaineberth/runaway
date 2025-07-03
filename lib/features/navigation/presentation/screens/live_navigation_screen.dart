@@ -9,6 +9,7 @@ import 'package:go_router/go_router.dart';
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart' as mp;
 import 'package:hugeicons/hugeicons.dart';
 import 'package:runaway/config/colors.dart';
+import 'package:runaway/core/di/bloc_provider_extension.dart';
 import 'package:runaway/core/widgets/icon_btn.dart';
 import 'package:runaway/core/widgets/modal_dialog.dart';
 import 'package:runaway/core/widgets/squircle_container.dart';
@@ -129,7 +130,7 @@ class _LiveNavigationScreenState extends State<LiveNavigationScreen> with Ticker
   }
 
   void _startNavigation() {
-    context.read<NavigationBloc>().add(
+    context.navigationBloc.add(
       NavigationStarted(
         originalRoute: widget.args.route,
         targetDistanceKm: widget.args.targetDistanceKm,
@@ -872,15 +873,15 @@ class _LiveNavigationScreenState extends State<LiveNavigationScreen> with Ticker
   }
 
   void _pauseNavigation() {
-    context.read<NavigationBloc>().add(const NavigationPaused());
+    context.navigationBloc.add(const NavigationPaused());
   }
 
   void _resumeNavigation() {
-    context.read<NavigationBloc>().add(const NavigationResumed());
+    context.navigationBloc.add(const NavigationResumed());
   }
 
   void _stopNavigation() {
-    context.read<NavigationBloc>().add(const NavigationStopped());
+    context.navigationBloc.add(const NavigationStopped());
     context.pop();
   }
 

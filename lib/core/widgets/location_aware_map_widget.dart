@@ -155,7 +155,7 @@ class _LocationAwareMapWidgetState extends State<LocationAwareMapWidget>
                     _initialPosition!.latitude,
                   ),
                 ),
-                zoom: 15.0,
+                zoom: 12.0,
                 pitch: 0.0,
                 bearing: 0.0,
               ),

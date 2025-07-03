@@ -40,13 +40,23 @@ class _ConversionListenerState extends State<ConversionListener> {
   Widget build(BuildContext context) {
     return BlocListener<AuthBloc, AuthState>(
       listener: (context, authState) {
-        // Ne montrer les prompts que pour les utilisateurs non connectés
-        if (authState is Unauthenticated && !_isPromptShowing) {
+        if (authState is Authenticated) {
+          // ✅ Utilisateur connecté → annuler tout prompt en cours
+          _delayedPromptTimer?.cancel();
+          _isPromptShowing = false;
+        } else if (authState is Unauthenticated && !_isPromptShowing) {
+          // Utilisateur non connecté → programmer vérification
           _scheduleDelayedPromptCheck();
         }
       },
       child: widget.child,
     );
+  }
+  
+  /// Vérifie si l'utilisateur est connecté
+  bool _isUserAuthenticated() {
+    final authState = context.read<AuthBloc>().state;
+    return authState is Authenticated;
   }
   
   /// Programme une vérification retardée pour éviter d'interrompre l'utilisateur
@@ -67,10 +77,17 @@ class _ConversionListenerState extends State<ConversionListener> {
   Future<void> _checkAndShowPrompt([String? promptContext]) async {
     if (_isPromptShowing) return;
     
+    // ✅ VÉRIFICATION CRITIQUE : Ne jamais afficher le prompt si l'utilisateur est connecté
+    if (_isUserAuthenticated()) {
+      print('🚫 Prompt annulé - utilisateur connecté');
+      return;
+    }
+    
     try {
       final shouldShow = await ConversionService.instance.shouldShowConversionPrompt();
       
-      if (shouldShow && mounted) {
+      // ✅ Double vérification avant affichage
+      if (shouldShow && mounted && !_isUserAuthenticated()) {
         _isPromptShowing = true;
         
         await showModalBottomSheet<void>(
@@ -83,6 +100,8 @@ class _ConversionListenerState extends State<ConversionListener> {
         );
         
         _isPromptShowing = false;
+      } else if (_isUserAuthenticated()) {
+        print('🚫 Prompt annulé au dernier moment - utilisateur connecté');
       }
     } catch (e) {
       print('❌ Erreur vérification prompt: $e');
