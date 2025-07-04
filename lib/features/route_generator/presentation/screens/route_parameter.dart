@@ -144,7 +144,7 @@ class _RouteParameterScreenState extends State<RouteParameterScreen> {
           Future.delayed(const Duration(milliseconds: 100));
           widget.generateRoute();
         },
-        height: 60,
+        height: 55,
         gradient: false,
         color: context.adaptivePrimary,
         radius: 50.0,

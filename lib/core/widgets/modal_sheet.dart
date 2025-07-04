@@ -46,6 +46,14 @@ class _ModalSheetState extends State<ModalSheet> {
             bottomLeft: Radius.circular(innerRadius),
             bottomRight: Radius.circular(innerRadius),
           ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.18),
+              spreadRadius: 2,
+              blurRadius: 30,
+              offset: Offset(0, 0), // changes position of shadow
+            ),
+          ]
         ),
         child: ClipRRect(
             borderRadius: BorderRadius.only(

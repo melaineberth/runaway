@@ -1,65 +1,64 @@
 import 'package:flutter/material.dart';
-import 'package:runaway/config/extensions.dart';
-import 'package:runaway/core/widgets/particles_spark.dart';
-import 'package:runaway/core/widgets/particles_spark_loader.dart';
+import 'package:runaway/core/widgets/full_screen_loader.dart';
 
-class LoadingOverlay extends StatefulWidget {
-  final String? message;
+/// Service singleton – gère un unique OverlayEntry plein écran.
+class LoadingOverlay {
+  LoadingOverlay._();
+  static final LoadingOverlay _i = LoadingOverlay._();
+  factory LoadingOverlay() => _i;
 
-  const LoadingOverlay({super.key, this.message});
+  OverlayEntry? _entry;
+  DateTime? _shownAt;
+  bool _isHideScheduled = false;
 
-  @override
-  State<LoadingOverlay> createState() => _LoadingOverlayState();
-}
+  static const Duration _kDefaultMinDisplay = Duration(milliseconds: 600);
+  Duration _minDisplay = _kDefaultMinDisplay;
 
-class _LoadingOverlayState extends State<LoadingOverlay> {
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      child: Container(
-        color: Colors.black.withValues(alpha: 0.95),
-        height: double.infinity,
-        width: double.infinity,
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(8),
-          child: Stack(
-            alignment: Alignment.center,
-            children: [
-              Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  SizedBox(
-                    width: 40,
-                    height: 40,
-                    child: StepRotatingShape(
-                      size: 25,
-                      rotationDuration: const Duration(milliseconds: 600), // Duration of each 45° rotation
-                      pauseDuration: const Duration(milliseconds: 300), // Pause duration between rotations
-                      color: Color(0xFF8157E8),
-                    ),
-                  ),
-                  16.h,
-                  Text(
-                    widget.message ?? context.l10n.currentGeneration,
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: Colors.white,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ],
-              ),
-              Positioned.fill(
-                child: ParticlesSpark(
-                  quantity: 20,
-                  maxSize: 8,
-                  minSize: 5,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
+  void show(
+    BuildContext context,
+    String message, {
+    Duration minDisplay = _kDefaultMinDisplay,
+  }) {
+    _minDisplay = minDisplay;
+
+    // Overlay déjà visible → on met à jour le contenu si besoin
+    if (_entry != null) {
+      _updateMessage(message);
+      return;
+    }
+
+    _shownAt = DateTime.now();
+
+    _entry = OverlayEntry(
+      builder: (_) => FullScreenLoader(message: message),
     );
+
+    Overlay.of(context, rootOverlay: true).insert(_entry!);
+  }
+
+  void hide() {
+    if (_entry == null) return;
+
+    final elapsed   = DateTime.now().difference(_shownAt!);
+    final remaining = _minDisplay - elapsed;
+
+    if (remaining.isNegative || remaining == Duration.zero) {
+      _remove();
+    } else if (!_isHideScheduled) {
+      _isHideScheduled = true;
+      Future.delayed(remaining, _remove);
+    }
+  }
+
+  void _remove() {
+    _entry?.remove();
+    _entry            = null;
+    _shownAt          = null;
+    _isHideScheduled  = false;
+  }
+
+  void _updateMessage(String msg) {
+    if (_entry == null) return;
+    _entry!.markNeedsBuild();
   }
 }

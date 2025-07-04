@@ -61,6 +61,9 @@ class AppDataBloc extends Bloc<AppDataEvent, AppDataState> {
     Emitter<AppDataState> emit,
   ) async {
     print('🚗 Sauvegarde de parcours via AppDataBloc: ${event.name}');
+
+    // 0️⃣ → signale le début
+    emit(state.copyWith(isSavingRoute: true));
     
     try {
       // 1. 📸 Capturer le screenshot de la carte
@@ -96,6 +99,9 @@ class AppDataBloc extends Bloc<AppDataEvent, AppDataState> {
 
       // 3. 🔄 Recharger les données d'historique pour mettre à jour l'interface
       await _refreshHistoricData(emit, showLoading: false);
+      
+      // 3️⃣ → fin OK
+      emit(state.copyWith(isSavingRoute: false));
       
       print('✅ Parcours sauvegardé avec succès: ${savedRoute.name}');
     } catch (e) {
@@ -360,8 +366,6 @@ class AppDataBloc extends Bloc<AppDataEvent, AppDataState> {
   ) async {
     print('➕ Sync optimisée - Route ajoutée: ${event.routeName}');
     
-    // Pour un ajout, rafraîchir SEULEMENT les statistiques d'activité
-    // L'historique sera déjà à jour via RouteGenerationBloc
     if (!_isActivitySyncInProgress) {
       await _onActivityDataRefresh(const ActivityDataRefreshRequested(), emit);
     } else {

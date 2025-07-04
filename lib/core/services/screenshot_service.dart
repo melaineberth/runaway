@@ -53,10 +53,7 @@ class ScreenshotService {
       try {
         // 5. Configurer le style (theme sombre pour correspondre à l'app)
         await snapshotter.style.setStyleURI(MapboxStyles.DARK);
-        
-        // Note: Le Snapshotter ne permet pas de masquer le logo Mapbox
-        // contrairement à la MapboxMap normale. Le logo fait partie de l'image générée.
-        
+                
         // 6. Calculer les bounds du parcours pour centrer la vue
         final bounds = _calculateRouteBounds(routeCoords);
         

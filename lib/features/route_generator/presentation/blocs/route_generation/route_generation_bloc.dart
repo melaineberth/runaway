@@ -41,6 +41,7 @@ class RouteGenerationBloc extends HydratedBloc<RouteGenerationEvent, RouteGenera
       pois: const [],
       isAnalyzingZone: false,
       isGeneratingRoute: false,
+      isSavingRoute: false, // 🆕 Ajout du reset pour isSavingRoute
       generatedRoute: null,
       usedParameters: null,
       errorMessage: null,
@@ -154,8 +155,9 @@ class RouteGenerationBloc extends HydratedBloc<RouteGenerationEvent, RouteGenera
       return;
     }
 
+    // 🆕 Utiliser isSavingRoute au lieu de isGeneratingRoute
     emit(state.copyWith(
-      isGeneratingRoute: true,
+      isSavingRoute: true,
       errorMessage: null,
     ));
 
@@ -201,8 +203,9 @@ class RouteGenerationBloc extends HydratedBloc<RouteGenerationEvent, RouteGenera
       final updatedRoutes = List<SavedRoute>.from(state.savedRoutes)
         ..add(savedRoute);
 
+      // 🆕 Utiliser isSavingRoute: false au lieu de isGeneratingRoute: false
       emit(state.copyWith(
-        isGeneratingRoute: false,
+        isSavingRoute: false,
         savedRoutes: updatedRoutes,
         errorMessage: null,
       ));
@@ -212,8 +215,9 @@ class RouteGenerationBloc extends HydratedBloc<RouteGenerationEvent, RouteGenera
 
     } catch (e) {
       print('❌ Erreur sauvegarde complète: $e');
+      // 🆕 Utiliser isSavingRoute: false au lieu de isGeneratingRoute: false
       emit(state.copyWith(
-        isGeneratingRoute: false,
+        isSavingRoute: false,
         errorMessage: 'Erreur lors de la sauvegarde: ${e.toString()}',
       ));
     }

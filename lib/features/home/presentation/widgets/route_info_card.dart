@@ -1,4 +1,3 @@
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:runaway/config/constants.dart';
@@ -15,7 +14,6 @@ class RouteInfoCard extends StatelessWidget {
   final int waypointCount;
   final RouteParameters? parameters; // Paramètres du parcours
   final VoidCallback onClear;
-  final VoidCallback onNavigate;
   final VoidCallback onShare;
   final VoidCallback onSave; // Callback de sauvegarde
   final bool isSaving; // État de sauvegarde en cours
@@ -29,7 +27,6 @@ class RouteInfoCard extends StatelessWidget {
     required this.waypointCount,
     this.parameters,
     required this.onClear,
-    required this.onNavigate,
     required this.onShare,
     required this.onSave, 
     this.isSaving = false,
@@ -37,34 +34,23 @@ class RouteInfoCard extends StatelessWidget {
   });
 
   static const _innerRadius = 35.0;
-  static const _padding = 15.0;
 
   @override
   Widget build(BuildContext context) {
-    return SquircleContainer(
-      gradient: false,
-      padding: EdgeInsets.all(_padding),
-      color: context.adaptiveBackground,
-      radius: _innerRadius.outerRadius(_padding),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // En-tête avec infos principales
-          Row(
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // En-tête avec infos principales
+        Padding(
+          padding: const EdgeInsets.fromLTRB(30.0, 30.0, 30.0, 0.0),
+          child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisAlignment: MainAxisAlignment.start,
             children: [
               Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      routeName,
-                      style: context.bodyMedium,
-                    ),
-                    8.h,
-                    _buildDetailChips(context),
-                  ],
+                child: Text(
+                  routeName,
+                  style: context.bodyMedium,
                 ),
               ),
               // Bouton fermer
@@ -77,116 +63,90 @@ class RouteInfoCard extends StatelessWidget {
               ),
             ],
           ),
-          
-          20.h,
+        ),
 
-          // Boutons d'action
-          Row(
+        10.h,
+        _buildDetailChips(context),
+        
+        20.h,
+    
+        // Boutons d'action
+        Padding(
+          padding: const EdgeInsets.fromLTRB(30.0, 0.0, 30.0, 30.0),
+          child: Column(
             children: [
+              _ActionButton(
+                radius: _innerRadius,
+                label: context.l10n.download,
+                onTap: onShare,
+                isPrimary: true,
+              ),
+              8.h,
               // 🆕 Bouton Sauvegarde
-              Expanded(
-                child: _ActionButton(
-                  radius: _innerRadius,
-                  label: _getSaveLabel(context),
-                  onTap: _getSaveAction(),
-                  isPrimary: false,
-                  isLoading: isSaving,
-                  isDisabled: isAlreadySaved,
-                ),
-              ),
-
-              8.w,
-
               _ActionButton(
                 radius: _innerRadius,
-                icon: CupertinoIcons.hand_thumbsup_fill,
-                onTap: onShare,
+                label: _getSaveLabel(context),
+                onTap: _getSaveAction(),
                 isPrimary: false,
-              ),
-
-              8.w,
-
-              _ActionButton(
-                radius: _innerRadius,
-                icon: CupertinoIcons.hand_thumbsdown_fill,
-                onTap: onShare,
-                isPrimary: false,
+                isLoading: isSaving,
+                isDisabled: isAlreadySaved,
               ),
             ],
           ),
-
-          8.h,
-
-          _ActionButton(
-            radius: _innerRadius,
-            label: context.l10n.download,
-            onTap: onShare,
-            isPrimary: true,
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
   Widget _buildDetailChips(BuildContext context) {
-    if (parameters == null) {
-      // Fallback vers l'ancien format si pas de paramètres
-      return Row(
-        children: [
-          _InfoChip(
-            icon: HugeIcons.solidRoundedWorkoutRun,
-            label: '${distance.toStringAsFixed(1)} km',
-          ),
-          8.w,
-          _InfoChip(
-            icon: isLoop 
-                ? HugeIcons.solidRoundedArrowReloadHorizontal 
-                : HugeIcons.strokeRoundedArrowRight01,
-            label: isLoop ? context.l10n.pathLoop : context.l10n.pathSimple,
-          ),
-        ],
-      );
-    }
-
     // Nouveau format avec plus d'informations
-    return Wrap(
-      spacing: 8.0,
-      runSpacing: 8.0,
-      children: [
-        // Type d'activité
-        _InfoChip(
-          icon: parameters!.activityType.icon,
-          label: parameters!.activityType.title,
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Padding(
+        padding: const EdgeInsets.only(left: 30.0, right: 30.0),
+        child: Row(
+          children: [
+            // Type d'activité
+            _InfoChip(
+              icon: parameters!.activityType.icon,
+              label: parameters!.activityType.title,
+            ),
+            10.w,
+            // Distance
+            _InfoChip(
+              icon: HugeIcons.solidRoundedNavigator01,
+              label: '${distance.toStringAsFixed(1)} km',
+            ),
+            10.w,
+            // Type de terrain
+            _InfoChip(
+              icon: getTerrainIcon(parameters!.terrainType.id),
+              label: parameters!.terrainType.title,
+            ),
+            10.w,
+            // Densité urbaine
+            _InfoChip(
+              icon: getUrbanDensityIcon(parameters!.urbanDensity.id),
+              label: parameters!.urbanDensity.title,
+            ),
+            10.w,
+            // Dénivelé (si > 0)
+            if (parameters!.elevationGain > 0)
+              _InfoChip(
+                icon: HugeIcons.solidSharpMountain,
+                label: '${parameters!.elevationGain.toStringAsFixed(0)}m',
+              ),
+              10.w,
+            // Type de parcours (boucle/simple)
+            _InfoChip(
+              icon: isLoop 
+                  ? HugeIcons.solidRoundedRepeat
+                  : HugeIcons.strokeRoundedArrowRight01,
+              label: isLoop ? context.l10n.pathLoop : context.l10n.pathSimple,
+            ),
+          ],
         ),
-        // Distance
-        _InfoChip(
-          icon: HugeIcons.solidRoundedNavigator01,
-          label: '${distance.toStringAsFixed(1)} km',
-        ),
-        // Type de terrain
-        _InfoChip(
-          icon: getTerrainIcon(parameters!.terrainType.id),
-          label: parameters!.terrainType.title,
-        ),
-        // Densité urbaine
-        _InfoChip(
-          icon: getUrbanDensityIcon(parameters!.urbanDensity.id),
-          label: parameters!.urbanDensity.title,
-        ),
-        // Dénivelé (si > 0)
-        if (parameters!.elevationGain > 0)
-          _InfoChip(
-            icon: HugeIcons.solidSharpMountain,
-            label: '${parameters!.elevationGain.toStringAsFixed(0)}m',
-          ),
-        // Type de parcours (boucle/simple)
-        _InfoChip(
-          icon: isLoop 
-              ? HugeIcons.solidRoundedRepeat
-              : HugeIcons.strokeRoundedArrowRight01,
-          label: isLoop ? context.l10n.pathLoop : context.l10n.pathSimple,
-        ),
-      ],
+      ),
     );
   }
 
@@ -252,7 +212,7 @@ class _InfoChip extends StatelessWidget {
 
 /// Bouton d'action
 class _ActionButton extends StatelessWidget {
-  final dynamic icon;
+  final IconData? icon;
   final String? label;
   final VoidCallback? onTap;
   final bool isPrimary;

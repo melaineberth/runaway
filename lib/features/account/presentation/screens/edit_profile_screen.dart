@@ -394,7 +394,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> with TickerProvid
             left: 20,
             right: 20,
             bottom: 40,
-            child: _buildCompleteButton(!_isLoading),
+            child: _buildCompleteButton(_isLoading),
           ),                
         ],
       ),

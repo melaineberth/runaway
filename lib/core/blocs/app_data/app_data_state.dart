@@ -7,6 +7,7 @@ class AppDataState extends Equatable {
   final bool isDataLoaded;
   final String? lastError;
   final DateTime? lastCacheUpdate;
+  final bool isSavingRoute;
   
   // Données d'activité - utilisant les types exacts du projet
   final ActivityStats? activityStats;
@@ -29,6 +30,7 @@ class AppDataState extends Equatable {
     this.personalGoals,
     this.personalRecords,
     this.savedRoutes = const [],
+    this.isSavingRoute = false,
   });
 
   AppDataState copyWith({
@@ -42,6 +44,7 @@ class AppDataState extends Equatable {
     List<PersonalGoal>? personalGoals,
     List<PersonalRecord>? personalRecords,
     List<SavedRoute>? savedRoutes,
+    bool? isSavingRoute,
   }) {
     return AppDataState(
       isLoading: isLoading ?? this.isLoading,
@@ -54,6 +57,7 @@ class AppDataState extends Equatable {
       personalGoals: personalGoals ?? this.personalGoals,
       personalRecords: personalRecords ?? this.personalRecords,
       savedRoutes: savedRoutes ?? this.savedRoutes,
+      isSavingRoute: isSavingRoute ?? this.isSavingRoute,
     );
   }
 
@@ -69,6 +73,7 @@ class AppDataState extends Equatable {
         personalGoals,
         personalRecords,
         savedRoutes,
+        isSavingRoute,
       ];
 
   /// Helpers pour vérifier l'état des données
