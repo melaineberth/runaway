@@ -161,17 +161,17 @@ class NotificationService {
     print('🔧 Handlers de notifications configurés');
   }
   
-  /// Gère les messages reçus en foreground
-  void _handleForegroundMessage(dynamic message) {
-    print('📨 Message reçu (foreground): ${message.toString()}');
-    // Afficher une notification locale
-  }
+  // /// Gère les messages reçus en foreground
+  // void _handleForegroundMessage(dynamic message) {
+  //   print('📨 Message reçu (foreground): ${message.toString()}');
+  //   // Afficher une notification locale
+  // }
   
-  /// Gère les messages reçus en arrière-plan
-  void _handleBackgroundMessage(dynamic message) {
-    print('📨 Message reçu (background): ${message.toString()}');
-    // Naviguer vers l'écran approprié
-  }
+  // /// Gère les messages reçus en arrière-plan
+  // void _handleBackgroundMessage(dynamic message) {
+  //   print('📨 Message reçu (background): ${message.toString()}');
+  //   // Naviguer vers l'écran approprié
+  // }
   
   /// Génère un token simulé pour le développement
   String _generateMockToken() {
