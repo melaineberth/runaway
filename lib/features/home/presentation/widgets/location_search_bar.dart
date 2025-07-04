@@ -144,6 +144,7 @@ class _LocationSearchBarState extends State<LocationSearchBar> {
                           children: [
                             SquircleContainer(
                               radius: 20,
+                              gradient: false,
                               padding: EdgeInsets.all(12),
                               color: context.adaptiveTextSecondary.withValues(alpha: 0.1),
                               child: HugeIcon(
@@ -153,32 +154,34 @@ class _LocationSearchBarState extends State<LocationSearchBar> {
                               ),
                             ),
                             12.w,
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  suggestion.placeName.split(',').first,
-                                  style: context.bodySmall?.copyWith(
-                                    fontWeight: FontWeight.w600,
-                                    color: context.adaptiveTextPrimary,
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                                if (suggestion.placeName.contains(',')) ...[
-                                  2.h,
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
                                   Text(
-                                    suggestion.placeName.split(',').skip(1).join(',').trim(),
+                                    suggestion.placeName.split(',').first,
                                     style: context.bodySmall?.copyWith(
-                                      fontSize: 14,
-                                      color: context.adaptiveTextSecondary,
-                                      fontWeight: FontWeight.normal,
+                                      fontWeight: FontWeight.w600,
+                                      color: context.adaptiveTextPrimary,
                                     ),
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
                                   ),
+                                  if (suggestion.placeName.contains(',')) ...[
+                                    2.h,
+                                    Text(
+                                      suggestion.placeName.split(',').skip(1).join(',').trim(),
+                                      style: context.bodySmall?.copyWith(
+                                        fontSize: 14,
+                                        color: context.adaptiveTextSecondary,
+                                        fontWeight: FontWeight.normal,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ],
                                 ],
-                              ],
+                              ),
                             ),
                           ],
                         ),

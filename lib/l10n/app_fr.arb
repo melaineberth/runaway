@@ -380,7 +380,11 @@
   "@needHelp": {
     "description": "Lien invitant l'utilisateur à contacter le support."
   },
-  "createAccountSubtitle": "Pour créer un compte, fournissez vos détails, vérifiez votre email et définissez un mot de passe.",
+  "createAccountTitle": "Prêt pour l'aventure ?",
+  "@createAccountTitle": {
+    "description": "Sous-titre expliquant les étapes d'inscription"
+  },
+  "createAccountSubtitle": "Crée ton compte pour découvrir des parcours uniques et commencer à explorer de nouveaux horizons sportifs",
   "@createAccountSubtitle": {
     "description": "Sous-titre expliquant les étapes d'inscription"
   },
@@ -424,11 +428,11 @@
   "@orDivider": {
     "description": ""
   },
-  "loginGreetingTitle": "Salut !",
+  "loginGreetingTitle": "Content de te revoir !",
   "@loginGreetingTitle": {
     "description": "Titre de salutation principal sur l'écran de connexion"
   },
-  "loginGreetingSubtitle": "Veuillez entrer les détails requis.",
+  "loginGreetingSubtitle": "Connecte-toi à ton compte pour retrouver toutes tes données et continuer là où tu t'étais arrêté",
   "@loginGreetingSubtitle": {
     "description": "Sous-titre demandant à l'utilisateur de remplir le formulaire"
   },

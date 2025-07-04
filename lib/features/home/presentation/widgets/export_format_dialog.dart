@@ -83,35 +83,37 @@ class ExportFormatDialog extends StatelessWidget {
 
   Widget _buildFormatOption(BuildContext context, {required RouteExportFormat format, required VoidCallback onTap}) {
     IconData icon;
-    Color color;
 
     switch (format) {
       case RouteExportFormat.gpx:
         icon = HugeIcons.strokeRoundedGps01;
-        color = Colors.green;
         break;
       case RouteExportFormat.kml:
         icon = HugeIcons.strokeRoundedEarth;
-        color = Colors.blue;
         break;
       case RouteExportFormat.json:
         icon = HugeIcons.strokeRoundedFileScript;
-        color = Colors.orange;
         break;
     }
 
     return SquircleContainer(
       onTap: onTap,
-      radius: 40,
-      color: context.adaptiveBorder.withValues(alpha: 0.05),
-      padding: EdgeInsets.all(8),
+      radius: 50,
+      gradient: false,
+      color: context.adaptiveBorder.withValues(alpha: 0.08),
+      padding: const EdgeInsets.all(8),
       child: Row(
         children: [
           SquircleContainer(
-            padding: EdgeInsets.all(12),
-            radius: 18,
-            color: color.withValues(alpha: 0.25),
-            child: Icon(icon, color: color, size: 25),
+            radius: 30,
+            isGlow: true,
+            color: context.adaptivePrimary,
+            padding: const EdgeInsets.all(15),
+            child: Icon(
+              icon, 
+              color: Colors.white, 
+              size: 25,
+            ),
           ),
           15.w,
           Expanded(
@@ -137,10 +139,13 @@ class ExportFormatDialog extends StatelessWidget {
               ],
             ),
           ),
-          Icon(
-            HugeIcons.strokeRoundedArrowRight01,
-            color: context.adaptiveTextPrimary,
-            size: 20,
+          Padding(
+            padding: const EdgeInsets.only(right: 8.0),
+            child: Icon(
+              HugeIcons.strokeRoundedArrowRight01,
+              color: context.adaptiveTextPrimary,
+              size: 20,
+            ),
           ),
         ],
       ),

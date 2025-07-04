@@ -633,10 +633,16 @@ abstract class AppLocalizations {
   /// **'Need help? '**
   String get needHelp;
 
+  /// Sous-titre expliquant les étapes d'inscription
+  ///
+  /// In en, this message translates to:
+  /// **'Ready for adventure?'**
+  String get createAccountTitle;
+
   /// Subtitle explaining the sign-up steps
   ///
   /// In en, this message translates to:
-  /// **'To create an account provide details, verify email and set a password.'**
+  /// **'Create your account to discover unique routes and start exploring new sporting horizons'**
   String get createAccountSubtitle;
 
   /// Placeholder of the e-mail text field
@@ -702,13 +708,13 @@ abstract class AppLocalizations {
   /// Main greeting title on the log-in screen
   ///
   /// In en, this message translates to:
-  /// **'Hi there!'**
+  /// **'Great to see you back!'**
   String get loginGreetingTitle;
 
   /// Subtitle asking the user to fill in the form
   ///
   /// In en, this message translates to:
-  /// **'Please enter required details.'**
+  /// **'Sign in to your account to access all your data and pick up where you left off'**
   String get loginGreetingSubtitle;
 
   /// Link or label that will lead to password-reset flow

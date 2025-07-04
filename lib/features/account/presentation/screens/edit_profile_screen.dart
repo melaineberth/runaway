@@ -394,7 +394,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> with TickerProvid
             left: 20,
             right: 20,
             bottom: 40,
-            child: _buildCompleteButton(_isLoading),
+            child: _buildCompleteButton(!_isLoading),
           ),                
         ],
       ),
@@ -405,7 +405,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> with TickerProvid
     return SquircleContainer(
       onTap: _hasChanges ? _saveProfile : null,
       height: 60,
-      color: isLoading || !_hasChanges ? context.adaptiveDisabled.withValues(alpha: 0.03) : context.adaptivePrimary,
+      color: isLoading || !_hasChanges ? context.adaptivePrimary.withValues(alpha: 0.6) : context.adaptivePrimary,
       radius: 30,
       padding: EdgeInsets.symmetric(
         horizontal: 15.0,
@@ -419,17 +419,17 @@ class _EditProfileScreenState extends State<EditProfileScreen> with TickerProvid
               "Modification en cours...",
               style: context.bodySmall?.copyWith(
                 fontSize: 19,
-                color: Colors.black54,
+                color: Colors.white,
                 fontWeight: FontWeight.w600,
               ),
             )
             .animate(onPlay: (controller) => controller.loop())
-            .shimmer(color: Colors.white54, duration: Duration(seconds: 2))
+            .shimmer(color: context.adaptivePrimary, duration: Duration(seconds: 2))
           : Text(
               context.l10n.complete,
               style: context.bodySmall?.copyWith(
                 fontSize: 19,
-                color: !_hasChanges ? Colors.white24 : Colors.white,
+                color: Colors.white,
                 fontWeight: FontWeight.w600,
               ),
             ),

@@ -63,6 +63,7 @@ dependencies:
   flutter_animate: ^4.5.2
   flutter_glow: ^0.3.2
   get_it: ^8.0.3
+  interactive_slider: ^0.5.1
 
 dev_dependencies:
   flutter_test:

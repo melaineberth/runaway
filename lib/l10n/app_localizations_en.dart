@@ -288,7 +288,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get needHelp => 'Need help? ';
 
   @override
-  String get createAccountSubtitle => 'To create an account provide details, verify email and set a password.';
+  String get createAccountTitle => 'Ready for adventure?';
+
+  @override
+  String get createAccountSubtitle => 'Create your account to discover unique routes and start exploring new sporting horizons';
 
   @override
   String get emailHint => 'Email address';
@@ -321,10 +324,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get orDivider => 'OR';
 
   @override
-  String get loginGreetingTitle => 'Hi there!';
+  String get loginGreetingTitle => 'Great to see you back!';
 
   @override
-  String get loginGreetingSubtitle => 'Please enter required details.';
+  String get loginGreetingSubtitle => 'Sign in to your account to access all your data and pick up where you left off';
 
   @override
   String get forgotPassword => 'Forgot Password?';

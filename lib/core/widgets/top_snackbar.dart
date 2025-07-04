@@ -18,6 +18,7 @@ class TopSnackBar extends StatelessWidget {
   Widget build(BuildContext context) {
     return SquircleContainer(
       radius: 40,
+      gradient: false,
       padding: EdgeInsets.all(20.0),
       color: color ?? Colors.red,
       child: Row(

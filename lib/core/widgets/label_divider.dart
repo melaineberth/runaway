@@ -17,7 +17,7 @@ class LabelDivider extends StatelessWidget {
       children: <Widget>[
         Expanded(
           child: Divider(
-            color: color ?? Colors.white24,
+            color: color ?? context.adaptiveTextPrimary.withValues(alpha: 0.3),
           )
         ),       
     
@@ -28,14 +28,14 @@ class LabelDivider extends StatelessWidget {
           child: Text(
             label ?? context.l10n.orDivider,
             style: context.bodySmall?.copyWith(
-              color: color ?? Colors.white24,
+              color: color ?? context.adaptiveTextPrimary.withValues(alpha: 0.3),
             ),
           ),
         ),        
     
         Expanded(
           child: Divider(
-            color: color ?? Colors.white24,
+            color: color ?? context.adaptiveTextPrimary.withValues(alpha: 0.3),
           )
         ),
       ]

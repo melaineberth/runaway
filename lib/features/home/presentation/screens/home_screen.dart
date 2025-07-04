@@ -8,6 +8,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lottie/lottie.dart';
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart' as mp;
+import 'package:runaway/config/constants.dart';
 import 'package:runaway/core/blocs/app_data/app_data_bloc.dart';
 import 'package:runaway/core/blocs/app_data/app_data_event.dart';
 import 'package:runaway/core/blocs/app_data/app_data_state.dart';
@@ -598,15 +599,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
       context: context, 
       backgroundColor: Colors.transparent,
       child: ModalDialog(
-        isDestructive: true,
         title: 'Connexion requise',
         subtitle: 'Vous devez être connecté pour sauvegarder vos parcours.',
         validLabel: 'Se connecter',
         onValid: () {
           HapticFeedback.mediumImpact();
-          
-          context.pop; // 🔧 Fermer le dialogue d'abord
-          context.go('/profile'); // 🔧 Puis naviguer
+          showSignModal(context, 1);
         },
       ),
     );
@@ -875,8 +873,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
         final routeLine = mp.PolylineAnnotationOptions(
           geometry: mp.LineString(coordinates: lineCoordinates),
           lineColor: AppColors.primary.toARGB32(), // Rouge vif pour le debug
-          lineWidth: 4.0,
+          lineWidth: 5.0,
           lineOpacity: 1.0,
+          lineJoin: mp.LineJoin.MITER
         );
 
         await routeLineManager!.create(routeLine);
@@ -2062,11 +2061,14 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
                           ),
                           child: BlocBuilder<AppDataBloc, AppDataState>(
                             builder: (context, appDataState) {
+                              final routeState = context.watch<RouteGenerationBloc>().state;
+
                               return RouteInfoCard(
                                 routeName : generateAutoRouteName(
                                   context.routeParametersBloc.state.parameters,
                                   _getGeneratedRouteDistance(),
                                 ),
+                                parameters: routeState.usedParameters,
                                 distance: _getGeneratedRouteDistance(), // MODIFICATION : Vraie distance
                                 isLoop: routeMetadata!['is_loop'] as bool? ?? true,
                                 waypointCount: routeMetadata!['points_count'] as int? ?? generatedRouteCoordinates!.length,

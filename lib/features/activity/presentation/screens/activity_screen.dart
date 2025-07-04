@@ -6,6 +6,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:pull_down_button/pull_down_button.dart';
+import 'package:runaway/config/constants.dart';
 import 'package:runaway/core/blocs/app_data/app_data_bloc.dart';
 import 'package:runaway/core/blocs/app_data/app_data_event.dart';
 import 'package:runaway/core/blocs/app_data/app_data_state.dart';
@@ -20,7 +21,6 @@ import 'package:runaway/features/activity/data/repositories/activity_repository.
 import 'package:runaway/features/activity/presentation/widgets/goal_templates_dialog.dart';
 import 'package:top_snackbar_flutter/top_snack_bar.dart';
 import '../../../../config/extensions.dart';
-import '../../../../core/widgets/ask_registration.dart';
 import '../../../auth/presentation/bloc/auth_bloc.dart';
 import '../../../auth/presentation/bloc/auth_state.dart';
 import '../../domain/models/activity_stats.dart';
@@ -95,12 +95,12 @@ class _ActivityScreenState extends State<ActivityScreen> with TickerProviderStat
       },
       child: BlocBuilder<AuthBloc, AuthState>(
         builder: (_, authState) {
-          // ✅ Vérifier d'abord l'authentification
           if (authState is! Authenticated) {
-            return AskRegistration();
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              showAuthModal(context);
+            });  
           }
 
-          // ✅ Utiliser EXCLUSIVEMENT AppDataBloc
           return BlocBuilder<AppDataBloc, AppDataState>(
             builder: (context, appDataState) {
               return Scaffold(

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:runaway/config/extensions.dart';
+import 'package:runaway/core/widgets/squircle_container.dart';
 import '../../domain/models/activity_type.dart';
 
 class ActivitySelector extends StatelessWidget {
@@ -58,48 +59,31 @@ class _ActivityCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
+    return SquircleContainer(
       onTap: onTap,
-      child: ClipPath(
-        clipper: ShapeBorderClipper(
-          shape: ContinuousRectangleBorder(
-            borderRadius: BorderRadius.all(Radius.circular(60)),
+      radius: 50,
+      height: 120,
+      gradient: isSelected ? true : false,
+      isGlow: isSelected ? true : false,
+      color: isSelected ? context.adaptivePrimary : context.adaptiveBorder.withValues(alpha: 0.08),
+      padding: const EdgeInsets.all(15),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          HugeIcon(
+            icon: activity.icon,
+            size: 50,
+            color: isSelected ? Colors.white : context.adaptiveTextSecondary.withValues(alpha: 0.5),
           ),
-        ),
-        child: AnimatedContainer(
-          duration: Duration(milliseconds: 200),
-          height: 120,
-          decoration: BoxDecoration(
-            color: isSelected 
-                ? context.adaptivePrimary 
-                : context.adaptiveBorder.withValues(alpha: 0.08),
-            boxShadow: isSelected ? [
-              BoxShadow(
-                color: context.adaptivePrimary.withAlpha(40),
-                blurRadius: 12,
-                offset: Offset(0, 4),
-              ),
-            ] : [],
+          5.h,
+          Text(
+            activity.label(context),
+            style: context.bodySmall?.copyWith(
+              color: isSelected ? Colors.white : context.adaptiveTextSecondary.withValues(alpha: 0.5),
+              fontWeight: FontWeight.w600,
+            ),
           ),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              HugeIcon(
-                icon: activity.icon,
-                size: 50,
-                color: isSelected ? Colors.white : context.adaptiveTextSecondary.withValues(alpha: 0.5),
-              ),
-              5.h,
-              Text(
-                activity.label(context),
-                style: context.bodySmall?.copyWith(
-                  color: isSelected ? Colors.white : context.adaptiveTextSecondary.withValues(alpha: 0.5),
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
-          ),
-        ),
+        ],
       ),
     );
   }

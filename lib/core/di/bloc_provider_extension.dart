@@ -18,9 +18,9 @@ extension BlocAccess on BuildContext {
   AuthBloc get authBloc => sl<AuthBloc>();
   LocaleBloc get localeBloc => sl<LocaleBloc>();
   ThemeBloc get themeBloc => sl<ThemeBloc>();
-  NavigationBloc get navigationBloc => sl<NavigationBloc>();
   
   // Pour les blocs avec instances multiples, utiliser le context comme avant
+  NavigationBloc get navigationBloc => read<NavigationBloc>();
   RouteParametersBloc get routeParametersBloc => read<RouteParametersBloc>();
   RouteGenerationBloc get routeGenerationBloc => read<RouteGenerationBloc>();
 }

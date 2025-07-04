@@ -5,8 +5,8 @@ import 'package:hugeicons/hugeicons.dart';
 import 'package:runaway/config/extensions.dart';
 import 'package:runaway/core/di/bloc_provider_extension.dart';
 import 'package:runaway/core/widgets/blurry_page.dart';
-import 'package:runaway/core/widgets/icon_btn.dart';
 import 'package:runaway/core/widgets/modal_sheet.dart';
+import 'package:runaway/core/widgets/squircle_container.dart';
 
 import '../../../home/presentation/blocs/route_parameters_bloc.dart';
 import '../../../home/presentation/blocs/route_parameters_event.dart';
@@ -51,7 +51,7 @@ class _RouteParameterScreenState extends State<RouteParameterScreen> {
   Widget build(BuildContext context) {
     return ModalSheet(
       padding: 0.0,
-      height: MediaQuery.of(context).size.height * 0.6,
+      height: MediaQuery.of(context).size.height * 0.8,
       child: BlocBuilder<RouteParametersBloc, RouteParametersState>(
         builder: (context, state) {
           return Stack(
@@ -86,7 +86,7 @@ class _RouteParameterScreenState extends State<RouteParameterScreen> {
                     },
                   ),
                   30.h,
-                    
+
                   // Distance
                   ParameterSlider(
                     title: context.l10n.distance,
@@ -94,7 +94,8 @@ class _RouteParameterScreenState extends State<RouteParameterScreen> {
                     min: state.parameters.activityType.minDistance,
                     max: state.parameters.activityType.maxDistance,
                     unit: "km",
-                    icon: HugeIcons.strokeRoundedRoute03,
+                    startIcon: HugeIcons.solidRoundedPinLocation03,
+                    endIcon: HugeIcons.solidRoundedFlag02,
                     onChanged: (value) {
                       context.routeParametersBloc.add(DistanceChanged(value));
                     },
@@ -108,7 +109,8 @@ class _RouteParameterScreenState extends State<RouteParameterScreen> {
                     min: 0,
                     max: state.parameters.distanceKm * state.parameters.terrainType.maxElevationGain,
                     unit: "m",
-                    icon: HugeIcons.strokeRoundedMountain,
+                    startIcon: HugeIcons.strokeRoundedRoute03,
+                    endIcon: HugeIcons.strokeRoundedRoute03,
                     onChanged:  (value) {
                       context.routeParametersBloc.add(ElevationGainChanged(value));
                     },
@@ -133,20 +135,31 @@ class _RouteParameterScreenState extends State<RouteParameterScreen> {
   Widget _buildSaveButton() {
     return Padding(
       padding: const EdgeInsets.all(30.0),
-      child: SizedBox(
-        width: double.infinity,
-        child: IconBtn(
-          label: context.l10n.generate,
-          backgroundColor: context.adaptivePrimary,
-          labelColor: Colors.white,
-          onPressed: () {
-            if (mounted) {
-              context.pop();
-            }
-        
-            Future.delayed(const Duration(milliseconds: 100));
-            widget.generateRoute();
-          },
+      child: SquircleContainer(
+        onTap: () {
+          if (mounted) {
+            context.pop();
+          }
+      
+          Future.delayed(const Duration(milliseconds: 100));
+          widget.generateRoute();
+        },
+        height: 60,
+        gradient: false,
+        color: context.adaptivePrimary,
+        radius: 50.0,
+        child: AnimatedSwitcher(
+          duration: Duration(milliseconds: 300),
+          child: Center(
+            child: Text(
+              context.l10n.generate,
+              style: context.bodySmall?.copyWith(
+                fontSize: 18,
+                color: Colors.white,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
         ),
       ),
     );
@@ -199,6 +212,7 @@ class _RouteParameterScreenState extends State<RouteParameterScreen> {
             context.routeParametersBloc.add(LoopToggled(value));
           },
         ),
+        15.h,
         SwitchListTile(
           inactiveTrackColor: context.adaptiveBorder.withValues(alpha: 0.08),
           activeColor: context.adaptivePrimary,
@@ -217,6 +231,7 @@ class _RouteParameterScreenState extends State<RouteParameterScreen> {
             context.routeParametersBloc.add(AvoidTrafficToggled(value));
           },
         ),
+        15.h,
         SwitchListTile(
           inactiveTrackColor: context.adaptiveBorder.withValues(alpha: 0.08),
           activeColor: context.adaptivePrimary,

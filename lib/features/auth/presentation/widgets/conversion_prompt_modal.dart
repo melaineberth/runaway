@@ -250,7 +250,7 @@ class _ConversionPromptModalState extends State<ConversionPromptModal> with Tick
           child: SquircleContainer(
             onTap: () {
               Navigator.of(context).pop();
-              _showAuthModal(const SignupScreen());
+              // _showAuthModal(const SignupScreen());
             },
             height: 60,
             color: context.adaptivePrimary,
@@ -275,7 +275,7 @@ class _ConversionPromptModalState extends State<ConversionPromptModal> with Tick
           child: SquircleContainer(
             onTap: () {
               Navigator.of(context).pop();
-              _showAuthModal(const LoginScreen());
+              // _showAuthModal(const LoginScreen());
             },
             height: 60,
             gradient: false,

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:runaway/core/blocs/app_data/app_data_event.dart';
 import 'package:runaway/core/di/bloc_provider_extension.dart';
 import 'package:runaway/core/widgets/conversion_listener.dart';
 import 'package:runaway/core/widgets/main_scaffold.dart';
@@ -9,9 +10,7 @@ import 'package:runaway/features/account/presentation/screens/edit_profile_scree
 import 'package:runaway/features/activity/presentation/screens/activity_screen.dart';
 import 'package:runaway/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:runaway/features/auth/presentation/bloc/auth_state.dart';
-import 'package:runaway/features/auth/presentation/screens/login_screen.dart';
 import 'package:runaway/features/auth/presentation/screens/onboarding_screen.dart';
-import 'package:runaway/features/auth/presentation/screens/signup_screen.dart';
 import 'package:runaway/features/historic/presentation/screens/historic_screen.dart';
 import 'package:runaway/features/navigation/blocs/navigation_bloc.dart';
 import 'package:runaway/features/navigation/presentation/screens/live_navigation_screen.dart';
@@ -66,21 +65,6 @@ final GoRouter router = GoRouter(
   },
   
   routes: [
-    // Routes d'authentification (sans shell)
-    GoRoute(
-      path: '/signup',
-      pageBuilder: (context, state) => NoTransitionPage(
-        key: state.pageKey,
-        child: const SignupScreen(),
-      ),
-    ),
-    GoRoute(
-      path: '/login',
-      pageBuilder: (context, state) => NoTransitionPage(
-        key: state.pageKey,
-        child: const LoginScreen(),
-      ),
-    ),
     GoRoute(
       path: '/onboarding',
       pageBuilder: (context, state) => NoTransitionPage(
@@ -224,12 +208,20 @@ class AuthWrapper extends StatelessWidget {
       listener: (context, authState) {
         // Listener pour les changements d'état d'authentification
         if (authState is Unauthenticated) {
-          // L'utilisateur vient de se déconnecter
+          // L'utilisateur vient de se déconnecter - NETTOYER LE CACHE
+          print('🚪 Utilisateur déconnecté, nettoyage du cache...');
+          try {
+            // Déclencher le nettoyage du cache via AppDataBloc
+            context.appDataBloc.add(const AppDataClearRequested());
+          } catch (e) {
+            print('❌ Erreur lors du nettoyage du cache: $e');
+          }
+          
+          // Redirection vers l'accueil si on est sur une page protégée
           final currentLocation = GoRouter.of(context).state.matchedLocation;
           final protectedPages = ['/activity', '/historic', '/account'];
           
           if (protectedPages.contains(currentLocation)) {
-            // Rediriger vers l'accueil si on est sur une page protégée
             context.go('/home');
           }
         }
@@ -237,6 +229,13 @@ class AuthWrapper extends StatelessWidget {
         if (authState is Authenticated) {
           // L'utilisateur vient de se connecter
           print('✅ User authenticated: ${authState.profile.email}');
+          
+          // Optionnel : Déclencher le pré-chargement des données
+          try {
+            context.appDataBloc.add(const AppDataPreloadRequested());
+          } catch (e) {
+            print('❌ Erreur lors du pré-chargement: $e');
+          }
         }
         
         if (authState is AuthError) {

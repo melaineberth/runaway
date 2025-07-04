@@ -1,16 +1,35 @@
 import 'package:flutter/material.dart';
-import 'package:progressive_blur/progressive_blur.dart';
+// import 'package:progressive_blur/progressive_blur.dart';
 import 'package:runaway/config/extensions.dart';
 import 'package:smooth_gradient/smooth_gradient.dart';
 
 class BlurryPage extends StatefulWidget {
   final List<Widget> children;
+  final Widget? child;
   final EdgeInsetsGeometry? padding;
   final EdgeInsetsGeometry? contentPadding;
   final Color? color;
   final bool shrinkWrap;
-  
-  const BlurryPage({super.key, required this.children, this.padding, this.contentPadding, this.color, this.shrinkWrap = true});
+  final ScrollPhysics? physics;
+
+  /// Callback appelé quand l'état de scroll change (true = scrollé, false = en haut)
+  final ValueChanged<bool>? onScrollStateChanged;
+
+  /// Callback qui expose le controller de scroll pour synchronisation externe
+  final ValueChanged<ScrollController>? onScrollControllerReady;
+
+  const BlurryPage({
+    super.key,
+    required this.children,
+    this.child,
+    this.padding,
+    this.contentPadding,
+    this.color,
+    this.shrinkWrap = true,
+    this.physics,
+    this.onScrollStateChanged,
+    this.onScrollControllerReady,
+  });
 
   @override
   State<BlurryPage> createState() => _BlurryPageState();
@@ -35,23 +54,35 @@ class _BlurryPageState extends State<BlurryPage> with TickerProviderStateMixin {
     _blurAnimation = Tween<double>(
       begin: 0.1, // Valeur minimale pour éviter les crashes iOS
       end: 50.0,
-    ).animate(CurvedAnimation(
-      parent: _blurAnimationController,
-      curve: Curves.easeInOut,
-    ));
+    ).animate(
+      CurvedAnimation(
+        parent: _blurAnimationController,
+        curve: Curves.easeInOut,
+      ),
+    );
 
-    _scrollController = ScrollController()
-    ..addListener(() {
-      final cut = _scrollController.offset > 0;
-      if (cut != _isCutByTop) {
-        setState(() => _isCutByTop = cut);
-        // Animer le flou au lieu d'un changement brusque
-        if (cut) {
-          _blurAnimationController.forward();
-        } else {
-          _blurAnimationController.reverse();
+    _scrollController =
+      ScrollController()..addListener(() {
+        final cut = _scrollController.offset > 0;
+        if (cut != _isCutByTop) {
+          setState(() => _isCutByTop = cut);
+
+          // Notifier le parent du changement d'état
+          widget.onScrollStateChanged?.call(cut);
+          
+          // Animer le flou au lieu d'un changement brusque
+          if (cut) {
+            _blurAnimationController.forward();
+          } else {
+            _blurAnimationController.reverse();
+          }
         }
-      }
+      },
+    );
+
+    // Exposer le controller au parent après l'initialisation
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      widget.onScrollControllerReady?.call(_scrollController);
     });
   }
 
@@ -71,14 +102,15 @@ class _BlurryPageState extends State<BlurryPage> with TickerProviderStateMixin {
           animation: _blurAnimation,
           builder: (context, child) {
             // Protection : s'assurer que sigma est toujours valide
-            final safeSigma = _blurAnimation.value.clamp(0.1, 50.0);
-            
+            // final safeSigma = _blurAnimation.value.clamp(0.1, 50.0);
+
             return Stack(
               alignment: Alignment.bottomCenter,
               children: [
                 Padding(
                   padding: widget.padding ?? EdgeInsets.zero,
-                  child: ListView(
+                  child: widget.child ?? ListView(
+                    physics: widget.physics,
                     shrinkWrap: widget.shrinkWrap,
                     padding: widget.contentPadding,
                     controller: _scrollController,
@@ -91,7 +123,9 @@ class _BlurryPageState extends State<BlurryPage> with TickerProviderStateMixin {
                     height: MediaQuery.of(context).size.height / 3,
                     decoration: BoxDecoration(
                       gradient: SmoothGradient(
-                        from: widget.color?.withValues(alpha: 0) ?? context.adaptiveBackground.withValues(alpha: 0),
+                        from:
+                            widget.color?.withValues(alpha: 0) ??
+                            context.adaptiveBackground.withValues(alpha: 0),
                         to: widget.color ?? context.adaptiveBackground,
                         curve: Curves.linear,
                         begin: Alignment.center,
@@ -115,7 +149,9 @@ class _BlurryPageState extends State<BlurryPage> with TickerProviderStateMixin {
               decoration: BoxDecoration(
                 gradient: SmoothGradient(
                   from: widget.color ?? context.adaptiveBackground,
-                  to: widget.color?.withValues(alpha: 0) ?? context.adaptiveBackground.withValues(alpha: 0),
+                  to:
+                      widget.color?.withValues(alpha: 0) ??
+                      context.adaptiveBackground.withValues(alpha: 0),
                   curve: Curves.linear,
                   begin: Alignment.topCenter,
                   end: Alignment.center,
@@ -142,7 +178,7 @@ class _BlurryPageState extends State<BlurryPage> with TickerProviderStateMixin {
     //         builder: (context, child) {
     //           // Protection : s'assurer que sigma est toujours valide
     //           final safeSigma = _blurAnimation.value.clamp(0.1, 50.0);
-              
+
     //           return ProgressiveBlurWidget(
     //             sigma: safeSigma,
     //             linearGradientBlur: const LinearGradientBlur(

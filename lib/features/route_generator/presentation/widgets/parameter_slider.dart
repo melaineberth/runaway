@@ -1,4 +1,7 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:interactive_slider/interactive_slider.dart';
+import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart';
 import 'package:runaway/config/extensions.dart';
 
 class ParameterSlider extends StatelessWidget {
@@ -7,10 +10,11 @@ class ParameterSlider extends StatelessWidget {
   final double min;
   final double max;
   final String unit;
-  final dynamic icon;
   final Function(double) onChanged;
   final int? divisions;
   final String? subtitle;
+  final IconData startIcon;
+  final IconData endIcon;
 
   const ParameterSlider({
     super.key,
@@ -19,52 +23,51 @@ class ParameterSlider extends StatelessWidget {
     required this.min,
     required this.max,
     required this.unit,
-    required this.icon,
     required this.onChanged,
+    required this.startIcon,
+    required this.endIcon,
     this.divisions,
     this.subtitle,
   });
 
   @override
   Widget build(BuildContext context) {
+    final String distance = round(value.clamp(min, max)).toStringAsFixed(0).toString();
+    
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              title,
-              style: context.bodySmall?.copyWith(
-                color: context.adaptiveTextPrimary,
-              ),
-            ),
-            Text(
-              '${value.toStringAsFixed(value < 10 ? 1 : 0)} $unit',
-              style: context.bodyLarge?.copyWith(
-                color: context.adaptivePrimary,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ],
+        Text(
+          title,
+          style: context.bodySmall?.copyWith(
+            color: context.adaptiveTextPrimary,
+          ),
         ),
-        12.h,
-        SliderTheme(
-          data: SliderTheme.of(context).copyWith(
-            activeTrackColor: context.adaptivePrimary,
-            inactiveTrackColor: context.adaptiveBorder.withValues(alpha: 0.08),
-            thumbColor: context.adaptivePrimary,
-            overlayColor: context.adaptivePrimary.withAlpha(30),
-            trackHeight: 6,
-            thumbShape: RoundSliderThumbShape(enabledThumbRadius: 10),
+        10.h,
+        InteractiveSlider(
+          unfocusedMargin: EdgeInsets.zero,
+          focusedMargin: const EdgeInsets.symmetric(horizontal: 16),
+          padding: EdgeInsets.zero,
+          iconPosition: IconPosition.inside,
+          startIcon: Icon(startIcon),
+          centerIcon: Text(
+            "$distance $unit", 
+            style: context.bodySmall?.copyWith(
+              color: context.adaptiveBorder.withValues(alpha: 0.4),
+              fontWeight: FontWeight.bold,
+              fontSize: 18,
+            ),
           ),
-          child: Slider(
-            value: value.clamp(min, max),
-            min: min,
-            max: max,
-            divisions: divisions ?? ((max - min) * 10).round(),
-            onChanged: onChanged,
-            padding: EdgeInsets.zero,
-          ),
+          endIcon: Icon(endIcon),
+          unfocusedHeight: 40,
+          focusedHeight: 50,
+          iconGap: 16,
+          min: min,
+          max: max,
+          onChanged: onChanged,
+          iconColor: context.adaptiveBorder.withValues(alpha: 0.4),
+          backgroundColor: context.adaptiveBorder.withValues(alpha: 0.08),
+          foregroundColor: context.adaptivePrimary,
         ),
       ],
     );

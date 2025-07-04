@@ -38,20 +38,29 @@ class TerrainSelector extends StatelessWidget {
             final isSelected = terrain == selectedTerrain;
             return Padding(
               padding: const EdgeInsets.only(right: 8.0),
-              child: ChoiceChip(
-                showCheckmark: false,
-                label: Text(terrain.label(context)),
-                selected: isSelected,
-                onSelected: (_) => onTerrainSelected(terrain),
-                selectedColor: context.adaptivePrimary,
-                backgroundColor: context.adaptiveBorder.withValues(alpha: 0.08),
-                labelStyle: TextStyle(
-                  color: isSelected ? Colors.white : context.adaptiveTextSecondary.withValues(alpha: 0.5),
-                ),
-                padding: EdgeInsets.symmetric(horizontal: 15, vertical: 10),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(100),
-                  side: BorderSide(style: BorderStyle.none),
+              child: GestureDetector(
+                onTap: () => onTerrainSelected(terrain),
+                child: Container(
+                  padding: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: isSelected ? context.adaptivePrimary : context.adaptiveBorder.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(100),
+                    boxShadow: [
+                      BoxShadow(
+                        color: isSelected ? context.adaptivePrimary.withValues(alpha: 0.4) : Colors.transparent,
+                        blurRadius: 30.0,
+                        spreadRadius: 1.0,
+                        offset: const Offset(0.0, 0.0),
+                      ),
+                    ],
+                  ),
+                  child: Text(
+                    terrain.label(context),
+                    style: context.bodySmall?.copyWith(
+                      color: isSelected ? Colors.white : context.adaptiveTextSecondary.withValues(alpha: 0.5),
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                 ),
               ),
             );

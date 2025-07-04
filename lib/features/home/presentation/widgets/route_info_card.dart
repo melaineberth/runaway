@@ -1,14 +1,19 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
+import 'package:runaway/config/constants.dart';
 import 'package:runaway/config/extensions.dart';
+import 'package:runaway/core/widgets/icon_btn.dart';
 import 'package:runaway/core/widgets/squircle_container.dart';
+import 'package:runaway/features/route_generator/domain/models/route_parameters.dart';
 
 /// Widget pour afficher les informations de la route générée
 class RouteInfoCard extends StatelessWidget {
-  final String routeName;           // <-- nouveau
+  final String routeName;
   final double distance;
   final bool isLoop;
   final int waypointCount;
+  final RouteParameters? parameters; // Paramètres du parcours
   final VoidCallback onClear;
   final VoidCallback onNavigate;
   final VoidCallback onShare;
@@ -22,11 +27,12 @@ class RouteInfoCard extends StatelessWidget {
     required this.distance,
     required this.isLoop,
     required this.waypointCount,
+    this.parameters,
     required this.onClear,
     required this.onNavigate,
     required this.onShare,
-    required this.onSave, // 🆕 Requis
-    this.isSaving = false, // 🆕 Par défaut false
+    required this.onSave, 
+    this.isSaving = false,
     this.isAlreadySaved = false,
   });
 
@@ -36,6 +42,7 @@ class RouteInfoCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SquircleContainer(
+      gradient: false,
       padding: EdgeInsets.all(_padding),
       color: context.adaptiveBackground,
       radius: _innerRadius.outerRadius(_padding),
@@ -45,59 +52,33 @@ class RouteInfoCard extends StatelessWidget {
           // En-tête avec infos principales
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.start,
             children: [
-              SquircleContainer(
-                radius: 25,
-                color: context.adaptivePrimary.withValues(alpha: 0.3),
-                child: Padding(
-                  padding: const EdgeInsets.all(20.0),
-                  child: Icon(
-                    HugeIcons.solidRoundedRouteBlock, 
-                    color: context.adaptivePrimary,
-                  ),
-                ),
-              ),
-              12.w,
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       routeName,
-                      style: context.bodySmall,
+                      style: context.bodyMedium,
                     ),
-                    4.h,
-                    Row(
-                      children: [
-                        _InfoChip(
-                          icon: HugeIcons.solidRoundedWorkoutRun,
-                          label: '${distance.toStringAsFixed(1)} km',
-                        ),
-                        8.w,
-                        _InfoChip(
-                          icon: isLoop 
-                              ? HugeIcons.solidRoundedArrowReloadHorizontal 
-                              : HugeIcons.strokeRoundedArrowRight01,
-                          label: isLoop ? context.l10n.pathLoop : context.l10n.pathSimple,
-                        ),
-                      ],
-                    ),
+                    8.h,
+                    _buildDetailChips(context),
                   ],
                 ),
               ),
               // Bouton fermer
-              IconButton(
+              IconBtn(
+                padding: 0.0,
+                backgroundColor: Colors.transparent,
                 onPressed: onClear,
-                icon: HugeIcon(
-                  icon: HugeIcons.solidRoundedCancelCircle,
-                  color: context.adaptiveTextPrimary,
-                  size: 24,
-                ),
+                icon: HugeIcons.solidRoundedCancelCircle,
+                iconColor: context.adaptiveDisabled.withValues(alpha: 0.2),
               ),
             ],
           ),
           
-          16.h,
+          20.h,
 
           // Boutons d'action
           Row(
@@ -106,7 +87,6 @@ class RouteInfoCard extends StatelessWidget {
               Expanded(
                 child: _ActionButton(
                   radius: _innerRadius,
-                  icon: _getSaveIcon(),
                   label: _getSaveLabel(context),
                   onTap: _getSaveAction(),
                   isPrimary: false,
@@ -115,26 +95,32 @@ class RouteInfoCard extends StatelessWidget {
                 ),
               ),
 
-              12.w,
+              8.w,
 
-              Expanded(
-                child: _ActionButton(
-                  radius: _innerRadius,
-                  icon: HugeIcons.solidRoundedDownloadCircle01,
-                  label: context.l10n.download,
-                  onTap: onShare,
-                  isPrimary: false,
-                ),
+              _ActionButton(
+                radius: _innerRadius,
+                icon: CupertinoIcons.hand_thumbsup_fill,
+                onTap: onShare,
+                isPrimary: false,
+              ),
+
+              8.w,
+
+              _ActionButton(
+                radius: _innerRadius,
+                icon: CupertinoIcons.hand_thumbsdown_fill,
+                onTap: onShare,
+                isPrimary: false,
               ),
             ],
           ),
 
-          12.h,
+          8.h,
+
           _ActionButton(
             radius: _innerRadius,
-            icon: HugeIcons.solidRoundedFlag02,
-            label: context.l10n.start,
-            onTap: onNavigate,
+            label: context.l10n.download,
+            onTap: onShare,
             isPrimary: true,
           ),
         ],
@@ -142,14 +128,66 @@ class RouteInfoCard extends StatelessWidget {
     );
   }
 
-  dynamic _getSaveIcon() {
-    if (isSaving) {
-      return HugeIcons.strokeRoundedLoading03;
-    } else if (isAlreadySaved) {
-      return HugeIcons.solidRoundedCheckmarkCircle02;
-    } else {
-      return HugeIcons.solidRoundedLocationStar01;
+  Widget _buildDetailChips(BuildContext context) {
+    if (parameters == null) {
+      // Fallback vers l'ancien format si pas de paramètres
+      return Row(
+        children: [
+          _InfoChip(
+            icon: HugeIcons.solidRoundedWorkoutRun,
+            label: '${distance.toStringAsFixed(1)} km',
+          ),
+          8.w,
+          _InfoChip(
+            icon: isLoop 
+                ? HugeIcons.solidRoundedArrowReloadHorizontal 
+                : HugeIcons.strokeRoundedArrowRight01,
+            label: isLoop ? context.l10n.pathLoop : context.l10n.pathSimple,
+          ),
+        ],
+      );
     }
+
+    // Nouveau format avec plus d'informations
+    return Wrap(
+      spacing: 8.0,
+      runSpacing: 8.0,
+      children: [
+        // Type d'activité
+        _InfoChip(
+          icon: parameters!.activityType.icon,
+          label: parameters!.activityType.title,
+        ),
+        // Distance
+        _InfoChip(
+          icon: HugeIcons.solidRoundedNavigator01,
+          label: '${distance.toStringAsFixed(1)} km',
+        ),
+        // Type de terrain
+        _InfoChip(
+          icon: getTerrainIcon(parameters!.terrainType.id),
+          label: parameters!.terrainType.title,
+        ),
+        // Densité urbaine
+        _InfoChip(
+          icon: getUrbanDensityIcon(parameters!.urbanDensity.id),
+          label: parameters!.urbanDensity.title,
+        ),
+        // Dénivelé (si > 0)
+        if (parameters!.elevationGain > 0)
+          _InfoChip(
+            icon: HugeIcons.solidSharpMountain,
+            label: '${parameters!.elevationGain.toStringAsFixed(0)}m',
+          ),
+        // Type de parcours (boucle/simple)
+        _InfoChip(
+          icon: isLoop 
+              ? HugeIcons.solidRoundedRepeat
+              : HugeIcons.strokeRoundedArrowRight01,
+          label: isLoop ? context.l10n.pathLoop : context.l10n.pathSimple,
+        ),
+      ],
+    );
   }
 
   String _getSaveLabel(BuildContext context) {
@@ -184,28 +222,26 @@ class _InfoChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      padding: EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
       decoration: BoxDecoration(
-        border: Border.all(
-          color: context.adaptiveDisabled,
-          width: 1.5,
-        ),
-        borderRadius: BorderRadius.circular(20),
+        color: context.adaptiveBorder.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(100),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           HugeIcon(
             icon: icon,
-            size: 16,
-            color: context.adaptiveDisabled,
+            size: 17,
+            color: context.adaptiveTextPrimary,
           ),
-          6.w,
+          5.w,
           Text(
             label,
             style: context.bodySmall?.copyWith(
               fontSize: 14,
-              color: context.adaptiveDisabled,
+              color:context.adaptiveTextPrimary,
+              fontWeight: FontWeight.w500,
             ),
           ),
         ],
@@ -217,7 +253,7 @@ class _InfoChip extends StatelessWidget {
 /// Bouton d'action
 class _ActionButton extends StatelessWidget {
   final dynamic icon;
-  final String label;
+  final String? label;
   final VoidCallback? onTap;
   final bool isPrimary;
   final double radius;
@@ -225,8 +261,8 @@ class _ActionButton extends StatelessWidget {
   final bool isDisabled;
 
   const _ActionButton({
-    required this.icon,
-    required this.label,
+    this.icon,
+    this.label,
     required this.onTap,
     required this.isPrimary,
     required this.radius,
@@ -239,6 +275,7 @@ class _ActionButton extends StatelessWidget {
     final bool isInactive = isLoading || isDisabled || onTap == null;
 
     return SquircleContainer(
+      gradient: isPrimary ? true : false,
       onTap: isInactive ? null : onTap, // 🆕 Désactiver si loading
       padding: EdgeInsets.symmetric(vertical: 15.0, horizontal: 15.0),
       radius: radius,
@@ -258,15 +295,15 @@ class _ActionButton extends StatelessWidget {
                     ),
                   ),
                 )
-              : HugeIcon(
+              : icon != null ? HugeIcon(
                   icon: icon,
                   size: 20,
                   color: _getIconColor(context),
-                ),
-          if (label.isNotEmpty) ...[
+                ) : Container(),
+          if (label != null) ...[
             10.w,
             Text(
-              label,
+              label!,
               style: context.bodySmall?.copyWith(
                 fontSize: 17,
                 fontWeight: FontWeight.w600,

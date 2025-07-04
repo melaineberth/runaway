@@ -9,12 +9,12 @@ enum NavItemModel {
     inactiveIcon: HugeIcons.strokeRoundedHome01,
     route: '/home',
   ),
-  activity(
-    label: "Activity",
-    activeIcon: HugeIcons.solidRoundedActivity01,
-    inactiveIcon: HugeIcons.strokeRoundedActivity01,
-    route: '/activity',
-  ),
+  // activity(
+  //   label: "Activity",
+  //   activeIcon: HugeIcons.solidRoundedActivity01,
+  //   inactiveIcon: HugeIcons.strokeRoundedActivity01,
+  //   route: '/activity',
+  // ),
   historic(
     label: "Historic",
     activeIcon: HugeIcons.solidRoundedCalendar03,
@@ -48,8 +48,8 @@ extension NavItemL10n on NavItemModel {
     switch (this) {
       case NavItemModel.home:
         return l10n.home;   // clé ARB : "statusPending"
-      case NavItemModel.activity:
-        return l10n.activityTitle;
+      // case NavItemModel.activity:
+      //   return l10n.activityTitle;
       case NavItemModel.historic:
         return l10n.historic;
       case NavItemModel.account:

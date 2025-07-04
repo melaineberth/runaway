@@ -14,10 +14,6 @@ class MainScaffold extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // On calcule dynamiquement l'index sélectionné à partir de la route actuelle
-    final String loc = GoRouter.of(context).state.matchedLocation;
-    final int selectedIndex = NavItemModel.values.indexWhere((item) => item.route == loc).clamp(0, NavItemModel.values.length - 1);
-
     return BlocBuilder<RouteGenerationBloc, RouteGenerationState>(
       builder: (context, routeState) {
         // 🔑 LoadingOverlay affiché pendant génération OU analyse
@@ -51,36 +47,45 @@ class MainScaffold extends StatelessWidget {
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          GNav(
-                            activeColor: Colors.white,
-                            iconSize: 25,
-                            color: context.adaptiveTextPrimary.withValues(alpha: 0.5),
-                            tabBackgroundColor: context.adaptivePrimary,
-                            tabShadow: [BoxShadow(color: context.adaptiveTextPrimary.withValues(alpha: 0.1), blurRadius: 0)], // tab button shadow
-                            padding: EdgeInsetsGeometry.symmetric(
-                              horizontal: 15.0,
-                              vertical: 15.0,
-                            ),
-                            tabs: [
-                              ...NavItemModel.values.asMap().entries.map((entry) {
-                                final i = entry.key;
-                                final item = entry.value;
-                          
-                                final bool isSelected = i == selectedIndex;
-                          
-                                return GButton(
-                                  gap: 8,
-                                  margin: EdgeInsets.all(4.0),
-                                  icon: isSelected ? item.activeIcon : item.inactiveIcon,
-                                  text: item.title(context),
-                                  textStyle: context.bodySmall?.copyWith(
-                                    fontSize: 17,
-                                    color: Colors.white,
-                                  ),
-                                  onPressed: () => context.go(item.route),
-                                );
-                              }), 
-                            ],
+                          Builder(
+                            builder: (context) {
+                              // Recalculer l'index à chaque rebuild
+                              final String loc = GoRouter.of(context).state.matchedLocation;
+                              final int selectedIndex = NavItemModel.values.indexWhere((item) => item.route == loc).clamp(0, NavItemModel.values.length - 1);
+
+                              return GNav(
+                                selectedIndex: selectedIndex, // Forcer la mise à jour
+                                activeColor: Colors.white,
+                                iconSize: 25,
+                                color: context.adaptiveTextPrimary.withValues(alpha: 0.5),
+                                tabBackgroundColor: context.adaptivePrimary,
+                                tabShadow: [BoxShadow(color: context.adaptiveTextPrimary.withValues(alpha: 0.1), blurRadius: 0)], // tab button shadow
+                                padding: EdgeInsetsGeometry.symmetric(
+                                  horizontal: 15.0,
+                                  vertical: 15.0,
+                                ),
+                                tabs: [
+                                  ...NavItemModel.values.asMap().entries.map((entry) {
+                                    final i = entry.key;
+                                    final item = entry.value;
+                              
+                                    final bool isSelected = i == selectedIndex;
+                              
+                                    return GButton(
+                                      gap: 8,
+                                      margin: EdgeInsets.all(4.0),
+                                      icon: isSelected ? item.activeIcon : item.inactiveIcon,
+                                      text: item.title(context),
+                                      textStyle: context.bodySmall?.copyWith(
+                                        fontSize: 17,
+                                        color: Colors.white,
+                                      ),
+                                      onPressed: () => context.go(item.route),
+                                    );
+                                  }), 
+                                ],
+                              );
+                            }
                           ),
                         ],
                       ),

@@ -124,6 +124,7 @@ class ThemeSelector extends StatelessWidget {
     return SquircleContainer(
       onTap: onTap,
       radius: 50,
+      gradient: false,
       color: context.adaptiveBorder.withValues(alpha: 0.08),
       padding: const EdgeInsets.all(8),
       child: Row(

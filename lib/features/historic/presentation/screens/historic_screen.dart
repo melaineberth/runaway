@@ -3,18 +3,15 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:go_router/go_router.dart';
-import 'package:pull_down_button/pull_down_button.dart';
-import 'package:runaway/config/colors.dart';
+import 'package:runaway/config/constants.dart';
 import 'package:runaway/config/extensions.dart';
 import 'package:runaway/core/blocs/app_data/app_data_bloc.dart';
 import 'package:runaway/core/blocs/app_data/app_data_event.dart';
 import 'package:runaway/core/blocs/app_data/app_data_state.dart';
 import 'package:runaway/core/di/bloc_provider_extension.dart';
 import 'package:runaway/core/services/conversion_triggers.dart';
-import 'package:runaway/core/widgets/ask_registration.dart';
+import 'package:runaway/core/widgets/blurry_app_bar.dart';
 import 'package:runaway/core/widgets/blurry_page.dart';
-import 'package:runaway/core/widgets/icon_btn.dart';
 import 'package:runaway/core/widgets/modal_dialog.dart';
 import 'package:runaway/core/widgets/squircle_container.dart';
 import 'package:runaway/core/widgets/top_snackbar.dart';
@@ -22,7 +19,6 @@ import 'package:runaway/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:runaway/features/auth/presentation/bloc/auth_state.dart';
 import 'package:runaway/features/historic/presentation/widgets/shimmer_historic_card.dart';
 import 'package:runaway/features/route_generator/domain/models/saved_route.dart';
-import 'package:runaway/features/route_generator/presentation/blocs/route_generation/route_generation_bloc.dart';
 import 'package:runaway/features/route_generator/presentation/blocs/route_generation/route_generation_event.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:top_snackbar_flutter/top_snack_bar.dart';
@@ -160,55 +156,6 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
     context.appDataBloc.add(const HistoricDataRefreshRequested());
   }
 
-  /// 🧭 Navigation vers le parcours sélectionné - Chargement dans HomeScreen
-  void _navigateToRoute(SavedRoute route) async {
-    print('🧭 === DÉBUT NAVIGATION VERS PARCOURS ===');
-    print('📊 Route ID: ${route.id}');
-    print('📊 Route Name: ${route.name}');
-    
-    try {
-      // 🔑 ÉTAPE 1: S'assurer que RouteGenerationBloc a les données nécessaires
-      final routeGenerationBloc = context.routeGenerationBloc;
-      
-      // Vérifier si RouteGenerationBloc a déjà les parcours sauvegardés
-      if (routeGenerationBloc.state.savedRoutes.isEmpty) {
-        print('🔄 Chargement des parcours dans RouteGenerationBloc...');
-        routeGenerationBloc.add(const SavedRoutesRequested());
-        
-        // Attendre un peu que les données se chargent
-        await Future.delayed(const Duration(milliseconds: 500));
-      }
-      
-      // 🔑 ÉTAPE 2: Charger le parcours spécifique
-      routeGenerationBloc.add(SavedRouteLoaded(route.id));
-      print('✅ Événement SavedRouteLoaded envoyé au bloc');
-      
-      // 🔑 ÉTAPE 3: Mettre à jour les statistiques d'utilisation via AppDataBloc
-      context.appDataBloc.add(SavedRouteUsageUpdatedInAppData(route.id));
-      
-      // 🔑 ÉTAPE 4: Naviguer vers HomeScreen
-      if (mounted) {
-        context.go('/home');
-        print('✅ Navigation vers /home lancée');
-      }
-      
-      print('🧭 === FIN NAVIGATION VERS PARCOURS ===');
-      
-    } catch (e) {
-      print('❌ Erreur lors de la navigation: $e');
-      
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Erreur lors du chargement du parcours'),
-            backgroundColor: Colors.red,
-            duration: const Duration(seconds: 2),
-          ),
-        );
-      }
-    }
-  }
-
   /// Suppression d'un parcours avec confirmation
   Future<void> _deleteRoute(SavedRoute route) async {
     try {
@@ -216,12 +163,11 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
       if (confirmed != true) return;
       
       print('🗑️ Suppression via AppDataBloc: ${route.name}');
-      
-      // 🔥 UTILISER AppDataBloc AU LIEU DE RouteGenerationBloc
-      context.appDataBloc.add(SavedRouteDeletedFromAppData(route.id));
-      
+            
       // Afficher un message de confirmation
       if (mounted) {
+        context.appDataBloc.add(SavedRouteDeletedFromAppData(route.id));
+        
         showTopSnackBar(
           Overlay.of(context),
           TopSnackBar(
@@ -277,11 +223,6 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
     return result ?? false;
   }
 
-  /// Interface pour les utilisateurs non connectés
-  Widget _buildUnauthenticatedView() {
-    return AskRegistration();
-  }
-
   /// 🎭 Interface principale avec animations intégrées
   Widget _buildMainView(AppDataState appDataState, List<SavedRoute> routes) {
     // Mettre à jour les animations en fonction du nombre de routes
@@ -289,30 +230,34 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
       _updateAnimationsForRoutes(routes.length);
     }
 
-    return Scaffold(
-      extendBodyBehindAppBar: true,
-      appBar: _buildAppBar(),
-      body: BlurryPage(
-        children: [
-          AnimatedBuilder(
-            animation: _fadeAnimation,
-            builder: (context, child) {
-              return Opacity(
-                opacity: _fadeAnimation.value,
-                child: Transform.translate(
-                  offset: Offset(0, 20 * (1 - _fadeAnimation.value)),
-                  child: _buildStatsCard(routes),
-                ),
-              );
-            },
-          ),
+    return BlurryAppBar(
+      title: context.l10n.historic, 
+      children: [
+        20.h,
+
+          if (routes.length > 1) ...[
+            AnimatedBuilder(
+              animation: _fadeAnimation,
+              builder: (context, child) {
+                return Opacity(
+                  opacity: _fadeAnimation.value,
+                  child: Transform.translate(
+                    offset: Offset(0, 20 * (1 - _fadeAnimation.value)),
+                    child: _buildStatsCard(routes),
+                  ),
+                );
+              },
+            ),
+
+            20.h,
+          ],
+
           _buildAnimatedRoutesList(routes),
-        ],
-      ),
+      ],
     );
   }
 
-  PreferredSizeWidget _buildAppBar() {
+  PreferredSizeWidget _buildAppBar(bool activeBlur) {
     return AppBar(
       forceMaterialTransparency: true,
       title: FadeTransition(
@@ -322,14 +267,14 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
           style: context.bodySmall?.copyWith(color: context.adaptiveTextPrimary),
         ),
       ),
-      flexibleSpace: FlexibleSpaceBar(
+      flexibleSpace: activeBlur ? FlexibleSpaceBar(
         background: BackdropFilter(
           filter: ImageFilter.blur(sigmaX: 50, sigmaY: 50),
           child: Container(
             color: context.adaptiveBackground.withValues(alpha: 0.3),
           ),
         ),
-      ),
+      ) : null,
     );
   }
 
@@ -411,7 +356,6 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
                         child: HistoricCard(
                           route: route,
                           isEdit: isEditMode,
-                          onTap: () => _navigateToRoute(route),
                           onDelete: () => _deleteRoute(route),
                           onSync: routes == routes.unsyncedRoutes ? _syncData : null,
                           onRename: _toggleEditMode,
@@ -497,20 +441,21 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
   Widget _buildEmptyView(AppDataState appDataState) {
     return Scaffold(
       extendBodyBehindAppBar: true,
-      appBar: _buildAppBar(),
+      appBar: _buildAppBar(false),
       body: FadeTransition(
         opacity: _fadeAnimation,
         child: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              SquircleContainer(              
-                color: AppColors.primary.withValues(alpha: 0.3),
+              SquircleContainer(     
+                isGlow: true,         
+                color: context.adaptivePrimary,
                 padding: EdgeInsets.all(30.0),
                 child: Icon(
                   HugeIcons.strokeRoundedRoute01,
-                  size: 64,
-                  color: AppColors.primary,
+                  size: 50,
+                  color: Colors.white,
                 ),
               ),
               30.h,
@@ -518,7 +463,7 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
                 context.l10n.emptySavedRouteTitle,
                 style: context.bodyLarge?.copyWith(
                   color: context.adaptiveTextPrimary,
-                  fontSize: 25,
+                  fontSize: 22,
                   fontWeight: FontWeight.w700,
                 ),
               ),
@@ -530,7 +475,7 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
                   style: context.bodyMedium?.copyWith(
                     color: context.adaptiveTextSecondary,
                     fontWeight: FontWeight.w500,
-                    fontSize: 17,
+                    fontSize: 15,
                     height: 1.3,
                   ),
                   textAlign: TextAlign.center,
@@ -554,8 +499,11 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
     final syncedCount = totalRoutes - unsyncedCount;
     
     return Padding(
-      padding: const EdgeInsets.all(20.0),
+      padding: const EdgeInsets.symmetric(
+        horizontal: 20.0,
+      ),
       child: SquircleContainer(
+        gradient: false,
         radius: 40.0,
         padding: EdgeInsets.all(20),
         color: context.adaptiveBorder.withValues(alpha: 0.08),
@@ -622,18 +570,6 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
     );
   }
 
-  void _refreshData() async {
-    print('🔄 Refresh manuel optimisé');
-    
-    // Déclencher les updates en parallèle
-    final context = this.context;
-    context.routeGenerationBloc.add(const SavedRoutesRequested());
-    context.appDataBloc.add(const AppDataRefreshRequested());
-    
-    // Petite pause pour l'animation
-    await Future.delayed(const Duration(milliseconds: 800));
-  }
-
   void _syncData() {
     print('☁️ Synchronisation des données demandée');
     context.routeGenerationBloc.add(SyncPendingRoutesRequested());
@@ -651,16 +587,139 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
     return BlocBuilder<AuthBloc, AuthState>(
       builder: (context, authState) {
         if (authState is! Authenticated) {
-          return _buildUnauthenticatedView();
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            showAuthModal(context);
+          });  
         }
 
-        // 🔥 UTILISER EXCLUSIVEMENT AppDataBloc
-        return BlocBuilder<AppDataBloc, AppDataState>(
-          builder: (context, appDataState) {
-            return _buildMainContent(appDataState);
-          },
-        );
+        if (authState is Authenticated) {
+          return BlocBuilder<AppDataBloc, AppDataState>(
+            builder: (context, appDataState) {
+              return _buildMainContent(appDataState);
+            },
+          );
+        }
+
+        return _buildEmptyUnauthenticated();
       },
+    );
+  }
+
+  Widget _buildEmptyUnauthenticated() {
+    return Scaffold(
+      extendBodyBehindAppBar: true,
+      appBar: AppBar(
+        forceMaterialTransparency: true,
+        title: FadeTransition(
+          opacity: _fadeAnimation,
+          child: Text(
+            context.l10n.historic,
+            style: context.bodySmall?.copyWith(
+              color: context.adaptiveTextPrimary,
+            ),
+          ),
+        ),
+      ),
+      body: AnimatedBuilder(
+        animation: _fadeAnimation,
+        builder: (context, child) {
+          return Opacity(
+            opacity: _fadeAnimation.value,
+            child: Transform.translate(
+              offset: Offset(0, 20 * (1 - _fadeAnimation.value)),
+              child: BlurryPage(
+                physics: const NeverScrollableScrollPhysics(),
+                children: [ 
+                  ...List.generate(3, (index) {
+                    return Padding(
+                      padding: const EdgeInsets.all(20.0),
+                        child: SquircleContainer(
+                          radius: 50.0,
+                          gradient: false,
+                          padding: EdgeInsets.all(15.0),
+                          color: context.adaptiveBorder.withValues(alpha: 0.08),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              SizedBox(
+                                child: SquircleContainer(
+                                  height: 250,
+                                  width: double.infinity,
+                                  radius: 30.0,
+                                  color: context.adaptivePrimary,
+                                  padding: EdgeInsets.zero,
+                                ),
+                              ),
+              
+                              15.h,
+              
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  SquircleContainer(
+                                    width: 200,
+                                    radius: 15.0,
+                                    height: 20,
+                                    color: context.adaptivePrimary,
+                                  ),
+                                  8.h,
+                                  SquircleContainer(
+                                    width: 300,
+                                    radius: 20.0,
+                                    height: 30,
+                                    color: context.adaptivePrimary,
+                                  ),
+                                ],
+                              ),
+              
+                              25.h,
+              
+                              Wrap(
+                                spacing: 8.0,
+                                runSpacing: 8.0,
+                                children: [
+                                  _buildEmptyDetailChip(40, 90),
+                                  _buildEmptyDetailChip(40, 80),
+                                  _buildEmptyDetailChip(40, 80),
+                                  _buildEmptyDetailChip(40, 80),
+                                  _buildEmptyDetailChip(40, 80),
+                                  _buildEmptyDetailChip(40, 100),
+                                  _buildEmptyDetailChip(40, 100),
+                                ],
+                              ),
+                          
+                              25.h,
+                          
+                              // Boutons d'action
+                              SquircleContainer(
+                                height: 50,
+                                radius: 30.0,
+                                color: context.adaptivePrimary,
+                                padding: EdgeInsets.symmetric(vertical: 15.0),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
+      ),
+    );
+  }
+
+  Widget _buildEmptyDetailChip(double height, double width) {
+    return Container(
+      height: height,
+      width: width,
+      decoration: BoxDecoration(
+        color: context.adaptivePrimary,
+        borderRadius: BorderRadius.circular(100),
+      ),
     );
   }
 
@@ -691,20 +750,16 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
   }
 
   Widget _buildLoadingView(AppDataState appDataState) {
-    return Scaffold(
-      extendBodyBehindAppBar: true,
-      appBar: _buildAppBar(),
-      body: BlurryPage(
-        contentPadding: EdgeInsets.only(top: kToolbarHeight + 60, left: 20, right: 20),
-        children: [
-          ...List.generate(5, (index) {
-            return Padding(
-              padding: EdgeInsets.only(bottom: 16),
-              child: ShimmerHistoricCard(),
-            );
-          })
-        ],
-      ),
+    return BlurryAppBar(
+      title: context.l10n.historic, 
+      children: [
+        ...List.generate(5, (index) {
+          return Padding(
+            padding: EdgeInsets.only(bottom: 16),
+            child: ShimmerHistoricCard(),
+          );
+        }),
+      ],
     );
   }
 }

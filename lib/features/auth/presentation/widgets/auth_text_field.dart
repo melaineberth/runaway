@@ -46,6 +46,7 @@ class _AuthTextFieldState extends State<AuthTextField> {
   Widget build(BuildContext context) {
     return SquircleContainer(
       height: 60,
+      gradient: false,
       color: context.adaptiveBorder.withValues(alpha: 0.08),
       radius: 30,
       padding: EdgeInsets.symmetric(

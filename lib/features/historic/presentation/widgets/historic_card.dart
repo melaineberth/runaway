@@ -3,18 +3,22 @@ import 'package:flutter/services.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:pull_down_button/pull_down_button.dart';
 import 'package:runaway/config/colors.dart';
+import 'package:runaway/config/constants.dart';
 import 'package:runaway/config/extensions.dart';
 import 'package:runaway/core/widgets/squircle_container.dart';
 import 'package:runaway/core/services/reverse_geocoding_service.dart';
+import 'package:runaway/core/widgets/top_snackbar.dart';
+import 'package:runaway/features/home/presentation/widgets/export_format_dialog.dart';
+import 'package:runaway/features/route_generator/data/services/route_export_service.dart';
 import 'package:runaway/features/route_generator/domain/models/activity_type.dart';
 import 'package:runaway/features/route_generator/domain/models/saved_route.dart';
 import 'package:runaway/features/route_generator/domain/models/terrain_type.dart';
 import 'package:runaway/features/route_generator/domain/models/urban_density.dart';
+import 'package:top_snackbar_flutter/top_snack_bar.dart';
 
 class HistoricCard extends StatefulWidget {
   final SavedRoute route;
   final bool isEdit;
-  final VoidCallback? onTap;
   final VoidCallback? onDelete;
   final VoidCallback? onRename;
   final VoidCallback? onSync;
@@ -22,7 +26,6 @@ class HistoricCard extends StatefulWidget {
   const HistoricCard({
     super.key,
     required this.route,
-    this.onTap,
     this.onDelete,
     this.onRename,
     this.onSync,
@@ -77,7 +80,78 @@ class _HistoricCardState extends State<HistoricCard> {
     }
   }
 
-@override
+  /// 🆕 Affiche le dialogue de sélection du format d'export
+  void _showExportDialog() {
+    showModalSheet(
+      context: context, 
+      backgroundColor: Colors.transparent,
+      child: ExportFormatDialog(
+        onGpxSelected: () => _exportRoute(RouteExportFormat.gpx),
+        onKmlSelected: () => _exportRoute(RouteExportFormat.kml),
+        onJsonSelected: () => _exportRoute(RouteExportFormat.json),
+      ),
+    );
+  }
+
+  /// 🆕 Exporte la route dans le format sélectionné
+  Future<void> _exportRoute(RouteExportFormat format) async {
+    try {
+      // Créer les métadonnées à partir de la route sauvegardée
+      final metadata = _buildMetadataFromRoute();
+      
+      // Exporter la route
+      await RouteExportService.exportRoute(
+        context: context,
+        coordinates: widget.route.coordinates,
+        metadata: metadata,
+        format: format,
+        customName: widget.route.name,
+      );
+
+      // Afficher un message de succès
+      if (mounted) {
+        showTopSnackBar(
+          Overlay.of(context),
+          TopSnackBar(
+            title: 'Parcours exporté en ${format.displayName}',
+            icon: HugeIcons.solidRoundedTick04,
+            color: Colors.lightGreen,
+          ),
+        );
+      }
+
+    } catch (e) {
+      // Afficher un message d'erreur
+      if (mounted) {
+        showTopSnackBar(
+          Overlay.of(context),
+          TopSnackBar(
+            title: 'Erreur lors de l\'export: $e',
+            icon: HugeIcons.solidRoundedAlert02,
+            color: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  /// 🆕 Construit les métadonnées à partir de la route sauvegardée
+  Map<String, dynamic> _buildMetadataFromRoute() {
+    return {
+      'distanceKm': widget.route.actualDistance ?? widget.route.parameters.distanceKm,
+      'durationMinutes': widget.route.formattedDuration,
+      'elevationGain': widget.route.parameters.elevationGain,
+      'is_loop': widget.route.parameters.isLoop,
+      'generatedAt': widget.route.createdAt.toIso8601String(),
+      'parameters': {
+        'activity_type': widget.route.parameters.activityType.id,
+        'terrain_type': widget.route.parameters.terrainType.id,
+        'urban_density': widget.route.parameters.urbanDensity.id,
+      },
+    };
+  }
+
+  @override
   Widget build(BuildContext context) {
     const innerRadius = 30.0;
     const double imgSize = 150;
@@ -89,6 +163,7 @@ class _HistoricCardState extends State<HistoricCard> {
       child: SquircleContainer(
         radius: outerRadius,
         padding: padding,
+        gradient: false,
         color: context.adaptiveBorder.withValues(alpha: 0.08),
         child: Column(
           spacing: 20.0,
@@ -190,11 +265,11 @@ class _HistoricCardState extends State<HistoricCard> {
                   text: widget.route.formattedDistance,
                 ),
                 _buildDetailChip(
-                  icon: _getTerrainIcon(),
+                  icon: getTerrainIcon(widget.route.parameters.terrainType.title.toLowerCase()),
                   text: widget.route.parameters.terrainType.label(context),
                 ),
                 _buildDetailChip(
-                  icon: _getUrbanDensityIcon(),
+                  icon: getUrbanDensityIcon(widget.route.parameters.urbanDensity.title.toLowerCase()),
                   text: widget.route.parameters.urbanDensity.label(context),
                 ),
                 if (widget.route.parameters.elevationGain > 0)
@@ -218,16 +293,17 @@ class _HistoricCardState extends State<HistoricCard> {
         
             // Boutons d'action
             SquircleContainer(
-              onTap: widget.onTap,
+              onTap: _showExportDialog,
               radius: innerRadius,
+              height: 55,
               color: context.adaptivePrimary,
               padding: EdgeInsets.symmetric(vertical: 15.0),
               child: Center(
                 child: Text(
-                  context.l10n.followRoute, 
+                  context.l10n.download, 
                   style: context.bodySmall?.copyWith(
+                    fontSize: 18,
                     color: Colors.white,
-                    fontSize: 16,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -489,30 +565,6 @@ class _HistoricCardState extends State<HistoricCard> {
         return Colors.green;
       default:
         return AppColors.primary;
-    }
-  }
-
-  /// Icône pour le terrain
-  IconData _getTerrainIcon() {
-    switch (widget.route.parameters.terrainType.title.toLowerCase()) {
-      case 'plat':
-        return HugeIcons.strokeRoundedRoad;
-      case 'vallonné':
-        return HugeIcons.strokeRoundedMountain;
-      default:
-        return HugeIcons.solidRoundedRouteBlock;
-    }
-  }
-
-  /// Icône pour la densité urbaine
-  IconData _getUrbanDensityIcon() {
-    switch (widget.route.parameters.urbanDensity.title.toLowerCase()) {
-      case 'urbain':
-        return HugeIcons.solidRoundedCity03;
-      case 'nature':
-        return HugeIcons.strokeRoundedTree05;
-      default:
-        return HugeIcons.strokeRoundedLocation04;
     }
   }
 }

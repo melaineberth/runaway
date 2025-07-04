@@ -98,11 +98,11 @@ extension L10nExtension on BuildContext {
   AppLocalizations get l10n => AppLocalizations.of(this)!;
 }
 
-void showModalSheet({required BuildContext context, required Widget child, Color backgroundColor = Colors.black}) {
+void showModalSheet({required BuildContext context, required Widget child, Color backgroundColor = Colors.black, bool isDismissible = true}) {
     showModalBottomSheet(
       useRootNavigator: true,
       isScrollControlled: true,
-      isDismissible: true,
+      isDismissible: isDismissible,
       enableDrag: false,
       context: context,
       backgroundColor: backgroundColor,

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 class SquircleContainer extends StatelessWidget {
-  final Widget child;
+  final Widget? child;
   final double? radius;
   final EdgeInsetsGeometry? padding;
   final EdgeInsetsGeometry? margin;
@@ -16,7 +16,7 @@ class SquircleContainer extends StatelessWidget {
 
   const SquircleContainer({
     super.key,
-    required this.child,
+    this.child,
     this.radius,
     this.padding,
     this.margin,
