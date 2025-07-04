@@ -4,8 +4,6 @@ import 'package:runaway/config/extensions.dart';
 import 'package:runaway/core/services/conversion_service.dart';
 import 'package:runaway/core/widgets/modal_sheet.dart';
 import 'package:runaway/core/widgets/squircle_container.dart';
-import 'package:runaway/features/auth/presentation/screens/login_screen.dart';
-import 'package:runaway/features/auth/presentation/screens/signup_screen.dart';
 
 class ConversionPromptModal extends StatefulWidget {
   final String? context; // Pour personnaliser le message selon le contexte
@@ -295,16 +293,7 @@ class _ConversionPromptModalState extends State<ConversionPromptModal> with Tick
       ],
     );
   }
-  
-  void _showAuthModal(Widget screen) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => screen,
-    );
-  }
-  
+    
   String _getContextualTitle() {
     switch (widget.context) {
       case 'route_generated':
