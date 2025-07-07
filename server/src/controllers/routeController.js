@@ -220,11 +220,13 @@ class RouteController {
             logger.info("Emergency regeneration successful", { requestId: requestId });
           }
         } catch (error) {
-          logger.warn("Emergency regeneration failed, using original route", {
-            requestId: requestId,
-            error: error.message
+          // Si échec, utiliser le fallback progressif
+          logger.warn('Standard generation failed, using progressive fallback', {
+            error: error.message,
+            requestId: enhancedParams.requestId
           });
-          // Garder la route originale mais appliquer des corrections
+          
+          finalRoute = await routeGeneratorService.generateWithProgressiveFallback(enhancedParams);
         }
       }
 
@@ -350,6 +352,11 @@ class RouteController {
       // Enregistrer les métriques
       const { metricsService } = require("../services/metricsService");
       metricsService.recordRouteGeneration(true, finalRoute.distance / 1000);
+
+      // Avertir si qualité dégradée
+      if (finalRoute.metadata?.emergency || finalRoute.metadata?.quality === 'poor') {
+        response.warning = "La zone demandée présente des limitations. Le parcours généré pourrait être moins intéressant que prévu.";
+      }
 
       res.json(response);
 

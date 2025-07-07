@@ -136,21 +136,6 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
     super.dispose();
   }
 
-  void _toggleEditMode() {
-    if (isEditMode == true) {
-      setState(() {
-        isEditMode = false;
-      });
-      print("Enable edit mode");
-    } else {
-      setState(() {
-        isEditMode = true;
-      });
-      
-      print("Disable edit mode");
-    }
-  }
-
   /// Charge les parcours sauvegardés
   void _loadSavedRoutes() {
     print('🔄 Chargement manuel des parcours via AppDataBloc');

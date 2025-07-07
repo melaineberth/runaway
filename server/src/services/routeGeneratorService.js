@@ -205,6 +205,127 @@ class RouteGeneratorService {
     throw new Error(`Unable to generate acceptable organic route after ${this.retryConfig.maxAttempts} attempts. Last error: ${lastError.message}`);
   }
 
+  async generateWithProgressiveFallback(params) {
+    const maxAttempts = 5; // Plus d'attempts avec stratégies différentes
+    let lastError;
+    
+    // Stratégies progressivement plus permissives
+    const fallbackStrategies = [
+      { name: 'optimal', adjustments: {} },
+      { name: 'relaxed_distance', adjustments: { distanceTolerance: 1.3 } },
+      { name: 'simplified', adjustments: { 
+        _minimumWaypoints: 1, 
+        _organicnessFactor: 0.4 
+      }},
+      { name: 'basic_loop', adjustments: { 
+        algorithm: 'round_trip',
+        _forceSimple: true,
+        _minimumWaypoints: 0
+      }},
+      { name: 'emergency', adjustments: {
+        distanceKm: params.distanceKm * 0.8, // Réduire la distance
+        _acceptAnyQuality: true
+      }}
+    ];
+    
+    for (let i = 0; i < maxAttempts; i++) {
+      try {
+        const strategy = fallbackStrategies[Math.min(i, fallbackStrategies.length - 1)];
+        const attemptParams = {
+          ...params,
+          ...strategy.adjustments,
+          _attemptNumber: i,
+          _strategyName: strategy.name
+        };
+        
+        logger.info(`Fallback attempt ${i + 1}/${maxAttempts}`, {
+          strategy: strategy.name,
+          adjustments: Object.keys(strategy.adjustments)
+        });
+        
+        const route = await this.generateRoute(attemptParams);
+        
+        // Si on accepte n'importe quelle qualité, on prend
+        if (attemptParams._acceptAnyQuality || route.metadata?.quality !== 'critical') {
+          route.metadata = {
+            ...route.metadata,
+            fallbackStrategy: strategy.name,
+            attemptNumber: i + 1
+          };
+          return route;
+        }
+        
+      } catch (error) {
+        lastError = error;
+        logger.warn(`Fallback attempt ${i + 1} failed:`, error.message);
+      }
+    }
+    
+    // Dernier recours : générer un simple carré/triangle
+    return this.generateEmergencyRoute(params);
+  }
+  
+  // Méthode d'urgence pour toujours retourner quelque chose
+  async generateEmergencyRoute(params) {
+    const { startLat, startLon, distanceKm } = params;
+    
+    logger.warn('Using emergency route generation');
+    
+    // Générer un simple parcours triangulaire
+    const radius = Math.sqrt(distanceKm * 1000 / (3 * Math.PI));
+    const points = [];
+    
+    for (let i = 0; i < 3; i++) {
+      const angle = (i * 120) + Math.random() * 30; // Triangle avec variation
+      const point = turf.destination(
+        [startLon, startLat],
+        radius / 1000,
+        angle,
+        { units: 'kilometers' }
+      );
+      points.push({
+        lat: point.geometry.coordinates[1],
+        lon: point.geometry.coordinates[0]
+      });
+    }
+    
+    // Ajouter le point de départ à la fin pour fermer la boucle
+    points.push({ lat: startLat, lon: startLon });
+    
+    try {
+      // Essayer de router entre ces points
+      const route = await graphhopperCloud.getRoute({
+        points: [{ lat: startLat, lon: startLon }, ...points.slice(0, 2)],
+        profile: 'foot',
+        algorithm: 'round_trip',
+        roundTripDistance: distanceKm * 1000
+      });
+      
+      route.metadata = {
+        ...route.metadata,
+        emergency: true,
+        quality: 'emergency',
+        message: 'Route générée en mode urgence - qualité limitée'
+      };
+      
+      return route;
+      
+    } catch (error) {
+      // Retourner au moins les coordonnées
+      return {
+        coordinates: points.map(p => [p.lon, p.lat]),
+        distance: distanceKm * 1000,
+        duration: distanceKm * 12 * 60000, // Estimation 12min/km
+        metadata: {
+          emergency: true,
+          quality: 'emergency',
+          error: 'GraphHopper unavailable',
+          message: 'Parcours basique généré localement'
+        }
+      };
+    }
+  }
+
   /**
  * NOUVELLE : Génération de fallback simple en cas de rate limiting
  */
@@ -420,51 +541,59 @@ class RouteGeneratorService {
   generateOrganicWaypoints(centerPoint, targetDistance, organicnessFactor) {
     const waypoints = [centerPoint];
     
-    // ✅ FIX: LIMITE ABSOLUE pour GraphHopper API (5 points max total)
-    // 1 start + max 2 intermédiaires + 1 end = 4 points max (sous la limite de 5)
+    // OPTIMISATION: Placement intelligent basé sur la distance
     const MAX_INTERMEDIATE_WAYPOINTS = 2;
     
-    const waypointCount = Math.min(
-      Math.max(1, Math.floor(targetDistance / 3000)), // 1 waypoint par 3km
-      MAX_INTERMEDIATE_WAYPOINTS
-    );
+    // Stratégie adaptative selon la distance
+    let waypointCount;
+    if (targetDistance < 3000) {
+      waypointCount = 1; // Un seul waypoint pour courtes distances
+    } else if (targetDistance < 10000) {
+      waypointCount = 2; // Deux waypoints pour distances moyennes
+    } else {
+      waypointCount = MAX_INTERMEDIATE_WAYPOINTS;
+    }
     
-    const organicnessFactor_safe = organicnessFactor || 0.7;
-    const baseRadius = (targetDistance / 1000) / (2 * Math.PI) * 1.2; // En km
+    const baseRadius = (targetDistance / 1000) / (2 * Math.PI) * 1.2;
     
-    logger.info('Generating organic waypoints with strict API limit', {
-      baseRadius: baseRadius,
-      waypointCount: waypointCount,
-      maxAllowed: MAX_INTERMEDIATE_WAYPOINTS,
-      organicnessFactor: organicnessFactor_safe,
-      targetDistance: targetDistance
-    });
-  
-    // Générer seulement les waypoints intermédiaires nécessaires
+    // AMÉLIORATION: Distribution asymétrique pour plus de variété
+    const goldenRatio = 1.618;
+    const angleOffsets = waypointCount === 1 
+      ? [goldenRatio * 137.5] // Angle d'or pour un point
+      : [120, 240]; // Distribution triangulaire pour 2 points
+    
     for (let i = 0; i < waypointCount; i++) {
-      const waypoint = this.generateSingleOrganicWaypoint(
-        centerPoint.lat,
-        centerPoint.lon,
-        baseRadius,
-        i,
-        waypointCount,
-        organicnessFactor_safe,
-        'natural'
+      // Variation de distance plus intelligente
+      const distanceVariation = 0.6 + (Math.random() * 0.8); // 60-140% du rayon
+      const radiusWithVariation = baseRadius * distanceVariation;
+      
+      // Angle avec perturbation organique
+      const baseAngle = angleOffsets[i];
+      const angleVariation = (Math.random() - 0.5) * 60 * organicnessFactor;
+      const finalAngle = baseAngle + angleVariation;
+      
+      // Ajouter une composante spirale pour éviter la symétrie
+      const spiralOffset = Math.sin(i * Math.PI / waypointCount) * 20;
+      
+      const waypoint = turf.destination(
+        [centerPoint.lon, centerPoint.lat],
+        radiusWithVariation,
+        finalAngle + spiralOffset,
+        { units: "kilometers" }
       );
       
-      waypoints.push(waypoint);
+      waypoints.push({
+        lat: waypoint.geometry.coordinates[1],
+        lon: waypoint.geometry.coordinates[0]
+      });
     }
-  
-    // ✅ FIX: NE PAS ajouter le point de fin ici - GraphHopper le gère avec round_trip
-    // waypoints.push({ ...centerPoint }); // SUPPRIMÉ
-  
-    // ✅ VÉRIFICATION FINALE - garantir max 3 points (start + 2 intermédiaires)
-    if (waypoints.length > 3) {
-      logger.warn(`Reducing waypoints from ${waypoints.length} to 3 for API compliance`);
-      return [waypoints[0], waypoints[1], waypoints[2]];
-    }
-  
-    logger.info(`Final waypoint count: ${waypoints.length} (API safe)`);
+    
+    logger.info('Optimized waypoint generation', {
+      targetDistance,
+      waypointCount,
+      strategy: targetDistance < 3000 ? 'single_point' : 'multi_point'
+    });
+    
     return waypoints;
   }
 

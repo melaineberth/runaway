@@ -520,6 +520,31 @@ class GraphHopperCloudService {
     return smoothed;
   }
 
+  generateIntelligentSeed(params, attempt = 0) {
+    const { startLat, startLon, distanceKm, activityType } = params;
+    
+    // Base seed sur la position et la distance
+    const positionHash = Math.abs(Math.floor(startLat * 10000) + Math.floor(startLon * 10000));
+    const distanceHash = Math.floor(distanceKm * 100);
+    
+    // Varier le seed selon l'attempt pour avoir des parcours différents
+    const attemptVariation = attempt * 123456;
+    
+    // Ajouter une composante temporelle pour la variété
+    const timeComponent = Math.floor(Date.now() / 60000) % 10000; // Change toutes les minutes
+    
+    // Combiner pour un seed unique mais reproductible
+    const seed = (positionHash + distanceHash + attemptVariation + timeComponent) % 1000000;
+    
+    logger.debug('Generated intelligent seed', {
+      seed,
+      attempt,
+      factors: { positionHash, distanceHash, attemptVariation, timeComponent }
+    });
+    
+    return seed;
+  }  
+
   /**
    * Génération standard avec validation améliorée
    */
@@ -551,7 +576,7 @@ class GraphHopperCloudService {
         requestParams.algorithm = 'round_trip';
         requestParams.round_trip = {
           distance: this.adjustRoundTripDistance(roundTripDistance, points[0]),
-          seed: roundTripSeed
+          seed: this.generateIntelligentSeed(params, params._attemptNumber || 0) // Utiliser le seed intelligent
         };
         requestParams.ch = false;
         requestParams.lm = false;

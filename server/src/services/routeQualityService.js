@@ -5,27 +5,26 @@ class RouteQualityService {
   constructor() {
     this.qualityThresholds = {
       distance: {
-        minAcceptableRatio: 0.85,
-        maxAcceptableRatio: 1.15,
-        criticalRatio: 0.5
+        minAcceptableRatio: 0.70,  // Assoupli de 0.85 à 0.70
+        maxAcceptableRatio: 1.30,  // Assoupli de 1.15 à 1.30
+        criticalRatio: 0.4         // Assoupli de 0.5 à 0.4
       },
       coordinates: {
-        minPoints: 15, // Augmenté pour plus de détails
-        maxGapMeters: 800, // Réduit pour plus de continuité
+        minPoints: 10,             // Réduit de 15 à 10
+        maxGapMeters: 1000,        // Augmenté de 800 à 1000
         maxSpeed: 150
       },
       loop: {
-        maxEndDistanceMeters: 150 // Réduit pour des boucles plus précises
+        maxEndDistanceMeters: 200  // Augmenté de 150 à 200
       },
-      // NOUVEAUX CRITÈRES ESTHÉTIQUES
       aesthetics: {
-        minDirectionChanges: 8, // Minimum de changements de direction
-        maxStraightSegmentRatio: 0.4, // Max 40% de segments droits
-        minComplexityScore: 0.3, // Score de complexité minimum
-        preferredTurnAngleRange: [30, 150] // Angles de virage préférés
+        minDirectionChanges: 4,    // Réduit de 8 à 4
+        maxStraightSegmentRatio: 0.5, // Augmenté de 0.4 à 0.5
+        minComplexityScore: 0.2,   // Réduit de 0.3 à 0.2
+        preferredTurnAngleRange: [20, 160] // Élargi
       }
     };
-  }
+  }  
 
   /**
    * Valide la qualité avec critères esthétiques améliorés
@@ -466,45 +465,26 @@ class RouteQualityService {
   calculateEnhancedQuality(metrics) {
     let score = 100;
     
-    // Pénalités distance (poids: 25%) - ✅ ASSOUPLI
+    // Pénalités réduites
     if (metrics.distance && !metrics.distance.isValid) {
-      score -= metrics.distance.severity === 'critical' ? 30 : 10; // ✅ RÉDUIT
+      score -= metrics.distance.severity === 'critical' ? 20 : 5; // Réduit
     }
-  
-    // Pénalités coordonnées (poids: 20%) - ✅ ASSOUPLI  
+
     if (metrics.coordinates && !metrics.coordinates.isValid) {
-      score -= (metrics.coordinates.gaps.length * 3); // ✅ RÉDUIT
-      score -= (metrics.coordinates.suspiciousSpeeds.length * 5); // ✅ RÉDUIT
+      score -= (metrics.coordinates.gaps.length * 2); // Réduit
+      score -= (metrics.coordinates.suspiciousSpeeds.length * 3); // Réduit
     }
-  
-    // Pénalités esthétiques (poids: 25%) - ✅ ASSOUPLI
+
     if (metrics.aesthetics) {
-      const aestheticsScore = metrics.aesthetics.score * 25;
-      score -= (25 - aestheticsScore);
+      const aestheticsScore = metrics.aesthetics.score * 30; // Augmenté le poids
+      score -= (30 - aestheticsScore);
     }
-  
-    // Pénalités complexité (poids: 15%) - ✅ ASSOUPLI
-    if (metrics.complexity) {
-      const complexityScore = metrics.complexity.score * 15;
-      score -= (15 - complexityScore);
-    }
-  
-    // Pénalités intérêt (poids: 10%)
-    if (metrics.interest) {
-      const interestScore = metrics.interest.score * 10;
-      score -= (10 - interestScore);
-    }
-  
-    // Pénalité boucle non fermée - ✅ RÉDUIT
-    if (metrics.loop && !metrics.loop.isValid) {
-      score -= 15; // ✅ RÉDUIT de 20 à 15
-    }
-  
-    // ✅ SEUILS DE QUALITÉ ASSOUPLIS
-    if (score >= 75) return 'excellent'; // ✅ RÉDUIT de 85 à 75
-    if (score >= 60) return 'good';      // ✅ RÉDUIT de 70 à 60
-    if (score >= 45) return 'acceptable'; // ✅ RÉDUIT de 55 à 45
-    if (score >= 30) return 'poor';      // ✅ RÉDUIT de 40 à 30
+
+    // Seuils assouplis
+    if (score >= 70) return 'excellent';
+    if (score >= 55) return 'good';
+    if (score >= 40) return 'acceptable';
+    if (score >= 25) return 'poor';
     return 'critical';
   }
 
