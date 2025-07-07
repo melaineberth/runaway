@@ -231,6 +231,17 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
       
       print('✅ Événement de renommage envoyé avec succès');
 
+      if (mounted) {
+      showTopSnackBar(
+        Overlay.of(context),
+        TopSnackBar(
+          title: 'Mise à jour effectuée',
+          icon: HugeIcons.strokeRoundedCheckmarkCircle03,
+          color: Colors.green,
+        ),
+      );
+    }
+
     } catch (e) {
       print('❌ Erreur renommage: $e');
       

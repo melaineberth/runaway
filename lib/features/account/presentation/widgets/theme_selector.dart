@@ -50,6 +50,7 @@ class ThemeSelector extends StatelessWidget {
                     final themeMode = entry.value;
                     final isSelected = themeMode == state.themeMode;
                     final themeName = _getThemeName(context, themeMode);
+                    final isDefault = themeMode == AppThemeMode.auto;
                     
                     return MultiBlocListener(
                       listeners: [
@@ -74,6 +75,7 @@ class ThemeSelector extends StatelessWidget {
                           name: themeName, 
                           icon: _getThemeIcon(themeMode),
                           isSelected: isSelected, 
+                          isDefault: isDefault,          
                           onTap: () {
                             if (!isSelected) {
                               context.themeBloc.add(ThemeChanged(themeMode));
@@ -120,6 +122,7 @@ class ThemeSelector extends StatelessWidget {
     required IconData icon,
     required bool isSelected,
     required VoidCallback onTap,
+    bool isDefault = false,
   }) {
     return SquircleContainer(
       onTap: onTap,
@@ -145,7 +148,7 @@ class ThemeSelector extends StatelessWidget {
               ),
                 
               15.w,
-                
+
               Text(
                 name,
                 style: context.bodyMedium?.copyWith(
@@ -153,6 +156,25 @@ class ThemeSelector extends StatelessWidget {
                   fontWeight: FontWeight.w600,
                 ),
               ),
+
+              if (isDefault) ...[
+                10.w,
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: context.adaptiveBorder.withValues(alpha: .1),
+                    borderRadius: BorderRadius.circular(50),
+                  ),
+                  child: Text(
+                    "Par défaut",        // ex. « Par défaut »
+                    style: context.bodySmall?.copyWith(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: context.adaptiveTextPrimary.withValues(alpha: 0.7),
+                    ),
+                  ),
+                ),
+              ],
             ],
           ),
             

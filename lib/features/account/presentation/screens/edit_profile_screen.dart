@@ -406,7 +406,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> with TickerProvid
       },
       child: SquircleContainer(
         onTap: _hasChanges ? _saveProfile : null,
-        height: 60,
+        height: 55,
         color: isLoading || !_hasChanges ? context.adaptivePrimary.withValues(alpha: 0.6) : context.adaptivePrimary,
         radius: 30,
         padding: EdgeInsets.symmetric(

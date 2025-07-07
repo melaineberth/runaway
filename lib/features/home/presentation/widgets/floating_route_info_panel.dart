@@ -100,20 +100,20 @@ class _FloatingRouteInfoPanelState extends State<FloatingRouteInfoPanel>
 
   @override
   Widget build(BuildContext context) {
-    return ModalSheet(
-      padding: 0.0,
-      child: AnimatedBuilder(
-        animation: Listenable.merge([_slideAnimation, _fadeAnimation]),
-        builder: (context, child) {
-          return FadeTransition(
-            opacity: _fadeAnimation,
-            child: SlideTransition(
-              position: _slideAnimation,
+    return AnimatedBuilder(
+      animation: Listenable.merge([_slideAnimation, _fadeAnimation]),
+      builder: (context, child) {
+        return FadeTransition(
+          opacity: _fadeAnimation,
+          child: SlideTransition(
+            position: _slideAnimation,
+            child: ModalSheet(
+              padding: 0.0,
               child: _buildPanel(),
             ),
-          );
-        },
-      ),
+          ),
+        );
+      }
     );
   }
 

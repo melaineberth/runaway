@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:runaway/config/constants.dart';
 import 'package:runaway/config/extensions.dart';
+import 'package:runaway/core/widgets/blurry_page.dart';
 import 'package:runaway/core/widgets/icon_btn.dart';
 import 'package:runaway/core/widgets/squircle_container.dart';
 import 'package:runaway/features/route_generator/domain/models/route_parameters.dart';
@@ -100,52 +101,53 @@ class RouteInfoCard extends StatelessWidget {
 
   Widget _buildDetailChips(BuildContext context) {
     // Nouveau format avec plus d'informations
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Padding(
-        padding: const EdgeInsets.only(left: 30.0, right: 30.0),
-        child: Row(
-          children: [
-            // Type d'activité
+    return SizedBox(
+      height: 40,
+      child: BlurryPage(
+        scrollDirection: Axis.horizontal,
+        shrinkWrap: true,
+        physics: const BouncingScrollPhysics(),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 30),
+        children: [
+          // Type d'activité
+          _InfoChip(
+            icon: parameters!.activityType.icon,
+            label: parameters!.activityType.title,
+          ),
+          10.w,
+          // Distance
+          _InfoChip(
+            icon: HugeIcons.solidRoundedNavigator01,
+            label: '${distance.toStringAsFixed(1)} km',
+          ),
+          10.w,
+          // Type de terrain
+          _InfoChip(
+            icon: getTerrainIcon(parameters!.terrainType.id),
+            label: parameters!.terrainType.title,
+          ),
+          10.w,
+          // Densité urbaine
+          _InfoChip(
+            icon: getUrbanDensityIcon(parameters!.urbanDensity.id),
+            label: parameters!.urbanDensity.title,
+          ),
+          10.w,
+          // Dénivelé (si > 0)
+          if (parameters!.elevationGain > 0)
             _InfoChip(
-              icon: parameters!.activityType.icon,
-              label: parameters!.activityType.title,
+              icon: HugeIcons.solidSharpMountain,
+              label: '${parameters!.elevationGain.toStringAsFixed(0)}m',
             ),
             10.w,
-            // Distance
-            _InfoChip(
-              icon: HugeIcons.solidRoundedNavigator01,
-              label: '${distance.toStringAsFixed(1)} km',
-            ),
-            10.w,
-            // Type de terrain
-            _InfoChip(
-              icon: getTerrainIcon(parameters!.terrainType.id),
-              label: parameters!.terrainType.title,
-            ),
-            10.w,
-            // Densité urbaine
-            _InfoChip(
-              icon: getUrbanDensityIcon(parameters!.urbanDensity.id),
-              label: parameters!.urbanDensity.title,
-            ),
-            10.w,
-            // Dénivelé (si > 0)
-            if (parameters!.elevationGain > 0)
-              _InfoChip(
-                icon: HugeIcons.solidSharpMountain,
-                label: '${parameters!.elevationGain.toStringAsFixed(0)}m',
-              ),
-              10.w,
-            // Type de parcours (boucle/simple)
-            _InfoChip(
-              icon: isLoop 
-                  ? HugeIcons.solidRoundedRepeat
-                  : HugeIcons.strokeRoundedArrowRight01,
-              label: isLoop ? context.l10n.pathLoop : context.l10n.pathSimple,
-            ),
-          ],
-        ),
+          // Type de parcours (boucle/simple)
+          _InfoChip(
+            icon: isLoop 
+                ? HugeIcons.solidRoundedRepeat
+                : HugeIcons.strokeRoundedArrowRight01,
+            label: isLoop ? context.l10n.pathLoop : context.l10n.pathSimple,
+          ),
+        ],
       ),
     );
   }
@@ -212,7 +214,6 @@ class _InfoChip extends StatelessWidget {
 
 /// Bouton d'action
 class _ActionButton extends StatelessWidget {
-  final IconData? icon;
   final String? label;
   final VoidCallback? onTap;
   final bool isPrimary;
@@ -221,7 +222,6 @@ class _ActionButton extends StatelessWidget {
   final bool isDisabled;
 
   const _ActionButton({
-    this.icon,
     this.label,
     required this.onTap,
     required this.isPrimary,
@@ -239,6 +239,7 @@ class _ActionButton extends StatelessWidget {
       onTap: isInactive ? null : onTap, // 🆕 Désactiver si loading
       padding: EdgeInsets.symmetric(vertical: 15.0, horizontal: 15.0),
       radius: radius,
+      height: 55,
       color: _getBackgroundColor(context), // 🆕 Style différent si loading
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -255,14 +256,7 @@ class _ActionButton extends StatelessWidget {
                     ),
                   ),
                 )
-              : icon != null ? HugeIcon(
-                  icon: icon,
-                  size: 20,
-                  color: _getIconColor(context),
-                ) : Container(),
-          if (label != null) ...[
-            10.w,
-            Text(
+              : Text(
               label!,
               style: context.bodySmall?.copyWith(
                 fontSize: 17,
@@ -270,7 +264,6 @@ class _ActionButton extends StatelessWidget {
                 color: _getTextColor(context),
               ),
             ),
-          ],
         ],
       ),
     );
@@ -281,16 +274,6 @@ class _ActionButton extends StatelessWidget {
       return context.adaptivePrimary;
     } else {
       return context.adaptiveBorder.withValues(alpha: 0.08);
-    }
-  }
-
-  Color _getIconColor(BuildContext context) {
-    if (isPrimary) {
-      return Colors.white;
-    } else if (isDisabled || isLoading) {
-      return context.adaptiveDisabled;
-    } else {
-      return context.adaptiveTextPrimary;
     }
   }
 

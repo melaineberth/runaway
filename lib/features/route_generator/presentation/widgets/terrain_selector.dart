@@ -1,3 +1,4 @@
+import 'package:bounce/bounce.dart';
 import 'package:flutter/material.dart';
 import 'package:runaway/config/extensions.dart';
 import '../../domain/models/terrain_type.dart';
@@ -38,7 +39,7 @@ class TerrainSelector extends StatelessWidget {
             final isSelected = terrain == selectedTerrain;
             return Padding(
               padding: const EdgeInsets.only(right: 8.0),
-              child: GestureDetector(
+              child: Bounce(
                 onTap: () => onTerrainSelected(terrain),
                 child: Container(
                   padding: EdgeInsets.symmetric(horizontal: 20, vertical: 10),

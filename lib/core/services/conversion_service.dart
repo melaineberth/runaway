@@ -73,18 +73,18 @@ class ConversionService {
         if (isToday) {
           // Continuer la session du jour
           _sessionStart = storedDate;
-          print('🔄 Reprise de session du jour : ${_sessionStart}');
+          print('🔄 Reprise de session du jour : $_sessionStart');
         } else {
           // Nouvelle session
           _sessionStart = now;
           await prefs.setInt(_sessionStartKey, _sessionStart!.millisecondsSinceEpoch);
-          print('🆕 Nouvelle session démarrée : ${_sessionStart}');
+          print('🆕 Nouvelle session démarrée : $_sessionStart');
         }
       } else {
         // Première session
         _sessionStart = now;
         await prefs.setInt(_sessionStartKey, _sessionStart!.millisecondsSinceEpoch);
-        print('🎉 Première session initialisée : ${_sessionStart}');
+        print('🎉 Première session initialisée : $_sessionStart');
       }
       
       // Charger les données persistées
@@ -184,7 +184,7 @@ class ConversionService {
       // 4. 🔧 AMÉLIORATION : Vérification plus robuste du temps de session
       final sessionDurationMinutes = _getSessionDuration();
       if (sessionDurationMinutes < _minSessionTimeMinutes) {
-        print('⏱️ Session trop courte (${sessionDurationMinutes}/${_minSessionTimeMinutes}min)');
+        print('⏱️ Session trop courte ($sessionDurationMinutes/$_minSessionTimeMinutes min)');
         return false;
       }
       

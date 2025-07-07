@@ -14,6 +14,7 @@ class MainScaffold extends StatelessWidget {
       children: [
         // Interface principale
         Scaffold(
+          resizeToAvoidBottomInset: false,
           extendBody: true,
           body: child,
           bottomNavigationBar: SafeArea(

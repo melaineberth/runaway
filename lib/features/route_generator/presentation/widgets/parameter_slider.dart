@@ -1,8 +1,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:interactive_slider/interactive_slider.dart';
-import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart';
 import 'package:runaway/config/extensions.dart';
+import 'package:runaway/core/widgets/tick_slider.dart';
 
 class ParameterSlider extends StatelessWidget {
   final String title;
@@ -31,9 +30,7 @@ class ParameterSlider extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
-    final String distance = round(value.clamp(min, max)).toStringAsFixed(0).toString();
-    
+  Widget build(BuildContext context) {    
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -44,30 +41,14 @@ class ParameterSlider extends StatelessWidget {
           ),
         ),
         10.h,
-        InteractiveSlider(
-          unfocusedMargin: EdgeInsets.zero,
-          focusedMargin: const EdgeInsets.symmetric(horizontal: 16),
-          padding: EdgeInsets.zero,
-          iconPosition: IconPosition.inside,
-          startIcon: Icon(startIcon),
-          centerIcon: Text(
-            "$distance $unit", 
-            style: context.bodySmall?.copyWith(
-              color: context.adaptiveBorder.withValues(alpha: 0.4),
-              fontWeight: FontWeight.bold,
-              fontSize: 18,
-            ),
-          ),
-          endIcon: Icon(endIcon),
-          unfocusedHeight: 40,
-          focusedHeight: 50,
-          iconGap: 16,
+        TickSlider(
           min: min,
           max: max,
+          unit: unit,
+          initialValue: 30,
           onChanged: onChanged,
-          iconColor: context.adaptiveBorder.withValues(alpha: 0.4),
-          backgroundColor: context.adaptiveBorder.withValues(alpha: 0.08),
-          foregroundColor: context.adaptivePrimary,
+          majorTickColor: context.adaptiveDisabled.withValues(alpha: .35),
+          minorTickColor: context.adaptiveDisabled.withValues(alpha: .2),
         ),
       ],
     );

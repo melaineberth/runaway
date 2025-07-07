@@ -586,9 +586,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
     showTopSnackBar(
       overlay,
       TopSnackBar(
-        title: 'Sauvegarde en cours...',
-        icon: HugeIcons.strokeRoundedLoading03,
-        color: Colors.blue,
+        title: 'Parcours sauvegardé',
+        icon: HugeIcons.solidRoundedTick04,
+        color: Colors.green,
       ),
     );
   }
@@ -2277,9 +2277,10 @@ class _SaveRouteSheetState extends State<SaveRouteSheet> {
               maxLines: 1,
             ),
               
-            40.h,
+            12.h,
               
             SquircleContainer(
+              height: 55,
               width: double.infinity,
               onTap: () {
                 final name = _ctl.text.trim();

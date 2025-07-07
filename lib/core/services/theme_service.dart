@@ -29,7 +29,7 @@ class ThemeService {
     }
     
     print('📱 Utilisation du theme par défaut: light');
-    return AppThemeMode.light;
+    return AppThemeMode.auto;
   }
 
   /// Efface la préférence de thème sauvegardée

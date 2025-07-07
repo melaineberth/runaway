@@ -1,13 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:go_router/go_router.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:pull_down_button/pull_down_button.dart';
 import 'package:runaway/config/constants.dart';
 import 'package:runaway/config/extensions.dart';
+import 'package:runaway/core/widgets/modal_sheet.dart';
 import 'package:runaway/core/widgets/squircle_container.dart';
 import 'package:runaway/core/services/reverse_geocoding_service.dart';
 import 'package:runaway/core/widgets/top_snackbar.dart';
+import 'package:runaway/features/auth/presentation/widgets/auth_text_field.dart';
 import 'package:runaway/features/home/presentation/widgets/export_format_dialog.dart';
 import 'package:runaway/features/route_generator/data/services/route_export_service.dart';
 import 'package:runaway/features/route_generator/domain/models/activity_type.dart';
@@ -72,19 +75,27 @@ class _HistoricCardState extends State<HistoricCard> {
     setState(() {});
   }
 
-  /// 🆕 Active le mode renommage
-  void _startRenaming() {
-    setState(() {
-      _isRenaming = true;
-      _originalName = widget.route.name;
-    });
-    
-    // Sélectionner tout le texte et focus
-    _nameController.selection = TextSelection(
-      baseOffset: 0,
-      extentOffset: _nameController.text.length,
+  // 1. Ouvre la modal sheet et traite le résultat
+  Future<void> _showRenameSheet() async {
+    final newName = await showModalBottomSheet<String>(
+      useRootNavigator: true,
+      isScrollControlled: true,
+      isDismissible: true,
+      enableDrag: false,
+      context: context,
+      clipBehavior: Clip.antiAliasWithSaveLayer,
+      backgroundColor: Colors.transparent,
+      builder: (context) => RenameRouteSheet(initialValue: widget.route.name),
     );
-    _focusNode.requestFocus();
+
+    if (!mounted) return;
+    final trimmed = newName?.trim();
+
+    if (trimmed != null &&
+        trimmed.isNotEmpty &&
+        trimmed != widget.route.name) {
+      widget.onRename?.call(trimmed);
+    }
   }
 
   /// 🆕 Confirme le renommage
@@ -439,7 +450,7 @@ class _HistoricCardState extends State<HistoricCard> {
         PullDownMenuItem(
           icon: HugeIcons.solidRoundedTypeCursor,
           title: context.l10n.renameRoute,
-          onTap: _startRenaming, // 🆕 Démarre le renommage
+          onTap: _showRenameSheet, // 🆕 Démarre le renommage
         ),
         if (widget.onSync != null)
           PullDownMenuItem(
@@ -715,6 +726,93 @@ class _HistoricCardState extends State<HistoricCard> {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class RenameRouteSheet extends StatefulWidget {
+  final String initialValue;                // <-- seulement la valeur
+  const RenameRouteSheet({required this.initialValue, super.key});
+
+  @override
+  State<RenameRouteSheet> createState() => _RenameRouteSheetState();
+}
+
+class _RenameRouteSheetState extends State<RenameRouteSheet> {
+  late final TextEditingController _ctl;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctl = TextEditingController(text: widget.initialValue);
+  }
+
+  @override
+  void dispose() {
+    _ctl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+
+    return ModalSheet(
+      child: Padding(
+        padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              "Mise à jour",
+              style: context.bodySmall?.copyWith(
+                color: context.adaptiveTextPrimary,
+              ),
+            ),
+            2.h,
+            Text(
+              "Choisissez un nouveau nom",
+              style: context.bodySmall?.copyWith(
+                color: context.adaptiveTextSecondary,
+                fontSize: 15,
+                fontWeight: FontWeight.w500
+              ),
+            ),
+            20.h,
+            AuthTextField(
+              controller: _ctl,
+              hint: 'Nom du parcours',
+              textCapitalization: TextCapitalization.sentences,
+              maxLines: 1,
+            ),
+              
+            12.h,
+              
+            SquircleContainer(
+              width: double.infinity,
+              height: 55,
+              onTap: () {
+                final name = _ctl.text.trim();
+                if (name.isEmpty) return;
+                context.pop(name);
+              }, // 🆕 Désactiver si loading
+              padding: EdgeInsets.symmetric(vertical: 15.0, horizontal: 15.0),
+              radius: 40.0,
+              color: context.adaptivePrimary, // 🆕 Style différent si loading
+              child: Center(
+                child: Text(
+                  context.l10n.save,
+                  style: context.bodySmall?.copyWith(
+                    fontSize: 17,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

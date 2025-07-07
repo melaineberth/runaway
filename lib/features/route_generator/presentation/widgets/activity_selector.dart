@@ -1,3 +1,4 @@
+import 'package:bounce/bounce.dart';
 import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:runaway/config/extensions.dart';
@@ -59,31 +60,34 @@ class _ActivityCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SquircleContainer(
+    return Bounce(
       onTap: onTap,
-      radius: 50,
-      height: 120,
-      gradient: isSelected ? true : false,
-      isGlow: isSelected ? true : false,
-      color: isSelected ? context.adaptivePrimary : context.adaptiveBorder.withValues(alpha: 0.08),
-      padding: const EdgeInsets.all(15),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          HugeIcon(
-            icon: activity.icon,
-            size: 50,
-            color: isSelected ? Colors.white : context.adaptiveTextSecondary.withValues(alpha: 0.5),
-          ),
-          5.h,
-          Text(
-            activity.label(context),
-            style: context.bodySmall?.copyWith(
+      filterQuality: FilterQuality.medium,
+      child: SquircleContainer(
+        radius: 50,
+        height: 120,
+        gradient: isSelected ? true : false,
+        isGlow: isSelected ? true : false,
+        color: isSelected ? context.adaptivePrimary : context.adaptiveBorder.withValues(alpha: 0.08),
+        padding: const EdgeInsets.all(15),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            HugeIcon(
+              icon: activity.icon,
+              size: 50,
               color: isSelected ? Colors.white : context.adaptiveTextSecondary.withValues(alpha: 0.5),
-              fontWeight: FontWeight.w600,
             ),
-          ),
-        ],
+            5.h,
+            Text(
+              activity.label(context),
+              style: context.bodySmall?.copyWith(
+                color: isSelected ? Colors.white : context.adaptiveTextSecondary.withValues(alpha: 0.5),
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

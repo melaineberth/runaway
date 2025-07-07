@@ -11,6 +11,7 @@ class BlurryPage extends StatefulWidget {
   final Color? color;
   final bool shrinkWrap;
   final ScrollPhysics? physics;
+  final Axis scrollDirection;
 
   /// Callback appelé quand l'état de scroll change (true = scrollé, false = en haut)
   final ValueChanged<bool>? onScrollStateChanged;
@@ -29,6 +30,7 @@ class BlurryPage extends StatefulWidget {
     this.physics,
     this.onScrollStateChanged,
     this.onScrollControllerReady,
+    this.scrollDirection = Axis.vertical,
   });
 
   @override
@@ -40,6 +42,8 @@ class _BlurryPageState extends State<BlurryPage> with TickerProviderStateMixin {
   late final AnimationController _blurAnimationController;
   late final Animation<double> _blurAnimation;
   bool _isCutByTop = false;
+  bool _isCutByLeft  = false;         // 🆕 si scroll horizontal
+  bool _isCutByRight = false;         // 🆕 si scroll horizontal
 
   @override
   void initState() {
@@ -61,27 +65,12 @@ class _BlurryPageState extends State<BlurryPage> with TickerProviderStateMixin {
       ),
     );
 
-    _scrollController =
-      ScrollController()..addListener(() {
-        final cut = _scrollController.offset > 0;
-        if (cut != _isCutByTop) {
-          setState(() => _isCutByTop = cut);
-
-          // Notifier le parent du changement d'état
-          widget.onScrollStateChanged?.call(cut);
-          
-          // Animer le flou au lieu d'un changement brusque
-          if (cut) {
-            _blurAnimationController.forward();
-          } else {
-            _blurAnimationController.reverse();
-          }
-        }
-      },
-    );
+    _scrollController = ScrollController()
+    ..addListener(() => _updateEdgeState(_scrollController.position));
 
     // Exposer le controller au parent après l'initialisation
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      _updateEdgeState(_scrollController.position);
       widget.onScrollControllerReady?.call(_scrollController);
     });
   }
@@ -91,6 +80,37 @@ class _BlurryPageState extends State<BlurryPage> with TickerProviderStateMixin {
     _scrollController.dispose();
     _blurAnimationController.dispose();
     super.dispose();
+  }
+
+  // 1️⃣  helper : calcule la visibilité des bords
+  void _updateEdgeState(ScrollMetrics m) {
+    if (widget.scrollDirection == Axis.vertical) {
+      final cut = _scrollController.offset > 0;
+      if (cut != _isCutByTop) {
+        setState(() => _isCutByTop = cut);
+
+        // Notifier le parent du changement d'état
+        widget.onScrollStateChanged?.call(cut);
+        
+        // Animer le flou au lieu d'un changement brusque
+        if (cut) {
+          _blurAnimationController.forward();
+        } else {
+          _blurAnimationController.reverse();
+        }
+      }
+    } else {
+      final offset = _scrollController.offset;
+      final max    = _scrollController.position.maxScrollExtent;
+      final cutLeft  = offset > 0;
+      final cutRight = offset < max;
+      if (cutLeft != _isCutByLeft || cutRight != _isCutByRight) {
+        setState(() {
+          _isCutByLeft  = cutLeft;
+          _isCutByRight = cutRight;
+        });
+      }
+    }
   }
 
   @override
@@ -109,14 +129,23 @@ class _BlurryPageState extends State<BlurryPage> with TickerProviderStateMixin {
               children: [
                 Padding(
                   padding: widget.padding ?? EdgeInsets.zero,
-                  child: widget.child ?? ListView(
-                    physics: widget.physics,
-                    shrinkWrap: widget.shrinkWrap,
-                    padding: widget.contentPadding,
-                    controller: _scrollController,
-                    children: widget.children,
+                  child: NotificationListener<ScrollNotification>(
+                    onNotification: (n) {
+                      _updateEdgeState(n.metrics);        // <— met à jour même sans déplacement
+                      return false;
+                    },
+                    child: widget.child ??
+                        ListView(
+                          controller: _scrollController,
+                          scrollDirection: widget.scrollDirection,
+                          physics: widget.physics,
+                          shrinkWrap: widget.shrinkWrap,
+                          padding: widget.contentPadding,
+                          children: widget.children,
+                        ),
                   ),
                 ),
+                if (widget.scrollDirection == Axis.vertical)
                 IgnorePointer(
                   ignoring: true,
                   child: Container(
@@ -138,6 +167,9 @@ class _BlurryPageState extends State<BlurryPage> with TickerProviderStateMixin {
             );
           },
         ),
+
+        // 🔸 Fade TOP 
+        if (widget.scrollDirection == Axis.vertical)
         AnimatedOpacity(
           opacity: _isCutByTop ? 1.0 : 0.0,
           duration: const Duration(milliseconds: 300),
@@ -160,6 +192,60 @@ class _BlurryPageState extends State<BlurryPage> with TickerProviderStateMixin {
             ),
           ),
         ),
+
+        // 🔸 Fade GAUCHE (scroll horizontal)
+        if (widget.scrollDirection == Axis.horizontal)
+          AnimatedOpacity(
+            opacity: _isCutByLeft ? 1 : 0,
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeInOut,
+            child: IgnorePointer(
+              ignoring: true,
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Container(
+                  width: MediaQuery.of(context).size.width / 2.5,
+                  decoration: BoxDecoration(
+                    gradient: SmoothGradient(
+                      from: widget.color ?? context.adaptiveBackground,
+                      to:   widget.color?.withValues(alpha: 0) ??
+                            context.adaptiveBackground.withValues(alpha: 0),
+                      begin: Alignment.centerLeft,
+                      end:   Alignment.center,
+                      curve: Curves.linear,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+
+        // 🔸 Fade DROITE (scroll horizontal)
+        if (widget.scrollDirection == Axis.horizontal)
+          AnimatedOpacity(
+            opacity: _isCutByRight ? 1 : 0,
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeInOut,
+            child: IgnorePointer(
+              ignoring: true,
+              child: Align(
+                alignment: Alignment.centerRight,
+                child: Container(
+                  width: MediaQuery.of(context).size.width / 2.5,
+                  decoration: BoxDecoration(
+                    gradient: SmoothGradient(
+                      from: widget.color?.withValues(alpha: 0) ??
+                            context.adaptiveBackground.withValues(alpha: 0),
+                      to:   widget.color ?? context.adaptiveBackground,
+                      begin: Alignment.center,
+                      end:   Alignment.centerRight,
+                      curve: Curves.linear,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
       ],
     );
     // return ProgressiveBlurWidget(
