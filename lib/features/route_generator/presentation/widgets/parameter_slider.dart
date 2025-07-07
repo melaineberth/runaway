@@ -15,6 +15,10 @@ class ParameterSlider extends StatelessWidget {
   final IconData startIcon;
   final IconData endIcon;
 
+  // ✅ NOUVEAU : Paramètres haptiques optionnels
+  final bool enableHapticFeedback;
+  final HapticIntensity hapticIntensity;
+
   const ParameterSlider({
     super.key,
     required this.title,
@@ -27,6 +31,8 @@ class ParameterSlider extends StatelessWidget {
     required this.endIcon,
     this.divisions,
     this.subtitle,
+    this.enableHapticFeedback = true, // ✅ Activé par défaut
+    this.hapticIntensity = HapticIntensity.custom, // ✅ Mode intelligent par défaut
   });
 
   @override
@@ -45,10 +51,12 @@ class ParameterSlider extends StatelessWidget {
           min: min,
           max: max,
           unit: unit,
-          initialValue: 30,
+          initialValue: value,
           onChanged: onChanged,
           majorTickColor: context.adaptiveDisabled.withValues(alpha: .35),
-          minorTickColor: context.adaptiveDisabled.withValues(alpha: .2),
+          minorTickColor: context.adaptiveDisabled.withValues(alpha: .25),
+          enableHapticFeedback: enableHapticFeedback, // ✅ NOUVEAU
+          hapticIntensity: hapticIntensity, // ✅ NOUVEAU
         ),
       ],
     );

@@ -76,13 +76,17 @@ class RouteParametersBloc extends HydratedBloc<RouteParametersEvent, RouteParame
     TerrainTypeChanged event,
     Emitter<RouteParametersState> emit,
   ) {
-    final suggestedElevation = state.parameters.distanceKm * event.terrainType.maxElevationGain;
+    // ✅ CORRECTION : Ne plus forcer une élévation "suggérée"
+    // Juste vérifier que l'élévation actuelle ne dépasse pas le nouveau maximum du terrain
+    final maxElevation = state.parameters.distanceKm * event.terrainType.maxElevationGain;
+    final currentElevation = state.parameters.elevationGain;
+    final adjustedElevation = currentElevation > maxElevation ? maxElevation : currentElevation;
     
     _updateParameters(
       emit,
       state.parameters.copyWith(
         terrainType: event.terrainType,
-        elevationGain: suggestedElevation,
+        elevationGain: adjustedElevation, // ✅ Garde la valeur actuelle ou l'ajuste au max si nécessaire
       ),
     );
   }
@@ -111,14 +115,17 @@ class RouteParametersBloc extends HydratedBloc<RouteParametersEvent, RouteParame
       return;
     }
     
-    final ratio = km / state.parameters.distanceKm;
-    final newElevation = state.parameters.elevationGain * ratio;
+    // ✅ CORRECTION : Ne plus modifier automatiquement l'élévation
+    // Juste vérifier que l'élévation actuelle ne dépasse pas le nouveau maximum
+    final maxElevation = km * state.parameters.terrainType.maxElevationGain;
+    final currentElevation = state.parameters.elevationGain;
+    final adjustedElevation = currentElevation > maxElevation ? maxElevation : currentElevation;
 
     _updateParameters(
       emit,
       state.parameters.copyWith(
         distanceKm: km,
-        elevationGain: newElevation,
+        elevationGain: adjustedElevation, // ✅ Garde la valeur actuelle ou l'ajuste au max si nécessaire
       ),
     );
   }

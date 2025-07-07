@@ -8,6 +8,7 @@ import 'package:runaway/core/di/bloc_provider_extension.dart';
 import 'package:runaway/core/widgets/blurry_page.dart';
 import 'package:runaway/core/widgets/modal_sheet.dart';
 import 'package:runaway/core/widgets/squircle_container.dart';
+import 'package:runaway/core/widgets/tick_slider.dart';
 
 import '../../../home/presentation/blocs/route_parameters_bloc.dart';
 import '../../../home/presentation/blocs/route_parameters_event.dart';
@@ -100,6 +101,8 @@ class _RouteParameterScreenState extends State<RouteParameterScreen> {
                     onChanged: (value) {
                       context.routeParametersBloc.add(DistanceChanged(value));
                     },
+                    enableHapticFeedback: true,
+                    hapticIntensity: HapticIntensity.light, // ✅ Plus subtil pour précision
                   ),
                   30.h,
                 
@@ -115,6 +118,8 @@ class _RouteParameterScreenState extends State<RouteParameterScreen> {
                     onChanged:  (value) {
                       context.routeParametersBloc.add(ElevationGainChanged(value));
                     },
+                    enableHapticFeedback: true,
+                    hapticIntensity: HapticIntensity.light, // ✅ Plus subtil pour précision
                   ),
                   30.h,
                     
