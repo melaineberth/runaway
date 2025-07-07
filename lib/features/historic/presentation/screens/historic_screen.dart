@@ -4,12 +4,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
-import 'package:runaway/config/constants.dart';
 import 'package:runaway/config/extensions.dart';
 import 'package:runaway/core/blocs/app_data/app_data_bloc.dart';
 import 'package:runaway/core/blocs/app_data/app_data_event.dart';
 import 'package:runaway/core/blocs/app_data/app_data_state.dart';
 import 'package:runaway/core/di/bloc_provider_extension.dart';
+import 'package:runaway/core/mixins/auth_guard_mixin.dart';
 import 'package:runaway/core/services/conversion_triggers.dart';
 import 'package:runaway/core/widgets/blurry_app_bar.dart';
 import 'package:runaway/core/widgets/blurry_page.dart';
@@ -39,7 +39,7 @@ class HistoricScreen extends StatefulWidget {
   State<HistoricScreen> createState() => _HistoricScreenState();
 }
 
-class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStateMixin {
+class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStateMixin, AuthGuardMixin<HistoricScreen> {
   bool isEditMode = true;
 
   // 🎭 Animation Controllers
@@ -652,35 +652,19 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
 
   @override
   Widget build(BuildContext context) {
-    return BlocListener<AuthBloc, AuthState>(
-      listener: (context, authState) {
-        if (authState is Unauthenticated) {
-          showAuthModal(context);
-        } else if (authState is AuthError) {
-          // Afficher l'erreur de suppression de compte
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Erreur: ${authState.message}'),
-              backgroundColor: Colors.red,
-              duration: Duration(seconds: 4),
-            ),
+    return BlocBuilder<AuthBloc, AuthState>(
+      builder: (_, authState) {          
+        // Si l'utilisateur est connecté, afficher le contenu
+        if (authState is Authenticated) {
+          return BlocBuilder<AppDataBloc, AppDataState>(
+            builder: (context, appDataState) {
+              return _buildMainContent(appDataState);
+            },
           );
         }
+
+        return _buildEmptyUnauthenticated();
       },
-      child: BlocBuilder<AuthBloc, AuthState>(
-        builder: (_, authState) {      
-          // Si l'utilisateur est connecté, afficher le contenu
-          if (authState is Authenticated) {
-            return BlocBuilder<AppDataBloc, AppDataState>(
-              builder: (context, appDataState) {
-                return _buildMainContent(appDataState);
-              },
-            );
-          }
-      
-          return _buildEmptyUnauthenticated();
-        },
-      ),
     );
   }
 

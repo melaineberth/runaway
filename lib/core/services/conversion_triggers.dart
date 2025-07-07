@@ -8,10 +8,15 @@ import 'package:runaway/features/auth/presentation/widgets/conversion_prompt_mod
 /// Helper class pour déclencher les événements de conversion
 class ConversionTriggers {
   
-  /// Vérifie si l'utilisateur est connecté
+  /// Vérifie si l'utilisateur est connecté avec vérification d'état stable
   static bool _isUserAuthenticated(BuildContext context) {
-    final authState = context.read<AuthBloc>().state;
-    return authState is Authenticated;
+    try {
+      final authState = context.read<AuthBloc>().state;
+      return authState is Authenticated;
+    } catch (e) {
+      // En cas d'erreur, considérer comme non authentifié par sécurité
+      return false;
+    }
   }
   
   /// Déclenche quand une route est générée
@@ -80,12 +85,23 @@ class ConversionTriggers {
     }
   }
   
-  /// Programme l'affichage d'un prompt contextuel après un délai
+  /// Programme l'affichage d'un prompt contextuel après un délai avec vérifications robustes
   static void _scheduleContextualPrompt(BuildContext context, String promptType) {
+    // 🔧 CORRECTION: Stocker une référence à l'AuthBloc pour surveillance continue
+    final authBloc = context.read<AuthBloc>();
+    
     Future.delayed(const Duration(seconds: 3), () async {
-      // ✅ Triple vérification avant affichage
-      if (!context.mounted || _isUserAuthenticated(context)) {
+      // ✅ VERIFICATION CRITIQUE: Vérifier l'état actuel (pas l'état au moment de l'appel)
+      final currentAuthState = authBloc.state;
+      
+      if (!context.mounted || currentAuthState is Authenticated) {
         print('🚫 Prompt contextuel annulé - utilisateur connecté ou contexte invalide');
+        return;
+      }
+      
+      // 🔧 CORRECTION: Vérification supplémentaire avant affichage
+      if (currentAuthState is AuthLoading) {
+        print('🚫 Prompt contextuel annulé - authentification en cours');
         return;
       }
       

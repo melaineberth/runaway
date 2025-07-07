@@ -114,6 +114,15 @@ class _EditProfileScreenState extends State<EditProfileScreen> with TickerProvid
       _isLoading = true;
     });
 
+    // 🔧 FIX: Vider le cache avant la mise à jour si avatar change
+    if (hasAvatarChange && widget.profile.hasAvatar) {
+      try {
+        CachedNetworkImage.evictFromCache(widget.profile.avatarUrl!);
+      } catch (e) {
+        print('⚠️ Erreur vidage cache: $e');
+      }
+    }
+
     Future.delayed(const Duration(seconds: 3), () {
       if (mounted) {
         context.authBloc.add(
@@ -192,6 +201,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> with TickerProvid
                         ? CachedNetworkImage(
                             imageUrl: widget.profile.avatarUrl!,
                             fit: BoxFit.cover,
+                            // 🔧 FIX: Ajouter une clé unique pour forcer le rechargement
+                            key: ValueKey(widget.profile.avatarUrl),
                             placeholder: (context, url) => Container(
                               color: Colors.primaries[initialColor].withValues(alpha: 0.2),
                               child: Center(

@@ -44,27 +44,39 @@ class _ConversionListenerState extends State<ConversionListener> {
           // ✅ Utilisateur connecté → annuler tout prompt en cours
           _delayedPromptTimer?.cancel();
           _isPromptShowing = false;
+          print('🔐 Utilisateur authentifié - annulation des prompts');
         } else if (authState is Unauthenticated && !_isPromptShowing) {
-          // Utilisateur non connecté → programmer vérification
+          // 🔧 CORRECTION: Ne programmer une vérification que si on vient d'une déconnexion
+          // et non pas lors du chargement initial de l'app
+          print('🚪 Utilisateur non authentifié');
           _scheduleDelayedPromptCheck();
+        } else if (authState is AuthLoading) {
+          // 🔧 CORRECTION: Annuler les prompts pendant le chargement d'auth
+          _delayedPromptTimer?.cancel();
+          print('⏳ Authentification en cours - annulation des prompts');
         }
       },
       child: widget.child,
     );
   }
   
-  /// Vérifie si l'utilisateur est connecté
+  /// Vérifie si l'utilisateur est connecté avec gestion des erreurs
   bool _isUserAuthenticated() {
-    final authState = context.read<AuthBloc>().state;
-    return authState is Authenticated;
+    try {
+      final authState = context.read<AuthBloc>().state;
+      return authState is Authenticated;
+    } catch (e) {
+      print('❌ Erreur vérification auth: $e');
+      return false;
+    }
   }
   
   /// Programme une vérification retardée pour éviter d'interrompre l'utilisateur
   void _scheduleDelayedPromptCheck([String? promptContext]) {
     _delayedPromptTimer?.cancel();
     
-    // Attendre 2-5 secondes pour laisser l'utilisateur finir son action
-    final delay = Duration(seconds: 2 + (promptContext?.length ?? 0) % 3);
+    // 🔧 CORRECTION: Délai plus court et vérifications plus fréquentes
+    const delay = Duration(seconds: 2);
     
     _delayedPromptTimer = Timer(delay, () {
       if (mounted && !_isPromptShowing) {
@@ -83,11 +95,18 @@ class _ConversionListenerState extends State<ConversionListener> {
       return;
     }
     
+    // 🔧 CORRECTION: Vérifier aussi l'état de chargement
+    final authState = context.read<AuthBloc>().state;
+    if (authState is AuthLoading) {
+      print('🚫 Prompt annulé - authentification en cours');
+      return;
+    }
+    
     try {
       final shouldShow = await ConversionService.instance.shouldShowConversionPrompt();
       
-      // ✅ Double vérification avant affichage
-      if (shouldShow && mounted && !_isUserAuthenticated()) {
+      // ✅ Triple vérification avant affichage
+      if (shouldShow && mounted && !_isUserAuthenticated() && authState is! AuthLoading) {
         _isPromptShowing = true;
         
         await showModalBottomSheet<void>(
@@ -100,8 +119,8 @@ class _ConversionListenerState extends State<ConversionListener> {
         );
         
         _isPromptShowing = false;
-      } else if (_isUserAuthenticated()) {
-        print('🚫 Prompt annulé au dernier moment - utilisateur connecté');
+      } else {
+        print('🚫 Prompt annulé - conditions non remplies');
       }
     } catch (e) {
       print('❌ Erreur vérification prompt: $e');

@@ -87,18 +87,7 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
                           ),
                         ],
                       ),
-                    ),
-                    
-                    // Overlay de chargement global
-                    if (isLoading)
-                      Container(
-                        color: Colors.black.withValues(alpha: 0.5),
-                        child: Center(
-                          child: CircularProgressIndicator(
-                            valueColor: AlwaysStoppedAnimation<Color>(context.adaptivePrimary),
-                          ),
-                        ),
-                      ),
+                    ),                    
                   ],
                 );
               },

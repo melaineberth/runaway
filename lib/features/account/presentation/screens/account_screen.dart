@@ -10,13 +10,13 @@ import 'package:flutter_svg/svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:package_info_plus/package_info_plus.dart';
-import 'package:runaway/config/constants.dart';
 import 'package:runaway/config/extensions.dart';
 import 'package:runaway/core/blocs/notification/notification_bloc.dart';
 import 'package:runaway/core/blocs/notification/notification_event.dart';
 import 'package:runaway/core/blocs/notification/notification_state.dart';
 import 'package:runaway/core/blocs/theme_bloc/theme_bloc.dart';
 import 'package:runaway/core/di/bloc_provider_extension.dart';
+import 'package:runaway/core/mixins/auth_guard_mixin.dart';
 import 'package:runaway/core/widgets/blurry_app_bar.dart';
 import 'package:runaway/core/widgets/blurry_page.dart';
 import 'package:runaway/core/widgets/icon_btn.dart';
@@ -41,11 +41,9 @@ class AccountScreen extends StatefulWidget {
   State<AccountScreen> createState() => _AccountScreenState();
 }
 
-class _AccountScreenState extends State<AccountScreen> with TickerProviderStateMixin {
+class _AccountScreenState extends State<AccountScreen> with TickerProviderStateMixin, AuthGuardMixin<AccountScreen> {
   late AnimationController _fadeController;
   late Animation<double> _fadeAnimation;
-
-  bool _isProfileUpdating = false; // 🆕 Flag pour éviter le modal pendant la mise à jour
   
   @override
   void initState() {
@@ -124,46 +122,15 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
 
   @override
   Widget build(BuildContext context) {
-    return BlocListener<AuthBloc, AuthState>(
-      listenWhen: (previous, current) {
-        // 🆕 Détecter les transitions de mise à jour de profil
-        if (previous is Authenticated && current is Authenticated) {
-          _isProfileUpdating = true;
-          // Réinitialiser le flag après un délai
-          Future.delayed(Duration(seconds: 3), () {
-            _isProfileUpdating = false;
-          });
+    return BlocBuilder<AuthBloc, AuthState>(
+      builder: (_, authState) {          
+        // Si l'utilisateur est connecté, afficher le contenu
+        if (authState is Authenticated) {
+          return _buildAuthenticatedView(authState);
         }
-        
-        return previous.runtimeType != current.runtimeType;
-      },
-      listener: (context, authState) {
-        if (authState is Unauthenticated) {
-          // 🆕 Vérifier qu'on n'est pas en train de mettre à jour
-          if (!_isProfileUpdating) {
-            showAuthModal(context);
-          }
-        } else if (authState is AuthError) {
-          // Afficher l'erreur de suppression de compte
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Erreur: ${authState.message}'),
-              backgroundColor: Colors.red,
-              duration: Duration(seconds: 4),
-            ),
-          );
-        }
-      },
-      child: BlocBuilder<AuthBloc, AuthState>(
-        builder: (_, authState) {          
-          // Si l'utilisateur est connecté, afficher le contenu
-          if (authState is Authenticated) {
-            return _buildAuthenticatedView(authState);
-          }
 
-          return _buildEmptyUnauthenticated();
-        },
-      ),
+        return _buildEmptyUnauthenticated();
+      },
     );
   }
 
@@ -265,227 +232,253 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
     return BlurryAppBar(
       title: context.l10n.account, 
       children: [
-        _buildHeaderAccount(
-          ctx: context,
-          user: user,
-          color: Colors.primaries[initialColor],
+        AnimatedBuilder(
+          animation: _fadeAnimation,
+          builder: (context, child) {
+            return Opacity(
+              opacity: _fadeAnimation.value,
+              child: Transform.translate(
+                offset: Offset(0, 20 * (1 - _fadeAnimation.value)),
+                child: _buildHeaderAccount(
+                  ctx: context,
+                  user: user,
+                  color: Colors.primaries[initialColor],
+                ),
+              ),
+            );
+          }
         ),
     
-        Padding(
-          padding: const EdgeInsets.all(20.0),
-          child: Column(
-            children: [
-              // Preferences settings
-              _buildSettingCategory(
-                context,
-                title: context.l10n.preferences,
-                children: [
-                  // Language selector
-                  _buildSettingTile(
-                    context,
-                    label: context.l10n.language,
-                    icon: HugeIcons.strokeRoundedLanguageSkill,
-                    onTap:
-                        () => showModalSheet(
-                          context: context,
-                          backgroundColor: Colors.transparent,
-                          child: LanguageSelector(),
-                        ),
-                    child: IconBtn(
-                      padding: 0.0,
-                      backgroundColor: Colors.transparent,
-                      label: context.l10n.currentLanguage,
-                      iconSize: 19,
-                      labelColor: context.adaptiveTextSecondary,
-                      iconColor: context.adaptiveTextSecondary,
-                      trailling: HugeIcons.strokeStandardArrowRight01,
-                    ),
-                  ),
-    
-                  // Notification switch
-                  _buildSettingTile(
-                    context,
-                    label: context.l10n.notifications,
-                    icon: HugeIcons.strokeRoundedNotification02,
-                    child: BlocBuilder<NotificationBloc, NotificationState>(
-                      builder: (context, notificationState) {
-                        // Afficher un indicateur de chargement si en cours d'initialisation
-                        if (notificationState.isLoading &&
-                            !notificationState.isInitialized) {
-                          return SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              valueColor: AlwaysStoppedAnimation<Color>(
-                                context.adaptivePrimary,
-                              ),
-                            ),
-                          );
-                        }
-    
-                        return Switch(
-                          value: notificationState.notificationsEnabled,
-                          inactiveThumbColor: context.adaptiveDisabled,
-                          activeColor: context.adaptivePrimary,
-                          onChanged:
-                              notificationState.isLoading
-                                  ? null
-                                  : (value) {
-                                    HapticFeedback.mediumImpact();
-    
-                                    // Déclencher l'événement pour basculer les notifications
-                                    context.notificationBloc.add(
-                                      NotificationToggleRequested(
-                                        enabled: value,
-                                      ),
-                                    );
-                                  },
-                        );
-                      },
-                    ),
-                  ),
-    
-                  // Theme selector
-                  _buildSettingTile(
-                    context,
-                    label: context.l10n.theme,
-                    icon: HugeIcons.strokeRoundedPaintBoard,
-                    onTap:
-                        () => showModalSheet(
-                          context: context,
-                          backgroundColor: Colors.transparent,
-                          child: const ThemeSelector(),
-                        ),
-                    child: BlocBuilder<ThemeBloc, ThemeState>(
-                      builder: (context, themeState) {
-                        String currentThemeLabel;
-                        switch (themeState.themeMode) {
-                          case AppThemeMode.auto:
-                            currentThemeLabel = context.l10n.autoTheme;
-                            break;
-                          case AppThemeMode.light:
-                            currentThemeLabel = context.l10n.lightTheme;
-                            break;
-                          case AppThemeMode.dark:
-                            currentThemeLabel = context.l10n.darkTheme;
-                            break;
-                        }
-    
-                        return IconBtn(
-                          padding: 0.0,
-                          backgroundColor: Colors.transparent,
-                          label: currentThemeLabel,
-                          iconSize: 19,
-                          labelColor: context.adaptiveTextSecondary,
-                          iconColor: context.adaptiveTextSecondary,
-                          trailling: HugeIcons.strokeStandardArrowRight01,
-                        );
-                      },
-                    ),
-                  ),
-                ],
+        AnimatedBuilder(
+          animation: _fadeAnimation,
+          builder: (context, child) {
+            return Opacity(
+              opacity: _fadeAnimation.value,
+              child: Transform.translate(
+                offset: Offset(0, 20 * (1 - _fadeAnimation.value)),
+                child: _buildSettingContent(),
               ),
-    
-              50.h,
-    
-              // Resources settings
-              _buildSettingCategory(
-                context,
-                title: context.l10n.resources,
-                children: [
-                  _buildSettingTile(
-                    context,
-                    label: context.l10n.contactSupport,
-                    icon: HugeIcons.strokeRoundedMail02,
-                    onTap: () => launchEmail(),
-                    child: HugeIcon(
-                      icon: HugeIcons.strokeStandardArrowRight01,
-                      color: context.adaptiveTextSecondary,
-                      size: 19,
-                    ),
-                  ),
-                  _buildSettingTile(
-                    context,
-                    label: context.l10n.rateInStore,
-                    icon: HugeIcons.strokeRoundedStar,
-                    onTap: () => openStore(),
-                    child: IconBtn(
-                      padding: 0.0,
-                      backgroundColor: Colors.transparent,
-                      iconSize: 19,
-                      iconColor: context.adaptiveTextSecondary,
-                      trailling: HugeIcons.strokeStandardArrowRight01,
-                    ),
-                  ),
-                  _buildSettingTile(
-                    context,
-                    label: context.l10n.followOnX,
-                    icon: HugeIcons.strokeRoundedNewTwitter,
-                    onTap: () => launchURL(),
-                    child: IconBtn(
-                      padding: 0.0,
-                      backgroundColor: Colors.transparent,
-                      iconSize: 19,
-                      iconColor: context.adaptiveTextSecondary,
-                      trailling: HugeIcons.strokeStandardArrowRight01,
-                    ),
-                  ),
-                ],
-              ),
-    
-              50.h,
-    
-              // Account settings
-              _buildSettingCategory(
-                context,
-                title: context.l10n.account,
-                children: [
-                  // Disconnect user
-                  _buildSettingTile(
-                    context,
-                    label: context.l10n.disconnect,
-                    icon: HugeIcons.strokeRoundedLogoutSquare02,
-                    onTap: () => _showLogoutDialog(context),
-                    child: IconBtn(
-                      padding: 0.0,
-                      backgroundColor: Colors.transparent,
-                      iconSize: 19,
-                      labelColor: context.adaptiveTextSecondary,
-                      iconColor: context.adaptiveTextSecondary,
-                      trailling: HugeIcons.strokeStandardArrowRight01,
-                    ),
-                  ),
-    
-                  // Delete account
-                  _buildSettingTile(
-                    context,
-                    label: context.l10n.deleteProfile,
-                    icon: HugeIcons.strokeRoundedDelete02,
-                    iconColor: Colors.red,
-                    labelColor: Colors.red,
-                    onTap: () => _showDeleteAccountDialog(context),
-                    child: IconBtn(
-                      padding: 0.0,
-                      backgroundColor: Colors.transparent,
-                      iconSize: 19,
-                      iconColor: Colors.red,
-                      trailling: HugeIcons.strokeStandardArrowRight01,
-                    ),
-                  ),
-                ],
-              ),
-    
-              80.h,
-    
-              _buildAppVersion(),
-    
-              80.h,
-            ],
-          ),
+            );
+          }
         ),
       ],
     );
+  }
+
+  Widget _buildSettingContent() {
+    return Padding(
+        padding: const EdgeInsets.all(20.0),
+        child: Column(
+          children: [
+            // Preferences settings
+            _buildSettingCategory(
+              context,
+              title: context.l10n.preferences,
+              children: [
+                // Language selector
+                _buildSettingTile(
+                  context,
+                  label: context.l10n.language,
+                  icon: HugeIcons.strokeRoundedLanguageSkill,
+                  onTap:
+                      () => showModalSheet(
+                        context: context,
+                        backgroundColor: Colors.transparent,
+                        child: LanguageSelector(),
+                      ),
+                  child: IconBtn(
+                    padding: 0.0,
+                    backgroundColor: Colors.transparent,
+                    label: context.l10n.currentLanguage,
+                    iconSize: 19,
+                    labelColor: context.adaptiveTextSecondary,
+                    iconColor: context.adaptiveTextSecondary,
+                    trailling: HugeIcons.strokeStandardArrowRight01,
+                  ),
+                ),
+  
+                // Notification switch
+                _buildSettingTile(
+                  context,
+                  label: context.l10n.notifications,
+                  icon: HugeIcons.strokeRoundedNotification02,
+                  child: BlocBuilder<NotificationBloc, NotificationState>(
+                    builder: (context, notificationState) {
+                      // Afficher un indicateur de chargement si en cours d'initialisation
+                      if (notificationState.isLoading &&
+                          !notificationState.isInitialized) {
+                        return SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              context.adaptivePrimary,
+                            ),
+                          ),
+                        );
+                      }
+  
+                      return Switch(
+                        value: notificationState.notificationsEnabled,
+                        inactiveThumbColor: context.adaptiveDisabled,
+                        activeColor: context.adaptivePrimary,
+                        onChanged:
+                            notificationState.isLoading
+                                ? null
+                                : (value) {
+                                  HapticFeedback.mediumImpact();
+  
+                                  // Déclencher l'événement pour basculer les notifications
+                                  context.notificationBloc.add(
+                                    NotificationToggleRequested(
+                                      enabled: value,
+                                    ),
+                                  );
+                                },
+                      );
+                    },
+                  ),
+                ),
+  
+                // Theme selector
+                _buildSettingTile(
+                  context,
+                  label: context.l10n.theme,
+                  icon: HugeIcons.strokeRoundedPaintBoard,
+                  onTap:
+                      () => showModalSheet(
+                        context: context,
+                        backgroundColor: Colors.transparent,
+                        child: const ThemeSelector(),
+                      ),
+                  child: BlocBuilder<ThemeBloc, ThemeState>(
+                    builder: (context, themeState) {
+                      String currentThemeLabel;
+                      switch (themeState.themeMode) {
+                        case AppThemeMode.auto:
+                          currentThemeLabel = context.l10n.autoTheme;
+                          break;
+                        case AppThemeMode.light:
+                          currentThemeLabel = context.l10n.lightTheme;
+                          break;
+                        case AppThemeMode.dark:
+                          currentThemeLabel = context.l10n.darkTheme;
+                          break;
+                      }
+  
+                      return IconBtn(
+                        padding: 0.0,
+                        backgroundColor: Colors.transparent,
+                        label: currentThemeLabel,
+                        iconSize: 19,
+                        labelColor: context.adaptiveTextSecondary,
+                        iconColor: context.adaptiveTextSecondary,
+                        trailling: HugeIcons.strokeStandardArrowRight01,
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+  
+            50.h,
+  
+            // Resources settings
+            _buildSettingCategory(
+              context,
+              title: context.l10n.resources,
+              children: [
+                _buildSettingTile(
+                  context,
+                  label: context.l10n.contactSupport,
+                  icon: HugeIcons.strokeRoundedMail02,
+                  onTap: () => launchEmail(),
+                  child: HugeIcon(
+                    icon: HugeIcons.strokeStandardArrowRight01,
+                    color: context.adaptiveTextSecondary,
+                    size: 19,
+                  ),
+                ),
+                _buildSettingTile(
+                  context,
+                  label: context.l10n.rateInStore,
+                  icon: HugeIcons.strokeRoundedStar,
+                  onTap: () => openStore(),
+                  child: IconBtn(
+                    padding: 0.0,
+                    backgroundColor: Colors.transparent,
+                    iconSize: 19,
+                    iconColor: context.adaptiveTextSecondary,
+                    trailling: HugeIcons.strokeStandardArrowRight01,
+                  ),
+                ),
+                _buildSettingTile(
+                  context,
+                  label: context.l10n.followOnX,
+                  icon: HugeIcons.strokeRoundedNewTwitter,
+                  onTap: () => launchURL(),
+                  child: IconBtn(
+                    padding: 0.0,
+                    backgroundColor: Colors.transparent,
+                    iconSize: 19,
+                    iconColor: context.adaptiveTextSecondary,
+                    trailling: HugeIcons.strokeStandardArrowRight01,
+                  ),
+                ),
+              ],
+            ),
+  
+            50.h,
+  
+            // Account settings
+            _buildSettingCategory(
+              context,
+              title: context.l10n.account,
+              children: [
+                // Disconnect user
+                _buildSettingTile(
+                  context,
+                  label: context.l10n.disconnect,
+                  icon: HugeIcons.strokeRoundedLogoutSquare02,
+                  onTap: () => _showLogoutDialog(context),
+                  child: IconBtn(
+                    padding: 0.0,
+                    backgroundColor: Colors.transparent,
+                    iconSize: 19,
+                    labelColor: context.adaptiveTextSecondary,
+                    iconColor: context.adaptiveTextSecondary,
+                    trailling: HugeIcons.strokeStandardArrowRight01,
+                  ),
+                ),
+  
+                // Delete account
+                _buildSettingTile(
+                  context,
+                  label: context.l10n.deleteProfile,
+                  icon: HugeIcons.strokeRoundedDelete02,
+                  iconColor: Colors.red,
+                  labelColor: Colors.red,
+                  onTap: () => _showDeleteAccountDialog(context),
+                  child: IconBtn(
+                    padding: 0.0,
+                    backgroundColor: Colors.transparent,
+                    iconSize: 19,
+                    iconColor: Colors.red,
+                    trailling: HugeIcons.strokeStandardArrowRight01,
+                  ),
+                ),
+              ],
+            ),
+  
+            80.h,
+  
+            _buildAppVersion(),
+  
+            80.h,
+          ],
+        ),
+      );
   }
 
   Widget _buildAppVersion() {

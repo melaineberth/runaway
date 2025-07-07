@@ -25,13 +25,75 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   final _formKey = GlobalKey<FormState>();
   final TextEditingController _fullNameController = TextEditingController();
   final TextEditingController _usernameController = TextEditingController();
+  
   File? _avatar;
+  bool _isLoadingSuggestions = false;
+
+  @override
+  void initState() {
+    super.initState();
+    
+    // Charger les suggestions depuis les données sociales
+    _loadSocialSuggestions();
+  }
 
   @override
   void dispose() {
     _fullNameController.dispose();
     _usernameController.dispose();
     super.dispose();
+  }
+
+  /* ───────── CHARGEMENT DES SUGGESTIONS SOCIALES ───────── */
+  Future<void> _loadSocialSuggestions() async {
+    setState(() {
+      _isLoadingSuggestions = true;
+    });
+    
+    try {
+      final authBloc = context.authBloc;
+      
+      // Récupérer les informations sociales via le BLoC
+      final socialInfo = authBloc.getSocialUserInfo();
+      
+      // Suggérer le nom complet
+      final suggestedFullName = socialInfo['fullName'];
+      if (suggestedFullName != null && suggestedFullName.trim().isNotEmpty) {
+        _fullNameController.text = suggestedFullName.trim();
+        print('📝 Nom complet suggéré: ${suggestedFullName.trim()}');
+      } else {
+        print('⚠️ Aucun nom complet suggéré disponible');
+      }
+      
+      // Générer une suggestion de nom d'utilisateur via le BLoC
+      try {
+        final suggestedUsername = await authBloc.getUsernameSuggestion();
+        if (suggestedUsername.isNotEmpty) {
+          // CORRECTION : Ajouter le @ automatiquement lors de la suggestion
+          final usernameWithAt = suggestedUsername.startsWith('@') 
+              ? suggestedUsername 
+              : '@$suggestedUsername';
+          _usernameController.text = usernameWithAt;
+          print('📝 Username suggéré: $usernameWithAt');
+        }
+      } catch (e) {
+        print('⚠️ Impossible de suggérer un nom d\'utilisateur: $e');
+        // Fallback local
+        final email = socialInfo['email'];
+        if (email != null) {
+          final fallbackUsername = '@${email.split('@').first.toLowerCase()}';
+          _usernameController.text = fallbackUsername;
+          print('📝 Username fallback: $fallbackUsername');
+        }
+      }
+    } catch (e) {
+      print('⚠️ Erreur lors du chargement des suggestions: $e');
+      // En cas d'erreur, on continue sans suggestions
+    } finally {
+      setState(() {
+        _isLoadingSuggestions = false;
+      });
+    }
   }
 
   Future<void> _pickAvatar() async {
@@ -67,7 +129,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       return context.l10n.usernameRequired;
     }
     
-    // Supprimer le @ au début si présent
+    // Supprimer le @ au début si présent pour la validation
     final username = value.startsWith('@') ? value.substring(1) : value;
     
     if (username.length < 3) {
@@ -98,10 +160,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           if (errorMessage.contains('upload') || errorMessage.contains('avatar')) {
             errorMessage = context.l10n.avatarUploadWarning;
             
-            // Même si l'avatar a échoué, on peut considérer que le profil est créé
-            // et rediriger vers l'accueil après un délai
+            // Même si l'avatar a échoué, on peut considérer que le profil est créé et rediriger vers l'accueil après un délai
             Future.delayed(Duration(seconds: 2), () {
-              if (mounted) context.go('/home');
+              if (context.mounted) {
+                context.go('/home');
+              }
             });
           }
           
@@ -204,20 +267,31 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                               textCapitalization: TextCapitalization.words,
                               controller: _fullNameController,
                               validator: _validateFullName,
-                              enabled: !isLoading,
+                              enabled: !isLoading && !_isLoadingSuggestions,
                             ),
                             15.h,
                             AuthTextField(
                               hint: context.l10n.usernameHint,
                               controller: _usernameController,
                               validator: _validateUsername,
-                              enabled: !isLoading,
+                              enabled: !isLoading && !_isLoadingSuggestions,
                               onChanged: (value) {
-                                // Ajouter automatiquement @ au début si pas présent
-                                if (value.isNotEmpty && !value.startsWith('@')) {
+                                // CORRECTION : Gestion plus robuste du @
+                                if (value.isNotEmpty) {
+                                  // Si l'utilisateur commence à taper sans @, l'ajouter
+                                  if (!value.startsWith('@')) {
+                                    final newValue = '@$value';
+                                    _usernameController.value = TextEditingValue(
+                                      text: newValue,
+                                      selection: TextSelection.collapsed(offset: newValue.length),
+                                    );
+                                  }
+                                }
+                                // Si l'utilisateur efface tout, remettre juste @
+                                else {
                                   _usernameController.value = TextEditingValue(
-                                    text: '@$value',
-                                    selection: TextSelection.collapsed(offset: value.length + 1),
+                                    text: '@',
+                                    selection: TextSelection.collapsed(offset: 1),
                                   );
                                 }
                               },
@@ -273,16 +347,16 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   Widget _buildCompleteButton(bool isLoading) {
     return SquircleContainer(
-      onTap: isLoading ? null : _handleCompleteProfile,
+      onTap: (isLoading || _isLoadingSuggestions) ? null : _handleCompleteProfile,
       height: 60,
-      color: isLoading ? context.adaptivePrimary.withValues(alpha: 0.5) : context.adaptivePrimary,
+      color: (isLoading || _isLoadingSuggestions) ? context.adaptivePrimary.withValues(alpha: 0.5) : context.adaptivePrimary,
       radius: 30,
       padding: EdgeInsets.symmetric(
         horizontal: 15.0,
         vertical: 5.0,
       ),
       child: Center(
-        child: isLoading
+        child: (isLoading || _isLoadingSuggestions)
         ? SizedBox(
             width: 20,
             height: 20,
@@ -309,6 +383,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       if (username.startsWith('@')) {
         username = username.substring(1);
       }
+
+      print('📝 Envoi complétion profil: ${_fullNameController.text.trim()} / $username');
 
       context.authBloc.add(
         CompleteProfileRequested(

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:runaway/features/auth/data/repositories/auth_repository.dart';
 import 'package:runaway/features/auth/domain/models/profile.dart';
@@ -85,6 +86,15 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         username: event.username,
         avatar: event.avatar,
       );
+
+      // 🔧 FIX: Vider le cache de l'ancienne image si avatar changé
+      if (event.avatar != null && currentState.profile.hasAvatar) {
+        try {
+          await CachedNetworkImage.evictFromCache(currentState.profile.avatarUrl!);
+        } catch (e) {
+          print('⚠️ Erreur vidage cache ancien avatar: $e');
+        }
+      }
       
       // 🆕 Remettre l'état Authenticated immédiatement
       print('✅ Profil mis à jour avec succès');
@@ -287,6 +297,48 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     } catch (err) {
       print('❌ Erreur Apple Sign-In: $err');
       emit(AuthError(err.toString()));
+    }
+  }
+
+  // Ajouter cette méthode publique dans AuthBloc
+  Future<String> getUsernameSuggestion() async {
+    try {
+      final suggestion = await _repo.suggestUsernameFromSocialData();
+      print('📝 Suggestion username reçue du repository: $suggestion');
+      return suggestion;
+    } catch (e) {
+      print('⚠️ Erreur récupération suggestion username: $e');
+      // Fallback local en cas d'erreur
+      final user = supabase.Supabase.instance.client.auth.currentUser;
+      if (user?.email != null) {
+        return user!.email!.split('@').first.toLowerCase();
+      }
+      return 'user';
+    }
+  }
+
+  // Ajouter cette méthode publique dans AuthBloc pour obtenir les infos sociales
+  Map<String, String?> getSocialUserInfo() {
+    try {
+      // Utiliser la méthode du repository qui gère les données temporaires
+      final socialInfo = _repo.getSocialUserInfo();
+      print('📝 Infos sociales reçues du repository: $socialInfo');
+      return socialInfo;
+    } catch (e) {
+      print('⚠️ Erreur récupération infos sociales: $e');
+      // Fallback local
+      try {
+        final user = supabase.Supabase.instance.client.auth.currentUser;
+        if (user == null) return {};
+        
+        return {
+          'fullName': null, // Pas d'infos disponibles en cas d'erreur
+          'email': user.email,
+        };
+      } catch (e2) {
+        print('⚠️ Erreur fallback infos sociales: $e2');
+        return {};
+      }
     }
   }
 

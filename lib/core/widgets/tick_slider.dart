@@ -64,7 +64,7 @@ class _TickSliderState extends State<TickSlider> with TickerProviderStateMixin {
   DateTime _lastHapticTime = DateTime.now();
   double _lastPosition = 0;          // Position précédente pour calcul vitesse
   DateTime _lastMoveTime = DateTime.now();
-  List<double> _velocityHistory = [];  // Historique des vitesses
+  final List<double> _velocityHistory = [];  // Historique des vitesses
   bool _isDragging = false;
 
   late final AnimationController _spring =

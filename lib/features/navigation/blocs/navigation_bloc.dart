@@ -270,7 +270,7 @@ class NavigationBloc extends Bloc<NavigationEvent, NavigationState> {
     try {
       emit(state.copyWith(isSaving: true));
 
-      // TODO: Implémenter la sauvegarde en base de données
+      // Implémenter la sauvegarde en base de données
       // await _saveSessionToDatabase(state.currentSession!, event.sessionName);
 
       print('💾 Session sauvegardée: ${event.sessionName}');

@@ -206,6 +206,9 @@ class AuthWrapper extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocListener<AuthBloc, AuthState>(
       listener: (context, authState) {
+        // 🔧 CORRECTION: Ajouter des logs pour debug et éviter les actions redondantes
+        print('🔄 AuthWrapper: Changement d\'état - ${authState.runtimeType}');
+        
         // Listener pour les changements d'état d'authentification
         if (authState is Unauthenticated) {
           // L'utilisateur vient de se déconnecter - NETTOYER LE CACHE
@@ -222,6 +225,7 @@ class AuthWrapper extends StatelessWidget {
           final protectedPages = ['/activity', '/historic', '/account'];
           
           if (protectedPages.contains(currentLocation)) {
+            print('🔀 Redirection vers /home depuis $currentLocation');
             context.go('/home');
           }
         }
@@ -230,23 +234,39 @@ class AuthWrapper extends StatelessWidget {
           // L'utilisateur vient de se connecter
           print('✅ User authenticated: ${authState.profile.email}');
           
-          // Optionnel : Déclencher le pré-chargement des données
-          try {
-            context.appDataBloc.add(const AppDataPreloadRequested());
-          } catch (e) {
-            print('❌ Erreur lors du pré-chargement: $e');
-          }
+          // 🔧 CORRECTION: Délai pour s'assurer que la navigation est stable
+          Future.delayed(const Duration(milliseconds: 500), () {
+            if (context.mounted) {
+              try {
+                context.appDataBloc.add(const AppDataPreloadRequested());
+              } catch (e) {
+                print('❌ Erreur lors du pré-chargement: $e');
+              }
+            }
+          });
         }
         
         if (authState is AuthError) {
           // Erreur d'authentification, afficher un message
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Erreur d\'authentification: ${authState.message}'),
-              backgroundColor: Colors.red,
-              duration: Duration(seconds: 4),
-            ),
-          );
+          print('❌ Erreur d\'authentification: ${authState.message}');
+          
+          // 🔧 CORRECTION: Délai pour éviter les conflits avec la navigation
+          Future.delayed(const Duration(milliseconds: 200), () {
+            if (context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Erreur d\'authentification: ${authState.message}'),
+                  backgroundColor: Colors.red,
+                  duration: Duration(seconds: 4),
+                ),
+              );
+            }
+          });
+        }
+        
+        // 🔧 CORRECTION: Gérer l'état de chargement
+        if (authState is AuthLoading) {
+          print('⏳ Authentification en cours...');
         }
       },
       child: child,

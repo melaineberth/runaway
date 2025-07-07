@@ -8,6 +8,8 @@ abstract class AuthEvent extends Equatable {
   List<Object?> get props => [];
 }
 
+class GetUsernameSuggestionRequested extends AuthEvent {}
+
 class AppStarted extends AuthEvent {}
 
 class SignUpBasicRequested extends AuthEvent {

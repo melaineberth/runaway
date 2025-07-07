@@ -17,6 +17,11 @@ class SignUpException extends AuthException {
   SignUpException(super.message, {super.code, super.originalError});
 }
 
+/// Exception pour les annulations utilisateur
+class UserCanceledException extends AuthException {
+  UserCanceledException(super.message, {super.code, super.originalError});
+}
+
 /// Exception de profil
 class ProfileException extends AuthException {
   ProfileException(super.message, {super.code, super.originalError});
@@ -43,6 +48,38 @@ class AuthExceptionHandler {
     final errorMessage = error.toString().toLowerCase();
     
     // Erreurs de connexion
+    if (errorMessage.contains('invalid login credentials') ||
+        errorMessage.contains('invalid email or password')) {
+      return LoginException(
+        'Email ou mot de passe incorrect',
+        code: 'INVALID_CREDENTIALS',
+        originalError: error,
+      );
+    }
+
+    // 🆕 Gestion des annulations utilisateur
+    if (errorMessage.contains('canceled') || 
+        errorMessage.contains('cancelled') ||
+        errorMessage.contains('user canceled') ||
+        errorMessage.contains('connexion google annulée') ||
+        errorMessage.contains('authorizationerrorcode.canceled')) {
+      return UserCanceledException(
+        'Connexion annulée par l\'utilisateur',
+        code: 'USER_CANCELED',
+        originalError: error,
+      );
+    }
+    
+    // 🆕 Gestion des null checks pour Google
+    if (errorMessage.contains('null check operator used on a null value')) {
+      return UserCanceledException(
+        'Connexion annulée par l\'utilisateur',
+        code: 'USER_CANCELED_NULL',
+        originalError: error,
+      );
+    }
+    
+    // Erreurs de connexion existantes...
     if (errorMessage.contains('invalid login credentials') ||
         errorMessage.contains('invalid email or password')) {
       return LoginException(

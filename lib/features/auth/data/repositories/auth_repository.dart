@@ -1,10 +1,9 @@
-// lib/features/auth/data/repositories/auth_repository.dart
-
 import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
 
 import 'package:crypto/crypto.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:path/path.dart' as p;
 import 'package:runaway/core/errors/auth_exceptions.dart';
@@ -15,10 +14,9 @@ import 'package:supabase_flutter/supabase_flutter.dart' hide AuthException;
 class AuthRepository {
   final SupabaseClient _supabase = Supabase.instance.client;
 
-  // Configuration Google Sign-In
-  final GoogleSignIn _googleSignIn = GoogleSignIn(
-    scopes: ['email', 'profile'],
-  );
+  // Variables statiques pour stocker temporairement les infos Apple/Google
+  static String? _tempAppleFullName;
+  static String? _tempGoogleFullName;
 
   User? get currentUser => _supabase.auth.currentUser;
 
@@ -55,28 +53,44 @@ class AuthRepository {
   Future<Profile?> signInWithGoogle() async {
     try {
       print('🔑 Tentative de connexion Google');
+
+      final webClientId = dotenv.env['WEB_CLIENT_ID'];
       
-      // 1. Déconnecter d'abord si déjà connecté
-      await _googleSignIn.signOut();
+      final iosClientId = dotenv.env['IOS_CLIENT_ID'];
       
-      // 2. Initier la connexion Google
-      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
-      
-      if (googleUser == null) {
-        print('❌ Connexion Google annulée par l\'utilisateur');
-        throw AuthException('Connexion Google annulée');
+      // 1. Initier la connexion Google
+      final GoogleSignIn googleSignIn = GoogleSignIn(
+        clientId: iosClientId,
+        serverClientId: webClientId,
+      );
+
+      final googleUser = await googleSignIn.signIn();
+      final googleAuth = await googleUser!.authentication;
+      final accessToken = googleAuth.accessToken;
+      final idToken = googleAuth.idToken;
+
+      if (accessToken == null) {
+        throw 'No Access Token found.';
+      }
+      if (idToken == null) {
+        throw 'No ID Token found.';
       }
       
-      // 3. Obtenir les détails d'authentification
-      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
-      
-      if (googleAuth.accessToken == null) {
-        throw AuthException('Impossible d\'obtenir le token Google');
+      print('✅ Utilisateur Google obtenu: ${googleUser.email}');
+
+      // 2. Stocker temporairement les informations Google
+      _tempGoogleFullName = googleUser.displayName;
+      if (_tempGoogleFullName != null) {
+        print('📝 Nom Google stocké temporairement: $_tempGoogleFullName');
+      }
+            
+      if (googleAuth.accessToken == null || googleAuth.idToken == null) {
+        throw AuthException('Tokens Google manquants');
       }
       
-      print('✅ Token Google obtenu');
+      print('✅ Tokens Google obtenus');
       
-      // 4. Connexion avec Supabase
+      // 3. Connexion avec Supabase
       final AuthResponse response = await _supabase.auth.signInWithIdToken(
         provider: OAuthProvider.google,
         idToken: googleAuth.idToken!,
@@ -89,18 +103,25 @@ class AuthRepository {
       
       print('✅ Connexion Supabase réussie: ${response.user!.email}');
       
-      // 5. Créer ou récupérer le profil
-      final profile = await _createOrGetSocialProfile(
-        user: response.user!,
-        displayName: googleUser.displayName,
-        photoUrl: googleUser.photoUrl,
-        provider: 'google',
-      );
+      // 4. Vérifier si un profil existe déjà (nouveau comportement)
+      final existingProfile = await getProfile(response.user!.id, skipCleanup: true);
+      if (existingProfile != null && existingProfile.isComplete) {
+        print('✅ Profil Google existant trouvé: ${existingProfile.username}');
+        // Nettoyer les données temporaires
+        _tempGoogleFullName = null;
+        return existingProfile;
+      }
+
       
-      return profile;
+      
+      // 5. Pour les nouveaux utilisateurs, retourner null pour forcer l'onboarding
+      print('📝 Nouveau compte Google - sera dirigé vers l\'onboarding');
+      return null;
       
     } catch (e) {
       print('❌ Erreur Google Sign-In: $e');
+      // Nettoyer en cas d'erreur
+      _tempGoogleFullName = null;
       throw AuthExceptionHandler.handleSupabaseError(e);
     }
   }
@@ -129,8 +150,22 @@ class AuthRepository {
       );
       
       print('✅ Credentials Apple obtenus');
+
+      // 4. Stocker temporairement les informations de nom Apple
+      if (credential.givenName != null || credential.familyName != null) {
+        final fullName = '${credential.givenName ?? ''} ${credential.familyName ?? ''}'.trim();
+        if (fullName.isNotEmpty) {
+          _tempAppleFullName = fullName;
+          print('📝 Nom Apple stocké temporairement: $fullName');
+        } else {
+          _tempAppleFullName = null;
+        }
+      } else {
+        _tempAppleFullName = null;
+        print('⚠️ Aucun nom fourni par Apple');
+      }
       
-      // 4. Connexion avec Supabase
+      // 5. Connexion avec Supabase
       final AuthResponse response = await _supabase.auth.signInWithIdToken(
         provider: OAuthProvider.apple,
         idToken: credential.identityToken!,
@@ -143,125 +178,25 @@ class AuthRepository {
       
       print('✅ Connexion Supabase réussie: ${response.user!.email}');
       
-      // 5. Créer le nom d'affichage à partir des informations Apple
-      String? displayName;
-      if (credential.givenName != null || credential.familyName != null) {
-        displayName = '${credential.givenName ?? ''} ${credential.familyName ?? ''}'.trim();
-        if (displayName.isEmpty) displayName = null;
-      }
-      
-      // 6. Créer ou récupérer le profil
-      final profile = await _createOrGetSocialProfile(
-        user: response.user!,
-        displayName: displayName,
-        photoUrl: null, // Apple ne fournit pas de photo de profil
-        provider: 'apple',
-      );
-      
-      return profile;
-      
-    } catch (e) {
-      print('❌ Erreur Apple Sign-In: $e');
-      throw AuthExceptionHandler.handleSupabaseError(e);
-    }
-  }
-
-  /* ───────── HELPER POUR PROFILS SOCIAUX ───────── */
-  Future<Profile?> _createOrGetSocialProfile({
-    required User user,
-    String? displayName,
-    String? photoUrl,
-    required String provider,
-  }) async {
-    try {
-      // 1. Vérifier si le profil existe déjà
-      final existingProfile = await getProfile(user.id, skipCleanup: true);
+      // 6. Vérifier si un profil existe déjà
+      final existingProfile = await getProfile(response.user!.id, skipCleanup: true);
       if (existingProfile != null && existingProfile.isComplete) {
-        print('✅ Profil existant trouvé: ${existingProfile.username}');
+        print('✅ Profil Apple existant trouvé: ${existingProfile.username}');
+        // Nettoyer les données temporaires
+        _tempAppleFullName = null;
         return existingProfile;
       }
       
-      // 2. Créer un nouveau profil pour les connexions sociales
-      String? fullName = displayName;
-      String? username;
-      String? avatarUrl = photoUrl;
-      
-      // Générer un nom d'utilisateur unique basé sur l'email ou le nom
-      if (fullName != null && fullName.isNotEmpty) {
-        username = await _generateUniqueUsername(fullName);
-      } else if (user.email != null) {
-        final emailUsername = user.email!.split('@').first;
-        username = await _generateUniqueUsername(emailUsername);
-      } else {
-        username = await _generateUniqueUsername('user');
-      }
-      
-      // Si pas de nom complet, utiliser l'email comme base
-      if (fullName == null || fullName.isEmpty) {
-        fullName = user.email?.split('@').first ?? 'Utilisateur';
-      }
-      
-      print('👤 Création profil social: $fullName (@$username)');
-      
-      // 3. Sauvegarder le profil
-      final data = await _supabase
-          .from('profiles')
-          .upsert({
-            'id': user.id,
-            'email': user.email!,
-            'full_name': fullName,
-            'username': username,
-            'avatar_url': avatarUrl,
-            'updated_at': DateTime.now().toIso8601String(),
-          })
-          .select()
-          .maybeSingle();
-
-      if (data == null) {
-        throw ProfileException('Impossible de créer le profil social');
-      }
-
-      final profile = Profile.fromJson(data);
-      print('✅ Profil social créé: ${profile.username}');
-      return profile;
+      // 7. Pour les nouveaux utilisateurs, retourner null pour forcer l'onboarding
+      print('📝 Nouveau compte Apple - sera dirigé vers l\'onboarding');
+      return null;
       
     } catch (e) {
-      print('❌ Erreur création profil social: $e');
-      if (e is AuthException) {
-        rethrow;
-      }
+      print('❌ Erreur Apple Sign-In: $e');
+      // Nettoyer en cas d'erreur
+      _tempAppleFullName = null;
       throw AuthExceptionHandler.handleSupabaseError(e);
     }
-  }
-
-  /* ───────── HELPER POUR GÉNÉRER USERNAME UNIQUE ───────── */
-  Future<String> _generateUniqueUsername(String baseName) async {
-    // Nettoyer le nom de base
-    String cleanBase = baseName
-        .toLowerCase()
-        .replaceAll(RegExp(r'[^a-z0-9]'), '')
-        .substring(0, min(baseName.length, 15));
-    
-    if (cleanBase.isEmpty) {
-      cleanBase = 'user';
-    }
-    
-    // Essayer le nom de base d'abord
-    if (await isUsernameAvailable(cleanBase)) {
-      return cleanBase;
-    }
-    
-    // Ajouter des nombres jusqu'à trouver un nom disponible
-    for (int i = 1; i <= 999; i++) {
-      final candidate = '$cleanBase$i';
-      if (await isUsernameAvailable(candidate)) {
-        return candidate;
-      }
-    }
-    
-    // Fallback avec timestamp
-    final timestamp = DateTime.now().millisecondsSinceEpoch.toString();
-    return '${cleanBase}_${timestamp.substring(timestamp.length - 6)}';
   }
 
   /* ───────── HELPER POUR GÉNÉRER NONCE ───────── */
@@ -280,10 +215,15 @@ class AuthRepository {
   }) async {
     try {
       print('👤 Complétion du profil pour: $userId');
+
+      // 1. Vérifier si le nom d'utilisateur est disponible
+      if (!await isUsernameAvailable(username)) {
+        throw AuthException('Ce nom d\'utilisateur n\'est pas disponible');
+      }
       
       String? avatarUrl;
       
-      // Upload de l'avatar si fourni (mais ne pas faire échouer si ça rate)
+      // 2. Upload de l'avatar si fourni
       if (avatar != null) {
         try {
           // Structure : userId/profile_picture/profile_picture.extension
@@ -309,21 +249,20 @@ class AuthRepository {
         }
       }
 
-
-      // Récupérer l'email depuis l'utilisateur actuel AVANT l'upsert
-      final currentUser = _supabase.auth.currentUser;
-      if (currentUser?.email == null) {
-        throw ProfileException('Impossible de récupérer l\'email utilisateur');
+      // 3. MODIFICATION : Récupérer l'email depuis l'utilisateur connecté
+      final user = _supabase.auth.currentUser;
+      if (user?.email == null) {
+        throw AuthException('Utilisateur non connecté ou email manquant');
       }
 
-      // Sauvegarder le profil (FIX: inclure l'email qui est NOT NULL)
+      // 4. Sauvegarder le profil complet
       final data = await _supabase
           .from('profiles')
           .upsert({
             'id': userId,
-            'email': currentUser!.email!, // FIX: Ajouter l'email obligatoire
-            'full_name': fullName.trim(),
-            'username': username.trim().toLowerCase(),
+            'email': user!.email!, // Utiliser l'email de l'utilisateur connecté
+            'full_name': fullName,
+            'username': username,
             'avatar_url': avatarUrl,
             'updated_at': DateTime.now().toIso8601String(),
           })
@@ -331,15 +270,21 @@ class AuthRepository {
           .maybeSingle();
 
       if (data == null) {
-        print('❌ Aucune donnée retournée après upsert profil');
         throw ProfileException('Impossible de sauvegarder le profil');
       }
 
-      // FIX: L'email est déjà inclus dans les données retournées
       final profile = Profile.fromJson(data);
-
       print('✅ Profil complété: ${profile.username}');
+
+      // 5. MODIFICATION : Informer si l'avatar n'a pas pu être uploadé
+      if (avatar != null && avatarUrl == null) {
+        // On peut retourner le profil mais signaler que l'avatar a échoué
+        // L'UI pourra afficher un avertissement
+        print('⚠️ Profil créé mais avatar non uploadé');
+      }
+
       return profile;
+      
     } catch (e) {
       print('❌ Erreur complétion profil: $e');
       if (e is AuthException) {
@@ -485,7 +430,12 @@ class AuthRepository {
               upsert: true,
             ),
           );
-          updates['avatar_url'] = _supabase.storage.from('profile').getPublicUrl(filePath);
+          
+          // 🔧 FIX: Ajouter un timestamp pour forcer le cache-busting
+          final timestamp = DateTime.now().millisecondsSinceEpoch;
+          final baseUrl = _supabase.storage.from('profile').getPublicUrl(filePath);
+          updates['avatar_url'] = '$baseUrl?v=$timestamp';
+          
         } catch (e) {
           print('⚠️ Erreur upload nouvel avatar: $e');
           // Continuer sans mettre à jour l'avatar
@@ -632,6 +582,210 @@ class AuthRepository {
     } catch (e) {
       print('❌ Erreur suppression compte: $e');
       throw AuthExceptionHandler.handleSupabaseError(e);
+    }
+  }
+
+  /* ───────── HELPER POUR GÉNÉRER USERNAME UNIQUE (réutilisé si nécessaire) ───────── */
+Future<String> _generateUniqueUsername(String baseName) async {
+  // Nettoyer le nom de base
+  String cleanBase = baseName
+      .toLowerCase()
+      .replaceAll(RegExp(r'[^a-z0-9]'), '')
+      .substring(0, min(baseName.length, 15));
+  
+  if (cleanBase.isEmpty) {
+    cleanBase = 'user';
+  }
+  
+  // Essayer le nom de base d'abord
+  if (await isUsernameAvailable(cleanBase)) {
+    return cleanBase;
+  }
+  
+  // Ajouter des nombres jusqu'à trouver un nom disponible
+  for (int i = 1; i <= 999; i++) {
+    final candidate = '$cleanBase$i';
+    if (await isUsernameAvailable(candidate)) {
+      return candidate;
+    }
+  }
+  
+  // Fallback avec timestamp
+  final timestamp = DateTime.now().millisecondsSinceEpoch.toString();
+  return '${cleanBase}_${timestamp.substring(timestamp.length - 6)}';
+}
+
+/* ───────── HELPER POUR SUGGÉRER UN USERNAME DEPUIS LES DONNÉES SOCIALES ───────── */
+Map<String, String?> getSocialUserInfo() {
+    try {
+      final user = _supabase.auth.currentUser;
+      if (user == null) return {};
+      
+      String? suggestedFullName;
+      
+      // 1. D'abord, vérifier les données temporaires Apple/Google
+      if (_tempAppleFullName != null && _tempAppleFullName!.isNotEmpty) {
+        suggestedFullName = _tempAppleFullName;
+        print('📝 Récupération nom Apple temporaire: $suggestedFullName');
+      } else if (_tempGoogleFullName != null && _tempGoogleFullName!.isNotEmpty) {
+        suggestedFullName = _tempGoogleFullName;
+        print('📝 Récupération nom Google temporaire: $suggestedFullName');
+      }
+      // 2. Sinon, essayer les métadonnées
+      else {
+        final userMetadata = user.userMetadata;
+        if (userMetadata != null) {
+          if (userMetadata.containsKey('full_name')) {
+            suggestedFullName = userMetadata['full_name'] as String?;
+          } else if (userMetadata.containsKey('name')) {
+            suggestedFullName = userMetadata['name'] as String?;
+          }
+        }
+      }
+      
+      // 3. AMÉLIORATION : Fallback intelligent sur l'email
+      if ((suggestedFullName == null || suggestedFullName.isEmpty) && user.email != null) {
+        final emailPart = user.email!.split('@').first;
+        
+        // Si l'email contient un point (prénom.nom), traiter intelligemment
+        if (emailPart.contains('.')) {
+          final parts = emailPart.split('.');
+          if (parts.length >= 2) {
+            // Capitaliser chaque partie et joindre avec espace
+            final firstName = _capitalizeFirst(parts[0]);
+            final lastName = _capitalizeFirst(parts[1]);
+            suggestedFullName = '$firstName $lastName';
+            print('📝 Nom formaté depuis email: $suggestedFullName');
+          } else {
+            // Un seul mot avec point à la fin
+            suggestedFullName = _capitalizeFirst(emailPart.replaceAll('.', ''));
+          }
+        } else {
+          // Pas de point, juste capitaliser
+          suggestedFullName = _capitalizeFirst(emailPart);
+        }
+        
+        print('📝 Fallback nom depuis email: $suggestedFullName');
+      }
+      
+      return {
+        'fullName': suggestedFullName?.trim(),
+        'email': user.email,
+      };
+    } catch (e) {
+      print('⚠️ Erreur récupération infos sociales: $e');
+      return {};
+    }
+  }
+
+  /* ───────── HELPER POUR CAPITALISER ───────── */
+  String _capitalizeFirst(String text) {
+    if (text.isEmpty) return text;
+    return text[0].toUpperCase() + text.substring(1).toLowerCase();
+  }
+
+  /* ───────── GÉNÉRATION USERNAME INTELLIGENTE ───────── */
+  Future<String> suggestUsernameFromSocialData() async {
+    try {
+      final user = _supabase.auth.currentUser;
+      if (user == null) return 'user';
+      
+      String baseName = 'user';
+      
+      // 1. D'abord, vérifier les données temporaires Apple/Google
+      if (_tempAppleFullName != null && _tempAppleFullName!.isNotEmpty) {
+        baseName = _tempAppleFullName!;
+        print('📝 Utilisation nom Apple temporaire: $baseName');
+      } else if (_tempGoogleFullName != null && _tempGoogleFullName!.isNotEmpty) {
+        baseName = _tempGoogleFullName!;
+        print('📝 Utilisation nom Google temporaire: $baseName');
+      }
+      // 2. Sinon, essayer les métadonnées utilisateur
+      else {
+        final userMetadata = user.userMetadata;
+        if (userMetadata != null) {
+          if (userMetadata.containsKey('full_name')) {
+            baseName = userMetadata['full_name'] as String? ?? baseName;
+          } else if (userMetadata.containsKey('name')) {
+            baseName = userMetadata['name'] as String? ?? baseName;
+          }
+        }
+      }
+      
+      // 3. AMÉLIORATION : Fallback intelligent sur l'email
+      if (baseName == 'user' && user.email != null) {
+        final emailPart = user.email!.split('@').first;
+        baseName = emailPart;
+        print('📝 Utilisation email comme base: $baseName');
+      }
+      
+      // 4. Générer username unique et nettoyer les données temporaires après usage
+      final result = await _generateUniqueUsernameFromEmail(baseName, user.email);
+      
+      // Nettoyer les données temporaires après utilisation
+      _tempAppleFullName = null;
+      _tempGoogleFullName = null;
+      
+      return result;
+    } catch (e) {
+      print('⚠️ Erreur suggestion username: $e');
+      // Nettoyer en cas d'erreur
+      _tempAppleFullName = null;
+      _tempGoogleFullName = null;
+      return await _generateUniqueUsername('user');
+    }
+  }
+
+  /* ───────── GÉNÉRATION USERNAME INTELLIGENT DEPUIS EMAIL ───────── */
+  Future<String> _generateUniqueUsernameFromEmail(String baseName, String? email) async {
+    try {
+      // Si on a un email avec point (prénom.nom), utiliser la logique intelligente
+      if (email != null) {
+        final emailPart = email.split('@').first;
+        
+        if (emailPart.contains('.')) {
+          final parts = emailPart.split('.');
+          if (parts.length >= 2) {
+            final firstName = parts[0].toLowerCase();
+            final lastName = parts[1].toLowerCase();
+            
+            // Prendre le prénom + 5 premières lettres du nom de famille
+            final lastNamePart = lastName.length > 5 ? lastName.substring(0, 5) : lastName;
+            final suggestedUsername = '$firstName$lastNamePart';
+            
+            print('📝 Username intelligent généré: $suggestedUsername ($firstName + $lastNamePart)');
+            
+            // Nettoyer et vérifier la disponibilité
+            String cleanUsername = suggestedUsername
+                .toLowerCase()
+                .replaceAll(RegExp(r'[^a-z0-9]'), '');
+            
+            if (cleanUsername.length > 15) {
+              cleanUsername = cleanUsername.substring(0, 15);
+            }
+            
+            // Essayer le nom suggéré d'abord
+            if (await isUsernameAvailable(cleanUsername)) {
+              return cleanUsername;
+            }
+            
+            // Si pas disponible, ajouter des nombres
+            for (int i = 1; i <= 999; i++) {
+              final candidate = '$cleanUsername$i';
+              if (await isUsernameAvailable(candidate)) {
+                return candidate;
+              }
+            }
+          }
+        }
+      }
+      
+      // Fallback sur la méthode classique si pas d'email avec point
+      return await _generateUniqueUsername(baseName);
+      
+    } catch (e) {
+      print('⚠️ Erreur génération username depuis email: $e');
+      return await _generateUniqueUsername(baseName);
     }
   }
 }
