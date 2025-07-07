@@ -44,6 +44,8 @@ class AccountScreen extends StatefulWidget {
 class _AccountScreenState extends State<AccountScreen> with TickerProviderStateMixin {
   late AnimationController _fadeController;
   late Animation<double> _fadeAnimation;
+
+  bool _isProfileUpdating = false; // 🆕 Flag pour éviter le modal pendant la mise à jour
   
   @override
   void initState() {
@@ -123,10 +125,24 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
   @override
   Widget build(BuildContext context) {
     return BlocListener<AuthBloc, AuthState>(
+      listenWhen: (previous, current) {
+        // 🆕 Détecter les transitions de mise à jour de profil
+        if (previous is Authenticated && current is Authenticated) {
+          _isProfileUpdating = true;
+          // Réinitialiser le flag après un délai
+          Future.delayed(Duration(seconds: 3), () {
+            _isProfileUpdating = false;
+          });
+        }
+        
+        return previous.runtimeType != current.runtimeType;
+      },
       listener: (context, authState) {
         if (authState is Unauthenticated) {
-          // L'utilisateur s'est déconnecté, rediriger vers l'accueil
-          context.go('/home');
+          // 🆕 Vérifier qu'on n'est pas en train de mettre à jour
+          if (!_isProfileUpdating) {
+            showAuthModal(context);
+          }
         } else if (authState is AuthError) {
           // Afficher l'erreur de suppression de compte
           ScaffoldMessenger.of(context).showSnackBar(
@@ -139,13 +155,7 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
         }
       },
       child: BlocBuilder<AuthBloc, AuthState>(
-        builder: (_, authState) {
-          if (authState is! Authenticated) {
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              showAuthModal(context);
-            });  
-          }
-          
+        builder: (_, authState) {          
           // Si l'utilisateur est connecté, afficher le contenu
           if (authState is Authenticated) {
             return _buildAuthenticatedView(authState);
@@ -847,17 +857,17 @@ class _AvatarViewer extends StatelessWidget {
                 ),
               ),
 
-              Positioned(
-                bottom: 50,
-                child: FadeTransition(
-                  opacity: animation,
-                  child: IconBtn(
-                    onPressed: onTap,
-                    label: context.l10n.editPhoto,
-                    icon: HugeIcons.strokeRoundedImage02,
-                  ),
-                ),
-              ),
+              // Positioned(
+              //   bottom: 50,
+              //   child: FadeTransition(
+              //     opacity: animation,
+              //     child: IconBtn(
+              //       onPressed: onTap,
+              //       label: context.l10n.editPhoto,
+              //       icon: HugeIcons.strokeRoundedImage02,
+              //     ),
+              //   ),
+              // ),
             ],
           ),
         );

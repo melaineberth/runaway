@@ -3,6 +3,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 import 'package:runaway/config/constants.dart';
 import 'package:runaway/config/extensions.dart';
 import 'package:runaway/core/blocs/app_data/app_data_bloc.dart';
@@ -194,6 +195,76 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
     }
   }
 
+  // 🆕 Affiche le parcours sur la carte dans HomeScreen
+  Future<void> _showRouteOnMap(SavedRoute route) async {
+    try {
+      print('🗺️ Affichage du parcours sur la carte: ${route.id}');
+      
+      // Charger le parcours dans RouteGenerationBloc
+      context.routeGenerationBloc.add(SavedRouteLoaded(route.id));
+      
+      // Naviguer vers HomeScreen
+      context.go('/home');
+      
+      // Feedback haptique
+      HapticFeedback.lightImpact();
+      
+      print('✅ Navigation vers HomeScreen avec parcours: ${route.name}');
+
+    } catch (e) {
+      print('❌ Erreur affichage parcours: $e');
+      if (mounted) {
+        showTopSnackBar(
+          Overlay.of(context),
+          TopSnackBar(
+            title: 'Erreur lors de l\'affichage du parcours',
+            icon: HugeIcons.solidRoundedAlert02,
+            color: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _renameRoute(SavedRoute route, String newName) async {
+    try {
+      print('✏️ Renommage via HistoricScreen: ${route.id} -> $newName');
+      
+      // Validation côté écran également
+      if (newName.trim().isEmpty) {
+        throw Exception('Le nom ne peut pas être vide');
+      }
+      
+      // Déclencher l'événement de renommage via AppDataBloc
+      context.appDataBloc.add(SavedRouteRenamedInAppData(
+        routeId: route.id,
+        newName: newName.trim(),
+      ));
+      
+      // Feedback haptique de succès
+      HapticFeedback.lightImpact();
+      
+      print('✅ Événement de renommage envoyé avec succès');
+
+    } catch (e) {
+      print('❌ Erreur renommage: $e');
+      
+      // Feedback haptique d'erreur
+      HapticFeedback.mediumImpact();
+      
+      if (mounted) {
+        showTopSnackBar(
+          Overlay.of(context),
+          TopSnackBar(
+            title: 'Erreur: ${e.toString().replaceFirst('Exception: ', '')}',
+            icon: HugeIcons.solidRoundedAlert02,
+            color: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
   Future<bool> _showDeleteConfirmationDialog(String routeName) async {
     final result = await showModalBottomSheet<bool>(
       useRootNavigator: true,
@@ -358,7 +429,8 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
                           isEdit: isEditMode,
                           onDelete: () => _deleteRoute(route),
                           onSync: routes == routes.unsyncedRoutes ? _syncData : null,
-                          onRename: _toggleEditMode,
+                          onRename: (newName) => _renameRoute(route, newName), // 🆕 Callback de renommage
+                          onShowOnMap: () => _showRouteOnMap(route), // 🆕 Callback ajouté
                         ),
                       ),
                     ),
@@ -506,7 +578,7 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
         gradient: false,
         radius: 40.0,
         padding: EdgeInsets.all(20),
-        color: context.adaptiveBorder.withValues(alpha: 0.08),
+        color: context.adaptiveBorder.withValues(alpha: 0.05),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceAround,
           children: [
@@ -584,24 +656,35 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<AuthBloc, AuthState>(
-      builder: (context, authState) {
-        if (authState is! Authenticated) {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            showAuthModal(context);
-          });  
-        }
-
-        if (authState is Authenticated) {
-          return BlocBuilder<AppDataBloc, AppDataState>(
-            builder: (context, appDataState) {
-              return _buildMainContent(appDataState);
-            },
+    return BlocListener<AuthBloc, AuthState>(
+      listener: (context, authState) {
+        if (authState is Unauthenticated) {
+          showAuthModal(context);
+        } else if (authState is AuthError) {
+          // Afficher l'erreur de suppression de compte
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Erreur: ${authState.message}'),
+              backgroundColor: Colors.red,
+              duration: Duration(seconds: 4),
+            ),
           );
         }
-
-        return _buildEmptyUnauthenticated();
       },
+      child: BlocBuilder<AuthBloc, AuthState>(
+        builder: (_, authState) {      
+          // Si l'utilisateur est connecté, afficher le contenu
+          if (authState is Authenticated) {
+            return BlocBuilder<AppDataBloc, AppDataState>(
+              builder: (context, appDataState) {
+                return _buildMainContent(appDataState);
+              },
+            );
+          }
+      
+          return _buildEmptyUnauthenticated();
+        },
+      ),
     );
   }
 

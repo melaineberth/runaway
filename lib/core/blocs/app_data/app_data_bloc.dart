@@ -1,6 +1,7 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:runaway/core/services/screenshot_service.dart';
 import 'package:runaway/features/activity/data/repositories/activity_repository.dart';
+import 'package:runaway/features/home/data/services/map_state_service.dart';
 import 'package:runaway/features/route_generator/data/repositories/routes_repository.dart';
 import 'package:runaway/features/activity/domain/models/activity_stats.dart';
 import 'package:runaway/features/route_generator/domain/models/saved_route.dart';
@@ -11,6 +12,7 @@ import 'app_data_state.dart';
 class AppDataBloc extends Bloc<AppDataEvent, AppDataState> {
   final ActivityRepository _activityRepository;
   final RoutesRepository _routesRepository;
+  final MapStateService _mapStateService; // 🆕 Injection du service
   
   // Cache avec expiration optimisé
   static const Duration _cacheExpiration = Duration(minutes: 30);
@@ -32,8 +34,10 @@ class AppDataBloc extends Bloc<AppDataEvent, AppDataState> {
   AppDataBloc({
     required ActivityRepository activityRepository,
     required RoutesRepository routesRepository,
+    required MapStateService mapStateService,
   })  : _activityRepository = activityRepository,
         _routesRepository = routesRepository,
+        _mapStateService = mapStateService,
         super(const AppDataState()) {
     on<AppDataPreloadRequested>(_onPreloadRequested);
     on<AppDataRefreshRequested>(_onRefreshRequested);
@@ -43,6 +47,7 @@ class AppDataBloc extends Bloc<AppDataEvent, AppDataState> {
     on<RouteAddedDataSync>(_onRouteAddedSync);
     on<RouteDeletedDataSync>(_onRouteDeletedSync);
     on<ForceDataSyncRequested>(_onForceDataSync);
+    on<SavedRouteRenamedInAppData>(_onRouteRenamed);
 
     // Handlers d'objectifs
     on<PersonalGoalAddedToAppData>(_onGoalAdded);
@@ -75,6 +80,7 @@ class AppDataBloc extends Bloc<AppDataEvent, AppDataState> {
           routeCoords: event.coordinates,
           routeId: 'temp_${DateTime.now().millisecondsSinceEpoch}',
           userId: 'temp_user',
+          mapStateService: _mapStateService,
         );
 
         if (screenshotUrl != null) {
@@ -152,6 +158,28 @@ class AppDataBloc extends Bloc<AppDataEvent, AppDataState> {
       print('❌ Erreur lors de la mise à jour des statistiques: $e');
       emit(state.copyWith(
         lastError: 'Erreur lors de la mise à jour des statistiques: $e',
+      ));
+    }
+  }
+
+  Future<void> _onRouteRenamed(
+    SavedRouteRenamedInAppData event,
+    Emitter<AppDataState> emit,
+  ) async {
+    print('✏️ Renommage de parcours via AppDataBloc: ${event.routeId} -> ${event.newName}');
+    
+    try {
+      // Renommer le parcours via le repository
+      await _routesRepository.renameRoute(event.routeId, event.newName);
+      
+      // Recharger les données d'historique pour mettre à jour l'interface
+      await _refreshHistoricData(emit, showLoading: false);
+      
+      print('✅ Parcours renommé avec succès');
+    } catch (e) {
+      print('❌ Erreur lors du renommage du parcours: $e');
+      emit(state.copyWith(
+        lastError: 'Erreur lors du renommage du parcours: $e',
       ));
     }
   }

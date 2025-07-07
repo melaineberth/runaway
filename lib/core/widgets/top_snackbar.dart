@@ -35,6 +35,7 @@ class TopSnackBar extends StatelessWidget {
           Icon(
             icon,
             size: 25,
+            color: Colors.white,
           ),
         ],
       ),

@@ -75,6 +75,9 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     
     try {
       print('📝 Début mise à jour profil');
+
+      // 🆕 Conserver l'état authenticated pendant la mise à jour
+      emit(AuthLoading()); // État de chargement temporaire
       
       final updatedProfile = await _repo.updateProfile(
         userId: user.id,
@@ -83,6 +86,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         avatar: event.avatar,
       );
       
+      // 🆕 Remettre l'état Authenticated immédiatement
       print('✅ Profil mis à jour avec succès');
       emit(Authenticated(updatedProfile!));
       

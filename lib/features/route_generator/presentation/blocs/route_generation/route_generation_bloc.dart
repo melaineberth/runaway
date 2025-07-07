@@ -275,48 +275,46 @@ class RouteGenerationBloc extends HydratedBloc<RouteGenerationEvent, RouteGenera
   }
 
   /// Chargement d'un parcours sauvegardé
-  void _onSavedRouteLoaded(
+  Future<void> _onSavedRouteLoaded(
     SavedRouteLoaded event,
     Emitter<RouteGenerationState> emit,
-  ) {
-    final loadId = DateTime.now().millisecondsSinceEpoch.toString();
-    print('📂 === DÉBUT CHARGEMENT HISTORIQUE (ID: $loadId) ===');
-    print('📂 Route ID demandé: ${event.routeId}');
-
+  ) async {
     try {
-      final route = state.savedRoutes.firstWhere(
+      print('🔄 Chargement du parcours sauvegardé: ${event.routeId}');
+      
+      // Récupérer le parcours depuis le repository
+      final routes = await _routesRepository.getUserRoutes();
+      final route = routes.firstWhere(
         (r) => r.id == event.routeId,
         orElse: () => throw Exception('Parcours non trouvé'),
       );
 
-      print('📂 Parcours trouvé: ${route.name} (${route.coordinates.length} points)');
+      // Calculer les métadonnées
+      final metadata = {
+        'distanceKm': route.actualDistance ?? route.parameters.distanceKm,
+        'distance': ((route.actualDistance ?? route.parameters.distanceKm) * 1000).round(),
+        'durationMinutes': route.actualDuration ?? 0,
+        'points_count': route.coordinates.length,
+        'is_loop': route.parameters.isLoop,
+      };
 
+      // Mettre à jour l'état avec le parcours chargé
       emit(state.copyWith(
         generatedRoute: route.coordinates,
         usedParameters: route.parameters,
-        routeMetadata: {
-          'distanceKm': route.actualDistance ?? route.parameters.distanceKm,
-          'distance': ((route.actualDistance ?? route.parameters.distanceKm) * 1000).round(),
-          'durationMinutes': route.actualDuration ?? route.parameters.estimatedDuration.inMinutes,
-          'points_count': route.coordinates.length,
-          'is_loop': route.parameters.isLoop,
-        },
-        isLoadedFromHistory: true, // 🔧 CRUCIAL : Marquer comme chargé depuis l'historique
-        errorMessage: null, // Reset les erreurs
-        stateId: '$loadId-loaded', // 🆕 ID unique pour le chargement
+        routeMetadata: metadata,
+        isLoadedFromHistory: true, // Indiquer que c'est un parcours de l'historique
+        errorMessage: null,
+        stateId: 'loaded-${event.routeId}',
       ));
 
-      // Mettre à jour les statistiques d'utilisation
-      add(RouteUsageUpdated(event.routeId));
-
-      print('✅ === FIN CHARGEMENT HISTORIQUE (SUCCESS: $loadId-loaded) ===');
+      print('✅ Parcours chargé avec succès: ${route.name}');
 
     } catch (e) {
-      print('❌ Erreur chargement: $e');
+      print('❌ Erreur chargement parcours: $e');
       emit(state.copyWith(
-        errorMessage: 'Parcours non trouvé',
-        isLoadedFromHistory: false,
-        stateId: '$loadId-error', // 🆕 ID d'erreur
+        errorMessage: 'Erreur lors du chargement du parcours: $e',
+        stateId: 'error-${event.routeId}',
       ));
     }
   }

@@ -144,3 +144,17 @@ class SavedRouteUsageUpdatedInAppData extends AppDataEvent {
   @override
   List<Object?> get props => [routeId];
 }
+
+/// Renommage d'un parcours sauvegardé
+class SavedRouteRenamedInAppData extends AppDataEvent {
+  final String routeId;
+  final String newName;
+
+  const SavedRouteRenamedInAppData({
+    required this.routeId,
+    required this.newName,
+  });
+
+  @override
+  List<Object?> get props => [routeId, newName];
+}

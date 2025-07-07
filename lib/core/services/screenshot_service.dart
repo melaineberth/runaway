@@ -5,6 +5,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart';
 import 'package:runaway/config/colors.dart';
+import 'package:runaway/features/home/data/services/map_state_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class ScreenshotService {
@@ -17,6 +18,7 @@ class ScreenshotService {
     required List<List<double>> routeCoords,
     required String routeId,
     required String userId,
+    MapStateService? mapStateService, // 🆕 Paramètre optionnel pour récupérer le style
   }) async {
     try {
       print('🚀 Début capture screenshot pour route: $routeId');
@@ -51,8 +53,26 @@ class ScreenshotService {
       );
 
       try {
+        // 🆕 5. Configurer le style dynamiquement selon le style actuel
+        String styleUri;
+        if (mapStateService != null) {
+          styleUri = mapStateService.getCurrentStyleUri();
+          print('🎨 Utilisation du style actuel: $styleUri');
+        } else {
+          // 🆕 Fallback : récupérer le style directement depuis la map live
+          try {
+            final currentStyleUri = await liveMap.style.getStyleURI();
+            styleUri = currentStyleUri;
+            print('🎨 Style récupéré depuis la map live: $styleUri');
+          } catch (e) {
+            // 🆕 Dernier fallback : style par défaut
+            styleUri = 'mapbox://styles/mapbox/outdoors-v12';
+            print('⚠️ Utilisation du style par défaut: $styleUri');
+          }
+        }
+
         // 5. Configurer le style (theme sombre pour correspondre à l'app)
-        await snapshotter.style.setStyleURI(MapboxStyles.DARK);
+        await snapshotter.style.setStyleURI(styleUri);
                 
         // 6. Calculer les bounds du parcours pour centrer la vue
         final bounds = _calculateRouteBounds(routeCoords);

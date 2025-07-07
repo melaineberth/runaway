@@ -135,10 +135,36 @@ class _EditProfileScreenState extends State<EditProfileScreen> with TickerProvid
         subtitle: "Avant de continuer, veuillez choisir le mode de selection souhaité", 
         validLabel: "Camera",
         cancelLabel: "Gallery",
-        onValid: () => _pickAvatar(ImageSource.camera),
-        onCancel: () => _pickAvatar(ImageSource.gallery),
+        onValid: () {
+          Navigator.pop(context);
+          _pickAvatar(ImageSource.camera);
+        },
+        onCancel: () {
+          Navigator.pop(context);
+          _pickAvatar(ImageSource.gallery);
+        },
       )
     );
+  }
+
+  // 🆕 Ajouter cette méthode pour gérer le succès
+  void _handleProfileUpdateSuccess() {
+    // Afficher le snackbar de succès
+    showTopSnackBar(
+      Overlay.of(context),
+      TopSnackBar(
+        title: 'Profil mis à jour avec succès',
+        icon: HugeIcons.solidRoundedTick04,
+        color: Colors.green,
+      ),
+    );
+
+    // Navigation avec délai pour laisser le temps au snackbar
+    Future.delayed(Duration(milliseconds: 1500), () {
+      if (mounted) {
+        context.go('/account'); // ou context.pop() selon votre navigation
+      }
+    });
   }
 
   Widget _buildAvatarSection() {
@@ -300,139 +326,116 @@ class _EditProfileScreenState extends State<EditProfileScreen> with TickerProvid
 
   @override
   Widget build(BuildContext context) {
-    return BlocListener<AuthBloc, AuthState>(
-      listener: (context, state) {
-        if (state is Authenticated && _isLoading) {
-          // Profil mis à jour avec succès
-          setState(() {
-            _isLoading = false;
-          });
-          
-          showTopSnackBar(
-            Overlay.of(context),
-            TopSnackBar(
-              title: context.l10n.profileUpdated,
-              icon: HugeIcons.strokeRoundedCheckmarkCircle03,
-              color: Colors.green,
-            ),
-          );
-          
-          context.pop();
-        } else if (state is AuthError && _isLoading) {
-          // Erreur lors de la mise à jour
-          setState(() {
-            _isLoading = false;
-          });
-          
-          showTopSnackBar(
-            Overlay.of(context),
-            TopSnackBar(
-              title: context.l10n.profileUpdateError,
-              icon: HugeIcons.solidRoundedAlert02,
-              color: Colors.red,
-            ),
-          );
-        }
-      },
-      child: Stack(
-        children: [
-          Scaffold(
-            appBar: AppBar(
-              forceMaterialTransparency: true,
-              backgroundColor: Colors.transparent,
-              title: Text(
-                context.l10n.editProfile,
-                style: context.bodySmall?.copyWith(
-                  color: context.adaptiveTextPrimary,
-                ),
-              ),
-              leading: IconButton(
-                onPressed: _isLoading ? null : context.pop,
-                icon: Icon(
-                  HugeIcons.strokeSharpArrowLeft02,
-                  color: _isLoading ? context.adaptiveDisabled : context.adaptiveTextPrimary,
-                ),
+    return Stack(
+      children: [
+        Scaffold(
+          appBar: AppBar(
+            forceMaterialTransparency: true,
+            backgroundColor: Colors.transparent,
+            title: Text(
+              context.l10n.editProfile,
+              style: context.bodySmall?.copyWith(
+                color: context.adaptiveTextPrimary,
               ),
             ),
-            body: Padding(
-              padding: const EdgeInsets.all(20.0),
-              child: ListView(
-                physics: const NeverScrollableScrollPhysics(),
-                children: [
-                  FadeTransition(
-                    opacity: _fadeController,
-                    child: Form(
-                      key: _formKey,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [                      
-                          // Section Avatar
-                          _buildAvatarSection(),
-                          
-                          50.h,
-                          
-                          // Section Nom complet
-                          _buildFullNameField(),
-                          
-                          30.h,
-                          
-                          // Section Username (désactivé)
-                          _buildUsernameField(),
-                          
-                          40.h,
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
+            leading: IconButton(
+              onPressed: _isLoading ? null : context.pop,
+              icon: Icon(
+                HugeIcons.strokeSharpArrowLeft02,
+                color: _isLoading ? context.adaptiveDisabled : context.adaptiveTextPrimary,
               ),
             ),
           ),
-
-          // Bouton en bas
-          Positioned(
-            left: 20,
-            right: 20,
-            bottom: 40,
-            child: _buildCompleteButton(_isLoading),
-          ),                
-        ],
-      ),
+          body: Padding(
+            padding: const EdgeInsets.all(20.0),
+            child: ListView(
+              physics: const NeverScrollableScrollPhysics(),
+              children: [
+                FadeTransition(
+                  opacity: _fadeController,
+                  child: Form(
+                    key: _formKey,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [                      
+                        // Section Avatar
+                        _buildAvatarSection(),
+                        
+                        50.h,
+                        
+                        // Section Nom complet
+                        _buildFullNameField(),
+                        
+                        30.h,
+                        
+                        // Section Username (désactivé)
+                        _buildUsernameField(),
+                        
+                        40.h,
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+    
+        // Bouton en bas
+        Positioned(
+          left: 20,
+          right: 20,
+          bottom: 40,
+          child: _buildCompleteButton(_isLoading),
+        ),                
+      ],
     );
   }
 
   Widget _buildCompleteButton(bool isLoading) {
-    return SquircleContainer(
-      onTap: _hasChanges ? _saveProfile : null,
-      height: 60,
-      color: isLoading || !_hasChanges ? context.adaptivePrimary.withValues(alpha: 0.6) : context.adaptivePrimary,
-      radius: 30,
-      padding: EdgeInsets.symmetric(
-        horizontal: 15.0,
-        vertical: 5.0,
-      ),
-      child: AnimatedSwitcher(
-        duration: Duration(milliseconds: 300),
-        child: Center(
-          child: isLoading
-          ? Text(
-              "Modification en cours...",
-              style: context.bodySmall?.copyWith(
-                fontSize: 19,
-                color: Colors.white,
-                fontWeight: FontWeight.w600,
+    return BlocListener<AuthBloc, AuthState>(
+      listenWhen: (previous, current) {
+        // Écouter spécifiquement les changements de profil
+        return previous != current && current is Authenticated;
+      },
+      listener: (context, state) {
+        if (state is Authenticated) {
+          // 🆕 Navigation immédiate après succès
+          _handleProfileUpdateSuccess();
+        }
+      },
+      child: SquircleContainer(
+        onTap: _hasChanges ? _saveProfile : null,
+        height: 60,
+        color: isLoading || !_hasChanges ? context.adaptivePrimary.withValues(alpha: 0.6) : context.adaptivePrimary,
+        radius: 30,
+        padding: EdgeInsets.symmetric(
+          horizontal: 15.0,
+          vertical: 5.0,
+        ),
+        child: AnimatedSwitcher(
+          duration: Duration(milliseconds: 300),
+          child: Center(
+            child: isLoading
+            ? Text(
+                "Modification en cours...",
+                style: context.bodySmall?.copyWith(
+                  fontSize: 19,
+                  color: Colors.white,
+                  fontWeight: FontWeight.w600,
+                ),
+              )
+              .animate(onPlay: (controller) => controller.loop())
+              .shimmer(color: context.adaptivePrimary, duration: Duration(seconds: 2))
+            : Text(
+                context.l10n.complete,
+                style: context.bodySmall?.copyWith(
+                  fontSize: 19,
+                  color: Colors.white,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
-            )
-            .animate(onPlay: (controller) => controller.loop())
-            .shimmer(color: context.adaptivePrimary, duration: Duration(seconds: 2))
-          : Text(
-              context.l10n.complete,
-              style: context.bodySmall?.copyWith(
-                fontSize: 19,
-                color: Colors.white,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
+          ),
         ),
       ),
     );

@@ -9,6 +9,7 @@ import 'package:runaway/features/activity/data/repositories/activity_repository.
 import 'package:runaway/features/auth/data/repositories/auth_repository.dart';
 import 'package:runaway/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:runaway/features/auth/presentation/bloc/auth_event.dart';
+import 'package:runaway/features/home/data/services/map_state_service.dart';
 import 'package:runaway/features/home/presentation/blocs/route_parameters_bloc.dart';
 import 'package:runaway/features/route_generator/data/repositories/routes_repository.dart';
 import 'package:runaway/features/route_generator/presentation/blocs/route_generation/route_generation_bloc.dart';
@@ -21,6 +22,7 @@ class ServiceLocator {
     sl.registerLazySingleton<ActivityRepository>(() => ActivityRepository());
     sl.registerLazySingleton<RoutesRepository>(() => RoutesRepository());
     sl.registerLazySingleton<AuthRepository>(() => AuthRepository());
+    sl.registerLazySingleton<MapStateService>(() => MapStateService());
 
     // Blocs - Singletons pour ceux qui doivent être partagés
     sl.registerLazySingleton<NotificationBloc>(() {
@@ -34,6 +36,7 @@ class ServiceLocator {
       final appDataBloc = AppDataBloc(
         activityRepository: sl<ActivityRepository>(),
         routesRepository: sl<RoutesRepository>(),
+        mapStateService: sl<MapStateService>(), 
       );
       
       // Initialiser le service IMMÉDIATEMENT après création du BLoC

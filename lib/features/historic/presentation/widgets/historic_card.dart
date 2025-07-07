@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:pull_down_button/pull_down_button.dart';
 import 'package:runaway/config/colors.dart';
@@ -20,8 +21,9 @@ class HistoricCard extends StatefulWidget {
   final SavedRoute route;
   final bool isEdit;
   final VoidCallback? onDelete;
-  final VoidCallback? onRename;
+  final Function(String)? onRename;
   final VoidCallback? onSync;
+  final VoidCallback? onShowOnMap; // 🆕 Callback pour afficher sur la carte
 
   const HistoricCard({
     super.key,
@@ -30,6 +32,7 @@ class HistoricCard extends StatefulWidget {
     this.onRename,
     this.onSync,
     required this.isEdit,
+    this.onShowOnMap,
   });
 
   @override
@@ -42,20 +45,116 @@ class _HistoricCardState extends State<HistoricCard> {
   String? _locationName;
   bool _isImageLoading = true;
   bool _hasImageError = false;
+  bool _isRenaming = false; // 🆕 État de renommage
+  String _originalName = ''; // 🆕 Nom original pour annulation
 
   @override
   void initState() {
     super.initState();
     _loadLocationName();
     _nameController = TextEditingController(text: widget.route.name);
+     _originalName = widget.route.name;
     _focusNode = FocusNode();
+
+    // 🆕 Écouter les changements pour validation
+    _nameController.addListener(_onNameChanged);
   }
 
   @override
   void dispose() {
+    _nameController.removeListener(_onNameChanged);
     _nameController.dispose();
     _focusNode.dispose();
     super.dispose();
+  }
+
+  void _onNameChanged() {
+    // Validation en temps réel si nécessaire
+    setState(() {});
+  }
+
+  /// 🆕 Active le mode renommage
+  void _startRenaming() {
+    setState(() {
+      _isRenaming = true;
+      _originalName = widget.route.name;
+    });
+    
+    // Sélectionner tout le texte et focus
+    _nameController.selection = TextSelection(
+      baseOffset: 0,
+      extentOffset: _nameController.text.length,
+    );
+    _focusNode.requestFocus();
+  }
+
+  /// 🆕 Confirme le renommage
+  void _confirmRename() {
+    final newName = _nameController.text.trim();
+    
+    // Validation basique
+    if (newName.isEmpty) {
+      _showError('Le nom ne peut pas être vide');
+      return;
+    }
+    
+    if (newName == _originalName) {
+      _cancelRename();
+      return;
+    }
+    
+    if (newName.length > 50) {
+      _showError('Le nom ne peut pas dépasser 50 caractères');
+      return;
+    }
+
+    // 🆕 Validation des caractères interdits
+    if (newName.contains(RegExp(r'[<>:"/\\|?*]'))) {
+      _showError('Le nom contient des caractères interdits');
+      return;
+    }
+
+    // 🆕 Validation de la longueur minimale
+    if (newName.length < 2) {
+      _showError('Le nom doit contenir au moins 2 caractères');
+      return;
+    }
+
+    setState(() {
+      _isRenaming = false;
+    });
+    
+    _focusNode.unfocus();
+    
+    // Feedback haptique
+    HapticFeedback.lightImpact();
+    
+    widget.onRename?.call(newName);
+    
+    print('✏️ Renommage confirmé: ${widget.route.id} -> $newName');
+  }
+
+  /// 🆕 Annule le renommage
+  void _cancelRename() {
+    setState(() {
+      _isRenaming = false;
+      _nameController.text = _originalName;
+    });
+    _focusNode.unfocus();
+  }
+
+  /// 🆕 Affiche une erreur
+  void _showError(String message) {
+    if (mounted) {
+      showTopSnackBar(
+        Overlay.of(context),
+        TopSnackBar(
+          title: message,
+          icon: HugeIcons.solidRoundedAlert02,
+          color: Colors.red,
+        ),
+      );
+    }
   }
 
   /// 🆕 Charge le nom de la localisation via reverse geocoding
@@ -161,10 +260,11 @@ class _HistoricCardState extends State<HistoricCard> {
 
     return IntrinsicHeight(
       child: SquircleContainer(
+        onTap: widget.onShowOnMap,
         radius: outerRadius,
         padding: padding,
         gradient: false,
-        color: context.adaptiveBorder.withValues(alpha: 0.08),
+        color: context.adaptiveBorder.withValues(alpha: 0.05),
         child: Column(
           spacing: 20.0,
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -175,9 +275,9 @@ class _HistoricCardState extends State<HistoricCard> {
               width: imgSize,
               child: SquircleContainer(
                 radius: innerRadius,
-                color: _getActivityColor(),
+                color: context.adaptiveDisabled,
                 padding: EdgeInsets.zero,
-                child: _buildRouteVisualization(),
+                child: _buildRouteImage(),
               ),
             ),
         
@@ -199,53 +299,13 @@ class _HistoricCardState extends State<HistoricCard> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Expanded(
-                      child: EditableText(
-                        controller: _nameController,
-                        focusNode: _focusNode,
-                        style: context.bodyMedium!,
-                        cursorColor: context.adaptivePrimary,
-                        backgroundCursorColor: context.adaptivePrimary,
-                        readOnly: widget.isEdit,
-                      ),
+                      child: _isRenaming ? _buildEditableField() : _buildDisplayName(),
                     ),
                     
-                    if (widget.isEdit)
-                    PullDownButton(
-                      itemBuilder: (context) => [
-                        PullDownMenuItem(
-                          icon: HugeIcons.solidRoundedTypeCursor,
-                          title: context.l10n.renameRoute,
-                          onTap: widget.onRename,
-                        ),
-                        PullDownMenuItem(
-                          icon: HugeIcons.strokeRoundedLayerSendToBack,
-                          title: context.l10n.synchronizeRoute,
-                          onTap: widget.onSync,
-                        ),
-                        PullDownMenuItem(
-                          isDestructive: true,
-                          icon: HugeIcons.strokeRoundedDelete02,
-                          title: context.l10n.deleteRoute,
-                          onTap: widget.onDelete,
-                        ),
-                      ],
-                      buttonBuilder: (context, showMenu) => GestureDetector(
-                        onTap: () {
-                          showMenu();
-                          HapticFeedback.mediumImpact();
-                        },
-                        child: Icon(
-                          HugeIcons.strokeRoundedMoreHorizontalCircle02,
-                        ),
-                      ),
-                    )
-                    else 
-                    GestureDetector(
-                      onTap: widget.onRename,
-                      child: Icon(
-                        HugeIcons.solidRoundedTick02,
-                      ),
-                    ),
+                    if (widget.isEdit && !_isRenaming)
+                      _buildActionMenu()
+                    else if (_isRenaming)
+                      _buildRenameActions(),
                   ],
                 ),
               ],
@@ -315,16 +375,130 @@ class _HistoricCardState extends State<HistoricCard> {
     );
   }
 
-  /// 🆕 Construit la visualisation de la route avec image ou fallback amélioré
-  Widget _buildRouteVisualization() {
-    if (widget.route.hasImage) {
-      return _buildRouteImage();
-    } else {
-      return _buildActivityFallback();
-    }
+  /// 📱 Affiche l'état de chargement de l'image avec shimmer
+  Widget _buildLoadingState(ImageChunkEvent? loadingProgress) {
+    const double innerRadius = 30.0;
+    
+    return SquircleContainer(
+      radius: innerRadius,
+      color: context.adaptiveDisabled,
+      padding: EdgeInsets.zero,
+      child: Container(
+        width: double.infinity,
+        height: double.infinity,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(innerRadius),
+        ),
+      ),
+    )
+    .animate(onPlay: (controller) => controller.loop())
+    .shimmer(
+      color: context.adaptiveBackground.withValues(alpha: 0.5), 
+      duration: Duration(seconds: 2)
+    );
   }
 
-  /// 🖼️ Affiche l'image de la route avec gestion d'erreurs
+  // 🆕 Champ éditable pour le renommage
+  Widget _buildEditableField() {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        border: Border.all(color: context.adaptivePrimary, width: 1),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: TextField(
+        controller: _nameController,
+        focusNode: _focusNode,
+        style: context.bodyMedium!.copyWith(fontWeight: FontWeight.w600),
+        decoration: InputDecoration(
+          border: InputBorder.none,
+          isDense: true,
+          contentPadding: EdgeInsets.zero,
+        ),
+        maxLength: 50,
+        buildCounter: (context, {required currentLength, maxLength, required isFocused}) => null,
+        onSubmitted: (_) => _confirmRename(),
+        textInputAction: TextInputAction.done,
+      ),
+    );
+  }
+
+  // 🆕 Nom affiché en mode lecture
+  Widget _buildDisplayName() {
+    return Text(
+      widget.route.name,
+      style: context.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+      maxLines: 2,
+      overflow: TextOverflow.ellipsis,
+    );
+  }
+
+  // 🆕 Menu d'actions (existant)
+  Widget _buildActionMenu() {
+    return PullDownButton(
+      itemBuilder: (context) => [
+        PullDownMenuItem(
+          icon: HugeIcons.solidRoundedTypeCursor,
+          title: context.l10n.renameRoute,
+          onTap: _startRenaming, // 🆕 Démarre le renommage
+        ),
+        if (widget.onSync != null)
+          PullDownMenuItem(
+            icon: HugeIcons.strokeRoundedLayerSendToBack,
+            title: context.l10n.synchronizeRoute,
+            onTap: widget.onSync,
+          ),
+        PullDownMenuItem(
+          isDestructive: true,
+          icon: HugeIcons.strokeRoundedDelete02,
+          title: context.l10n.deleteRoute,
+          onTap: widget.onDelete,
+        ),
+      ],
+      buttonBuilder: (context, showMenu) => GestureDetector(
+        onTap: () {
+          showMenu();
+          HapticFeedback.mediumImpact();
+        },
+        child: Icon(
+          HugeIcons.strokeRoundedMoreVertical,
+        ),
+      ),
+    );
+  }
+
+  // 🆕 Actions de confirmation/annulation du renommage
+  Widget _buildRenameActions() {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        GestureDetector(
+          onTap: _cancelRename,
+          child: Container(
+            padding: EdgeInsets.all(6),
+            child: Icon(
+              HugeIcons.strokeRoundedCancel01,
+              color: context.adaptiveTextSecondary,
+              size: 20,
+            ),
+          ),
+        ),
+        8.w,
+        GestureDetector(
+          onTap: _confirmRename,
+          child: Container(
+            padding: EdgeInsets.all(6),
+            child: Icon(
+              HugeIcons.strokeRoundedTick02,
+              color: context.adaptivePrimary,
+              size: 20,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildRouteImage() {
     return Stack(
       children: [
@@ -347,7 +521,7 @@ class _HistoricCardState extends State<HistoricCard> {
               });
               return child;
             }
-            // En cours de chargement
+            // 🆕 En cours de chargement - Afficher shimmer au lieu du CircularProgressIndicator
             return _buildLoadingState(loadingProgress);
           },
           errorBuilder: (context, error, stackTrace) {
@@ -364,9 +538,6 @@ class _HistoricCardState extends State<HistoricCard> {
             return _buildActivityFallback();
           },
         ),
-
-        if (_isImageLoading)
-        CircularProgressIndicator(),
 
         IgnorePointer(
           ignoring: true,
@@ -398,45 +569,40 @@ class _HistoricCardState extends State<HistoricCard> {
     );
   }
 
-  /// 📱 Affiche l'état de chargement de l'image
-  Widget _buildLoadingState(ImageChunkEvent loadingProgress) {
-    return Container(
-      color: _getActivityColor(),
-      child: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            CircularProgressIndicator(
-              color: Colors.white,
-              value: loadingProgress.expectedTotalBytes != null
-                  ? loadingProgress.cumulativeBytesLoaded /
-                      (loadingProgress.expectedTotalBytes ?? 1)
-                  : null,
-            ),
-            8.h,
-            Text(
-              context.l10n.loading,
-              style: context.bodySmall?.copyWith(
-                color: Colors.white,
-                fontSize: 12,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   /// 🎨 Fallback avec design basé sur l'activité
   Widget _buildActivityFallback() {
+    const double innerRadius = 30.0;
+    
+    // Si on est encore en train de charger, afficher le shimmer
+    if (_isImageLoading && !_hasImageError) {
+      return SquircleContainer(
+        radius: innerRadius,
+        color: context.adaptiveDisabled,
+        padding: EdgeInsets.zero,
+        child: Container(
+          width: double.infinity,
+          height: double.infinity,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(innerRadius),
+          ),
+        ),
+      )
+      .animate(onPlay: (controller) => controller.loop())
+      .shimmer(
+        color: context.adaptiveBackground.withValues(alpha: 0.5), 
+        duration: Duration(seconds: 2)
+      );
+    }
+
+    // Sinon, afficher le fallback normal avec l'icône et les informations
     return Container(
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            _getActivityColor(),
-            _getActivityColor().withValues(alpha: 0.7),
+            context.adaptiveDisabled,
+            context.adaptiveDisabled.withValues(alpha: 0.7),
           ],
         ),
         borderRadius: BorderRadius.circular(30.0),
@@ -552,19 +718,5 @@ class _HistoricCardState extends State<HistoricCard> {
         ],
       ),
     );
-  }
-
-  /// Couleur basée sur le type d'activité
-  Color _getActivityColor() {
-    switch (widget.route.parameters.activityType.title.toLowerCase()) {
-      case 'course':
-        return Colors.red;
-      case 'vélo':
-        return Colors.blue;
-      case 'marche':
-        return Colors.green;
-      default:
-        return AppColors.primary;
-    }
   }
 }

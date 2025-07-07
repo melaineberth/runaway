@@ -153,6 +153,107 @@ class RoutesRepository {
     }
   }
 
+  /// Renomme un parcours sauvegardé
+  Future<void> renameRoute(String routeId, String newName) async {
+    final user = _supabase.auth.currentUser;
+    if (user == null) {
+      throw Exception('Utilisateur non connecté');
+    }
+
+    print('✏️ Renommage du parcours: $routeId -> $newName');
+
+    // 1. Mise à jour locale
+    await _renameRouteLocally(routeId, newName);
+
+    // 2. Synchronisation avec Supabase si connecté
+    try {
+      if (await _isConnected()) {
+        // 🆕 Vérifier d'abord si la route existe dans Supabase
+        final routeExists = await _checkRouteExistsInSupabase(routeId, user.id);
+        
+        if (routeExists) {
+          // Route existe → UPDATE
+          await _updateRouteNameInSupabase(routeId, newName, user.id);
+          print('✅ Nom du parcours mis à jour dans Supabase');
+        } else {
+          // Route n'existe pas → marquer pour synchronisation complète
+          await _markRouteForSync(routeId);
+          print('📝 Route marquée pour synchronisation complète (n\'existe pas encore sur le serveur)');
+        }
+      } else {
+        // Marquer pour synchronisation ultérieure si hors ligne
+        await _markRouteForSync(routeId);
+        print('📱 Parcours renommé localement, synchronisation en attente');
+      }
+    } catch (e) {
+      print('❌ Erreur sync renommage Supabase: $e');
+      await _markRouteForSync(routeId);
+    }
+  }
+
+  /// 🆕 Vérifie si une route existe dans Supabase
+  Future<bool> _checkRouteExistsInSupabase(String routeId, String userId) async {
+    try {
+      final response = await _supabase
+          .from('user_routes') // 🔧 Correction : saved_routes → user_routes
+          .select('id')
+          .eq('id', routeId)
+          .eq('user_id', userId)
+          .maybeSingle();
+      
+      final exists = response != null;
+      print('🔍 Route $routeId existe dans Supabase: $exists');
+      return exists;
+    } catch (e) {
+      print('❌ Erreur vérification existence route: $e');
+      return false;
+    }
+  }
+
+  /// 🆕 Met à jour uniquement le nom d'une route existante dans Supabase
+  Future<void> _updateRouteNameInSupabase(String routeId, String newName, String userId) async {
+    try {
+      final response = await _supabase
+          .from('user_routes') // 🔧 Correction : saved_routes → user_routes
+          .update({
+            'name': newName,
+            'updated_at': DateTime.now().toUtc().toIso8601String(),
+          })
+          .eq('id', routeId)
+          .eq('user_id', userId)
+          .select('id')
+          .maybeSingle();
+
+      if (response == null) {
+        throw Exception('Route non trouvée lors de la mise à jour');
+      }
+
+      print('✅ Nom du parcours mis à jour dans Supabase: $routeId');
+    } catch (e) {
+      print('❌ Erreur mise à jour nom Supabase: $e');
+      throw Exception('Erreur lors de la mise à jour du nom sur le serveur');
+    }
+  }
+
+  /// Met à jour le nom d'un parcours localement
+  Future<void> _renameRouteLocally(String routeId, String newName) async {
+    try {
+      final routes = await _getLocalRoutes();
+      final updatedRoutes = routes.map((route) {
+        if (route.id == routeId) {
+          return route.copyWith(name: newName);
+        }
+        return route;
+      }).toList();
+
+      await _saveRoutesToLocal(updatedRoutes);
+      print('✅ Parcours renommé localement: $routeId');
+    } catch (e) {
+      print('❌ Erreur renommage local: $e');
+      throw Exception('Erreur lors du renommage local du parcours');
+    }
+  }
+
   /// 🔧 Met à jour les statistiques d'utilisation d'un parcours - CORRIGÉ
   Future<void> updateRouteUsage(String routeId) async {
     final user = _supabase.auth.currentUser;
@@ -248,40 +349,40 @@ class RoutesRepository {
 
   /// 🆕 Sauvegarde un parcours dans Supabase avec image_url
   Future<void> _saveRouteToSupabase(SavedRoute route, String userId) async {
-    print('📤 Envoi vers Supabase: ${route.id}');
-    
     try {
-      // 🔧 Convertir explicitement en UTC pour Supabase
-      final createdAtUtc = route.createdAt.toUtc().toIso8601String();
-      final lastUsedAtUtc = route.lastUsedAt?.toUtc().toIso8601String();
+      print('📤 Envoi vers Supabase: ${route.id}');
       
-      print('🕒 Sauvegarde date UTC: $createdAtUtc (original local: ${route.createdAt})');
+      // Convertir la date en UTC pour la sauvegarde
+      final createdAtUtc = route.createdAt.toUtc();
+      print('🕒 Sauvegarde date UTC: ${createdAtUtc.toIso8601String()} (original local: ${route.createdAt})');
       
-      await _supabase.from('user_routes').insert({
+      await _supabase.from('user_routes').insert({ // 🔧 Correction : saved_routes → user_routes
         'id': route.id,
         'user_id': userId,
         'name': route.name,
         'activity_type': route.parameters.activityType.id,
+        'distance_km': route.parameters.distanceKm,
         'terrain_type': route.parameters.terrainType.id,
         'urban_density': route.parameters.urbanDensity.id,
-        'distance_km': route.parameters.distanceKm,
-        'elevation_gain': route.parameters.elevationGain,
         'is_loop': route.parameters.isLoop,
         'avoid_traffic': route.parameters.avoidTraffic,
-        'prefer_scenic': route.parameters.preferScenic,
+        'elevation_gain': route.parameters.elevationGain,
         'coordinates': route.coordinates,
-        'start_latitude': route.parameters.startLatitude,
-        'start_longitude': route.parameters.startLongitude,
+        'start_latitude': route.coordinates.isNotEmpty ? route.coordinates.first[1] : null,
+        'start_longitude': route.coordinates.isNotEmpty ? route.coordinates.first[0] : null,
         'actual_distance_km': route.actualDistance,
         'estimated_duration_minutes': route.actualDuration,
-        'created_at': createdAtUtc, // 🔧 UTC explicite
-        'times_used': 0,
-        'last_used_at': lastUsedAtUtc, // 🔧 UTC explicite
+        'created_at': createdAtUtc.toIso8601String(),
+        'updated_at': createdAtUtc.toIso8601String(),
+        'times_used': route.timesUsed,
+        'last_used_at': route.lastUsedAt?.toUtc().toIso8601String(),
         'image_url': route.imageUrl,
       });
-      
+
       print('✅ Route sauvée dans Supabase avec image: ${route.id}');
-      print('🖼️ Image URL: ${route.imageUrl ?? "Aucune"}');
+      if (route.hasImage) {
+        print('🖼️ Image URL: ${route.imageUrl}');
+      }
     } catch (e) {
       print('❌ Erreur sauvegarde Supabase détaillée: $e');
       rethrow;
@@ -357,6 +458,19 @@ class RoutesRepository {
     }).toList();
   }
 
+  /// Sauvegarde une liste de routes en local
+  Future<void> _saveRoutesToLocal(List<SavedRoute> routes) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final routesJson = routes.map((route) => route.toJson()).toList();
+      await prefs.setString(_localCacheKey, jsonEncode(routesJson));
+      print('✅ ${routes.length} routes sauvegardées localement');
+    } catch (e) {
+      print('❌ Erreur sauvegarde locale: $e');
+      throw Exception('Erreur lors de la sauvegarde locale');
+    }
+  }
+
   /// 🆕 Sauvegarde locale avec support image_url
   Future<void> _saveRouteLocally(SavedRoute route) async {
     final prefs = await SharedPreferences.getInstance();
@@ -413,16 +527,27 @@ class RoutesRepository {
   }
 
   Future<bool> _isConnected() async {
-    final connectivityResult = await Connectivity().checkConnectivity();
-    return connectivityResult != ConnectivityResult.none;
+    try {
+      final connectivityResult = await Connectivity().checkConnectivity();
+      return connectivityResult != ConnectivityResult.none;
+    } catch (e) {
+      print('❌ Erreur vérification connectivité: $e');
+      return false;
+    }
   }
 
   Future<void> _markRouteForSync(String routeId) async {
-    final prefs = await SharedPreferences.getInstance();
-    final pendingIds = prefs.getStringList(_pendingSyncKey) ?? [];
-    if (!pendingIds.contains(routeId)) {
-      pendingIds.add(routeId);
-      await prefs.setStringList(_pendingSyncKey, pendingIds);
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final pendingSync = prefs.getStringList(_pendingSyncKey) ?? [];
+      
+      if (!pendingSync.contains(routeId)) {
+        pendingSync.add(routeId);
+        await prefs.setStringList(_pendingSyncKey, pendingSync);
+        print('📝 Route marquée pour sync: $routeId');
+      }
+    } catch (e) {
+      print('❌ Erreur marquage sync: $e');
     }
   }
 
@@ -438,28 +563,93 @@ class RoutesRepository {
   }
 
   Future<void> _syncPendingRoutes() async {
-    final prefs = await SharedPreferences.getInstance();
-    final pendingIds = prefs.getStringList(_pendingSyncKey) ?? [];
-    final user = _supabase.auth.currentUser;
-    
-    if (user == null || pendingIds.isEmpty) return;
-
-    final localRoutes = await _getLocalRoutes();
-    
-    for (final routeId in List.from(pendingIds)) {
-      try {
-        final route = localRoutes.firstWhere(
-          (r) => r.id == routeId,
-          orElse: () => throw Exception('Route introuvable localement'),
-        );
-        
-        await _saveRouteToSupabase(route, user.id);
-        await _markRouteSynced(routeId);
-        
-        print('✅ Route synchronisée: $routeId');
-      } catch (e) {
-        print('❌ Erreur sync route $routeId: $e');
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final pendingSync = prefs.getStringList(_pendingSyncKey) ?? [];
+      
+      if (pendingSync.isEmpty) {
+        print('📝 Aucune route en attente de synchronisation');
+        return;
       }
+
+      print('🔄 Synchronisation de ${pendingSync.length} routes en attente...');
+      
+      final localRoutes = await _getLocalRoutes();
+      final user = _supabase.auth.currentUser;
+      
+      if (user == null) {
+        print('❌ Utilisateur non connecté pour la sync');
+        return;
+      }
+
+      final successfulSyncs = <String>[];
+      
+      for (final routeId in pendingSync) {
+        try {
+          final route = localRoutes.firstWhere(
+            (r) => r.id == routeId,
+            orElse: () => throw Exception('Route locale introuvable: $routeId'),
+          );
+
+          // 🆕 Vérifier si la route existe déjà sur le serveur
+          final exists = await _checkRouteExistsInSupabase(routeId, user.id);
+          
+          if (exists) {
+            // Route existe → UPDATE complet
+            await _updateCompleteRouteInSupabase(route, user.id);
+            print('✅ Route mise à jour dans Supabase: $routeId');
+          } else {
+            // Route n'existe pas → INSERT
+            await _saveRouteToSupabase(route, user.id);
+            print('✅ Route insérée dans Supabase: $routeId');
+          }
+          
+          successfulSyncs.add(routeId);
+          await _markRouteSynced(routeId);
+          
+        } catch (e) {
+          print('❌ Erreur sync route $routeId: $e');
+          // Continue avec les autres routes
+        }
+      }
+
+      // Nettoyer la liste des routes synchronisées avec succès
+      if (successfulSyncs.isNotEmpty) {
+        final remainingPending = pendingSync.where((id) => !successfulSyncs.contains(id)).toList();
+        await prefs.setStringList(_pendingSyncKey, remainingPending);
+        print('✅ ${successfulSyncs.length} routes synchronisées avec succès');
+      }
+
+    } catch (e) {
+      print('❌ Erreur synchronisation générale: $e');
+    }
+  }
+
+  Future<void> _updateCompleteRouteInSupabase(SavedRoute route, String userId) async {
+    try {
+      await _supabase.from('user_routes').update({ // 🔧 Correction : saved_routes → user_routes
+        'name': route.name,
+        'activity_type': route.parameters.activityType.id,
+        'distance_km': route.parameters.distanceKm,
+        'terrain_type': route.parameters.terrainType.id,
+        'urban_density': route.parameters.urbanDensity.id,
+        'is_loop': route.parameters.isLoop,
+        'avoid_traffic': route.parameters.avoidTraffic,
+        'elevation_gain': route.parameters.elevationGain,
+        'coordinates': route.coordinates,
+        'start_latitude': route.coordinates.isNotEmpty ? route.coordinates.first[1] : null,
+        'start_longitude': route.coordinates.isNotEmpty ? route.coordinates.first[0] : null,
+        'actual_distance_km': route.actualDistance,
+        'estimated_duration_minutes': route.actualDuration,
+        'image_url': route.imageUrl,
+        'times_used': route.timesUsed,
+        'last_used_at': route.lastUsedAt?.toUtc().toIso8601String(),
+        'updated_at': DateTime.now().toUtc().toIso8601String(),
+      }).eq('id', route.id).eq('user_id', userId);
+
+    } catch (e) {
+      print('❌ Erreur mise à jour complète Supabase: $e');
+      rethrow;
     }
   }
 

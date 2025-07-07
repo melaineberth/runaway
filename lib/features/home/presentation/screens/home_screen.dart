@@ -1950,6 +1950,26 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
       });
     }
 
+    // 🆕 AJOUT : parcours chargé depuis l'historique
+    if (s.hasGeneratedRoute && s.isLoadedFromHistory && !s.isGeneratingRoute) {
+      setState(() {
+        generatedRouteCoordinates = s.generatedRoute;
+        routeMetadata = s.routeMetadata;
+      });
+      
+      if (s.generatedRoute case final coords?) {
+        _displayRouteOnMap(coords);
+        
+        // 🆕 Afficher le RouteInfoCard pour les parcours de l'historique
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            _showRouteInfoModal();
+            print('✅ RouteInfoCard affiché pour parcours historique');
+          }
+        });
+      }
+    }
+
     // erreur éventuelle
     if (s.errorMessage != null && !s.isGeneratingRoute) {
       _showRouteGenerationError(s.errorMessage!);
@@ -2103,7 +2123,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
               // 🆕 Overlay spécifique pour la génération
               if (routeState.isGeneratingRoute)
               Container(
-                color: Colors.black.withOpacity(0.5),
+                color: Colors.black.withValues(alpha: 0.5),
                 child: Center(
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
@@ -2128,7 +2148,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
               // 🆕 Overlay spécifique pour la sauvegarde
               if (routeState.isSavingRoute)
               Container(
-                color: Colors.black.withOpacity(0.5),
+                color: Colors.black.withValues(alpha: 0.5),
                 child: Center(
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
