@@ -564,7 +564,6 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
     );
     final totalRoutes = routes.length;
     final unsyncedCount = routes.unsyncedRoutes.length;
-    final syncedCount = totalRoutes - unsyncedCount;
     
     return Padding(
       padding: const EdgeInsets.symmetric(
@@ -572,7 +571,7 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
       ),
       child: SquircleContainer(
         gradient: false,
-        radius: 40.0,
+        radius: 50.0,
         padding: EdgeInsets.all(20),
         color: context.adaptiveBorder.withValues(alpha: 0.05),
         child: Row(
@@ -595,14 +594,6 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
               label: context.l10n.unsynchronized,
               color: Colors.orange,
             )
-          else
-            _buildStatItem(
-              icon: HugeIcons.strokeRoundedWifi01,
-              value: syncedCount.toString(),
-              label: context.l10n.synchronized,
-              color: Colors.green,
-            ),
-      
           ],
         ),
       ),

@@ -25,8 +25,12 @@ void showAuthModal(BuildContext context) {
       subtitle: context.l10n.loginOrCreateAccountHint,
       validLabel: context.l10n.logIn,
       cancelLabel: context.l10n.createAccount,
-      onValid: () => showSignModal(context, 1),
-      onCancel: () => showSignModal(context, 0),
+      onValid: () {
+        showSignModal(context, 1);
+      },
+      onCancel: () {
+        showSignModal(context, 0);
+      },
     ),
   );
 }

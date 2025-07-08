@@ -5,7 +5,7 @@ import 'package:hugeicons/hugeicons.dart';
 import 'package:runaway/config/extensions.dart';
 import 'package:runaway/core/widgets/icon_btn.dart';
 import 'package:runaway/core/widgets/modal_sheet.dart';
-import 'package:runaway/core/widgets/squircle_container.dart';
+import 'package:runaway/core/widgets/squircle_btn.dart';
 
 class ModalDialog extends StatelessWidget {
   final String? imgPath;
@@ -66,17 +66,17 @@ class ModalDialog extends StatelessWidget {
                 textAlign: TextAlign.center,
               ),
               40.h,
-              _buildCompleteButton(
-                context: context, 
+              SquircleBtn(
+                isDestructive: isDestructive,
                 isPrimary: true,
                 label: validLabel,
                 onTap: onValid
               ),
               if (activeCancel) ...[
                 10.h,
-                _buildCompleteButton(
-                  context: context, 
+                SquircleBtn(
                   isGradient: false,
+                  isDestructive: isDestructive,
                   label: cancelLabel ?? context.l10n.cancel,
                   onTap: onCancel ?? () {
                     HapticFeedback.mediumImpact();
@@ -102,29 +102,6 @@ class ModalDialog extends StatelessWidget {
           ),
         )
       ],
-    );
-  }
-
-  Widget _buildCompleteButton({required BuildContext context, Function()? onTap, required String label, bool isPrimary = false, bool isGradient = true}) {
-    return SquircleContainer(
-      onTap: onTap,
-      height: 55,
-      gradient: isGradient,
-      color: isPrimary ? isDestructive ? Colors.red : context.adaptivePrimary : context.adaptiveDisabled.withValues(alpha: 0.08),
-      radius: 50.0,
-      child: AnimatedSwitcher(
-        duration: Duration(milliseconds: 300),
-        child: Center(
-          child: Text(
-            label,
-            style: context.bodySmall?.copyWith(
-              fontSize: 18,
-              color: isPrimary ? Colors.white : context.adaptiveDisabled,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ),
-      ),
     );
   }
 }

@@ -1,4 +1,3 @@
-import 'package:bounce/bounce.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -7,7 +6,7 @@ import 'package:runaway/config/extensions.dart';
 import 'package:runaway/core/di/bloc_provider_extension.dart';
 import 'package:runaway/core/widgets/blurry_page.dart';
 import 'package:runaway/core/widgets/modal_sheet.dart';
-import 'package:runaway/core/widgets/squircle_container.dart';
+import 'package:runaway/core/widgets/squircle_btn.dart';
 import 'package:runaway/core/widgets/tick_slider.dart';
 
 import '../../../home/presentation/blocs/route_parameters_bloc.dart';
@@ -141,7 +140,8 @@ class _RouteParameterScreenState extends State<RouteParameterScreen> {
   Widget _buildSaveButton() {
     return Padding(
       padding: const EdgeInsets.all(30.0),
-      child: Bounce(
+      child: SquircleBtn(
+        isPrimary: true,
         onTap: () {
           if (mounted) {
             context.pop();
@@ -150,25 +150,7 @@ class _RouteParameterScreenState extends State<RouteParameterScreen> {
           Future.delayed(const Duration(milliseconds: 100));
           widget.generateRoute();
         },
-        child: SquircleContainer(
-          height: 55,
-          gradient: false,
-          color: context.adaptivePrimary,
-          radius: 50.0,
-          child: AnimatedSwitcher(
-            duration: Duration(milliseconds: 300),
-            child: Center(
-              child: Text(
-                context.l10n.generate,
-                style: context.bodySmall?.copyWith(
-                  fontSize: 18,
-                  color: Colors.white,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-          ),
-        ),
+        label: context.l10n.generate,
       ),
     );
   }

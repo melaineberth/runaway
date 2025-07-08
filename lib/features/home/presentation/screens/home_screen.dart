@@ -17,7 +17,7 @@ import 'package:runaway/core/services/conversion_triggers.dart';
 import 'package:runaway/core/widgets/loading_overlay.dart';
 import 'package:runaway/core/widgets/modal_dialog.dart';
 import 'package:runaway/core/widgets/modal_sheet.dart';
-import 'package:runaway/core/widgets/squircle_container.dart';
+import 'package:runaway/core/widgets/squircle_btn.dart';
 import 'package:runaway/features/auth/presentation/widgets/auth_text_field.dart';
 import 'package:runaway/features/home/presentation/widgets/floating_route_info_panel.dart';
 import 'package:runaway/features/route_generator/domain/models/route_parameters.dart';
@@ -2278,29 +2278,16 @@ class _SaveRouteSheetState extends State<SaveRouteSheet> {
             ),
               
             12.h,
-              
-            SquircleContainer(
-              height: 55,
-              width: double.infinity,
+
+            SquircleBtn(
+              isPrimary: true,
               onTap: () {
                 final name = _ctl.text.trim();
                 if (name.isEmpty) return;
                 context.pop(name);
               }, // 🆕 Désactiver si loading
-              padding: EdgeInsets.symmetric(vertical: 15.0, horizontal: 15.0),
-              radius: 40.0,
-              color: context.adaptivePrimary, // 🆕 Style différent si loading
-              child: Center(
-                child: Text(
-                  context.l10n.save,
-                  style: context.bodySmall?.copyWith(
-                    fontSize: 17,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.white,
-                  ),
-                ),
-              ),
-            ),
+              label: context.l10n.save,
+            ),              
           ],
         ),
       ),

@@ -47,8 +47,8 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
     return BlocListener<AuthBloc, AuthState>(
       listener: (context, authState) {
         if (authState is Authenticated) {
-          // Connexion réussie, fermer la modal et revenir à l'accueil
-          context.pop();
+          Navigator.of(context).popUntil((route) => route.isFirst);
+          context.go('/home');
         } else if (authState is ProfileIncomplete) {
           // Profil incomplet, aller vers l'onboarding
           context.go('/onboarding');

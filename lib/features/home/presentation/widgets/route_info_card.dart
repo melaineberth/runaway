@@ -4,7 +4,7 @@ import 'package:runaway/config/constants.dart';
 import 'package:runaway/config/extensions.dart';
 import 'package:runaway/core/widgets/blurry_page.dart';
 import 'package:runaway/core/widgets/icon_btn.dart';
-import 'package:runaway/core/widgets/squircle_container.dart';
+import 'package:runaway/core/widgets/squircle_btn.dart';
 import 'package:runaway/features/route_generator/domain/models/route_parameters.dart';
 
 /// Widget pour afficher les informations de la route générée
@@ -33,8 +33,6 @@ class RouteInfoCard extends StatelessWidget {
     this.isSaving = false,
     this.isAlreadySaved = false,
   });
-
-  static const _innerRadius = 35.0;
 
   @override
   Widget build(BuildContext context) {
@@ -76,16 +74,13 @@ class RouteInfoCard extends StatelessWidget {
           padding: const EdgeInsets.fromLTRB(30.0, 0.0, 30.0, 30.0),
           child: Column(
             children: [
-              _ActionButton(
-                radius: _innerRadius,
+              SquircleBtn(
                 label: context.l10n.download,
                 onTap: onShare,
                 isPrimary: true,
               ),
               8.h,
-              // 🆕 Bouton Sauvegarde
-              _ActionButton(
-                radius: _innerRadius,
+              SquircleBtn(
                 label: _getSaveLabel(context),
                 onTap: _getSaveAction(),
                 isPrimary: false,
@@ -209,81 +204,5 @@ class _InfoChip extends StatelessWidget {
         ],
       ),
     );
-  }
-}
-
-/// Bouton d'action
-class _ActionButton extends StatelessWidget {
-  final String? label;
-  final VoidCallback? onTap;
-  final bool isPrimary;
-  final double radius;
-  final bool isLoading; // 🆕 Indicateur de chargement
-  final bool isDisabled;
-
-  const _ActionButton({
-    this.label,
-    required this.onTap,
-    required this.isPrimary,
-    required this.radius,
-    this.isLoading = false,
-    this.isDisabled = false, // 🆕 Par défaut false
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final bool isInactive = isLoading || isDisabled || onTap == null;
-
-    return SquircleContainer(
-      gradient: isPrimary ? true : false,
-      onTap: isInactive ? null : onTap, // 🆕 Désactiver si loading
-      padding: EdgeInsets.symmetric(vertical: 15.0, horizontal: 15.0),
-      radius: radius,
-      height: 55,
-      color: _getBackgroundColor(context), // 🆕 Style différent si loading
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          // 🆕 Animation de rotation pour l'icône loading
-          isLoading
-              ? SizedBox(
-                  width: 16,
-                  height: 16,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    valueColor: AlwaysStoppedAnimation<Color>(
-                      isPrimary ? Colors.white : context.adaptiveDisabled,
-                    ),
-                  ),
-                )
-              : Text(
-              label!,
-              style: context.bodySmall?.copyWith(
-                fontSize: 17,
-                fontWeight: FontWeight.w600,
-                color: _getTextColor(context),
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-
-  Color _getBackgroundColor(BuildContext context) {
-    if (isPrimary) {
-      return context.adaptivePrimary;
-    } else {
-      return context.adaptiveBorder.withValues(alpha: 0.08);
-    }
-  }
-
-  Color _getTextColor(BuildContext context) {
-    if (isPrimary) {
-      return Colors.white;
-    } else if (isDisabled || isLoading) {
-      return context.adaptiveDisabled;
-    } else {
-      return context.adaptiveTextPrimary;
-    }
   }
 }

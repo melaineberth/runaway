@@ -3,7 +3,6 @@ import 'dart:math' as math;
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hugeicons/hugeicons.dart';
@@ -11,7 +10,8 @@ import 'package:image_picker/image_picker.dart';
 import 'package:runaway/config/extensions.dart';
 import 'package:runaway/core/di/bloc_provider_extension.dart';
 import 'package:runaway/core/widgets/modal_dialog.dart';
-import 'package:runaway/core/widgets/squircle_container.dart';
+import 'package:runaway/core/widgets/modal_sheet.dart';
+import 'package:runaway/core/widgets/squircle_btn.dart';
 import 'package:runaway/core/widgets/top_snackbar.dart';
 import 'package:runaway/features/auth/domain/models/profile.dart';
 import 'package:runaway/features/auth/presentation/bloc/auth_bloc.dart';
@@ -114,7 +114,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> with TickerProvid
       _isLoading = true;
     });
 
-    // 🔧 FIX: Vider le cache avant la mise à jour si avatar change
+    // Vider le cache avant la mise à jour si avatar change
     if (hasAvatarChange && widget.profile.hasAvatar) {
       try {
         CachedNetworkImage.evictFromCache(widget.profile.avatarUrl!);
@@ -168,12 +168,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> with TickerProvid
       ),
     );
 
-    // Navigation avec délai pour laisser le temps au snackbar
-    Future.delayed(Duration(milliseconds: 1500), () {
-      if (mounted) {
-        context.go('/account'); // ou context.pop() selon votre navigation
-      }
-    });
+    // Navigation
+    if (mounted) {
+      context.pop(); // ou context.pop() selon votre navigation
+    }
   }
 
   Widget _buildAvatarSection() {
@@ -278,7 +276,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> with TickerProvid
             color: context.adaptiveTextPrimary,
           ),
         ),
-        12.h,
+        8.h,
         AuthTextField(
           hint: context.l10n.fullNameHint,
           textCapitalization: TextCapitalization.words,
@@ -315,7 +313,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> with TickerProvid
             fontWeight: FontWeight.w400
           ),
         ),
-        12.h,
+        8.h,
         AuthTextField(
           initialValue: widget.profile.username ?? '',
           enabled: false,
@@ -337,69 +335,36 @@ class _EditProfileScreenState extends State<EditProfileScreen> with TickerProvid
 
   @override
   Widget build(BuildContext context) {
-    return Stack(
-      children: [
-        Scaffold(
-          appBar: AppBar(
-            forceMaterialTransparency: true,
-            backgroundColor: Colors.transparent,
-            title: Text(
-              context.l10n.editProfile,
-              style: context.bodySmall?.copyWith(
-                color: context.adaptiveTextPrimary,
-              ),
-            ),
-            leading: IconButton(
-              onPressed: _isLoading ? null : context.pop,
-              icon: Icon(
-                HugeIcons.strokeSharpArrowLeft02,
-                color: _isLoading ? context.adaptiveDisabled : context.adaptiveTextPrimary,
-              ),
-            ),
-          ),
-          body: Padding(
-            padding: const EdgeInsets.all(20.0),
-            child: ListView(
-              physics: const NeverScrollableScrollPhysics(),
-              children: [
-                FadeTransition(
-                  opacity: _fadeController,
-                  child: Form(
-                    key: _formKey,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [                      
-                        // Section Avatar
-                        _buildAvatarSection(),
-                        
-                        50.h,
-                        
-                        // Section Nom complet
-                        _buildFullNameField(),
-                        
-                        30.h,
-                        
-                        // Section Username (désactivé)
-                        _buildUsernameField(),
-                        
-                        40.h,
-                      ],
-                    ),
-                  ),
-                ),
+    return ModalSheet(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Form(
+            key: _formKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [                      
+                // Section Avatar
+                _buildAvatarSection(),
+                
+                50.h,
+                
+                // Section Nom complet
+                _buildFullNameField(),
+                
+                20.h,
+                
+                // Section Username (désactivé)
+                _buildUsernameField(),
+                
+                40.h,
+
+                _buildCompleteButton(_isLoading),
               ],
             ),
           ),
-        ),
-    
-        // Bouton en bas
-        Positioned(
-          left: 20,
-          right: 20,
-          bottom: 40,
-          child: _buildCompleteButton(_isLoading),
-        ),                
-      ],
+        ],
+      ),
     );
   }
 
@@ -415,39 +380,11 @@ class _EditProfileScreenState extends State<EditProfileScreen> with TickerProvid
           _handleProfileUpdateSuccess();
         }
       },
-      child: SquircleContainer(
+      child: SquircleBtn(
+        isPrimary: true,
+        isLoading: isLoading,
         onTap: _hasChanges ? _saveProfile : null,
-        height: 55,
-        color: isLoading || !_hasChanges ? context.adaptivePrimary.withValues(alpha: 0.6) : context.adaptivePrimary,
-        radius: 30,
-        padding: EdgeInsets.symmetric(
-          horizontal: 15.0,
-          vertical: 5.0,
-        ),
-        child: AnimatedSwitcher(
-          duration: Duration(milliseconds: 300),
-          child: Center(
-            child: isLoading
-            ? Text(
-                "Modification en cours...",
-                style: context.bodySmall?.copyWith(
-                  fontSize: 19,
-                  color: Colors.white,
-                  fontWeight: FontWeight.w600,
-                ),
-              )
-              .animate(onPlay: (controller) => controller.loop())
-              .shimmer(color: context.adaptivePrimary, duration: Duration(seconds: 2))
-            : Text(
-                context.l10n.complete,
-                style: context.bodySmall?.copyWith(
-                  fontSize: 19,
-                  color: Colors.white,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-          ),
-        ),
+        label: context.l10n.complete,
       ),
     );
   }

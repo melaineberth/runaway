@@ -7,6 +7,7 @@ import 'package:pull_down_button/pull_down_button.dart';
 import 'package:runaway/config/constants.dart';
 import 'package:runaway/config/extensions.dart';
 import 'package:runaway/core/widgets/modal_sheet.dart';
+import 'package:runaway/core/widgets/squircle_btn.dart';
 import 'package:runaway/core/widgets/squircle_container.dart';
 import 'package:runaway/core/services/reverse_geocoding_service.dart';
 import 'package:runaway/core/widgets/top_snackbar.dart';
@@ -262,7 +263,7 @@ class _HistoricCardState extends State<HistoricCard> {
 
   @override
   Widget build(BuildContext context) {
-    const innerRadius = 30.0;
+    const innerRadius = 50.0;
     const double imgSize = 150;
     const double paddingValue = 15.0;
     const padding = EdgeInsets.all(paddingValue);
@@ -284,7 +285,7 @@ class _HistoricCardState extends State<HistoricCard> {
               height: 250,
               width: imgSize,
               child: SquircleContainer(
-                radius: innerRadius,
+                radius: 50,
                 color: context.adaptiveDisabled,
                 padding: EdgeInsets.zero,
                 child: _buildRouteImage(),
@@ -360,25 +361,12 @@ class _HistoricCardState extends State<HistoricCard> {
                   ),
               ],
             ),
-        
-            // Boutons d'action
-            SquircleContainer(
+
+            SquircleBtn(
+              isPrimary: true,
               onTap: _showExportDialog,
-              radius: innerRadius,
-              height: 55,
-              color: context.adaptivePrimary,
-              padding: EdgeInsets.symmetric(vertical: 15.0),
-              child: Center(
-                child: Text(
-                  context.l10n.download, 
-                  style: context.bodySmall?.copyWith(
-                    fontSize: 18,
-                    color: Colors.white,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ),
+              label: context.l10n.download,
+            ),        
           ],
         ),
       ),
@@ -788,29 +776,16 @@ class _RenameRouteSheetState extends State<RenameRouteSheet> {
             ),
               
             12.h,
-              
-            SquircleContainer(
-              width: double.infinity,
-              height: 55,
+
+            SquircleBtn(
+              isPrimary: true,
               onTap: () {
                 final name = _ctl.text.trim();
                 if (name.isEmpty) return;
                 context.pop(name);
               }, // 🆕 Désactiver si loading
-              padding: EdgeInsets.symmetric(vertical: 15.0, horizontal: 15.0),
-              radius: 40.0,
-              color: context.adaptivePrimary, // 🆕 Style différent si loading
-              child: Center(
-                child: Text(
-                  context.l10n.save,
-                  style: context.bodySmall?.copyWith(
-                    fontSize: 17,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.white,
-                  ),
-                ),
-              ),
-            ),
+              label: context.l10n.save,
+            ),                 
           ],
         ),
       ),

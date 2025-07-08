@@ -4,7 +4,7 @@ import 'package:hugeicons/hugeicons.dart';
 import 'package:runaway/config/extensions.dart';
 import 'package:runaway/core/di/bloc_provider_extension.dart';
 import 'package:runaway/core/widgets/label_divider.dart';
-import 'package:runaway/core/widgets/squircle_container.dart';
+import 'package:runaway/core/widgets/squircle_btn.dart';
 import 'package:runaway/features/auth/presentation/bloc/auth_event.dart';
 import 'package:runaway/features/auth/presentation/widgets/auth_text_field.dart';
 
@@ -143,38 +143,11 @@ class _SignupScreenState extends State<SignupScreen> {
   }
 
   Widget _buildSignUpButton() {
-    return SizedBox(
-      width: double.infinity,
-      child: SquircleContainer(
-        onTap: widget.isLoading ? null : _handleSignUp,
-        height: 60,
-        color: widget.isLoading 
-          ? context.adaptivePrimary.withValues(alpha: 0.5)
-          : context.adaptivePrimary,
-        radius: 30,
-        padding: EdgeInsets.symmetric(
-          horizontal: 15.0,
-          vertical: 5.0,
-        ),
-        child: Center(
-          child: widget.isLoading
-            ? SizedBox(
-                width: 20,
-                height: 20,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                ),
-              )
-            : Text(
-                context.l10n.continueForms,
-                style: context.bodySmall?.copyWith(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-        ),
-      ),
+    return SquircleBtn(
+      isPrimary: true,
+      isLoading: widget.isLoading,
+      onTap: widget.isLoading ? null : _handleSignUp,
+      label: context.l10n.continueForms,
     );
   }
 
@@ -184,67 +157,49 @@ class _SignupScreenState extends State<SignupScreen> {
       child: Row(
         children: [
           Expanded(
-            child: SquircleContainer(
+            child: SquircleBtn(
+              isPrimary: true,
+              isLoading: widget.isLoading,
               onTap: widget.isLoading ? null : _handleAppleSignIn,
-              height: 60,
-              color: widget.isLoading 
-                ? context.adaptivePrimary.withValues(alpha: 0.5) 
-                : context.adaptivePrimary,
-              radius: 30,
-              padding: EdgeInsets.symmetric(
-                horizontal: 15.0,
-                vertical: 5.0,
-              ),
-              child: Center(
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      HugeIcons.solidSharpApple,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    HugeIcons.solidSharpApple,
+                    color: Colors.white,
+                  ),
+                  5.w,
+                  Text(
+                    context.l10n.apple,
+                    style: context.bodySmall?.copyWith(
                       color: Colors.white,
                     ),
-                    5.w,
-                    Text(
-                      context.l10n.apple,
-                      style: context.bodySmall?.copyWith(
-                        color: Colors.white,
-                      ),
-                    ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
           ),
-          10.w,
+          8.w,
           Expanded(
-            child: SquircleContainer(
+            child: SquircleBtn(
+              isPrimary: true,
+              isLoading: widget.isLoading,
               onTap: widget.isLoading ? null : _handleGoogleSignIn,
-              height: 60,
-              color: widget.isLoading 
-                ? context.adaptivePrimary.withValues(alpha: 0.5)
-                : context.adaptivePrimary,
-              radius: 30,
-              padding: EdgeInsets.symmetric(
-                horizontal: 15.0,
-                vertical: 5.0,
-              ),
-              child: Center(
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      HugeIcons.solidSharpGoogle,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    HugeIcons.solidSharpGoogle,
+                    color: Colors.white,
+                  ),
+                  5.w,
+                  Text(
+                    context.l10n.google,
+                    style: context.bodySmall?.copyWith(
                       color: Colors.white,
                     ),
-                    5.w,
-                    Text(
-                      context.l10n.google,
-                      style: context.bodySmall?.copyWith(
-                        color: Colors.white,
-                      ),
-                    ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
           ),

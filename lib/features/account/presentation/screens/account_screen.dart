@@ -23,6 +23,7 @@ import 'package:runaway/core/widgets/icon_btn.dart';
 import 'package:runaway/core/widgets/modal_dialog.dart';
 import 'package:runaway/core/widgets/squircle_container.dart';
 import 'package:runaway/core/widgets/top_snackbar.dart';
+import 'package:runaway/features/account/presentation/screens/edit_profile_screen.dart';
 import 'package:runaway/features/account/presentation/widgets/language_selector.dart';
 import 'package:runaway/features/account/presentation/widgets/theme_selector.dart';
 import 'package:runaway/features/auth/domain/models/profile.dart';
@@ -742,7 +743,13 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
   }
 
   void _navigateToEditProfile(BuildContext context, Profile profile) {
-    context.push('/edit-profile', extra: profile);
+    showModalSheet(
+      context: context, 
+      backgroundColor: Colors.transparent,
+      child: EditProfileScreen(
+        profile: profile,
+      ),
+    );
   }
 
   void _showLogoutDialog(BuildContext context) {

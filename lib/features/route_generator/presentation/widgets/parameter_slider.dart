@@ -53,8 +53,8 @@ class ParameterSlider extends StatelessWidget {
           unit: unit,
           initialValue: value,
           onChanged: onChanged,
-          majorTickColor: context.adaptiveDisabled.withValues(alpha: .35),
-          minorTickColor: context.adaptiveDisabled.withValues(alpha: .25),
+          majorTickColor: context.adaptiveDisabled.withValues(alpha: .25),
+          minorTickColor: context.adaptiveDisabled.withValues(alpha: .15),
           enableHapticFeedback: enableHapticFeedback, // ✅ NOUVEAU
           hapticIntensity: hapticIntensity, // ✅ NOUVEAU
         ),
