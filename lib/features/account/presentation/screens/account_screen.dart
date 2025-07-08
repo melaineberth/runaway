@@ -30,6 +30,9 @@ import 'package:runaway/features/auth/domain/models/profile.dart';
 import 'package:runaway/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:runaway/features/auth/presentation/bloc/auth_event.dart';
 import 'package:runaway/features/auth/presentation/bloc/auth_state.dart';
+import 'package:runaway/features/credits/presentation/blocs/credits_bloc.dart';
+import 'package:runaway/features/credits/presentation/blocs/credits_event.dart';
+import 'package:runaway/features/credits/presentation/blocs/credits_state.dart';
 import 'package:top_snackbar_flutter/top_snack_bar.dart';
 import 'dart:math' as math;
 
@@ -50,6 +53,13 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
   void initState() {
     super.initState();
     _initializeAnimations();
+
+    // 🆕 Charger les crédits au démarrage
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        context.read<CreditsBloc>().add(const CreditsRequested());
+      }
+    });
   }
 
   void _initializeAnimations() {
@@ -112,9 +122,8 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
         showTopSnackBar(
           Overlay.of(context),
           TopSnackBar(
+            isError: true,
             title: 'Could not launch email app',
-            icon: HugeIcons.solidRoundedCancelCircle,
-            color: Colors.red,
           ),
         );
       }
@@ -438,6 +447,9 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
               title: context.l10n.account,
               children: [
                 // Disconnect user
+                _buildCreditsTile(),
+
+                // Disconnect user
                 _buildSettingTile(
                   context,
                   label: context.l10n.disconnect,
@@ -480,6 +492,50 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
           ],
         ),
       );
+  }
+
+  Widget _buildCreditsTile() {
+    return BlocBuilder<CreditsBloc, CreditsState>(
+      builder: (context, creditsState) {
+        // Déterminer l'affichage selon l'état
+        String creditsDisplay;
+        bool isLoading = false;
+
+        if (creditsState is CreditsLoading) {
+          isLoading = true;
+          creditsDisplay = '--';
+        } else if (creditsState is CreditsLoaded) {
+          final credits = creditsState.credits.availableCredits;
+          creditsDisplay = credits.toString();
+        } else if (creditsState is CreditUsageSuccess) {
+          final credits = creditsState.updatedCredits.availableCredits;
+          creditsDisplay = credits.toString();
+        } else if (creditsState is CreditPurchaseSuccess) {
+          final credits = creditsState.updatedCredits.availableCredits;
+          creditsDisplay = credits.toString();
+        } else if (creditsState is CreditsError) {
+          creditsDisplay = creditsState.message;
+        } else {
+          // État initial
+          creditsDisplay = '--';
+        }
+
+        return _buildSettingTile(
+          context,
+          label: context.l10n.manageCredits,
+          icon: HugeIcons.strokeRoundedWallet05,
+          onTap: isLoading ? null : () => context.push("/manage-credits"),
+          child: IconBtn(
+            padding: 0.0,
+            backgroundColor: Colors.transparent,
+            iconSize: 19,
+            iconColor: context.adaptiveTextSecondary,
+            trailling: HugeIcons.strokeStandardArrowRight01,
+            label: creditsDisplay,
+          ),
+        );
+      },
+    );
   }
 
   Widget _buildAppVersion() {

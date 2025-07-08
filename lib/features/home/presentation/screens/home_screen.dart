@@ -467,7 +467,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
         overlay,
         TopSnackBar(
           title: 'Aucun parcours à sauvegarder',
-          icon: HugeIcons.solidRoundedAlert02,
         ),
       );
       return;
@@ -479,8 +478,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
         overlay,
         TopSnackBar(
           title: 'Sauvegarde en cours...',
-          icon: HugeIcons.strokeRoundedLoading03,
-          color: Colors.orange,
         ),
       );
       return;
@@ -498,8 +495,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
       showTopSnackBar(
         overlay,
         TopSnackBar(
+          isError: true,
           title: 'Erreur de connexion',
-          icon: HugeIcons.solidRoundedAlert02,
         ),
       );
       return;
@@ -537,8 +534,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
       showTopSnackBar(
         overlay,
         TopSnackBar(
+          isError: true,
           title: 'Carte non disponible',
-          icon: HugeIcons.solidRoundedAlert02,
         ),
       );
       return;
@@ -548,8 +545,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
       showTopSnackBar(
         overlay,
         TopSnackBar(
+          isError: true,
           title: 'Aucun parcours à sauvegarder',
-          icon: HugeIcons.solidRoundedAlert02,
         ),
       );
       return;
@@ -561,8 +558,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
       showTopSnackBar(
         overlay,
         TopSnackBar(
+          isError: true,
           title: 'Paramètres de parcours manquants',
-          icon: HugeIcons.solidRoundedAlert02,
         ),
       );
       return;
@@ -587,8 +584,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
       overlay,
       TopSnackBar(
         title: 'Parcours sauvegardé',
-        icon: HugeIcons.solidRoundedTick04,
-        color: Colors.green,
       ),
     );
   }
@@ -1008,8 +1003,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
     showTopSnackBar(
       Overlay.of(context),
       TopSnackBar(
+        isError: true,
         title: error,
-        icon: HugeIcons.solidRoundedAlert02,
       ),
     );
   }
@@ -1697,8 +1692,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
       showTopSnackBar(
         Overlay.of(context),
         TopSnackBar(
+          isError: true,
           title: 'Aucun parcours à exporter',
-          icon: HugeIcons.solidRoundedAlert02,
         ),
       );
       return;
@@ -1735,8 +1730,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
           Overlay.of(context),
           TopSnackBar(
             title: 'Parcours exporté en ${format.displayName}',
-            icon: HugeIcons.solidRoundedTick04,
-            color: Colors.lightGreen,
           ),
         );
       }
@@ -1748,8 +1741,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
         showTopSnackBar(
           Overlay.of(context),
           TopSnackBar(
+            isError: true,
             title: 'Erreur d\'export: $e',
-            icon: HugeIcons.solidRoundedAlert02,
           ),
         );
       }
@@ -2019,7 +2012,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
                     if (_showLottieMarker && _lottieMarkerLat != null && _lottieMarkerLng != null)
                       _buildLottieMarker(),
               
-                      // Interface normale (masquée en mode navigation OU navigation live)
+                      // Interface normale
                       if (!isNavigationMode && !_isInNavigationMode)
                       Padding(
                         padding: const EdgeInsets.symmetric(vertical: 30.0),

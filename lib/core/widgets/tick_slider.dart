@@ -67,9 +67,7 @@ class _TickSliderState extends State<TickSlider> with TickerProviderStateMixin {
   final List<double> _velocityHistory = [];  // Historique des vitesses
   bool _isDragging = false;
 
-  late final AnimationController _spring =
-      AnimationController.unbounded(vsync: this)
-        ..addListener(() => setState(() => _overscroll = _spring.value));
+  late final AnimationController _spring;
 
   double get _maxStretchPx =>
       widget.stretch <= 1 ? _trackW * widget.stretch : widget.stretch;
@@ -79,6 +77,15 @@ class _TickSliderState extends State<TickSlider> with TickerProviderStateMixin {
     super.initState();
     _value = widget.initialValue.clamp(widget.min, widget.max);
     _currentTick = _valueToTick(_value);
+
+    // ✅ Initialiser dans initState au lieu de la déclaration
+    _spring = AnimationController.unbounded(vsync: this)
+      ..addListener(() {
+        if (mounted) {
+          setState(() => _overscroll = _spring.value);
+        }
+      });
+
   }
 
   @override

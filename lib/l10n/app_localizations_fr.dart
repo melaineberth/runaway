@@ -854,4 +854,80 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get supportEmailBody => 'Bonjour le support Trailix,\n\nJ\'ai des difficultés avec l\'application.\nPourriez-vous m\'aider à résoudre ce problème ?\n\nMerci.';
+
+  @override
+  String get insufficientCreditsTitle => 'Crédits insuffisants';
+
+  @override
+  String insufficientCreditsDescription(int requiredCredits, String action, int availableCredits) {
+    return 'Il vous faut $requiredCredits crédit(s) pour $action. Vous avez actuellement $availableCredits crédit(s).';
+  }
+
+  @override
+  String get buyCredits => 'Acheter des crédits';
+
+  @override
+  String get currentCredits => 'Crédits actuels';
+
+  @override
+  String get availableCredits => 'Crédits disponibles';
+
+  @override
+  String get totalUsed => 'Total utilisé';
+
+  @override
+  String get popular => 'Populaire';
+
+  @override
+  String get buySelectedPlan => 'Acheter ce plan';
+
+  @override
+  String get selectPlan => 'Sélectionnez un plan';
+
+  @override
+  String get purchaseSimulated => 'Achat simulé';
+
+  @override
+  String get purchaseSimulatedDescription => 'En mode développement, les achats sont simulés. Voulez-vous simuler cet achat ?';
+
+  @override
+  String get simulatePurchase => 'Simuler l\'achat';
+
+  @override
+  String get purchaseSuccess => 'Achat réussi !';
+
+  @override
+  String get transactionHistory => 'Historique des transactions';
+
+  @override
+  String get noTransactions => 'Aucune transaction pour le moment';
+
+  @override
+  String get yesterday => 'Hier';
+
+  @override
+  String get daysAgo => 'jours';
+
+  @override
+  String get ok => 'OK';
+
+  @override
+  String get creditUsageSuccess => 'Crédits utilisés avec succès';
+
+  @override
+  String get routeGenerationWithCredits => '1 crédit sera utilisé pour générer ce parcours';
+
+  @override
+  String get creditsRequiredForGeneration => 'Génération de parcours (1 crédit)';
+
+  @override
+  String get manageCredits => 'Gérer mes crédits';
+
+  @override
+  String get freeCreditsWelcome => '🎉 Bienvenue ! Vous avez reçu 3 crédits gratuits pour commencer';
+
+  @override
+  String creditsLeft(int count) {
+    return '$count crédit(s) restant(s)';
+  }
 }

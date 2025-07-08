@@ -576,8 +576,6 @@ class _ActivityScreenState extends State<ActivityScreen> with TickerProviderStat
             Overlay.of(context),
             TopSnackBar(
               title: context.l10n.updatedGoal,
-              icon: HugeIcons.strokeRoundedCheckmarkCircle03,
-              color: Colors.green,
             ),
           );
         }
@@ -590,8 +588,6 @@ class _ActivityScreenState extends State<ActivityScreen> with TickerProviderStat
             Overlay.of(context),
             TopSnackBar(
               title: context.l10n.createdGoal,
-              icon: HugeIcons.strokeRoundedCheckmarkCircle03,
-              color: Colors.green,
             ),
           );
         }
@@ -619,8 +615,6 @@ class _ActivityScreenState extends State<ActivityScreen> with TickerProviderStat
           Overlay.of(context),
           TopSnackBar(
             title: context.l10n.createdGoal,
-            icon: HugeIcons.strokeRoundedCheckmarkCircle03,
-            color: Colors.green,
           ),
         );
       }
@@ -653,8 +647,6 @@ class _ActivityScreenState extends State<ActivityScreen> with TickerProviderStat
             Overlay.of(context),
             TopSnackBar(
               title: context.l10n.removedGoal,
-              icon: HugeIcons.solidRoundedRemoveCircleHalfDot,
-              color: Colors.orange,
             ),
           );
         },
@@ -684,8 +676,6 @@ class _ActivityScreenState extends State<ActivityScreen> with TickerProviderStat
             Overlay.of(context),
             TopSnackBar(
               title: 'Tous les objectifs ont été supprimés',
-              icon: HugeIcons.solidRoundedRemoveCircleHalfDot,
-              color: Colors.orange,
             ),
           );
         },

@@ -854,4 +854,80 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get supportEmailBody => 'Hello Trailix Support,\n\nI\'m having trouble in the app.\nCould you please help me resolve this?\n\nThank you.';
+
+  @override
+  String get insufficientCreditsTitle => 'Insufficient credits';
+
+  @override
+  String insufficientCreditsDescription(int requiredCredits, String action, int availableCredits) {
+    return 'You need $requiredCredits credit(s) to $action. You currently have $availableCredits credit(s).';
+  }
+
+  @override
+  String get buyCredits => 'Buy credits';
+
+  @override
+  String get currentCredits => 'Current credits';
+
+  @override
+  String get availableCredits => 'Available credits';
+
+  @override
+  String get totalUsed => 'Total used';
+
+  @override
+  String get popular => 'Popular';
+
+  @override
+  String get buySelectedPlan => 'Buy this plan';
+
+  @override
+  String get selectPlan => 'Select a plan';
+
+  @override
+  String get purchaseSimulated => 'Purchase simulated';
+
+  @override
+  String get purchaseSimulatedDescription => 'In development mode, purchases are simulated. Do you want to simulate this purchase?';
+
+  @override
+  String get simulatePurchase => 'Simulate purchase';
+
+  @override
+  String get purchaseSuccess => 'Purchase successful!';
+
+  @override
+  String get transactionHistory => 'Transaction history';
+
+  @override
+  String get noTransactions => 'No transactions yet';
+
+  @override
+  String get yesterday => 'Yesterday';
+
+  @override
+  String get daysAgo => 'days';
+
+  @override
+  String get ok => 'OK';
+
+  @override
+  String get creditUsageSuccess => 'Credits used successfully';
+
+  @override
+  String get routeGenerationWithCredits => '1 credit will be used to generate this route';
+
+  @override
+  String get creditsRequiredForGeneration => 'Route generation (1 credit)';
+
+  @override
+  String get manageCredits => 'Manage my credits';
+
+  @override
+  String get freeCreditsWelcome => '🎉 Welcome! You have received 3 free credits to start';
+
+  @override
+  String creditsLeft(int count) {
+    return '$count credit(s) left';
+  }
 }

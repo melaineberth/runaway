@@ -158,8 +158,6 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
           Overlay.of(context),
           TopSnackBar(
             title: 'Parcours "${route.name}" supprimé',
-            icon: HugeIcons.strokeRoundedCheckmarkCircle03,
-            color: Colors.green,
           ),
         );
       }
@@ -171,9 +169,8 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
         showTopSnackBar(
           Overlay.of(context),
           TopSnackBar(
+            isError: true,
             title: 'Erreur lors de la suppression',
-            icon: HugeIcons.solidRoundedAlert02,
-            color: Colors.red,
           ),
         );
       }
@@ -202,9 +199,8 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
         showTopSnackBar(
           Overlay.of(context),
           TopSnackBar(
+            isError: true,
             title: 'Erreur lors de l\'affichage du parcours',
-            icon: HugeIcons.solidRoundedAlert02,
-            color: Colors.red,
           ),
         );
       }
@@ -236,8 +232,6 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
         Overlay.of(context),
         TopSnackBar(
           title: 'Mise à jour effectuée',
-          icon: HugeIcons.strokeRoundedCheckmarkCircle03,
-          color: Colors.green,
         ),
       );
     }
@@ -252,9 +246,8 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
         showTopSnackBar(
           Overlay.of(context),
           TopSnackBar(
+            isError: true,
             title: 'Erreur: ${e.toString().replaceFirst('Exception: ', '')}',
-            icon: HugeIcons.solidRoundedAlert02,
-            color: Colors.red,
           ),
         );
       }

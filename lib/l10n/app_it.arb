@@ -1161,5 +1161,89 @@
   "supportEmailBody": "Ciao supporto Trailix,\n\nSto avendo problemi nell'app.\nPotreste aiutarmi a risolvere questo?\n\nGrazie.",
   "@supportEmailBody": {
     "description": "Corpo dell'email di supporto."
+  },
+
+  "insufficientCreditsTitle": "Crediti insufficienti",
+  "@insufficientCreditsTitle": {
+    "description": "Titre affiché quand l'utilisateur n'a pas assez de crédits"
+  },
+  "insufficientCreditsDescription": "Hai bisogno di {requiredCredits} credito/i per {action}. Al momento hai {availableCredits} credito/i.",
+  "@insufficientCreditsDescription": {
+    "description": "Description expliquant le manque de crédits",
+    "placeholders": {
+      "requiredCredits": { "type": "int", "example": "1" },
+      "action":       { "type": "String", "example": "generare un percorso" },
+      "availableCredits": { "type": "int", "example": "0" }
+    }
+  },
+  "buyCredits": "Acquista crediti",
+  "@buyCredits": { "description": "Bouton pour acheter des crédits" },
+
+  "currentCredits": "Crediti attuali",
+  "@currentCredits": { "description": "Label pour afficher les crédits actuels" },
+
+  "availableCredits": "Crediti disponibili",
+  "@availableCredits": { "description": "Label pour les crédits disponibles" },
+
+  "totalUsed": "Totale utilizzato",
+  "@totalUsed": { "description": "Label pour le total de crédits utilisés" },
+
+  "popular": "Popolare",
+  "@popular": { "description": "Badge pour le plan le plus populaire" },
+
+  "buySelectedPlan": "Acquista questo piano",
+  "@buySelectedPlan": { "description": "Bouton pour acheter le plan sélectionné" },
+
+  "selectPlan": "Seleziona un piano",
+  "@selectPlan": { "description": "Message quand aucun plan n'est sélectionné" },
+
+  "purchaseSimulated": "Acquisto simulato",
+  "@purchaseSimulated": { "description": "Titre pour la simulation d'achat" },
+
+  "purchaseSimulatedDescription": "In modalità sviluppo, gli acquisti sono simulati. Vuoi simulare questo acquisto?",
+  "@purchaseSimulatedDescription": { "description": "Description pour la simulation d'achat" },
+
+  "simulatePurchase": "Simula acquisto",
+  "@simulatePurchase": { "description": "Bouton pour simuler un achat" },
+
+  "purchaseSuccess": "Acquisto riuscito!",
+  "@purchaseSuccess": { "description": "Titre de succès d'achat" },
+
+  "transactionHistory": "Storico delle transazioni",
+  "@transactionHistory": { "description": "Titre de l'écran d'historique" },
+
+  "noTransactions": "Nessuna transazione al momento",
+  "@noTransactions": { "description": "Message quand il n'y a pas de transactions" },
+
+  "yesterday": "Ieri",
+  "@yesterday": { "description": "Libellé pour hier dans les dates" },
+
+  "daysAgo": "giorni",
+  "@daysAgo": { "description": "Suffixe pour les jours passés" },
+
+  "ok": "OK",
+  "@ok": { "description": "Bouton OK générique" },
+
+  "creditUsageSuccess": "Crediti utilizzati con successo",
+  "@creditUsageSuccess": { "description": "Message de succès d'utilisation de crédits" },
+
+  "routeGenerationWithCredits": "Verrà utilizzato 1 credito per generare questo percorso",
+  "@routeGenerationWithCredits": { "description": "Information sur l'utilisation de crédits pour la génération" },
+
+  "creditsRequiredForGeneration": "Generazione percorso (1 credito)",
+  "@creditsRequiredForGeneration": { "description": "Description de l'action qui consomme des crédits" },
+
+  "manageCredits": "Gestisci i miei crediti",
+  "@manageCredits": { "description": "Lien pour gérer les crédits" },
+
+  "freeCreditsWelcome": "🎉 Benvenuto! Hai ricevuto 3 crediti gratuiti per iniziare",
+  "@freeCreditsWelcome": { "description": "Message de bienvenue avec crédits gratuits" },
+
+  "creditsLeft": "{count} credito/i rimanente/i",
+  "@creditsLeft": {
+    "description": "Affichage du nombre de crédits restants",
+    "placeholders": {
+      "count": { "type": "int", "example": "5" }
+    }
   }
 }

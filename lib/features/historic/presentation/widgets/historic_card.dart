@@ -26,7 +26,7 @@ class HistoricCard extends StatefulWidget {
   final VoidCallback? onDelete;
   final Function(String)? onRename;
   final VoidCallback? onSync;
-  final VoidCallback? onShowOnMap; // 🆕 Callback pour afficher sur la carte
+  final VoidCallback? onShowOnMap; // Callback pour afficher sur la carte
 
   const HistoricCard({
     super.key,
@@ -48,8 +48,8 @@ class _HistoricCardState extends State<HistoricCard> {
   String? _locationName;
   bool _isImageLoading = true;
   bool _hasImageError = false;
-  bool _isRenaming = false; // 🆕 État de renommage
-  String _originalName = ''; // 🆕 Nom original pour annulation
+  bool _isRenaming = false; // État de renommage
+  String _originalName = ''; // Nom original pour annulation
 
   @override
   void initState() {
@@ -76,7 +76,7 @@ class _HistoricCardState extends State<HistoricCard> {
     setState(() {});
   }
 
-  // 1. Ouvre la modal sheet et traite le résultat
+  // Ouvre la modal sheet et traite le résultat
   Future<void> _showRenameSheet() async {
     final newName = await showModalBottomSheet<String>(
       useRootNavigator: true,
@@ -99,7 +99,7 @@ class _HistoricCardState extends State<HistoricCard> {
     }
   }
 
-  /// 🆕 Confirme le renommage
+  /// Confirme le renommage
   void _confirmRename() {
     final newName = _nameController.text.trim();
     
@@ -145,7 +145,7 @@ class _HistoricCardState extends State<HistoricCard> {
     print('✏️ Renommage confirmé: ${widget.route.id} -> $newName');
   }
 
-  /// 🆕 Annule le renommage
+  /// Annule le renommage
   void _cancelRename() {
     setState(() {
       _isRenaming = false;
@@ -154,21 +154,20 @@ class _HistoricCardState extends State<HistoricCard> {
     _focusNode.unfocus();
   }
 
-  /// 🆕 Affiche une erreur
+  /// Affiche une erreur
   void _showError(String message) {
     if (mounted) {
       showTopSnackBar(
         Overlay.of(context),
         TopSnackBar(
+          isError: true,
           title: message,
-          icon: HugeIcons.solidRoundedAlert02,
-          color: Colors.red,
         ),
       );
     }
   }
 
-  /// 🆕 Charge le nom de la localisation via reverse geocoding
+  /// Charge le nom de la localisation via reverse geocoding
   Future<void> _loadLocationName() async {
     try {
       final locationInfo = await ReverseGeocodingService.getLocationNameForRoute(
@@ -190,7 +189,7 @@ class _HistoricCardState extends State<HistoricCard> {
     }
   }
 
-  /// 🆕 Affiche le dialogue de sélection du format d'export
+  /// Affiche le dialogue de sélection du format d'export
   void _showExportDialog() {
     showModalSheet(
       context: context, 
@@ -203,19 +202,21 @@ class _HistoricCardState extends State<HistoricCard> {
     );
   }
 
-  /// 🆕 Exporte la route dans le format sélectionné
+  /// Exporte la route dans le format sélectionné
   Future<void> _exportRoute(RouteExportFormat format) async {
     try {
       // Créer les métadonnées à partir de la route sauvegardée
       final metadata = _buildMetadataFromRoute();
+    
+      // Nettoyer le nom du fichier
+      final cleanName = _sanitizeFileName(widget.route.name);
       
-      // Exporter la route
       await RouteExportService.exportRoute(
         context: context,
         coordinates: widget.route.coordinates,
         metadata: metadata,
         format: format,
-        customName: widget.route.name,
+        customName: cleanName,
       );
 
       // Afficher un message de succès
@@ -224,8 +225,6 @@ class _HistoricCardState extends State<HistoricCard> {
           Overlay.of(context),
           TopSnackBar(
             title: 'Parcours exporté en ${format.displayName}',
-            icon: HugeIcons.solidRoundedTick04,
-            color: Colors.lightGreen,
           ),
         );
       }
@@ -236,16 +235,26 @@ class _HistoricCardState extends State<HistoricCard> {
         showTopSnackBar(
           Overlay.of(context),
           TopSnackBar(
+            isError: true,
             title: 'Erreur lors de l\'export: $e',
-            icon: HugeIcons.solidRoundedAlert02,
-            color: Colors.red,
           ),
         );
       }
     }
   }
 
-  /// 🆕 Construit les métadonnées à partir de la route sauvegardée
+  /// Nettoie le nom de fichier en supprimant les caractères invalides
+  String _sanitizeFileName(String fileName) {
+    return fileName
+        .replaceAll(RegExp(r'[<>:"/\\|?*]'), '_') // Caractères Windows invalides
+        .replaceAll(RegExp(r'[()-]'), '')
+        .replaceAll(RegExp(r'[()]'), '') // Parenthèses
+        .replaceAll(RegExp(r'\s+'), '_') // Espaces multiples
+        .replaceAll(RegExp(r'_+'), '_') // Underscores multiples
+        .replaceAll(RegExp(r'^_|_$'), ''); // Underscores en début/fin
+  }
+
+  /// Construit les métadonnées à partir de la route sauvegardée
   Map<String, dynamic> _buildMetadataFromRoute() {
     return {
       'distanceKm': widget.route.actualDistance ?? widget.route.parameters.distanceKm,

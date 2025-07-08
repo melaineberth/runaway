@@ -2,6 +2,10 @@
 import 'dart:math' as math;
 import 'package:hydrated_bloc/hydrated_bloc.dart';
 import 'package:runaway/core/services/screenshot_service.dart';
+import 'package:runaway/features/credits/data/repositories/credits_repository.dart';
+import 'package:runaway/features/credits/presentation/blocs/credits_bloc.dart';
+import 'package:runaway/features/credits/presentation/blocs/credits_event.dart';
+import 'package:runaway/features/credits/presentation/blocs/credits_state.dart';
 import 'package:runaway/features/route_generator/domain/models/saved_route.dart';
 import '../../../data/repositories/routes_repository.dart';
 import '../../../data/services/graphhopper_api_service.dart';
@@ -12,10 +16,17 @@ import 'route_generation_state.dart';
 /// BLoC pour gérer l'analyse de zone et la génération de parcours
 class RouteGenerationBloc extends HydratedBloc<RouteGenerationEvent, RouteGenerationState> {
   final RoutesRepository _routesRepository;
+  final CreditsBloc _creditsBloc; // 🆕 Injection du BLoC crédits
+  final CreditsRepository _creditsRepository; // 🆕 Ajout pour accès direct
 
-  RouteGenerationBloc({RoutesRepository? routesRepository}) 
-      : _routesRepository = routesRepository ?? RoutesRepository(),
-        super(const RouteGenerationState()) {
+  RouteGenerationBloc({
+    RoutesRepository? routesRepository,
+    required CreditsBloc creditsBloc, // 🆕 Paramètre requis
+    CreditsRepository? creditsRepository, // 🆕 Paramètre optionnel
+  }) : _routesRepository = routesRepository ?? RoutesRepository(),
+       _creditsBloc = creditsBloc,
+       _creditsRepository = creditsRepository ?? CreditsRepository(), // 🆕 Injection
+       super(const RouteGenerationState()) {
     on<ZoneAnalysisRequested>(_onZoneAnalysisRequested);
     on<RouteGenerationRequested>(_onRouteGenerationRequested);
     on<GeneratedRouteSaved>(_onGeneratedRouteSaved);
@@ -26,34 +37,6 @@ class RouteGenerationBloc extends HydratedBloc<RouteGenerationEvent, RouteGenera
     on<RouteUsageUpdated>(_onRouteUsageUpdated);
     on<SyncPendingRoutesRequested>(_onSyncPendingRoutesRequested);
     on<RouteStateReset>(_onRouteStateReset);
-  }
-
-  /// 🆕 Reset complet de l'état pour une nouvelle génération propre
-  Future<void> _onRouteStateReset(
-    RouteStateReset event,
-    Emitter<RouteGenerationState> emit,
-  ) async {
-    final resetId = DateTime.now().millisecondsSinceEpoch.toString();
-    print('🔄 === DÉBUT RESET COMPLET ÉTAT (ID: $resetId) ===');
-    
-    // Reset complet vers l'état initial
-    emit(RouteGenerationState(
-      pois: const [],
-      isAnalyzingZone: false,
-      isGeneratingRoute: false,
-      isSavingRoute: false, // 🆕 Ajout du reset pour isSavingRoute
-      generatedRoute: null,
-      usedParameters: null,
-      errorMessage: null,
-      zoneStats: null,
-      savedRoutes: state.savedRoutes, // Garder les parcours sauvegardés
-      routeMetadata: null,
-      routeInstructions: null,
-      isLoadedFromHistory: false,
-      stateId: '$resetId-reset',
-    ));
-    
-    print('✅ === FIN RESET COMPLET ÉTAT (RESET: $resetId-reset) ===');
   }
 
   /// Analyse de zone simplifiée
@@ -102,6 +85,8 @@ class RouteGenerationBloc extends HydratedBloc<RouteGenerationEvent, RouteGenera
     final generationId = DateTime.now().millisecondsSinceEpoch.toString();
     print('🚀 === DÉBUT GÉNÉRATION (ID: $generationId) ===');
 
+    const requiredCredits = 1; // 1 crédit par génération
+
     emit(state.copyWith(
       isGeneratingRoute: true,
       errorMessage: null,
@@ -109,25 +94,51 @@ class RouteGenerationBloc extends HydratedBloc<RouteGenerationEvent, RouteGenera
     ));
 
     try {
+      // 1. 🆕 Vérifier ET décompter les crédits de façon synchrone
+      print('💰 Vérification et décompte des crédits (requis: $requiredCredits)');
+      
+      final usageResult = await _creditsRepository.useCredits(
+        amount: requiredCredits,
+        reason: 'Génération de parcours',
+        routeGenerationId: generationId,
+        metadata: {
+          'activity_type': event.parameters.activityType.name,
+          'distance_km': event.parameters.distanceKm,
+          'terrain_type': event.parameters.terrainType.name,
+          'generation_id': generationId,
+        },
+      );
+
+      if (!usageResult.success) {
+        print('❌ Échec décompte crédits: ${usageResult.errorMessage}');
+        emit(state.copyWith(
+          isGeneratingRoute: false,
+          errorMessage: usageResult.errorMessage ?? 'Crédits insuffisants',
+          stateId: '$generationId-credits-failed',
+        ));
+        return;
+      }
+
+      print('✅ Crédits décomptés avec succès. Nouveau solde: ${usageResult.updatedCredits?.availableCredits}');
+
+      // 2. 🆕 Notifier le CreditsBloc du succès de l'utilisation
+      _creditsBloc.add(CreditsRequested()); // Recharger les crédits
+
+      // 3. Procéder à la génération du parcours
+      print('🛣️ Génération du parcours via API...');
       final result = await GraphHopperApiService.generateRoute(parameters: event.parameters);
 
       print('✅ Génération réussie: ${result.coordinates.length} points, ${result.distanceKm}km');
 
+      // 4. Émettre le résultat de la génération
       emit(state.copyWith(
-        isGeneratingRoute: false, // 🔑 FIN du loading - PAS de sauvegarde automatique
-        generatedRoute: result.coordinates,
+        isGeneratingRoute: false,
+        generatedRoute: result.coordinatesForUI,
         usedParameters: event.parameters,
-        routeMetadata: {
-          'distanceKm': result.distanceKm,
-          'distance': (result.distanceKm * 1000).round(),
-          'durationMinutes': result.durationMinutes,
-          'points_count': result.coordinates.length,
-          'is_loop': event.parameters.isLoop,
-        },
+        routeMetadata: result.metadata,
         routeInstructions: result.instructions,
-        isLoadedFromHistory: false, // 🔧 Nouveau parcours généré
-        errorMessage: null,
-        stateId: '$generationId-success-no-auto-save', // 🆕 Indiquer pas de sauvegarde auto
+        isLoadedFromHistory: false,
+        stateId: '$generationId-success',
       ));
 
       print('✅ === FIN GÉNÉRATION (SUCCESS: $generationId-success-no-auto-save) ===');
@@ -399,6 +410,55 @@ class RouteGenerationBloc extends HydratedBloc<RouteGenerationEvent, RouteGenera
 
   // === MÉTHODES UTILITAIRES ===
 
+  /// Vérifie si l'utilisateur peut générer un parcours
+  Future<bool> canGenerateRoute() async {
+    try {
+      return await _creditsBloc.hasEnoughCredits(1);
+    } catch (e) {
+      print('❌ Erreur vérification possibilité génération: $e');
+      return false;
+    }
+  }
+
+  /// Récupère le nombre de crédits disponibles
+  Future<int> getAvailableCredits() async {
+    try {
+      final credits = await _creditsBloc.getCurrentCredits();
+      return credits?.availableCredits ?? 0;
+    } catch (e) {
+      print('❌ Erreur récupération crédits: $e');
+      return 0;
+    }
+  }
+
+  /// 🆕 Reset complet de l'état pour une nouvelle génération propre
+  Future<void> _onRouteStateReset(
+    RouteStateReset event,
+    Emitter<RouteGenerationState> emit,
+  ) async {
+    final resetId = DateTime.now().millisecondsSinceEpoch.toString();
+    print('🔄 === DÉBUT RESET COMPLET ÉTAT (ID: $resetId) ===');
+    
+    // Reset complet vers l'état initial
+    emit(RouteGenerationState(
+      pois: const [],
+      isAnalyzingZone: false,
+      isGeneratingRoute: false,
+      isSavingRoute: false,
+      generatedRoute: null,
+      usedParameters: null,
+      errorMessage: null,
+      zoneStats: null,
+      savedRoutes: state.savedRoutes, // Garder les parcours sauvegardés
+      routeMetadata: null,
+      routeInstructions: null,
+      isLoadedFromHistory: false,
+      stateId: '$resetId-reset',
+    ));
+    
+    print('✅ === FIN RESET COMPLET ÉTAT (RESET: $resetId-reset) ===');
+  }
+
   Map<String, dynamic> _createDummyPoi(double lat, double lon) {
     return {
       'id': 'start_point',
@@ -440,7 +500,6 @@ class RouteGenerationBloc extends HydratedBloc<RouteGenerationEvent, RouteGenera
     return earthRadius * c;
   }
 
-
   /// Persistance locale uniquement pour les données de session
   @override
   RouteGenerationState? fromJson(Map<String, dynamic> json) {
@@ -463,4 +522,26 @@ class RouteGenerationBloc extends HydratedBloc<RouteGenerationEvent, RouteGenera
       return null;
     }
   }
+}
+
+extension RouteGenerationBlocExtension on RouteGenerationBloc {
+  /// Helper pour vérifier rapidement si on peut générer
+  Stream<bool> get canGenerateStream => _creditsBloc.stream.map((creditsState) {
+    if (creditsState is CreditsLoaded) {
+      return creditsState.credits.canGenerate;
+    } else if (creditsState is CreditUsageSuccess) {
+      return creditsState.updatedCredits.canGenerate;
+    }
+    return false;
+  });
+
+  /// Helper pour obtenir le nombre de crédits en temps réel
+  Stream<int> get availableCreditsStream => _creditsBloc.stream.map((creditsState) {
+    if (creditsState is CreditsLoaded) {
+      return creditsState.credits.availableCredits;
+    } else if (creditsState is CreditUsageSuccess) {
+      return creditsState.updatedCredits.availableCredits;
+    }
+    return 0;
+  });
 }

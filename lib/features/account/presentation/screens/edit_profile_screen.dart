@@ -85,9 +85,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> with TickerProvid
         showTopSnackBar(
           Overlay.of(context),
           TopSnackBar(
+            isError: true,
             title: context.l10n.selectionError(e.toString()),
-            icon: HugeIcons.solidRoundedAlert02,
-            color: Colors.red,
           ),
         );
       }
@@ -163,8 +162,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> with TickerProvid
       Overlay.of(context),
       TopSnackBar(
         title: 'Profil mis à jour avec succès',
-        icon: HugeIcons.solidRoundedTick04,
-        color: Colors.green,
       ),
     );
 

@@ -11,6 +11,7 @@ import 'package:runaway/features/activity/presentation/screens/activity_screen.d
 import 'package:runaway/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:runaway/features/auth/presentation/bloc/auth_state.dart';
 import 'package:runaway/features/auth/presentation/screens/onboarding_screen.dart';
+import 'package:runaway/features/credits/presentation/screens/credit_plans_screen.dart';
 import 'package:runaway/features/historic/presentation/screens/historic_screen.dart';
 import 'package:runaway/features/navigation/blocs/navigation_bloc.dart';
 import 'package:runaway/features/navigation/presentation/screens/live_navigation_screen.dart';
@@ -111,6 +112,15 @@ final GoRouter router = GoRouter(
         // Rediriger si pas authentifié
         return const Scaffold(
           body: Center(child: Text('Non autorisé')),
+        );
+      },
+    ),
+    GoRoute(
+      path: '/manage-credits',
+      pageBuilder: (context, state) {
+        return NoTransitionPage(
+          key: state.pageKey,
+          child: const CreditPlansScreen(),
         );
       },
     ),

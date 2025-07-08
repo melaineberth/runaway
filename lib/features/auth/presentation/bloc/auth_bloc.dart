@@ -3,15 +3,24 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:runaway/features/auth/data/repositories/auth_repository.dart';
 import 'package:runaway/features/auth/domain/models/profile.dart';
+import 'package:runaway/features/credits/data/repositories/credits_repository.dart';
+import 'package:runaway/features/credits/presentation/blocs/credits_bloc.dart';
+import 'package:runaway/features/credits/presentation/blocs/credits_event.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' as supabase;
 import 'auth_event.dart';
 import 'auth_state.dart';
 
 class AuthBloc extends Bloc<AuthEvent, AuthState> {
   final AuthRepository _repo;
+  final CreditsBloc? _creditsBloc; // 🆕 Injection optionnelle
   late final StreamSubscription _sub;
 
-  AuthBloc(this._repo) : super(AuthInitial()) {
+  AuthBloc({
+    AuthRepository? authRepository,
+    CreditsBloc? creditsBloc, // 🆕 Paramètre optionnel
+  }) : _repo = authRepository ?? AuthRepository(),
+       _creditsBloc = creditsBloc,
+       super(AuthInitial()) {
     on<AppStarted>(_onStart);
     on<SignUpBasicRequested>(_onSignUpBasic);
     on<CompleteProfileRequested>(_onCompleteProfile);
@@ -24,7 +33,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     on<NotificationSettingsToggleRequested>(_onNotificationSettingsToggle);
 
     // handlers internes
-    on<_InternalProfileLoaded>((e, emit) => emit(Authenticated(e.profile)));
+    on<_InternalProfileLoaded>(_onInternalProfileLoaded);
     on<_InternalProfileIncomplete>((e, emit) => emit(ProfileIncomplete(e.user)));
     on<_InternalLoggedOut>((e, emit) => emit(Unauthenticated()));
 
@@ -60,6 +69,19 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       }
     });
   }
+
+  Future<void> _onInternalProfileLoaded(
+    _InternalProfileLoaded event,
+    Emitter<AuthState> emit,
+  ) async {
+    emit(Authenticated(event.profile));
+    
+    // 🆕 Charger les crédits après authentification réussie
+    _creditsBloc?.add(const CreditsRequested());
+    
+    print('✅ Utilisateur authentifié: ${event.profile.username}');
+  }
+
 
   // Ajouter cette méthode dans la classe AuthBloc :
   Future<void> _onUpdateProfile(UpdateProfileRequested event, Emitter<AuthState> emit) async {
@@ -344,6 +366,18 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
 
   Future<void> _onLogout(LogOutRequested e, Emitter<AuthState> emit) async {
     emit(AuthLoading());
+    
+    // 🆕 Nettoyer le cache des crédits
+    if (_creditsBloc != null) {
+      _creditsBloc.add(const CreditsReset());
+      try {
+        final creditsRepo = CreditsRepository();
+        await creditsRepo.clearCache();
+      } catch (error) {
+        print('⚠️ Erreur nettoyage cache crédits: $error');
+      }
+    }
+    
     await _repo.logOut();
     emit(Unauthenticated());
   }

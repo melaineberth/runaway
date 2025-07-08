@@ -1153,5 +1153,89 @@
   "supportEmailBody": "Hello Trailix Support,\n\nI'm having trouble in the app.\nCould you please help me resolve this?\n\nThank you.",
   "@supportEmailBody": {
     "description": "Body content for the support email."
+  },
+
+  "insufficientCreditsTitle": "Insufficient credits",
+  "@insufficientCreditsTitle": {
+    "description": "Titre affiché quand l'utilisateur n'a pas assez de crédits"
+  },
+  "insufficientCreditsDescription": "You need {requiredCredits} credit(s) to {action}. You currently have {availableCredits} credit(s).",
+  "@insufficientCreditsDescription": {
+    "description": "Description expliquant le manque de crédits",
+    "placeholders": {
+      "requiredCredits": { "type": "int", "example": "1" },
+      "action":       { "type": "String", "example": "generate a route" },
+      "availableCredits": { "type": "int", "example": "0" }
+    }
+  },
+  "buyCredits": "Buy credits",
+  "@buyCredits": { "description": "Bouton pour acheter des crédits" },
+
+  "currentCredits": "Current credits",
+  "@currentCredits": { "description": "Label pour afficher les crédits actuels" },
+
+  "availableCredits": "Available credits",
+  "@availableCredits": { "description": "Label pour les crédits disponibles" },
+
+  "totalUsed": "Total used",
+  "@totalUsed": { "description": "Label pour le total de crédits utilisés" },
+
+  "popular": "Popular",
+  "@popular": { "description": "Badge pour le plan le plus populaire" },
+
+  "buySelectedPlan": "Buy this plan",
+  "@buySelectedPlan": { "description": "Bouton pour acheter le plan sélectionné" },
+
+  "selectPlan": "Select a plan",
+  "@selectPlan": { "description": "Message quand aucun plan n'est sélectionné" },
+
+  "purchaseSimulated": "Purchase simulated",
+  "@purchaseSimulated": { "description": "Titre pour la simulation d'achat" },
+
+  "purchaseSimulatedDescription": "In development mode, purchases are simulated. Do you want to simulate this purchase?",
+  "@purchaseSimulatedDescription": { "description": "Description pour la simulation d'achat" },
+
+  "simulatePurchase": "Simulate purchase",
+  "@simulatePurchase": { "description": "Bouton pour simuler un achat" },
+
+  "purchaseSuccess": "Purchase successful!",
+  "@purchaseSuccess": { "description": "Titre de succès d'achat" },
+
+  "transactionHistory": "Transaction history",
+  "@transactionHistory": { "description": "Titre de l'écran d'historique" },
+
+  "noTransactions": "No transactions yet",
+  "@noTransactions": { "description": "Message quand il n'y a pas de transactions" },
+
+  "yesterday": "Yesterday",
+  "@yesterday": { "description": "Libellé pour hier dans les dates" },
+
+  "daysAgo": "days",
+  "@daysAgo": { "description": "Suffixe pour les jours passés" },
+
+  "ok": "OK",
+  "@ok": { "description": "Bouton OK générique" },
+
+  "creditUsageSuccess": "Credits used successfully",
+  "@creditUsageSuccess": { "description": "Message de succès d'utilisation de crédits" },
+
+  "routeGenerationWithCredits": "1 credit will be used to generate this route",
+  "@routeGenerationWithCredits": { "description": "Information sur l'utilisation de crédits pour la génération" },
+
+  "creditsRequiredForGeneration": "Route generation (1 credit)",
+  "@creditsRequiredForGeneration": { "description": "Description de l'action qui consomme des crédits" },
+
+  "manageCredits": "Manage my credits",
+  "@manageCredits": { "description": "Lien pour gérer les crédits" },
+
+  "freeCreditsWelcome": "🎉 Welcome! You have received 3 free credits to start",
+  "@freeCreditsWelcome": { "description": "Message de bienvenue avec crédits gratuits" },
+
+  "creditsLeft": "{count} credit(s) left",
+  "@creditsLeft": {
+    "description": "Affichage du nombre de crédits restants",
+    "placeholders": {
+      "count": { "type": "int", "example": "5" }
+    }
   }
 }

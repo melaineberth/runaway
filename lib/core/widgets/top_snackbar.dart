@@ -1,43 +1,51 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
+import 'package:hugeicons/hugeicons.dart';
 import 'package:runaway/config/extensions.dart';
 import 'package:runaway/core/widgets/squircle_container.dart';
 
 class TopSnackBar extends StatelessWidget {
-  final Color? color;
   final String title;
-  final IconData icon;
+  final bool isError;
 
   const TopSnackBar({
     super.key,
-    this.color,
     required this.title,
-    required this.icon,
+    this.isError = false,
   });
 
   @override
   Widget build(BuildContext context) {
-    return SquircleContainer(
-      radius: 40,
-      gradient: false,
-      padding: EdgeInsets.all(20.0),
-      color: color ?? Colors.red,
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.end,
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(
-            title,
-            style: context.bodySmall?.copyWith(
-              color: Colors.white,
-            ),
-            overflow: TextOverflow.ellipsis,
+    return ClipRRect(
+      borderRadius: BorderRadiusGeometry.circular(20.0),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 30, sigmaY: 30),
+        child: SquircleContainer(
+          radius: 40,
+          gradient: false,
+          padding: EdgeInsets.all(20.0),
+          color: context.adaptiveDisabled.withValues(alpha: 0.05),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                title,
+                style: context.bodySmall?.copyWith(
+                  fontWeight: FontWeight.w400,
+                  color: Colors.black,
+                ),
+                overflow: TextOverflow.ellipsis,
+              ),
+              Icon(
+                isError ? HugeIcons.strokeRoundedCancelCircle : HugeIcons.strokeRoundedCheckmarkCircle03,
+                size: 25,
+                color: Colors.black,
+              ),
+            ],
           ),
-          Icon(
-            icon,
-            size: 25,
-            color: Colors.white,
-          ),
-        ],
+        ),
       ),
     );
   }

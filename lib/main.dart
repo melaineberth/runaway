@@ -18,6 +18,7 @@ import 'package:runaway/core/services/notification_service.dart';
 import 'package:runaway/core/services/route_data_sync_wrapper.dart';
 import 'package:runaway/core/widgets/auth_data_listener.dart';
 import 'package:runaway/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:runaway/features/credits/presentation/blocs/credits_bloc.dart';
 import 'package:runaway/l10n/app_localizations.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'core/blocs/app_bloc_observer.dart';
@@ -101,6 +102,7 @@ class _TrailixState extends State<Trailix> {
         BlocProvider<AuthBloc>.value(value: sl<AuthBloc>()),
         BlocProvider<LocaleBloc>.value(value: sl<LocaleBloc>()),
         BlocProvider<ThemeBloc>.value(value: sl<ThemeBloc>()),
+        BlocProvider<CreditsBloc>.value(value: sl<CreditsBloc>()),
         
         // Factory pour les blocs qui peuvent avoir plusieurs instances
         BlocProvider<RouteParametersBloc>(create: (_) => sl<RouteParametersBloc>()),

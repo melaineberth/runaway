@@ -1748,6 +1748,150 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Hello Trailix Support,\n\nI\'m having trouble in the app.\nCould you please help me resolve this?\n\nThank you.'**
   String get supportEmailBody;
+
+  /// Titre affiché quand l'utilisateur n'a pas assez de crédits
+  ///
+  /// In en, this message translates to:
+  /// **'Insufficient credits'**
+  String get insufficientCreditsTitle;
+
+  /// Description expliquant le manque de crédits
+  ///
+  /// In en, this message translates to:
+  /// **'You need {requiredCredits} credit(s) to {action}. You currently have {availableCredits} credit(s).'**
+  String insufficientCreditsDescription(int requiredCredits, String action, int availableCredits);
+
+  /// Bouton pour acheter des crédits
+  ///
+  /// In en, this message translates to:
+  /// **'Buy credits'**
+  String get buyCredits;
+
+  /// Label pour afficher les crédits actuels
+  ///
+  /// In en, this message translates to:
+  /// **'Current credits'**
+  String get currentCredits;
+
+  /// Label pour les crédits disponibles
+  ///
+  /// In en, this message translates to:
+  /// **'Available credits'**
+  String get availableCredits;
+
+  /// Label pour le total de crédits utilisés
+  ///
+  /// In en, this message translates to:
+  /// **'Total used'**
+  String get totalUsed;
+
+  /// Badge pour le plan le plus populaire
+  ///
+  /// In en, this message translates to:
+  /// **'Popular'**
+  String get popular;
+
+  /// Bouton pour acheter le plan sélectionné
+  ///
+  /// In en, this message translates to:
+  /// **'Buy this plan'**
+  String get buySelectedPlan;
+
+  /// Message quand aucun plan n'est sélectionné
+  ///
+  /// In en, this message translates to:
+  /// **'Select a plan'**
+  String get selectPlan;
+
+  /// Titre pour la simulation d'achat
+  ///
+  /// In en, this message translates to:
+  /// **'Purchase simulated'**
+  String get purchaseSimulated;
+
+  /// Description pour la simulation d'achat
+  ///
+  /// In en, this message translates to:
+  /// **'In development mode, purchases are simulated. Do you want to simulate this purchase?'**
+  String get purchaseSimulatedDescription;
+
+  /// Bouton pour simuler un achat
+  ///
+  /// In en, this message translates to:
+  /// **'Simulate purchase'**
+  String get simulatePurchase;
+
+  /// Titre de succès d'achat
+  ///
+  /// In en, this message translates to:
+  /// **'Purchase successful!'**
+  String get purchaseSuccess;
+
+  /// Titre de l'écran d'historique
+  ///
+  /// In en, this message translates to:
+  /// **'Transaction history'**
+  String get transactionHistory;
+
+  /// Message quand il n'y a pas de transactions
+  ///
+  /// In en, this message translates to:
+  /// **'No transactions yet'**
+  String get noTransactions;
+
+  /// Libellé pour hier dans les dates
+  ///
+  /// In en, this message translates to:
+  /// **'Yesterday'**
+  String get yesterday;
+
+  /// Suffixe pour les jours passés
+  ///
+  /// In en, this message translates to:
+  /// **'days'**
+  String get daysAgo;
+
+  /// Bouton OK générique
+  ///
+  /// In en, this message translates to:
+  /// **'OK'**
+  String get ok;
+
+  /// Message de succès d'utilisation de crédits
+  ///
+  /// In en, this message translates to:
+  /// **'Credits used successfully'**
+  String get creditUsageSuccess;
+
+  /// Information sur l'utilisation de crédits pour la génération
+  ///
+  /// In en, this message translates to:
+  /// **'1 credit will be used to generate this route'**
+  String get routeGenerationWithCredits;
+
+  /// Description de l'action qui consomme des crédits
+  ///
+  /// In en, this message translates to:
+  /// **'Route generation (1 credit)'**
+  String get creditsRequiredForGeneration;
+
+  /// Lien pour gérer les crédits
+  ///
+  /// In en, this message translates to:
+  /// **'Manage my credits'**
+  String get manageCredits;
+
+  /// Message de bienvenue avec crédits gratuits
+  ///
+  /// In en, this message translates to:
+  /// **'🎉 Welcome! You have received 3 free credits to start'**
+  String get freeCreditsWelcome;
+
+  /// Affichage du nombre de crédits restants
+  ///
+  /// In en, this message translates to:
+  /// **'{count} credit(s) left'**
+  String creditsLeft(int count);
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {
