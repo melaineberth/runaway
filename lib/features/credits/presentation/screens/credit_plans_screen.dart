@@ -3,7 +3,10 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:runaway/config/extensions.dart';
+import 'package:runaway/core/errors/api_exceptions.dart';
 import 'package:runaway/core/widgets/squircle_container.dart';
+import 'package:runaway/features/credits/data/services/stripe_service.dart';
+import 'package:runaway/features/credits/domain/models/credit_plan.dart';
 import 'package:runaway/features/credits/presentation/blocs/credits_bloc.dart';
 import 'package:runaway/features/credits/presentation/blocs/credits_event.dart';
 import 'package:runaway/features/credits/presentation/blocs/credits_state.dart';
@@ -27,6 +30,65 @@ class _CreditPlansScreenState extends State<CreditPlansScreen> {
     // Charger les plans au démarrage
     context.read<CreditsBloc>().add(const CreditPlansRequested());
   }
+
+  void _handlePurchase() async {
+  if (selectedPlanId == null) return;
+
+  try {
+    print('🛒 Début processus d\'achat Stripe pour plan: $selectedPlanId');
+    
+    // Récupérer le plan sélectionné
+    final creditsBloc = context.read<CreditsBloc>();
+    final currentState = creditsBloc.state;
+    
+    CreditPlan? selectedPlan;
+    if (currentState is CreditPlansLoaded) {
+      selectedPlan = currentState.plans.firstWhere(
+        (plan) => plan.id == selectedPlanId,
+        orElse: () => throw Exception('Plan non trouvé'),
+      );
+    }
+    
+    if (selectedPlan == null) {
+      _showErrorSnackBar('Plan non trouvé');
+      return;
+    }
+
+    // Processus de paiement Stripe
+    final paymentIntentId = await StripeService.makePayment(
+      plan: selectedPlan,
+      context: context,
+    );
+
+    if (paymentIntentId != null) {
+      // Paiement réussi - confirmer l'achat côté backend
+      if (mounted) {
+        creditsBloc.add(
+          CreditPurchaseConfirmed(
+            planId: selectedPlan.id,
+            paymentIntentId: paymentIntentId,
+          ),
+        );
+      }
+    }
+    // Si paymentIntentId est null, l'utilisateur a annulé - pas d'action nécessaire
+
+  } catch (e) {
+    print('❌ Erreur processus achat: $e');
+    
+    String errorMessage = 'Erreur lors du paiement';
+    if (e is PaymentException) {
+      errorMessage = e.message;
+    } else if (e is NetworkException) {
+      errorMessage = 'Problème de connexion. Veuillez réessayer.';
+    }
+    
+    if (mounted) {
+      _showErrorSnackBar(errorMessage);
+    }
+  }
+}
+
 
   @override
   Widget build(BuildContext context) {
@@ -229,41 +291,6 @@ class _CreditPlansScreenState extends State<CreditPlansScreen> {
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  void _handlePurchase() {
-    if (selectedPlanId == null) return;
-
-    // TODO: Intégrer ici Stripe, RevenueCat ou In-App Purchase
-    // Pour le moment, simuler un achat réussi
-    
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(context.l10n.purchaseSimulated),
-        content: Text(context.l10n.purchaseSimulatedDescription),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.of(context).pop();
-              // Simuler un payment intent ID
-              final mockPaymentIntent = 'pi_mock_${DateTime.now().millisecondsSinceEpoch}';
-              context.read<CreditsBloc>().add(
-                CreditPurchaseConfirmed(
-                  planId: selectedPlanId!,
-                  paymentIntentId: mockPaymentIntent,
-                ),
-              );
-            },
-            child: Text(context.l10n.simulatePurchase),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: Text(context.l10n.cancel),
-          ),
-        ],
       ),
     );
   }

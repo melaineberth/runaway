@@ -21,6 +21,36 @@ class CreditsBloc extends Bloc<CreditsEvent, CreditsState> {
     on<CreditsReset>(_onCreditsReset);
   }
 
+  Future<bool> hasEnoughCredits(int requiredCredits) async {
+    try {
+      // Vérifier d'abord dans l'état actuel pour éviter un appel API
+      final currentState = state;
+      UserCredits? currentCredits;
+      
+      if (currentState is CreditsLoaded) {
+        currentCredits = currentState.credits;
+      } else if (currentState is CreditUsageSuccess) {
+        currentCredits = currentState.updatedCredits;
+      } else if (currentState is CreditPurchaseSuccess) {
+        currentCredits = currentState.updatedCredits;
+      }
+
+      // Si on a les crédits en cache, les utiliser
+      if (currentCredits != null) {
+        final hasEnough = currentCredits.availableCredits >= requiredCredits;
+        print('💰 Vérification crédits (cache): $requiredCredits requis, ${currentCredits.availableCredits} disponibles → ${hasEnough ? "✅" : "❌"}');
+        return hasEnough;
+      }
+
+      // Sinon, appel au repository
+      print('💰 Vérification crédits via API...');
+      return await _creditsRepository.hasEnoughCredits(requiredCredits);
+    } catch (e) {
+      print('❌ Erreur vérification crédits: $e');
+      return false;
+    }
+  }
+
   /// Charge les crédits de l'utilisateur
   Future<void> _onCreditsRequested(
     CreditsRequested event,
@@ -234,16 +264,6 @@ class CreditsBloc extends Bloc<CreditsEvent, CreditsState> {
       return error.toString().replaceAll('Exception: ', '');
     }
     return 'Une erreur inattendue s\'est produite';
-  }
-
-  /// Méthode publique pour vérifier les crédits disponibles
-  Future<bool> hasEnoughCredits(int requiredCredits) async {
-    try {
-      return await _creditsRepository.hasEnoughCredits(requiredCredits);
-    } catch (e) {
-      print('❌ Erreur vérification crédits: $e');
-      return false;
-    }
   }
 
   /// Méthode publique pour obtenir les crédits actuels sans changer l'état

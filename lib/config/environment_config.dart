@@ -23,10 +23,41 @@ class EnvironmentConfig {
   static bool get isProduction => dotenv.env['ENVIRONMENT'] == 'production';
   static bool get isDevelopment => dotenv.env['ENVIRONMENT'] == 'development';
   
+  // 🆕 Configuration Stripe
+  static String get stripePublishableKey {
+    final String? key = isProduction 
+        ? dotenv.env['STRIPE_PUBLIC_KEY_TEST']
+        : dotenv.env['STRIPE_PUBLIC_KEY_PROD'];
+    
+    if (key == null || key.isEmpty) {
+      throw Exception('Stripe publishable key must be configured in .env file');
+    }
+    
+    return key;
+  }
+  
+  static String get stripeSecretKey {
+    final String? key = isProduction 
+        ? dotenv.env['STRIPE_PRIVATE_KEY_TEST']
+        : dotenv.env['STRIPE_PRIVATE_KEY_PROD'];
+    
+    if (key == null || key.isEmpty) {
+      throw Exception('Stripe secret key must be configured in .env file');
+    }
+    
+    return key;
+  }
+  
+  static String get merchantIdentifier {
+    return dotenv.env['STRIPE_MERCHANT_IDENTIFIER'] ?? 'merchant.com.trailix.runaway';
+  }
+  
   static void validate() {
     try {
       apiBaseUrl; // Déclenche la validation
-      print('✅ Configuration environment validée');
+      stripePublishableKey; // 🆕 Validation Stripe
+      stripeSecretKey; // 🆕 Validation Stripe
+      print('✅ Configuration environment et Stripe validée');
     } catch (e) {
       print('❌ Erreur configuration: $e');
       rethrow;

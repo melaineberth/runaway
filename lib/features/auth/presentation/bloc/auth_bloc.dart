@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:runaway/core/services/app_data_initialization_service.dart';
 import 'package:runaway/features/auth/data/repositories/auth_repository.dart';
 import 'package:runaway/features/auth/domain/models/profile.dart';
 import 'package:runaway/features/credits/data/repositories/credits_repository.dart';
@@ -76,8 +77,10 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   ) async {
     emit(Authenticated(event.profile));
     
-    // 🆕 Charger les crédits après authentification réussie
-    _creditsBloc?.add(const CreditsRequested());
+    // 🆕 Déclencher le pré-chargement des données (qui inclut maintenant les crédits)
+    if (AppDataInitializationService.isInitialized) {
+      AppDataInitializationService.startDataPreloading();
+    }
     
     print('✅ Utilisateur authentifié: ${event.profile.username}');
   }

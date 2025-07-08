@@ -77,3 +77,4 @@ class TransactionHistoryRequested extends CreditsEvent {
 class CreditsReset extends CreditsEvent {
   const CreditsReset();
 }
+

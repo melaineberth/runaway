@@ -102,16 +102,6 @@ class CreditPurchaseSuccess extends CreditsState {
   List<Object?> get props => [updatedCredits, message, purchasedPlan];
 }
 
-class CreditsError extends CreditsState {
-  final String message;
-  final UserCredits? currentCredits;
-
-  const CreditsError(this.message, {this.currentCredits});
-
-  @override
-  List<Object?> get props => [message, currentCredits];
-}
-
 class InsufficientCreditsError extends CreditsState {
   final UserCredits currentCredits;
   final int requiredCredits;
@@ -125,4 +115,14 @@ class InsufficientCreditsError extends CreditsState {
 
   @override
   List<Object?> get props => [currentCredits, requiredCredits, action];
+}
+
+class CreditsError extends CreditsState {
+  final String message;
+  final UserCredits? currentCredits;
+
+  const CreditsError(this.message, {this.currentCredits});
+
+  @override
+  List<Object?> get props => [message, currentCredits];
 }
