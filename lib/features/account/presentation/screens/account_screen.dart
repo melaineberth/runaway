@@ -12,7 +12,6 @@ import 'package:hugeicons/hugeicons.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:runaway/config/extensions.dart';
 import 'package:runaway/core/blocs/app_data/app_data_bloc.dart';
-import 'package:runaway/core/blocs/app_data/app_data_event.dart';
 import 'package:runaway/core/blocs/app_data/app_data_state.dart';
 import 'package:runaway/core/blocs/notification/notification_bloc.dart';
 import 'package:runaway/core/blocs/notification/notification_event.dart';
@@ -33,8 +32,6 @@ import 'package:runaway/features/auth/domain/models/profile.dart';
 import 'package:runaway/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:runaway/features/auth/presentation/bloc/auth_event.dart';
 import 'package:runaway/features/auth/presentation/bloc/auth_state.dart';
-import 'package:runaway/features/credits/presentation/blocs/credits_bloc.dart';
-import 'package:runaway/features/credits/presentation/blocs/credits_event.dart';
 import 'package:top_snackbar_flutter/top_snack_bar.dart';
 import 'dart:math' as math;
 
@@ -56,10 +53,11 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
     super.initState();
     _initializeAnimations();
 
-    // 🆕 Charger les crédits au démarrage
+    // Déclencher le pré-chargement uniquement si les données ne sont pas disponibles
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
-        context.read<CreditsBloc>().add(const CreditsRequested());
+        print('💳 Pré-chargement des données de crédits depuis AccountScreen');
+        context.refreshCreditData();
       }
     });
   }
@@ -486,11 +484,11 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
               ],
             ),
   
-            80.h,
+            70.h,
   
             _buildAppVersion(),
   
-            80.h,
+            70.h,
           ],
         ),
       );
@@ -503,7 +501,6 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
         // Déterminer l'affichage selon l'état des données dans AppDataBloc
         String creditsDisplay;
         bool isLoading = false;
-        bool hasError = false;
 
         if (!appDataState.isCreditDataLoaded && appDataState.isLoading) {
           // Chargement en cours
@@ -515,7 +512,6 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
           creditsDisplay = credits.toString();
         } else if (appDataState.lastError != null) {
           // Erreur
-          hasError = true;
           creditsDisplay = 'Erreur';
         } else {
           // État initial ou pas de données
@@ -546,44 +542,20 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
               // Affichage des crédits
               Text(
                 creditsDisplay,
-                style: context.bodyMedium?.copyWith(
-                  color: hasError 
-                    ? Colors.red 
-                    : context.adaptiveTextPrimary,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              
-              const SizedBox(width: 8),
-              
-              // Icône d'action ou de chargement
-              if (isLoading)
-                SizedBox(
-                  width: 16,
-                  height: 16,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: context.adaptiveTextSecondary,
-                  ),
-                )
-              else if (hasError)
-                GestureDetector(
-                  onTap: () {
-                    // Déclencher un rafraîchissement des données
-                    context.appDataBloc.add(const CreditDataRefreshRequested());
-                  },
-                  child: Icon(
-                    HugeIcons.strokeRoundedRefresh,
-                    size: 16,
-                    color: context.adaptiveTextSecondary,
-                  ),
-                )
-              else
-                Icon(
-                  HugeIcons.strokeStandardArrowRight01,
-                  size: 19,
+                  style: context.bodySmall?.copyWith(
                   color: context.adaptiveTextSecondary,
                 ),
+              ),
+
+              10.w,
+              
+              IconBtn(
+                padding: 0.0,
+                backgroundColor: Colors.transparent,
+                iconSize: 19,
+                iconColor: context.adaptiveTextSecondary,
+                trailling: HugeIcons.strokeStandardArrowRight01,
+              ),
             ],
           ),
         );

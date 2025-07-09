@@ -161,6 +161,7 @@ class _CreditPlansScreenState extends State<CreditPlansScreen> {
         color: context.adaptiveBorder.withValues(alpha: 0.08),
         padding: const EdgeInsets.all(30),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,

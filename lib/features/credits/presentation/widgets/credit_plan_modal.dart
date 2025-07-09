@@ -259,10 +259,10 @@ class _CreditPlanModalState extends State<CreditPlanModal> {
           12.h,
 
           Text(
-            "Paiement débité à la confirmation de l’achat. Les crédits sont non remboursables et valables uniquement dans l’application",
+            "Paiement débité à la confirmation de l’achat. Les crédits sont non remboursables et valables uniquement dans l’application.",
             style: context.bodySmall?.copyWith(
               color: context.adaptiveTextSecondary,
-              fontSize: 12,
+              fontSize: 10,
               fontWeight: FontWeight.w500,
             ),
             textAlign: TextAlign.center,

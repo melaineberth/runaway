@@ -17,8 +17,8 @@ class IapValidationService {
         'platform': Platform.isIOS ? 'ios' : 'android',
         'userId': _supabase.auth.currentUser!.id,
         'transactionId': transactionId,
-        'verificationData': verificationData,
         'productId': productId,
+        'verificationData': verificationData,
       },
     );
 
