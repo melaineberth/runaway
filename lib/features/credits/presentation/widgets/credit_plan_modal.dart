@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 import 'package:runaway/config/extensions.dart';
 import 'package:runaway/core/blocs/app_data/app_data_bloc.dart';
 import 'package:runaway/core/blocs/app_data/app_data_state.dart';
@@ -8,11 +9,13 @@ import 'package:runaway/core/errors/api_exceptions.dart';
 import 'package:runaway/core/widgets/modal_sheet.dart';
 import 'package:runaway/core/widgets/squircle_btn.dart';
 import 'package:runaway/core/widgets/squircle_container.dart';
+import 'package:runaway/core/widgets/top_snackbar.dart';
 import 'package:runaway/features/credits/data/services/iap_service.dart';
 import 'package:runaway/features/credits/presentation/blocs/credits_bloc.dart';
 import 'package:runaway/features/credits/presentation/blocs/credits_event.dart';
 import 'package:runaway/features/credits/presentation/blocs/credits_state.dart';
 import 'package:runaway/features/credits/presentation/widgets/credit_plan_card.dart';
+import 'package:top_snackbar_flutter/top_snack_bar.dart';
 
 /// Écran d'achat de crédits
 class CreditPlanModal extends StatefulWidget {
@@ -44,7 +47,7 @@ class _CreditPlanModalState extends State<CreditPlanModal> {
     try {
       print('🛒 Début processus d\'achat IAP pour plan: $selectedPlanId');
       
-      // 🆕 Récupérer le plan depuis AppDataBloc (UI First)
+      // Récupérer le plan depuis AppDataBloc (UI First)
       final appDataState = context.appDataBloc.state;
       
       if (!appDataState.hasCreditData) {
@@ -59,22 +62,43 @@ class _CreditPlanModalState extends State<CreditPlanModal> {
       
       print('✅ Plan trouvé: ${selectedPlan.name} (${selectedPlan.credits} crédits)');
 
-      final purchaseId = await IAPService.makePurchase(
-        plan: selectedPlan,
-        context: context,
-      );
-
-      if (purchaseId != null) {
-        if (mounted) {
-          // Utiliser CreditsBloc pour l'achat (logique métier)
+      // Effectuer l'achat - chaque achat doit être un NOUVEAU achat (consommable)
+      final purchaseResult = await IAPService.makePurchase(selectedPlan);
+      
+      // Vérifier le résultat de l'achat
+      if (purchaseResult.isSuccess) {
+        // ✅ Nouveau achat réussi
+        final transactionId = purchaseResult.transactionId;
+        if (transactionId != null && mounted) {
+          print('✅ Nouveau achat réussi avec transaction: $transactionId');
+          
+          // Confirmer l'achat via CreditsBloc
           context.creditsBloc.add(
             CreditPurchaseConfirmed(
               planId: selectedPlan.id,
-              paymentIntentId: purchaseId,
+              paymentIntentId: transactionId,
             ),
           );
+        } else {
+          _showErrorSnackBar('Erreur: ID de transaction manquant');
+        }
+      } else if (purchaseResult.isCanceled) {
+        // 🚫 Achat annulé par l'utilisateur
+        print('🚫 Achat annulé par l\'utilisateur');
+        _showErrorSnackBar('Achat annulé');
+      } else {
+        // ❌ Erreur lors de l'achat
+        final errorMessage = purchaseResult.errorMessage ?? 'Erreur inconnue';
+        print('❌ Erreur achat: $errorMessage');
+        
+        // Gestion spéciale pour les problèmes de restauration/finalisation
+        if (errorMessage.contains('restauré au lieu de nouveau')) {
+          _showSystemErrorDialog();
+        } else {
+          _showErrorSnackBar(errorMessage);
         }
       }
+      
     } catch (e) {
       print('❌ Erreur processus achat: $e');
       
@@ -85,7 +109,6 @@ class _CreditPlanModalState extends State<CreditPlanModal> {
         errorMessage = 'Problème de connexion. Veuillez réessayer.';
       } else if (e.toString().contains('Plan non trouvé')) {
         errorMessage = 'Plan sélectionné non disponible. Veuillez réessayer.';
-        // 🆕 Déclencher un rafraîchissement des plans
         if (mounted) {
           context.refreshCreditData();
         }
@@ -97,6 +120,57 @@ class _CreditPlanModalState extends State<CreditPlanModal> {
     }
   }
 
+  // AJOUTER cette méthode pour gérer les erreurs système
+  void _showSystemErrorDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(
+              Icons.warning,
+              color: Colors.orange[600],
+              size: 24,
+            ),
+            8.w,
+            Text('Problème système détecté'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Un problème système a été détecté. Cela peut arriver si des achats précédents ne se sont pas finalisés correctement.'),
+            16.h,
+            Text(
+              'Recommandation: Redémarrez l\'application et réessayez.',
+              style: TextStyle(fontSize: 14, color: Colors.grey[600], fontWeight: FontWeight.w600),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text('Fermer'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.of(context).pop();
+              try {
+                // Forcer un nettoyage complet
+                await IAPService.cleanupPendingTransactions();
+                _showErrorSnackBar('Nettoyage effectué. Réessayez maintenant.');
+              } catch (e) {
+                _showErrorSnackBar('Erreur lors du nettoyage: $e');
+              }
+            },
+            child: Text('Nettoyer'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return MultiBlocListener(
@@ -105,7 +179,15 @@ class _CreditPlanModalState extends State<CreditPlanModal> {
         BlocListener<CreditsBloc, CreditsState>(
           listener: (context, state) {
             if (state is CreditPurchaseSuccess) {
-              _showPurchaseSuccessDialog(state);
+              // Fermer immédiatement la modal
+              context.pop();
+              
+              showTopSnackBar(
+                Overlay.of(context),
+                TopSnackBar(
+                  title: state.message,
+                ),
+              );              
             } else if (state is CreditsError) {
               _showErrorSnackBar(state.message);
             }
@@ -256,6 +338,28 @@ class _CreditPlanModalState extends State<CreditPlanModal> {
             ),
           ],
 
+          8.h,
+          TextButton(
+            onPressed: () async {
+              try {
+                print('🔄 Restauration explicite des achats demandée par l\'utilisateur');
+                await IAPService.restorePurchasesExplicitly();
+                context.refreshCreditData();
+                _showErrorSnackBar('Restauration terminée');
+              } catch (e) {
+                _showErrorSnackBar('Erreur lors de la restauration: $e');
+              }
+            },
+            child: Text(
+              'Restaurer les achats',
+              style: TextStyle(
+                color: context.adaptiveTextSecondary,
+                fontSize: 12,
+                decoration: TextDecoration.underline,
+              ),
+            ),
+          ),
+
           12.h,
 
           Text(
@@ -315,35 +419,6 @@ class _CreditPlanModalState extends State<CreditPlanModal> {
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  void _showPurchaseSuccessDialog(CreditPurchaseSuccess state) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Row(
-          children: [
-            Icon(
-              Icons.check_circle_rounded,
-              color: Colors.green[600],
-              size: 24,
-            ),
-            8.w,
-            Text(context.l10n.purchaseSuccess),
-          ],
-        ),
-        content: Text(state.message),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.of(context).pop();
-              Navigator.of(context).pop(); // Retourner à l'écran précédent
-            },
-            child: Text(context.l10n.ok),
-          ),
-        ],
       ),
     );
   }

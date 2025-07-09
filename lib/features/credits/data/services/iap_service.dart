@@ -1,221 +1,430 @@
 import 'dart:async';
 import 'dart:io' show Platform;
-import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
 import 'package:runaway/features/credits/data/services/iap_validation_service.dart';
 import 'package:runaway/features/credits/domain/models/credit_plan.dart';
 
 class PaymentException implements Exception {
   final String message;
-  const PaymentException(this.message);
+  final String? code;
+  
+  const PaymentException(this.message, [this.code]);
+  
   @override
-  String toString() => 'PaymentException: $message';
+  String toString() => 'PaymentException: $message${code != null ? ' ($code)' : ''}';
 }
 
 class IAPService {
   IAPService._();
 
-  // ---------------------------------------------------------------------------
-  // ▸ ATTRIBUTS
-  // ---------------------------------------------------------------------------
   static final InAppPurchase _iap = InAppPurchase.instance;
   static bool _isAvailable = false;
   static StreamSubscription<List<PurchaseDetails>>? _subscription;
+  static final IapValidationService _validator = IapValidationService();
 
-  /// { productId → ProductDetails }
-  static final _products = <String, ProductDetails>{};
+  /// Cache des produits : { productId → ProductDetails }
+  static final Map<String, ProductDetails> _products = {};
 
-  /// { purchaseId → _PendingPurchase }
-  static final _pending = <String, _PendingPurchase>{};
+  /// Achats en cours : { purchaseId → Completer }
+  static final Map<String, Completer<PurchaseResult>> _pendingPurchases = {};
 
-  // ---------------------------------------------------------------------------
-  // ▸ INIT / DISPOSE
-  // ---------------------------------------------------------------------------
-  static Future<void> initialise() => _ensureInit();
+  static Future<void> initialize() async {
+    await _ensureInitialized();
+    debugPrint('🛒 IAP Service initialized');
+  }
 
   static Future<void> dispose() async {
     await _subscription?.cancel();
     _subscription = null;
     _products.clear();
-    _pending.clear();
+    _pendingPurchases.clear();
+    debugPrint('🛒 IAP Service disposed');
   }
 
-  static Future<void> _ensureInit() async {
-    if (_subscription != null) return; // déjà initialisé
+  static Future<void> _ensureInitialized() async {
+    if (_subscription != null) return; // Déjà initialisé
 
     _isAvailable = await _iap.isAvailable();
     if (!_isAvailable) {
-      debugPrint('🚫 In-App Purchases non disponibles.');
+      debugPrint('🚫 In-App Purchases non disponibles');
       return;
     }
 
-    // 2️⃣ Ecoute du flux
+    // Simple nettoyage au démarrage
+    _pendingPurchases.clear();
+
+    // Écoute du flux d'achats
     _subscription = _iap.purchaseStream.listen(
       _onPurchaseUpdated,
       onDone: () => _subscription = null,
-      onError: (e, __) => debugPrint('❌ Flux achats: $e'),
+      onError: (error, stackTrace) {
+        debugPrint('❌ Erreur flux achats: $error');
+        _completeAllPendingWithError(PaymentException('Erreur système IAP'));
+      },
     );
+
+    debugPrint('✅ IAP Service stream configuré');
   }
 
-  // ---------------------------------------------------------------------------
-  // ▸ PRODUITS
-  // ---------------------------------------------------------------------------
   static Future<void> preloadProducts(List<CreditPlan> plans) async {
-    await _ensureInit();
-    if (!_isAvailable) return;
-
-    final ids = plans.map((p) => p.iapId).toSet();
-    final response = await _iap.queryProductDetails(ids);
-
-    if (response.error != null) {
-      throw PaymentException('Store error: ${response.error!.message}');
-    }
-    for (final d in response.productDetails) {
-      _products[d.id] = d;
-    }
-  }
-
-  // ---------------------------------------------------------------------------
-  // ▸ ACHAT
-  // ---------------------------------------------------------------------------
-  static Future<String?> makePurchase({
-    required CreditPlan plan,
-    required BuildContext context, // conservé si besoin de UI plus tard
-  }) async {
-    await _ensureInit();
+    await _ensureInitialized();
     if (!_isAvailable) {
       throw const PaymentException('Les achats in-app ne sont pas disponibles');
     }
 
-    final details = _products[plan.iapId];
-    if (details == null) {
-      throw const PaymentException('Produit introuvable dans le Store');
+    final productIds = plans.map((p) => p.iapId).toSet();
+    debugPrint('🔍 Chargement des produits: $productIds');
+
+    final response = await _iap.queryProductDetails(productIds);
+
+    if (response.error != null) {
+      throw PaymentException(
+        'Erreur lors du chargement des produits: ${response.error!.message}',
+        response.error!.code,
+      );
     }
 
-    // On crée un identifiant *local* pour suivre cette session d’achat
-    final purchaseKey = UniqueKey().toString();
-    final completer = Completer<String?>();
-    _pending[purchaseKey] = _PendingPurchase(
-      productId: plan.iapId,
-      startedAt: DateTime.now(),
-      completer: completer,
-    );
-
-    final launched = await _iap.buyConsumable(
-      purchaseParam: PurchaseParam(productDetails: details),
-      autoConsume: false, // ⚠️ toujours false sur iOS
-    );
-
-    if (!launched) {
-      _pending.remove(purchaseKey);
-      throw const PaymentException('Impossible d’ouvrir le paiement');
+    _products.clear();
+    for (final product in response.productDetails) {
+      _products[product.id] = product;
     }
 
-    return completer.future;
+    final missingProducts = productIds.where((id) => !_products.containsKey(id)).toList();
+    if (missingProducts.isNotEmpty) {
+      debugPrint('⚠️ Produits manquants: $missingProducts');
+    }
+
+    debugPrint('✅ ${_products.length} produits chargés');
   }
 
-  // ---------------------------------------------------------------------------
-  // ▸ FLUX D’ACHATS
-  // ---------------------------------------------------------------------------
-  static Future<void> _onPurchaseUpdated(
-      List<PurchaseDetails> list) async {
-    for (final details in list) {
-      // Cherche le _PendingPurchase correspondant
-      final entry = _pending.values.firstWhere(
-        (p) => p.productId == details.productID,
-        orElse: () => _PendingPurchase.empty(),
-      );
-      final completer = entry.completer;
+  static Future<PurchaseResult> makePurchase(CreditPlan plan) async {
+    await _ensureInitialized();
+    if (!_isAvailable) {
+      throw const PaymentException('Les achats in-app ne sont pas disponibles');
+    }
 
-      // 1. Si aucune session n’attend ce produit ⇒ on termine/laisse passer
-      if (completer == null) {
+    final productDetails = _products[plan.iapId];
+    if (productDetails == null) {
+      throw PaymentException('Produit ${plan.iapId} non trouvé dans le store');
+    }
+
+    debugPrint('🛒 Début processus d\'achat IAP pour plan: ${plan.iapId}');
+
+    // Simple nettoyage
+    _cleanupPendingPurchasesForProduct(plan.iapId);
+
+    final purchaseParam = PurchaseParam(productDetails: productDetails);
+    final completer = Completer<PurchaseResult>();
+
+    final purchaseKey = '${plan.iapId}_${DateTime.now().millisecondsSinceEpoch}';
+    _pendingPurchases[purchaseKey] = completer;
+
+    try {
+      final launched = await _iap.buyConsumable(
+        purchaseParam: purchaseParam,
+        autoConsume: !kIsWeb,
+      );
+
+      if (!launched) {
+        _pendingPurchases.remove(purchaseKey);
+        throw const PaymentException('Impossible de lancer le processus d\'achat');
+      }
+
+      debugPrint('✅ Processus d\'achat lancé pour ${plan.iapId}');
+
+      return await completer.future.timeout(
+        const Duration(minutes: 2),
+        onTimeout: () {
+          _pendingPurchases.remove(purchaseKey);
+          throw const PaymentException('Timeout lors de l\'achat');
+        },
+      );
+    } catch (e) {
+      _pendingPurchases.remove(purchaseKey);
+      rethrow;
+    }
+  }
+
+  static void _cleanupPendingPurchasesForProduct(String productId) {
+    final keysToRemove = _pendingPurchases.keys
+        .where((key) => key.startsWith(productId))
+        .toList();
+    
+    for (final key in keysToRemove) {
+      final completer = _pendingPurchases.remove(key);
+      if (completer != null && !completer.isCompleted) {
+        completer.completeError(
+          const PaymentException('Nouveau processus d\'achat initié')
+        );
+      }
+    }
+    
+    if (keysToRemove.isNotEmpty) {
+      debugPrint('🧹 Nettoyé ${keysToRemove.length} pending purchases pour $productId');
+    }
+  }
+
+  static Future<void> _onPurchaseUpdated(List<PurchaseDetails> purchaseDetailsList) async {
+    for (final purchaseDetails in purchaseDetailsList) {
+      await _processPurchase(purchaseDetails);
+    }
+  }
+
+  static Future<void> _processPurchase(PurchaseDetails details) async {
+    debugPrint('📦 Traitement achat: ${details.productID} - Status: ${details.status}');
+
+    switch (details.status) {
+      case PurchaseStatus.pending:
+        debugPrint('⏳ Achat en attente: ${details.productID}');
+        break;
+
+      case PurchaseStatus.error:
+        debugPrint('❌ Erreur achat: ${details.error?.message}');
+        _completePurchaseWithError(
+          details.productID,
+          PaymentException(
+            details.error?.message ?? 'Erreur inconnue lors de l\'achat',
+            details.error?.code,
+          ),
+        );
+        break;
+
+      case PurchaseStatus.canceled:
+        debugPrint('🚫 Achat annulé: ${details.productID}');
+        _completePurchaseWithResult(
+          details.productID,
+          PurchaseResult.canceled(),
+        );
+        break;
+
+      case PurchaseStatus.purchased:
+        await _handleSuccessfulPurchase(details);
+        break;
+        
+      case PurchaseStatus.restored:
+        await _handleRestoredPurchase(details);
+        break;
+    }
+  }
+
+  // CORRIGÉE - Traiter les "restored" comme des achats si on les attend
+  static Future<void> _handleRestoredPurchase(PurchaseDetails details) async {
+    try {
+      debugPrint('🔄 Gestion achat restauré: ${details.productID}');
+      
+      final hasPendingPurchase = _pendingPurchases.keys
+          .any((key) => key.startsWith(details.productID));
+
+      if (hasPendingPurchase) {
+        // C'est un nouvel achat qui arrive comme "restored" (comportement Sandbox)
+        debugPrint('🎯 Restored attendu = NOUVEL ACHAT (comportement Sandbox normal)');
+        await _handleSuccessfulPurchase(details);
+        return;
+      } else {
+        // Vraie restauration silencieuse
+        debugPrint('🔕 Restauration silencieuse ignorée pour ${details.productID}');
+        
         if (details.pendingCompletePurchase) {
           await _iap.completePurchase(details);
+          debugPrint('✅ Achat restauré complété côté store');
         }
-        continue;
       }
 
-      switch (details.status) {
-        case PurchaseStatus.pending:
-          break; // on attend…
-
-        case PurchaseStatus.error:
-          if (!completer.isCompleted) {
-            completer.completeError(
-              PaymentException(details.error?.message ?? 'Erreur inconnue'),
-            );
-          }
-          _pending.remove(entry.key);
-          break;
-
-        case PurchaseStatus.canceled:
-          if (!completer.isCompleted) completer.complete(null);
-          _pending.remove(entry.key);
-          break;
-
-        case PurchaseStatus.purchased:
-        case PurchaseStatus.restored:
-          try {
-            // -- ① Reçu / JWS garanti non vide
-            final payload = await _payloadFor(details);
-
-            // -- ② Validation serveur
-            await IapValidationService().validate(
-              transactionId:
-                  details.purchaseID ?? details.verificationData.localVerificationData,
-              productId: details.productID,
-              verificationData: payload,
-            );
-
-            debugPrint('✅ Validation serveur OK pour ${details.productID}');
-
-            // -- ③ Consommation (iOS & Android)
-            if (details.pendingCompletePurchase) {
-              await _iap.completePurchase(details);
-            }
-
-            if (!completer.isCompleted) completer.complete(details.purchaseID);
-          } catch (e) {
-            debugPrint('❌ Validation serveur KO: $e');
-            if (!completer.isCompleted) completer.completeError(e);
-          }
-          _pending.remove(entry.key);
-          break;
+    } catch (e) {
+      debugPrint('❌ Erreur gestion achat restauré: $e');
+      if (details.pendingCompletePurchase) {
+        await _iap.completePurchase(details);
       }
     }
   }
 
-  /// Retourne un payload **non vide** conforme aux attentes du backend.
-  static Future<String> _payloadFor(PurchaseDetails d) async {
-    // Android ⇒ purchaseToken (inchangé)
-    if (!Platform.isIOS) return d.verificationData.serverVerificationData;
+  static Future<void> _handleSuccessfulPurchase(PurchaseDetails details) async {
+    try {
+      debugPrint('💳 Validation nouvel achat: ${details.productID}');
 
-    // iOS ⇒ JWS signé StoreKit 2
-    final jws = d.verificationData.serverVerificationData;
-    if (jws.isEmpty) {
-      throw const PaymentException(
-        'JWS vide : impossible de valider la transaction iOS',
+      final verificationData = _extractVerificationData(details);
+      final transactionId = details.purchaseID ?? 
+                          details.verificationData.localVerificationData;
+
+      final validationResult = await _validator.validate(
+        transactionId: transactionId,
+        productId: details.productID,
+        verificationData: verificationData,
       );
+
+      // CORRECTION : Si déjà traité, considérer comme succès mais sans nouveaux crédits
+      if (validationResult.alreadyProcessed) {
+        debugPrint('⚠️ Transaction déjà traitée - Succès sans nouveaux crédits');
+        
+        if (details.pendingCompletePurchase) {
+          await _iap.completePurchase(details);
+          debugPrint('✅ Achat complété côté store (déjà traité)');
+        }
+
+        _completePurchaseWithResult(
+          details.productID,
+          PurchaseResult.success(
+            transactionId: validationResult.transactionId ?? transactionId,
+            creditsAdded: 0, // Pas de nouveaux crédits car déjà traité
+          ),
+        );
+        return; // IMPORTANT : Arrêter ici, ne pas appeler _handleRestoredPurchase
+      }
+
+      debugPrint('✅ Validation serveur OK: ${validationResult.creditsAdded} crédits');
+
+      if (details.pendingCompletePurchase) {
+        await _iap.completePurchase(details);
+        debugPrint('✅ Achat complété côté store');
+      }
+
+      _completePurchaseWithResult(
+        details.productID,
+        PurchaseResult.success(
+          transactionId: validationResult.transactionId ?? transactionId,
+          creditsAdded: validationResult.creditsAdded,
+        ),
+      );
+
+    } catch (e) {
+      debugPrint('❌ Erreur validation: $e');
+      
+      if (details.pendingCompletePurchase) {
+        await _iap.completePurchase(details);
+      }
+      
+      _completePurchaseWithError(details.productID, e as Exception);
     }
-    return jws;
+  }
+
+  static String _extractVerificationData(PurchaseDetails details) {
+    if (Platform.isIOS) {
+      final jws = details.verificationData.serverVerificationData;
+      if (jws.isEmpty) {
+        throw const PaymentException('Reçu iOS vide ou invalide');
+      }
+      return jws;
+    } else {
+      final token = details.verificationData.serverVerificationData;
+      if (token.isEmpty) {
+        throw const PaymentException('Token Android vide ou invalide');
+      }
+      return token;
+    }
+  }
+
+  // SIMPLE nettoyage
+  static Future<void> cleanupPendingTransactions() async {
+    await _ensureInitialized();
+    if (!_isAvailable) return;
+
+    debugPrint('🧹 Nettoyage simple des pending purchases...');
+    _pendingPurchases.clear();
+    debugPrint('✅ Nettoyage simple terminé');
+  }
+
+  static Future<void> restorePurchasesExplicitly() async {
+    await _ensureInitialized();
+    if (!_isAvailable) {
+      throw const PaymentException('Les achats in-app ne sont pas disponibles');
+    }
+
+    debugPrint('🔄 Restoration explicite des achats');
+    _pendingPurchases.clear();
+    await _iap.restorePurchases();
+    debugPrint('✅ Restoration explicite terminée');
+  }
+
+  static void _completePurchaseWithResult(String productId, PurchaseResult result) {
+    final completersToRemove = <String>[];
+    
+    for (final entry in _pendingPurchases.entries) {
+      if (entry.key.startsWith(productId) && !entry.value.isCompleted) {
+        entry.value.complete(result);
+        completersToRemove.add(entry.key);
+      }
+    }
+    
+    for (final key in completersToRemove) {
+      _pendingPurchases.remove(key);
+    }
+  }
+
+  static void _completePurchaseWithError(String productId, Exception error) {
+    final completersToRemove = <String>[];
+    
+    for (final entry in _pendingPurchases.entries) {
+      if (entry.key.startsWith(productId) && !entry.value.isCompleted) {
+        entry.value.completeError(error);
+        completersToRemove.add(entry.key);
+      }
+    }
+    
+    for (final key in completersToRemove) {
+      _pendingPurchases.remove(key);
+    }
+  }
+
+  static void _completeAllPendingWithError(Exception error) {
+    for (final completer in _pendingPurchases.values) {
+      if (!completer.isCompleted) {
+        completer.completeError(error);
+      }
+    }
+    _pendingPurchases.clear();
+  }
+
+  static Future<void> restorePurchases() async {
+    await _ensureInitialized();
+    if (!_isAvailable) {
+      throw const PaymentException('Les achats in-app ne sont pas disponibles');
+    }
+
+    debugPrint('🔄 Restoration des achats');
+    await _iap.restorePurchases();
   }
 }
 
-// -----------------------------------------------------------------------------
-// ▸ PRIVATE SUPPORT CLASS
-// -----------------------------------------------------------------------------
-class _PendingPurchase {
-  final String key = UniqueKey().toString();
-  final String productId;
-  final DateTime startedAt;
-  final Completer<String?>? completer;
-  _PendingPurchase({
-    required this.productId,
-    required this.startedAt,
-    required this.completer,
+class PurchaseResult {
+  final bool isSuccess;
+  final bool isCanceled;
+  final String? transactionId;
+  final int? creditsAdded;
+  final String? errorMessage;
+
+  PurchaseResult._({
+    required this.isSuccess,
+    required this.isCanceled,
+    this.transactionId,
+    this.creditsAdded,
+    this.errorMessage,
   });
-  _PendingPurchase.empty()
-      : productId = '',
-        startedAt = DateTime.fromMillisecondsSinceEpoch(0),
-        completer = null;
+
+  factory PurchaseResult.success({
+    required String transactionId,
+    required int creditsAdded,
+  }) {
+    return PurchaseResult._(
+      isSuccess: true,
+      isCanceled: false,
+      transactionId: transactionId,
+      creditsAdded: creditsAdded,
+    );
+  }
+
+  factory PurchaseResult.canceled() {
+    return PurchaseResult._(
+      isSuccess: false,
+      isCanceled: true,
+    );
+  }
+
+  factory PurchaseResult.error(String message) {
+    return PurchaseResult._(
+      isSuccess: false,
+      isCanceled: false,
+      errorMessage: message,
+    );
+  }
 }

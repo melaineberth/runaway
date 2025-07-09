@@ -25,7 +25,7 @@ class TopSnackBar extends StatelessWidget {
           radius: 40,
           gradient: false,
           padding: EdgeInsets.all(20.0),
-          color: context.adaptiveDisabled.withValues(alpha: 0.05),
+          color: context.adaptiveTextPrimary.withValues(alpha: 0.1),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.end,
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -34,14 +34,14 @@ class TopSnackBar extends StatelessWidget {
                 title,
                 style: context.bodySmall?.copyWith(
                   fontWeight: FontWeight.w400,
-                  color: Colors.black,
+                  color: context.adaptiveTextPrimary,
                 ),
                 overflow: TextOverflow.ellipsis,
               ),
               Icon(
                 isError ? HugeIcons.strokeRoundedCancelCircle : HugeIcons.strokeRoundedCheckmarkCircle03,
                 size: 25,
-                color: Colors.black,
+                color: context.adaptiveTextPrimary,
               ),
             ],
           ),

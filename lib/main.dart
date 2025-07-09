@@ -40,7 +40,7 @@ void main() async {
     EnvironmentConfig.validate();
 
     // 🆕 Initialiser IAP
-    await IAPService.initialise();
+    await IAPService.initialize();
 
     // Initialiser HydratedBloc pour la persistance
     final directory = await getApplicationDocumentsDirectory();
