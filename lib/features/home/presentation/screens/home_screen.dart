@@ -22,6 +22,7 @@ import 'package:runaway/core/widgets/squircle_btn.dart';
 import 'package:runaway/features/auth/presentation/bloc/auth_state.dart';
 import 'package:runaway/features/auth/presentation/widgets/auth_text_field.dart';
 import 'package:runaway/features/home/presentation/widgets/floating_route_info_panel.dart';
+import 'package:runaway/features/home/presentation/widgets/guest_generation_indicator.dart';
 import 'package:runaway/features/route_generator/domain/models/route_parameters.dart';
 import 'package:runaway/features/route_generator/domain/models/saved_route.dart';
 import 'package:runaway/features/route_generator/presentation/blocs/extensions/route_generation_bloc_extensions.dart';
@@ -42,6 +43,7 @@ import 'package:runaway/features/route_generator/data/services/route_export_serv
 import 'package:runaway/features/route_generator/presentation/blocs/route_generation/route_generation_bloc.dart';
 import 'package:runaway/features/route_generator/presentation/blocs/route_generation/route_generation_event.dart';
 import 'package:runaway/features/route_generator/presentation/blocs/route_generation/route_generation_state.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' as su;
 import 'package:top_snackbar_flutter/top_snack_bar.dart';
 import '../../../route_generator/presentation/screens/route_parameter.dart' as gen;
 import '../../../../core/widgets/icon_btn.dart';
@@ -1681,18 +1683,18 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
     print('🚀 === DÉBUT GÉNÉRATION AVEC VÉRIFICATION GUEST ===');
     
     try {
-      // 🆕 ÉTAPE 1 : Vérifier la capacité de génération (guest + authenticated)
+      // ÉTAPE 1 : Vérifier la capacité de génération (guest + authenticated)
       final capability = await context.routeGenerationBloc.checkGenerationCapability(context.authBloc);
       
       print('📊 Capacité: ${capability.toString()}');
       
       if (!capability.canGenerate) {
         print('❌ Génération refusée : ${capability.displayMessage}');
-        _showGenerationLimitedDialog(capability);
+        showLimitCapability(capability);
         return;
       }
       
-      // 🆕 ÉTAPE 2 : Consommer la génération AVANT de lancer la génération
+      // ÉTAPE 2 : Consommer la génération AVANT de lancer la génération
       final consumed = await context.routeGenerationBloc.consumeGeneration(context.authBloc);
       
       print('💳 Consommation: ${consumed ? "✅ OK" : "❌ KO"}');
@@ -1703,12 +1705,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
         return;
       }
       
-      // 🆕 ÉTAPE 3 : Réinitialiser le flag auto-save
+      // ÉTAPE 3 : Réinitialiser le flag auto-save
       setState(() {
         _hasAutoSaved = false;
       });
 
-      // 🆕 ÉTAPE 4 : Récupérer les paramètres et valider
+      // ÉTAPE 4 : Récupérer les paramètres et valider
       final parametersState = context.routeParametersBloc.state;
       final parameters = parametersState.parameters;
 
@@ -1720,16 +1722,23 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
 
       print('✅ Paramètres valides, lancement génération...');
       
-      // 🆕 ÉTAPE 5 : Lancer la génération (sans vérification de crédits supplémentaire)
+      // ÉTAPE 5 : Déterminer si c'est un guest ou un utilisateur connecté
+      final authState = context.authBloc.state;
+      final isGuest = authState is! Authenticated || 
+                    su.Supabase.instance.client.auth.currentUser == null;
+      
+      print('👤 Mode détecté: ${isGuest ? "Guest" : "Authentifié"}');
+      
+      // ÉTAPE 6 : Lancer la génération avec le bon bypass
       context.routeGenerationBloc.add(
         RouteGenerationRequested(
           parameters,
           mapboxMap: mapboxMap,
-          bypassCreditCheck: true, // 🆕 NOUVEAU FLAG POUR BYPASSER LA VÉRIFICATION
+          bypassCreditCheck: isGuest, // 🔧 CORRECTION : Bypass pour les guests uniquement
         ),
       );
 
-      // 🆕 ÉTAPE 6 : Déclencher les analytics si connecté
+      // ÉTAPE 7 : Déclencher les analytics si connecté
       if (mounted) {
         ConversionTriggers.onRouteGenerated(context);
       }
@@ -1741,48 +1750,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
       print('❌ Erreur lors de la génération: $e');
       _showRouteGenerationError('Erreur: $e');
     }
-  }
-
-  // 🆕 NOUVELLE MÉTHODE : Afficher dialogue de limitation
-  void _showGenerationLimitedDialog(GenerationCapability capability) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(
-          capability.type == GenerationType.guest 
-              ? 'Générations gratuites épuisées'
-              : 'Crédits insuffisants'
-        ),
-        content: GenerationLimitWidget(
-          capability: capability,
-          showBackground: false,
-          onUpgrade: () {
-            Navigator.pop(context);
-            context.push('/manage-credits');
-          },
-          onLogin: () {
-            Navigator.pop(context);
-            _showLoginOptions();
-          },
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Fermer'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // 🆕 MÉTHODE HELPER : Afficher options de connexion
-  void _showLoginOptions() {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => const LoginOptionsModal(),
-    );
   }
 
   void _showExportDialog() {
@@ -2067,6 +2034,22 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
     }
   }
 
+  void showLimitCapability(GenerationCapability capability) {
+    showModalSheet(
+      context: context, 
+      backgroundColor: Colors.transparent,
+      child: GenerationLimitWidget(
+        capability: capability,
+        onDebug: () => showModalSheet(
+          context: context, 
+          backgroundColor: Colors.transparent,
+          child: GuestGenerationIndicator(),
+        ),
+        onLogin: () => showSignModal(context, 0),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return MultiBlocListener(
@@ -2090,116 +2073,70 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
               Scaffold(
                 extendBody: true,
                 resizeToAvoidBottomInset: false,
-                body: Stack(
-                  alignment: Alignment.bottomCenter,
-                  children: [
-                    // Carte
-                    SizedBox(
-                      width: MediaQuery.of(context).size.width,
-                      height: MediaQuery.of(context).size.height,
-                      child: LocationAwareMapWidget(
-                        key: ValueKey("locationAwareMapWidget"),
-                        styleUri: _mapStateService.getCurrentStyleUri(),
-                        onMapCreated: _onMapCreated,
-                        mapKey: ValueKey("mapWidget"),
-                        restoreFromCache: _mapStateService.isMapInitialized,
-                      ),
-                    ),
-              
-                    // 🆕 MARQUEUR LOTTIE ANIMÉ
-                    if (_showLottieMarker && _lottieMarkerLat != null && _lottieMarkerLng != null)
-                      _buildLottieMarker(),
-              
-                      // Interface normale
-                      if (!isNavigationMode && !_isInNavigationMode)
-                      Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 30.0),
-                        child: SizedBox(
+                body: FutureBuilder<GenerationCapability>(
+                  future: context.routeGenerationBloc.checkGenerationCapability(context.authBloc),
+                  builder: (context, snapshot) {
+                    final capability = snapshot.data;
+
+                    return Stack(
+                      alignment: Alignment.bottomCenter,
+                      children: [
+                        // Carte
+                        SizedBox(
                           width: MediaQuery.of(context).size.width,
                           height: MediaQuery.of(context).size.height,
-                          child: SafeArea(
-                            child: Column(
-                              children: [
-                                Padding(
-                                  padding: const EdgeInsets.symmetric(horizontal: 20.0),
-                                  child: LocationSearchBar(
-                                    onLocationSelected: _onLocationSelected,
-                                    userLongitude: _userLongitude,
-                                    userLatitude: _userLatitude,
-                                  ),
-                                ),
-              
-                                40.h,
-              
-                                Expanded(
-                                  child: Padding(
-                                    padding: const EdgeInsets.only(right: 20.0),
-                                    child: Row(
-                                      mainAxisAlignment: MainAxisAlignment.end,
-                                      crossAxisAlignment: CrossAxisAlignment.end,
-                                      children: [
-                                        Column(
-                                          spacing: 12.0,
-                                          mainAxisSize: MainAxisSize.min,
+                          child: LocationAwareMapWidget(
+                            key: ValueKey("locationAwareMapWidget"),
+                            styleUri: _mapStateService.getCurrentStyleUri(),
+                            onMapCreated: _onMapCreated,
+                            mapKey: ValueKey("mapWidget"),
+                            restoreFromCache: _mapStateService.isMapInitialized,
+                          ),
+                        ),
+                                  
+                        // 🆕 MARQUEUR LOTTIE ANIMÉ
+                        if (_showLottieMarker && _lottieMarkerLat != null && _lottieMarkerLng != null)
+                          _buildLottieMarker(),
+                                  
+                          // Interface normale
+                          if (!isNavigationMode && !_isInNavigationMode)
+                          Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 30.0),
+                            child: SizedBox(
+                              width: MediaQuery.of(context).size.width,
+                              height: MediaQuery.of(context).size.height,
+                              child: SafeArea(
+                                child: Column(
+                                  children: [
+                                    Padding(
+                                      padding: const EdgeInsets.symmetric(horizontal: 20.0),
+                                      child: LocationSearchBar(
+                                        onLocationSelected: _onLocationSelected,
+                                        userLongitude: _userLongitude,
+                                        userLatitude: _userLatitude,
+                                      ),
+                                    ),
+                                  
+                                    40.h,
+                                  
+                                    Expanded(
+                                      child: Padding(
+                                        padding: const EdgeInsets.only(right: 20.0),
+                                        child: Row(
+                                          mainAxisAlignment: MainAxisAlignment.end,
+                                          crossAxisAlignment: CrossAxisAlignment.end,
                                           children: [
-                                            // Map style
-                                            IconBtn(
-                                              padding: 15.0,
-                                              backgroundColor: context.adaptiveBackground,
-                                              icon: HugeIcons.strokeRoundedMaterialAndTexture,
-                                              iconColor: context.adaptiveTextSecondary,
-                                              onPressed: _openMapStyleSelector,
-                                              boxShadow: [
-                                                BoxShadow(
-                                                  color: Colors.black.withValues(alpha: 0.18),
-                                                  spreadRadius: 2,
-                                                  blurRadius: 30,
-                                                  offset: Offset(0, 0), // changes position of shadow
-                                                ),
-                                              ]
-                                            ),
-              
-                                            // Bouton retour position utilisateur
-                                            IconBtn(
-                                              padding: 15.0,
-                                              backgroundColor: context.adaptiveBackground,
-                                              icon: _trackingMode == TrackingMode.userTracking
-                                                  ? HugeIcons.solidRoundedLocationShare02
-                                                  : HugeIcons.strokeRoundedLocationShare02,
-                                              onPressed: _activateUserTracking,
-                                              iconColor: _trackingMode == TrackingMode.userTracking
-                                                  ? AppColors.primary
-                                                  : context.adaptiveTextSecondary,
-                                              boxShadow: [
-                                                BoxShadow(
-                                                  color: Colors.black.withValues(alpha: 0.18),
-                                                  spreadRadius: 2,
-                                                  blurRadius: 30,
-                                                  offset: Offset(0, 0), // changes position of shadow
-                                                ),
-                                              ]
-                                            ),
-                                            
-                                            // Bouton générateur
-                                            FutureBuilder<GenerationCapability>(
-                                              future: context.routeGenerationBloc.checkGenerationCapability(context.authBloc),
-                                              builder: (context, snapshot) {
-                                                final capability = snapshot.data;
-    
-                                                if (capability != null && !capability.canGenerate) {
-                                                  return GenerationLimitWidget(
-                                                    capability: capability,
-                                                    onUpgrade: () => context.push('/manage-credits'),
-                                                    onLogin: () => showAuthModal(context),
-                                                  );
-                                                }
-
-                                                return IconBtn(
+                                            Column(
+                                              spacing: 12.0,
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                // Map style
+                                                IconBtn(
                                                   padding: 15.0,
                                                   backgroundColor: context.adaptiveBackground,
-                                                  icon: HugeIcons.strokeRoundedAiMagic,
+                                                  icon: HugeIcons.strokeRoundedMaterialAndTexture,
                                                   iconColor: context.adaptiveTextSecondary,
-                                                  onPressed: openGenerator,
+                                                  onPressed: _openMapStyleSelector,
                                                   boxShadow: [
                                                     BoxShadow(
                                                       color: Colors.black.withValues(alpha: 0.18),
@@ -2208,21 +2145,59 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
                                                       offset: Offset(0, 0), // changes position of shadow
                                                     ),
                                                   ]
-                                                );
-                                              }
+                                                ),
+                                  
+                                                // Bouton retour position utilisateur
+                                                IconBtn(
+                                                  padding: 15.0,
+                                                  backgroundColor: context.adaptiveBackground,
+                                                  icon: _trackingMode == TrackingMode.userTracking
+                                                      ? HugeIcons.solidRoundedLocationShare02
+                                                      : HugeIcons.strokeRoundedLocationShare02,
+                                                  onPressed: _activateUserTracking,
+                                                  iconColor: _trackingMode == TrackingMode.userTracking
+                                                      ? AppColors.primary
+                                                      : context.adaptiveTextSecondary,
+                                                  boxShadow: [
+                                                    BoxShadow(
+                                                      color: Colors.black.withValues(alpha: 0.18),
+                                                      spreadRadius: 2,
+                                                      blurRadius: 30,
+                                                      offset: Offset(0, 0), // changes position of shadow
+                                                    ),
+                                                  ]
+                                                ),
+                                                
+                                                // Bouton générateur
+                                                IconBtn(
+                                                  padding: 15.0,
+                                                  backgroundColor: context.adaptiveBackground,
+                                                  icon: HugeIcons.strokeRoundedAiMagic,
+                                                  iconColor: context.adaptiveTextSecondary,
+                                                  onPressed: capability != null && !capability.canGenerate ? () => showLimitCapability(capability) : openGenerator,
+                                                  boxShadow: [
+                                                    BoxShadow(
+                                                      color: Colors.black.withValues(alpha: 0.18),
+                                                      spreadRadius: 2,
+                                                      blurRadius: 30,
+                                                      offset: Offset(0, 0), // changes position of shadow
+                                                    ),
+                                                  ]
+                                                ),
+                                              ],
                                             ),
                                           ],
                                         ),
-                                      ],
+                                      ),
                                     ),
-                                  ),
+                                  ],
                                 ),
-                              ],
+                              ),
                             ),
                           ),
-                        ),
-                      ),
-                  ],
+                      ],
+                    );
+                  }
                 ),
               ),
               

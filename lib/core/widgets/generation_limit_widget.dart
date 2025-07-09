@@ -1,10 +1,10 @@
 // lib/core/widgets/generation_limit_widget.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:go_router/go_router.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:runaway/config/extensions.dart';
 import 'package:runaway/core/di/bloc_provider_extension.dart';
+import 'package:runaway/core/widgets/modal_dialog.dart';
 import 'package:runaway/core/widgets/squircle_btn.dart';
 import 'package:runaway/core/widgets/squircle_container.dart';
 import 'package:runaway/features/auth/presentation/bloc/auth_bloc.dart';
@@ -15,7 +15,7 @@ import 'package:runaway/features/route_generator/presentation/blocs/extensions/r
 /// Widget qui affiche les limitations de génération et encourage l'achat/connexion
 class GenerationLimitWidget extends StatelessWidget {
   final GenerationCapability capability;
-  final VoidCallback? onUpgrade;
+  final VoidCallback? onDebug;
   final VoidCallback? onLogin;
   final bool showBackground;
   final EdgeInsetsGeometry? padding;
@@ -23,7 +23,7 @@ class GenerationLimitWidget extends StatelessWidget {
   const GenerationLimitWidget({
     super.key,
     required this.capability,
-    this.onUpgrade,
+    this.onDebug,
     this.onLogin,
     this.showBackground = true,
     this.padding,
@@ -135,31 +135,6 @@ class GenerationLimitWidget extends StatelessWidget {
                   ),
                 ),
               ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: SquircleBtn(
-                  onTap: onUpgrade ?? () => _navigateToCredits(context),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        HugeIcons.strokeRoundedCoins01,
-                        size: 16,
-                        color: context.colorScheme.onPrimary,
-                      ),
-                      const SizedBox(width: 6),
-                      Text(
-                        'Acheter',
-                        style: TextStyle(
-                          color: context.colorScheme.onPrimary,
-                          fontWeight: FontWeight.w600,
-                          fontSize: 13,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
             ],
           ),
         ],
@@ -176,120 +151,20 @@ class GenerationLimitWidget extends StatelessWidget {
 
   /// Affichage quand la limite est atteinte
   Widget _buildLimitReached(BuildContext context) {
-    final container = SquircleContainer(
-      padding: const EdgeInsets.all(20),
-      color: context.colorScheme.errorContainer.withOpacity(0.1),
-      child: Column(
-        children: [
-          Icon(
-            HugeIcons.strokeRoundedLockPassword,
-            size: 48,
-            color: context.colorScheme.error,
-          ),
-          const SizedBox(height: 16),
-          Text(
-            capability.type == GenerationType.guest 
-                ? 'Générations gratuites épuisées'
-                : 'Crédits épuisés',
-            style: context.textTheme.titleMedium?.copyWith(
-              color: context.colorScheme.error,
-              fontWeight: FontWeight.w700,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 8),
-          Text(
-            capability.upgradeMessage ?? 'Impossible de générer plus de parcours',
-            style: context.textTheme.bodyMedium?.copyWith(
-              color: context.colorScheme.onSurface,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 20),
-          if (capability.type == GenerationType.guest) ...[
-            // Pour les guests : connexion + achat
-            SquircleBtn(
-              onTap: onLogin ?? () => _showLoginOptions(context),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    HugeIcons.strokeRoundedUserAdd01,
-                    size: 18,
-                    color: context.colorScheme.onPrimary,
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    'Créer un compte gratuit',
-                    style: TextStyle(
-                      color: context.colorScheme.onPrimary,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 12),
-            SquircleBtn(
-              onTap: onUpgrade ?? () => _navigateToCredits(context),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    HugeIcons.strokeRoundedCoins01,
-                    size: 18,
-                    color: context.colorScheme.primary,
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    'Acheter des crédits',
-                    style: TextStyle(
-                      color: context.colorScheme.primary,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ] else ...[
-            // Pour les utilisateurs connectés : seulement achat
-            SquircleBtn(
-              onTap: onUpgrade ?? () => _navigateToCredits(context),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    HugeIcons.strokeRoundedCoins01,
-                    size: 18,
-                    color: context.colorScheme.onPrimary,
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    'Acheter des crédits',
-                    style: TextStyle(
-                      color: context.colorScheme.onPrimary,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ],
-      ),
+    final container = ModalDialog(
+      title: capability.type == GenerationType.guest 
+        ? 'Générations gratuites épuisées'
+        : 'Crédits épuisés', 
+      subtitle: capability.upgradeMessage ?? 'Impossible de générer plus de parcours', 
+      validLabel: "Créer un compte gratuit",
+      onValid: onLogin ?? () => _showLoginOptions(context),
+      cancelLabel: "Debug",
+      onCancel: onDebug,
     );
 
     if (!showBackground) return container;
 
-    return Padding(
-      padding: padding ?? const EdgeInsets.all(16),
-      child: container,
-    );
-  }
-
-  /// Navigation vers l'écran d'achat de crédits
-  void _navigateToCredits(BuildContext context) {
-    context.push('/manage-credits');
+    return container;
   }
 
   /// Affiche les options de connexion

@@ -118,7 +118,7 @@ Future<GenerationCapability> _handleGuestMode() async {
   Future<void> clearGuestDataOnLogin() async {
     try {
       final guestService = GuestLimitationService.instance;
-      await guestService.clearGuestData();
+      await guestService.clearGuestDataOnLogin();
       print('🧹 Données guest nettoyées après connexion');
     } catch (e) {
       print('❌ Erreur nettoyage données guest: $e');

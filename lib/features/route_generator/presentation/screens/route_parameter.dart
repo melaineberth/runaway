@@ -5,14 +5,12 @@ import 'package:hugeicons/hugeicons.dart';
 import 'package:runaway/config/extensions.dart';
 import 'package:runaway/core/di/bloc_provider_extension.dart';
 import 'package:runaway/core/widgets/blurry_page.dart';
-import 'package:runaway/core/widgets/modal_dialog.dart';
 import 'package:runaway/core/widgets/modal_sheet.dart';
 import 'package:runaway/core/widgets/squircle_btn.dart';
 import 'package:runaway/core/widgets/tick_slider.dart';
 import 'package:runaway/features/credits/presentation/blocs/credits_bloc.dart';
 import 'package:runaway/features/credits/presentation/blocs/credits_event.dart';
 import 'package:runaway/features/credits/presentation/blocs/credits_state.dart';
-import 'package:runaway/features/credits/presentation/screens/credit_plans_screen.dart';
 
 import '../../../home/presentation/blocs/route_parameters_bloc.dart';
 import '../../../home/presentation/blocs/route_parameters_event.dart';
@@ -151,45 +149,11 @@ class _RouteParameterScreenState extends State<RouteParameterScreen> {
       child: BlocBuilder<CreditsBloc, CreditsState>(
         builder: (context, creditsState) {
           // Déterminer si on peut générer
-          final canGenerate = _canGenerate(creditsState);
-          final availableCredits = _getAvailableCredits(creditsState);
           final isLoadingCredits = creditsState is CreditsLoading;
 
           return Column(
             mainAxisSize: MainAxisSize.min,
             children: [              
-              // 🆕 Warning si peu de crédits
-              if (canGenerate && availableCredits <= 3 && !isLoadingCredits)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: Colors.amber.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: Colors.amber.withValues(alpha: 0.3)),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Icons.warning_rounded,
-                          size: 14,
-                          color: Colors.amber[700],
-                        ),
-                        6.w,
-                        Text(
-                          'Plus que $availableCredits crédit${availableCredits > 1 ? 's' : ''}',
-                          style: context.bodySmall?.copyWith(
-                            color: Colors.amber[700],
-                            fontSize: 11,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
               
               // Bouton principal
               SquircleBtn(
@@ -229,48 +193,12 @@ class _RouteParameterScreenState extends State<RouteParameterScreen> {
         ),
       ),
     );
-  }
-
-  // 🆕 Vérifier si on peut générer
-  bool _canGenerate(CreditsState creditsState) {
-    if (creditsState is CreditsLoaded) {
-      return creditsState.credits.availableCredits >= 1;
-    } else if (creditsState is CreditUsageSuccess) {
-      return creditsState.updatedCredits.availableCredits >= 1;
-    } else if (creditsState is CreditPurchaseSuccess) {
-      return creditsState.updatedCredits.availableCredits >= 1;
-    }
-    return false;
-  }
-
-  // 🆕 Obtenir le nombre de crédits disponibles
-  int _getAvailableCredits(CreditsState creditsState) {
-    if (creditsState is CreditsLoaded) {
-      return creditsState.credits.availableCredits;
-    } else if (creditsState is CreditUsageSuccess) {
-      return creditsState.updatedCredits.availableCredits;
-    } else if (creditsState is CreditPurchaseSuccess) {
-      return creditsState.updatedCredits.availableCredits;
-    }
-    return 0;
-  }
+  }  
 
   // 🆕 Gérer la génération avec vérification préalable des crédits
   Future<void> _handleGenerate() async {
     print('🔍 === VÉRIFICATION CRÉDITS AVANT GÉNÉRATION ===');
-    
-    // Vérification finale des crédits en temps réel
-    final creditsBloc = context.creditsBloc;
-    final hasEnough = await creditsBloc.hasEnoughCredits(1);
-    
-    if (!hasEnough) {
-      print('❌ Crédits insuffisants détectés juste avant génération');
-      _showInsufficientCreditsFlow();
-      return;
-    }
-    
-    print('✅ Crédits suffisants, lancement de la génération');
-    
+      
     // Fermer la modal des paramètres
     if (mounted) {
       context.pop();
@@ -281,49 +209,6 @@ class _RouteParameterScreenState extends State<RouteParameterScreen> {
     
     // Lancer la génération normale
     widget.generateRoute();
-  }
-
-  // 🆕 Flow pour crédits insuffisants
-  void _showInsufficientCreditsFlow() {
-    final creditsState = context.creditsBloc.state;
-    final availableCredits = _getAvailableCredits(creditsState);
-    
-    showModalBottomSheet(
-      useRootNavigator: true,
-      isScrollControlled: true,
-      isDismissible: true,
-      enableDrag: false,
-      context: context,
-      backgroundColor: Colors.transparent,
-      clipBehavior: Clip.antiAliasWithSaveLayer,
-      builder: (context) {
-        return ModalDialog(
-          title: context.l10n.insufficientCreditsTitle, 
-          subtitle: context.l10n.insufficientCreditsDescription(
-            1,
-            'générer un parcours',
-            availableCredits,
-          ), 
-          validLabel: context.l10n.buyCredits,
-          onValid: () {
-            context.pop();
-
-            if (mounted) {
-              showModalSheet(
-                context: context, 
-                backgroundColor: Colors.transparent,
-                child: CreditPlansScreen(),
-              );
-            }
-          },
-        );
-      },
-    ).then((_) {
-      // Après fermeture de la modal, recharger les crédits
-      if (mounted) {
-        context.creditsBloc.add(const CreditsRequested());
-      }
-    });
   }
 
   Widget _buildAdvancedOptions(RouteParametersState state) {

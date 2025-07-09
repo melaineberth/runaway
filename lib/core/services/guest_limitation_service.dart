@@ -4,7 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 class GuestLimitationService {
   static const String _keyGuestGenerations = 'guest_generations_count';
   static const String _keyFirstUseDate = 'guest_first_use_date';
-  static const int _maxGuestGenerations = 2; // 2 générations gratuites pour les guests
+  static const int _maxGuestGenerations = 3; // 🔧 CHANGÉ : 3 générations gratuites pour les guests
   static const Duration _limitPeriod = Duration(days: 30); // Période de 30 jours
 
   static GuestLimitationService? _instance;
@@ -87,119 +87,56 @@ class GuestLimitationService {
     }
   }
 
-  /// Retourne des informations détaillées sur le statut guest
-  Future<GuestLimitationStatus> getGuestStatus() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final generationsCount = prefs.getInt(_keyGuestGenerations) ?? 0;
-      final firstUseDateString = prefs.getString(_keyFirstUseDate);
-      
-      if (firstUseDateString == null) {
-        return GuestLimitationStatus(
-          generationsUsed: 0,
-          generationsRemaining: _maxGuestGenerations,
-          limitReached: false,
-          resetDate: null,
-        );
-      }
-      
-      final firstUseDate = DateTime.parse(firstUseDateString);
-      final resetDate = firstUseDate.add(_limitPeriod);
-      final now = DateTime.now();
-      
-      // Si la période est expirée, retourner un statut réinitialisé
-      if (now.isAfter(resetDate)) {
-        return GuestLimitationStatus(
-          generationsUsed: 0,
-          generationsRemaining: _maxGuestGenerations,
-          limitReached: false,
-          resetDate: null,
-        );
-      }
-      
-      final remaining = _maxGuestGenerations - generationsCount;
-      
-      return GuestLimitationStatus(
-        generationsUsed: generationsCount,
-        generationsRemaining: remaining.clamp(0, _maxGuestGenerations),
-        limitReached: remaining <= 0,
-        resetDate: resetDate,
-      );
-      
-    } catch (e) {
-      print('❌ Erreur récupération statut guest: $e');
-      return GuestLimitationStatus(
-        generationsUsed: _maxGuestGenerations,
-        generationsRemaining: 0,
-        limitReached: true,
-        resetDate: null,
-      );
-    }
+  /// Initialise les données guest
+  Future<void> _initializeGuestData(SharedPreferences prefs) async {
+    await prefs.setInt(_keyGuestGenerations, 0);
+    await prefs.setString(_keyFirstUseDate, DateTime.now().toIso8601String());
+    print('✅ Données guest initialisées');
   }
 
-  /// Nettoie les données guest lors de la connexion
-  Future<void> clearGuestData() async {
+  /// ⚠️ À n’utiliser que pour le debug / les tests.
+  /// Remet le compteur de générations invité à 0 et redémarre la période.
+  Future<void> resetGuestGenerationsForTesting() async {
+    final prefs = await SharedPreferences.getInstance();
+    await _resetGuestData(prefs); // on réutilise la méthode privée
+  }
+
+  /// Réinitialise les données guest
+  Future<void> _resetGuestData(SharedPreferences prefs) async {
+    await prefs.setInt(_keyGuestGenerations, 0);
+    await prefs.setString(_keyFirstUseDate, DateTime.now().toIso8601String());
+    print('🔄 Données guest réinitialisées');
+  }
+
+  /// Nettoie les données guest lors de la connexion utilisateur
+  Future<void> clearGuestDataOnLogin() async {
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove(_keyGuestGenerations);
       await prefs.remove(_keyFirstUseDate);
-      print('🧹 Données guest nettoyées');
+      print('🧹 Données guest nettoyées après connexion');
     } catch (e) {
       print('❌ Erreur nettoyage données guest: $e');
     }
   }
 
-  /// Initialise les données pour un nouvel utilisateur guest
-  Future<void> _initializeGuestData(SharedPreferences prefs) async {
-    await prefs.setInt(_keyGuestGenerations, 0);
-    await prefs.setString(_keyFirstUseDate, DateTime.now().toIso8601String());
-    print('🆕 Données guest initialisées');
-  }
-
-  /// Réinitialise les données après expiration de la période
-  Future<void> _resetGuestData(SharedPreferences prefs) async {
-    await prefs.setInt(_keyGuestGenerations, 0);
-    await prefs.setString(_keyFirstUseDate, DateTime.now().toIso8601String());
-    print('🔄 Données guest réinitialisées après expiration');
-  }
-
-  // Getters statiques pour l'UI
-  static int get maxGuestGenerations => _maxGuestGenerations;
-  static Duration get limitPeriod => _limitPeriod;
-}
-
-/// Modèle pour le statut de limitation guest
-class GuestLimitationStatus {
-  final int generationsUsed;
-  final int generationsRemaining;
-  final bool limitReached;
-  final DateTime? resetDate;
-
-  const GuestLimitationStatus({
-    required this.generationsUsed,
-    required this.generationsRemaining,
-    required this.limitReached,
-    this.resetDate,
-  });
-
-  /// Formate la date de reset pour l'affichage
-  String? get formattedResetDate {
-    if (resetDate == null) return null;
-    
-    final now = DateTime.now();
-    final difference = resetDate!.difference(now);
-    
-    if (difference.inDays > 0) {
-      return '${difference.inDays} jour${difference.inDays > 1 ? 's' : ''}';
-    } else if (difference.inHours > 0) {
-      return '${difference.inHours} heure${difference.inHours > 1 ? 's' : ''}';
-    } else {
-      return 'Bientôt';
+  /// Obtient des informations de debug
+  Future<Map<String, dynamic>> getDebugInfo() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final used = prefs.getInt(_keyGuestGenerations) ?? 0;
+      final firstUseDate = prefs.getString(_keyFirstUseDate);
+      final remaining = await getRemainingGuestGenerations();
+      
+      return {
+        'used': used,
+        'remaining': remaining,
+        'maxGenerations': _maxGuestGenerations,
+        'firstUseDate': firstUseDate,
+        'canGenerate': await canGuestGenerate(),
+      };
+    } catch (e) {
+      return {'error': e.toString()};
     }
-  }
-
-  @override
-  String toString() {
-    return 'GuestLimitationStatus(used: $generationsUsed, remaining: $generationsRemaining, limitReached: $limitReached, resetIn: $formattedResetDate)';
   }
 }

@@ -369,33 +369,6 @@ class _CreditPlansScreenState extends State<CreditPlansScreen> {
               textAlign: TextAlign.center,
             ),
           ),
-
-          // 🆕 Bouton pour rafraîchir ou acheter des crédits
-          20.h,
-          SquircleContainer(
-            onTap: () {
-              showModalSheet(
-                context: context, 
-                backgroundColor: Colors.transparent,
-                child: CreditPlanModal(),
-              );
-            },
-            height: 44,
-            color: context.adaptivePrimary,
-            radius: 22.0,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Center(
-                child: Text(
-                  'Acheter des crédits',
-                  style: context.bodySmall?.copyWith(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ),
-          ),
         ],
       ),
     );
