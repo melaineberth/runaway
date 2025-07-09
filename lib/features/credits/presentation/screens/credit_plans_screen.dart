@@ -3,15 +3,15 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:runaway/config/extensions.dart';
-import 'package:runaway/core/errors/api_exceptions.dart';
 import 'package:runaway/core/widgets/squircle_container.dart';
-import 'package:runaway/features/credits/data/services/stripe_service.dart';
-import 'package:runaway/features/credits/domain/models/credit_plan.dart';
+import 'package:runaway/core/widgets/top_snackbar.dart';
+import 'package:runaway/features/credits/domain/models/credit_transaction.dart';
+import 'package:runaway/features/credits/domain/models/user_credits.dart';
 import 'package:runaway/features/credits/presentation/blocs/credits_bloc.dart';
 import 'package:runaway/features/credits/presentation/blocs/credits_event.dart';
 import 'package:runaway/features/credits/presentation/blocs/credits_state.dart';
-import 'package:runaway/features/credits/presentation/screens/transaction_history_screen.dart';
-import 'package:runaway/features/credits/presentation/widgets/credit_plan_card.dart';
+import 'package:runaway/features/credits/presentation/widgets/credit_plan_modal.dart';
+import 'package:top_snackbar_flutter/top_snack_bar.dart';
 
 /// Écran d'achat de crédits
 class CreditPlansScreen extends StatefulWidget {
@@ -29,66 +29,8 @@ class _CreditPlansScreenState extends State<CreditPlansScreen> {
     super.initState();
     // Charger les plans au démarrage
     context.read<CreditsBloc>().add(const CreditPlansRequested());
+    context.read<CreditsBloc>().add(const TransactionHistoryRequested());
   }
-
-  void _handlePurchase() async {
-  if (selectedPlanId == null) return;
-
-  try {
-    print('🛒 Début processus d\'achat Stripe pour plan: $selectedPlanId');
-    
-    // Récupérer le plan sélectionné
-    final creditsBloc = context.read<CreditsBloc>();
-    final currentState = creditsBloc.state;
-    
-    CreditPlan? selectedPlan;
-    if (currentState is CreditPlansLoaded) {
-      selectedPlan = currentState.plans.firstWhere(
-        (plan) => plan.id == selectedPlanId,
-        orElse: () => throw Exception('Plan non trouvé'),
-      );
-    }
-    
-    if (selectedPlan == null) {
-      _showErrorSnackBar('Plan non trouvé');
-      return;
-    }
-
-    // Processus de paiement Stripe
-    final paymentIntentId = await StripeService.makePayment(
-      plan: selectedPlan,
-      context: context,
-    );
-
-    if (paymentIntentId != null) {
-      // Paiement réussi - confirmer l'achat côté backend
-      if (mounted) {
-        creditsBloc.add(
-          CreditPurchaseConfirmed(
-            planId: selectedPlan.id,
-            paymentIntentId: paymentIntentId,
-          ),
-        );
-      }
-    }
-    // Si paymentIntentId est null, l'utilisateur a annulé - pas d'action nécessaire
-
-  } catch (e) {
-    print('❌ Erreur processus achat: $e');
-    
-    String errorMessage = 'Erreur lors du paiement';
-    if (e is PaymentException) {
-      errorMessage = e.message;
-    } else if (e is NetworkException) {
-      errorMessage = 'Problème de connexion. Veuillez réessayer.';
-    }
-    
-    if (mounted) {
-      _showErrorSnackBar(errorMessage);
-    }
-  }
-}
-
 
   @override
   Widget build(BuildContext context) {
@@ -108,8 +50,12 @@ class _CreditPlansScreenState extends State<CreditPlansScreen> {
         ),
         actions: [
           IconButton(
-            onPressed: () => _showTransactionHistory(context), 
-            icon: Icon(HugeIcons.strokeRoundedClock03),
+            onPressed: () => showModalSheet(
+              context: context, 
+              backgroundColor: Colors.transparent,
+              child: CreditPlanModal(),
+            ), 
+            icon: Icon(HugeIcons.strokeRoundedCreditCardPos),
           ),
         ],
       ),
@@ -122,130 +68,92 @@ class _CreditPlansScreenState extends State<CreditPlansScreen> {
           }
         },
         builder: (context, state) {
-          if (state is CreditsLoading) {
-            return const Center(
-              child: CircularProgressIndicator(),
-            );
-          }
+          if (state is CreditsLoading) return const Center(child: CircularProgressIndicator());
+          if (state is CreditsError)  return _buildErrorState(state.message);
 
-          if (state is CreditPlansLoaded) {
-            return _buildPlansContent(state);
-          }
+          // On récupère le solde et la liste (s’ils existent)
+          final UserCredits? summary =
+              (state is TransactionHistoryLoaded) ? state.currentCredits : null;
+          final List<CreditTransaction> transactions =
+              (state is TransactionHistoryLoaded) ? state.transactions : const [];
 
-          if (state is CreditsError) {
-            return _buildErrorState(state.message);
-          }
+          return Column(
+            children: [
+              // 1️⃣ Header fixe
+              _creditsHeader(summary),
 
-          return const SizedBox.shrink();
-        },
+              // 2️⃣ Liste scrollable qui occupe le reste
+              Expanded(
+                child: transactions.isEmpty
+                    ? _buildEmptyState()          // rien à scroller
+                    : ListView.separated(
+                        physics: const BouncingScrollPhysics(),
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        itemCount: transactions.length,
+                        separatorBuilder: (_, __) => const SizedBox(height: 12),
+                        itemBuilder: (c, i) => _buildTransactionItem(transactions[i]),
+                      ),
+              ),
+            ],
+          );
+        }
       ),
     );
   }
 
-  Widget _buildPlansContent(CreditPlansLoaded state) {
-    return Column(
-      children: [
-        // Header avec crédits actuels
-        if (state.currentCredits != null)
-          Container(
-            width: double.infinity,
-            margin: const EdgeInsets.all(20),
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: context.adaptiveSurface,
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Column(
-              children: [
-                Text(
-                  context.l10n.currentCredits,
-                  style: context.bodySmall?.copyWith(
-                    color: context.adaptiveTextSecondary,
-                  ),
-                ),
-                8.h,
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.star_rounded,
-                      size: 24,
-                      color: Colors.amber[600],
-                    ),
-                    8.w,
-                    Text(
-                      '${state.currentCredits!.availableCredits}',
-                      style: context.bodyLarge?.copyWith(
-                        fontWeight: FontWeight.w800,
-                        color: context.adaptiveTextPrimary,
-                      ),
-                    ),
-                    4.w,
-                    Text(
-                      'crédits',
-                      style: context.bodyMedium?.copyWith(
-                        color: context.adaptiveTextPrimary,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
+  Widget _creditsHeader(UserCredits? summary) {
+    if (summary == null) return const SizedBox.shrink();
 
-        // Liste des plans
-        Expanded(
-          child: ListView.builder(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            itemCount: state.plans.length,
-            itemBuilder: (context, index) {
-              final plan = state.plans[index];
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 16),
-                child: CreditPlanCard(
-                  plan: plan,
-                  isSelected: selectedPlanId == plan.id,
-                  onTap: () {
-                    setState(() {
-                      selectedPlanId = plan.id;
-                    });
-                  },
-                ),
-              );
-            },
+    return Container(
+      margin: const EdgeInsets.fromLTRB(20, 20, 20, 12),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: context.adaptiveSurface,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        children: [
+          Text(
+            context.l10n.currentCredits,
+            style: context.bodySmall?.copyWith(color: context.adaptiveTextSecondary),
           ),
-        ),
-
-        // Bouton d'achat
-        SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.all(20),
-            child: SizedBox(
-              width: double.infinity,
-              child: SquircleContainer(
-                onTap: selectedPlanId != null ? _handlePurchase : null,
-                height: 56,
-                color: selectedPlanId != null 
-                    ? context.adaptivePrimary 
-                    : context.adaptiveTextSecondary.withValues(alpha: 0.3),
-                radius: 28.0,
-                child: Center(
-                  child: Text(
-                    selectedPlanId != null 
-                        ? context.l10n.buySelectedPlan
-                        : context.l10n.selectPlan,
-                    style: context.bodySmall?.copyWith(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
+          8.h,
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.star_rounded, size: 24, color: Colors.amber[600]),
+              8.w,
+              Text(
+                '${summary.availableCredits}',
+                style: context.bodyLarge?.copyWith(
+                  fontWeight: FontWeight.w800,
+                  color: context.adaptiveTextPrimary,
                 ),
               ),
-            ),
+              4.w,
+              Text(
+                'crédits',
+                style: context.bodyMedium?.copyWith(color: context.adaptiveTextPrimary),
+              ),
+            ],
           ),
-        ),
-      ],
+        ],
+      ),
     );
+  }
+
+  /// 3️⃣  Section “historique”
+  List<Widget> _historySection(TransactionHistoryLoaded state) {
+    if (state.transactions.isEmpty) return [_buildEmptyState()];
+    return [
+      ...state.transactions.map(
+        (t) => Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          child: _buildTransactionItem(t),
+        ),
+      ),
+      40.h,
+    ];
   }
 
   Widget _buildErrorState(String message) {
@@ -295,6 +203,139 @@ class _CreditPlansScreenState extends State<CreditPlansScreen> {
     );
   }
 
+  Widget _buildEmptyState() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.history_rounded,
+              size: 48,
+              color: context.adaptiveTextSecondary,
+            ),
+            16.h,
+            Text(
+              context.l10n.noTransactions,
+              style: context.bodySmall?.copyWith(
+                color: context.adaptiveTextSecondary,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTransactionItem(CreditTransaction transaction) {
+    final isPositive = transaction.isPositive;
+    
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: context.adaptiveSurface,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        children: [
+          // Icône selon le type
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: _getTransactionColor(transaction.type).withValues(alpha: 0.1),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              _getTransactionIcon(transaction.type),
+              size: 20,
+              color: _getTransactionColor(transaction.type),
+            ),
+          ),
+          
+          12.w,
+          
+          // Détails
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  transaction.description ?? transaction.typeDisplayName,
+                  style: context.bodySmall?.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: context.adaptiveTextPrimary,
+                  ),
+                ),
+                4.h,
+                Text(
+                  _formatDate(transaction.createdAt),
+                  style: context.bodySmall?.copyWith(
+                    color: context.adaptiveTextSecondary,
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          
+          // Montant
+          Text(
+            transaction.formattedAmount,
+            style: context.bodySmall?.copyWith(
+              fontWeight: FontWeight.w700,
+              color: isPositive ? Colors.green[600] : Colors.red[600],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Color _getTransactionColor(CreditTransactionType type) {
+    switch (type) {
+      case CreditTransactionType.purchase:
+        return Colors.green;
+      case CreditTransactionType.usage:
+        return Colors.orange;
+      case CreditTransactionType.bonus:
+        return Colors.blue;
+      case CreditTransactionType.refund:
+        return Colors.purple;
+    }
+  }
+
+  IconData _getTransactionIcon(CreditTransactionType type) {
+    switch (type) {
+      case CreditTransactionType.purchase:
+        return Icons.add_circle_rounded;
+      case CreditTransactionType.usage:
+        return Icons.remove_circle_rounded;
+      case CreditTransactionType.bonus:
+        return Icons.card_giftcard_rounded;
+      case CreditTransactionType.refund:
+        return Icons.refresh_rounded;
+    }
+  }
+
+  String _formatDate(DateTime date) {
+    final now = DateTime.now();
+    final diff = now.difference(date);
+    
+    if (diff.inDays == 0) {
+      return '${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
+    } else if (diff.inDays == 1) {
+      return context.l10n.yesterday;
+    } else if (diff.inDays < 7) {
+      return '${diff.inDays} ${context.l10n.daysAgo}';
+    } else {
+      return '${date.day}/${date.month}/${date.year}';
+    }
+  }
+
   void _showPurchaseSuccessDialog(CreditPurchaseSuccess state) {
     showDialog(
       context: context,
@@ -325,19 +366,13 @@ class _CreditPlansScreenState extends State<CreditPlansScreen> {
   }
 
   void _showErrorSnackBar(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: Colors.red[600],
+    showTopSnackBar(
+      Overlay.of(context),
+      TopSnackBar(
+        isError: true,
+        title: message,
       ),
     );
   }
 
-  void _showTransactionHistory(BuildContext context) {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (context) => const TransactionHistoryScreen(),
-      ),
-    );
-  }
 }

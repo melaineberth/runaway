@@ -1,6 +1,7 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:runaway/core/errors/api_exceptions.dart';
 import 'package:runaway/features/credits/data/repositories/credits_repository.dart';
+import 'package:runaway/features/credits/data/services/iap_service.dart';
 import 'package:runaway/features/credits/domain/models/user_credits.dart';
 
 import 'credits_event.dart';
@@ -161,10 +162,7 @@ class CreditsBloc extends Bloc<CreditsEvent, CreditsState> {
       }
 
       emit(CreditPurchaseInProgress(plan, currentCredits: currentCredits));
-      
-      // TODO: Ici on devrait intégrer Stripe/RevenueCat/In-App Purchase
-      // Pour l'instant, on émet juste l'état en attente
-      
+            
     } catch (e) {
       print('❌ Erreur initiation achat: $e');
       emit(CreditsError(_getErrorMessage(e)));
@@ -177,10 +175,7 @@ class CreditsBloc extends Bloc<CreditsEvent, CreditsState> {
     Emitter<CreditsState> emit,
   ) async {
     try {
-      final updatedCredits = await _creditsRepository.purchaseCredits(
-        planId: event.planId,
-        paymentIntentId: event.paymentIntentId,
-      );
+      final updatedCredits = await _creditsRepository.refreshUserCredits();
 
       final plan = await _creditsRepository.getCreditPlan(event.planId);
       
@@ -204,6 +199,8 @@ class CreditsBloc extends Bloc<CreditsEvent, CreditsState> {
 
     try {
       final plans = await _creditsRepository.getCreditPlans();
+
+      await IAPService.preloadProducts(plans);   // 👈 ajoute
       
       // Récupérer aussi les crédits actuels
       UserCredits? currentCredits;

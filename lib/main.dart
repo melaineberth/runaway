@@ -18,7 +18,7 @@ import 'package:runaway/core/services/notification_service.dart';
 import 'package:runaway/core/services/route_data_sync_wrapper.dart';
 import 'package:runaway/core/widgets/auth_data_listener.dart';
 import 'package:runaway/features/auth/presentation/bloc/auth_bloc.dart';
-import 'package:runaway/features/credits/data/services/stripe_service.dart';
+import 'package:runaway/features/credits/data/services/iap_service.dart';
 import 'package:runaway/features/credits/presentation/blocs/credits_bloc.dart';
 import 'package:runaway/l10n/app_localizations.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -39,8 +39,8 @@ void main() async {
     // Valider la configuration d'environnement
     EnvironmentConfig.validate();
 
-    // 🆕 Initialiser Stripe
-    await StripeService.initialize();
+    // 🆕 Initialiser IAP
+    await IAPService.initialise();
 
     // Initialiser HydratedBloc pour la persistance
     final directory = await getApplicationDocumentsDirectory();

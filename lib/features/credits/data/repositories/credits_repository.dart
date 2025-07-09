@@ -118,65 +118,7 @@ class CreditsRepository {
   }
 
   /// Achète des crédits selon un plan
-  Future<UserCredits> purchaseCredits({
-    required String planId,
-    required String paymentIntentId,
-  }) async {
-    final user = _supabase.auth.currentUser;
-    if (user == null) {
-      throw SessionException('Utilisateur non connecté');
-    }
-
-    try {
-      print('🛒 Achat de crédits pour le plan: $planId');
-      
-      // Récupérer le plan pour calculer les crédits
-      final plan = await getCreditPlan(planId);
-      if (plan == null) {
-        throw ValidationException([
-          ValidationError(field: 'planId', message: 'Plan non trouvé')
-        ]);
-      }
-
-      final creditsToAdd = plan.totalCreditsWithBonus;
-      
-      // Traitement de l'achat
-      final result = await _supabase.rpc('process_credit_transaction', params: {
-        'p_user_id': user.id,
-        'p_amount': creditsToAdd,
-        'p_transaction_type': 'purchase',
-        'p_description': 'Achat ${plan.name}',
-        'p_credit_plan_id': planId,
-        'p_payment_intent_id': paymentIntentId,
-        'p_metadata': {
-          'plan_name': plan.name,
-          'plan_price': plan.price,
-          'bonus_percentage': plan.bonusPercentage,
-        },
-      });
-
-      if (result['success'] == true) {
-        final updatedCredits = await getUserCredits();
-        
-        print('✅ Achat réussi. Nouveau solde: ${updatedCredits.availableCredits}');
-        return updatedCredits;
-      } else {
-        throw Exception('Échec de l\'achat: ${result['error'] ?? 'Erreur inconnue'}');
-      }
-      
-    } catch (e) {
-      print('❌ Erreur achat crédits: $e');
-      
-      if (e is AppException) {
-        rethrow;
-      }
-      
-      throw ServerException(
-        'Erreur lors de l\'achat des crédits',
-        500,
-      );
-    }
-  }
+  Future<UserCredits> refreshUserCredits() => getUserCredits();
 
   /// Récupère tous les plans de crédits disponibles
   Future<List<CreditPlan>> getCreditPlans() async {

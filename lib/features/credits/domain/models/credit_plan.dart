@@ -2,6 +2,7 @@ import 'package:equatable/equatable.dart';
 
 class CreditPlan extends Equatable {
   final String id;
+  final String iapId;
   final String name;
   final int credits;
   final double price;
@@ -15,6 +16,7 @@ class CreditPlan extends Equatable {
 
   const CreditPlan({
     required this.id,
+    required this.iapId,
     required this.name,
     required this.credits,
     required this.price,
@@ -42,6 +44,7 @@ class CreditPlan extends Equatable {
   factory CreditPlan.fromJson(Map<String, dynamic> json) {
     return CreditPlan(
       id: json['id'] as String,
+      iapId:   json['iap_id'] as String,
       name: json['name'] as String,
       credits: json['credits'] as int,
       price: (json['price'] as num).toDouble(),
@@ -60,6 +63,7 @@ class CreditPlan extends Equatable {
   Map<String, dynamic> toJson() {
     return {
       'id': id,
+      'iap_id': iapId,
       'name': name,
       'credits': credits,
       'price': price,
