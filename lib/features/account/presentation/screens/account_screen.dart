@@ -11,6 +11,9 @@ import 'package:go_router/go_router.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:runaway/config/extensions.dart';
+import 'package:runaway/core/blocs/app_data/app_data_bloc.dart';
+import 'package:runaway/core/blocs/app_data/app_data_event.dart';
+import 'package:runaway/core/blocs/app_data/app_data_state.dart';
 import 'package:runaway/core/blocs/notification/notification_bloc.dart';
 import 'package:runaway/core/blocs/notification/notification_event.dart';
 import 'package:runaway/core/blocs/notification/notification_state.dart';
@@ -32,7 +35,6 @@ import 'package:runaway/features/auth/presentation/bloc/auth_event.dart';
 import 'package:runaway/features/auth/presentation/bloc/auth_state.dart';
 import 'package:runaway/features/credits/presentation/blocs/credits_bloc.dart';
 import 'package:runaway/features/credits/presentation/blocs/credits_event.dart';
-import 'package:runaway/features/credits/presentation/blocs/credits_state.dart';
 import 'package:top_snackbar_flutter/top_snack_bar.dart';
 import 'dart:math' as math;
 
@@ -495,28 +497,28 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
   }
 
   Widget _buildCreditsTile() {
-    return BlocBuilder<CreditsBloc, CreditsState>(
-      builder: (context, creditsState) {
-        // Déterminer l'affichage selon l'état
+    // 🆕 Utilisation d'AppDataBloc au lieu de CreditsBloc directement
+    return BlocBuilder<AppDataBloc, AppDataState>(
+      builder: (context, appDataState) {
+        // Déterminer l'affichage selon l'état des données dans AppDataBloc
         String creditsDisplay;
         bool isLoading = false;
+        bool hasError = false;
 
-        if (creditsState is CreditsLoading) {
+        if (!appDataState.isCreditDataLoaded && appDataState.isLoading) {
+          // Chargement en cours
           isLoading = true;
           creditsDisplay = '--';
-        } else if (creditsState is CreditsLoaded) {
-          final credits = creditsState.credits.availableCredits;
+        } else if (appDataState.hasCreditData) {
+          // Données disponibles - affichage immédiat
+          final credits = appDataState.availableCredits;
           creditsDisplay = credits.toString();
-        } else if (creditsState is CreditUsageSuccess) {
-          final credits = creditsState.updatedCredits.availableCredits;
-          creditsDisplay = credits.toString();
-        } else if (creditsState is CreditPurchaseSuccess) {
-          final credits = creditsState.updatedCredits.availableCredits;
-          creditsDisplay = credits.toString();
-        } else if (creditsState is CreditsError) {
-          creditsDisplay = creditsState.message;
+        } else if (appDataState.lastError != null) {
+          // Erreur
+          hasError = true;
+          creditsDisplay = 'Erreur';
         } else {
-          // État initial
+          // État initial ou pas de données
           creditsDisplay = '--';
         }
 
@@ -525,18 +527,70 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
           label: context.l10n.manageCredits,
           icon: HugeIcons.strokeRoundedWallet05,
           onTap: isLoading ? null : () => context.push("/manage-credits"),
-          child: IconBtn(
-            padding: 0.0,
-            backgroundColor: Colors.transparent,
-            iconSize: 19,
-            iconColor: context.adaptiveTextSecondary,
-            trailling: HugeIcons.strokeStandardArrowRight01,
-            label: creditsDisplay,
+          child: Row(
+            children: [
+              // Indicateur de statut visuel
+              if (appDataState.hasCreditData)
+                Container(
+                  width: 8,
+                  height: 8,
+                  margin: const EdgeInsets.only(right: 8),
+                  decoration: BoxDecoration(
+                    color: appDataState.hasCredits 
+                      ? Colors.green 
+                      : Colors.orange,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+              
+              // Affichage des crédits
+              Text(
+                creditsDisplay,
+                style: context.bodyMedium?.copyWith(
+                  color: hasError 
+                    ? Colors.red 
+                    : context.adaptiveTextPrimary,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              
+              const SizedBox(width: 8),
+              
+              // Icône d'action ou de chargement
+              if (isLoading)
+                SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: context.adaptiveTextSecondary,
+                  ),
+                )
+              else if (hasError)
+                GestureDetector(
+                  onTap: () {
+                    // Déclencher un rafraîchissement des données
+                    context.appDataBloc.add(const CreditDataRefreshRequested());
+                  },
+                  child: Icon(
+                    HugeIcons.strokeRoundedRefresh,
+                    size: 16,
+                    color: context.adaptiveTextSecondary,
+                  ),
+                )
+              else
+                Icon(
+                  HugeIcons.strokeStandardArrowRight01,
+                  size: 19,
+                  color: context.adaptiveTextSecondary,
+                ),
+            ],
           ),
         );
       },
     );
   }
+
 
   Widget _buildAppVersion() {
     return Column(

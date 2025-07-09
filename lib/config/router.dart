@@ -68,6 +68,7 @@ final GoRouter router = GoRouter(
   routes: [
     GoRoute(
       path: '/onboarding',
+      name: 'onboarding',
       pageBuilder: (context, state) => NoTransitionPage(
         key: state.pageKey,
         child: const OnboardingScreen(),
@@ -117,12 +118,9 @@ final GoRouter router = GoRouter(
     ),
     GoRoute(
       path: '/manage-credits',
-      pageBuilder: (context, state) {
-        return NoTransitionPage(
-          key: state.pageKey,
-          child: const CreditPlansScreen(),
-        );
-      },
+      builder: (context, state) => CreditAwarePageWrapper(
+            child: const CreditPlansScreen(),
+          ),
     ),
 
     // Routes principales avec shell (navigation bottom)

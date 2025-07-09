@@ -329,10 +329,10 @@ class _ActivityScreenState extends State<ActivityScreen> with TickerProviderStat
     // ✅ Créer un état ActivityLoaded virtuel à partir des données pré-chargées
     final virtualState = ActivityLoaded(
       generalStats: appDataState.activityStats!,
-      typeStats: appDataState.activityTypeStats ?? [],
-      periodStats: appDataState.periodStats ?? [],
-      goals: appDataState.personalGoals ?? [],
-      records: appDataState.personalRecords ?? [],
+      typeStats: appDataState.activityTypeStats,
+      periodStats: appDataState.periodStats,
+      goals: appDataState.personalGoals,
+      records: appDataState.personalRecords,
       currentPeriod: PeriodType.monthly, // Valeur par défaut
       selectedActivityFilter: null,
     );

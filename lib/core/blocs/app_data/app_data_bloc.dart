@@ -1,6 +1,11 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:runaway/core/services/screenshot_service.dart';
 import 'package:runaway/features/activity/data/repositories/activity_repository.dart';
+import 'package:runaway/features/credits/data/repositories/credits_repository.dart';
+import 'package:runaway/features/credits/data/services/iap_service.dart';
+import 'package:runaway/features/credits/domain/models/credit_plan.dart';
+import 'package:runaway/features/credits/domain/models/credit_transaction.dart';
+import 'package:runaway/features/credits/domain/models/user_credits.dart';
 import 'package:runaway/features/home/data/services/map_state_service.dart';
 import 'package:runaway/features/route_generator/data/repositories/routes_repository.dart';
 import 'package:runaway/features/activity/domain/models/activity_stats.dart';
@@ -13,31 +18,37 @@ class AppDataBloc extends Bloc<AppDataEvent, AppDataState> {
   final ActivityRepository _activityRepository;
   final RoutesRepository _routesRepository;
   final MapStateService _mapStateService; // 🆕 Injection du service
+  final CreditsRepository _creditsRepository; // 🆕 Ajout du repository crédits
   
   // Cache avec expiration optimisé
   static const Duration _cacheExpiration = Duration(minutes: 30);
   DateTime? _lastCacheUpdate;
   DateTime? _lastActivityUpdate;
   DateTime? _lastHistoricUpdate;
+  DateTime? _lastCreditUpdate; // 🆕
   
   // 🛡️ Protection contre les synchronisations multiples
   bool _isActivitySyncInProgress = false;
   bool _isHistoricSyncInProgress = false;
+  bool _isCreditSyncInProgress = false; // 🆕
   bool _isFullSyncInProgress = false;
   
   // 🕒 Timing pour éviter les appels trop fréquents
   static const Duration _minSyncInterval = Duration(seconds: 5);
   DateTime? _lastActivitySync;
   DateTime? _lastHistoricSync;
+  DateTime? _lastCreditSync; // 🆕
   DateTime? _lastFullSync;
 
   AppDataBloc({
     required ActivityRepository activityRepository,
     required RoutesRepository routesRepository,
     required MapStateService mapStateService,
+    required CreditsRepository creditsRepository, // 🆕 Paramètre requis
   })  : _activityRepository = activityRepository,
         _routesRepository = routesRepository,
         _mapStateService = mapStateService,
+        _creditsRepository = creditsRepository, // 🆕
         super(const AppDataState()) {
     on<AppDataPreloadRequested>(_onPreloadRequested);
     on<AppDataRefreshRequested>(_onRefreshRequested);
@@ -59,6 +70,219 @@ class AppDataBloc extends Bloc<AppDataEvent, AppDataState> {
     on<SavedRouteAddedToAppData>(_onRouteAdded);
     on<SavedRouteDeletedFromAppData>(_onRouteDeleted);
     on<SavedRouteUsageUpdatedInAppData>(_onRouteUsageUpdated);
+
+    // 🆕 Handlers pour les crédits
+    on<CreditDataRefreshRequested>(_onCreditDataRefresh);
+    on<CreditDataPreloadRequested>(_onCreditDataPreload);
+    on<CreditUsageCompletedInAppData>(_onCreditUsageCompleted);
+    on<CreditPurchaseCompletedInAppData>(_onCreditPurchaseCompleted);
+    on<CreditBalanceUpdatedInAppData>(_onCreditBalanceUpdated);
+    on<CreditDataClearRequested>(_onCreditDataClear);
+  }
+
+  /// Chargement initial des données de crédits
+  Future<void> _onCreditDataPreload(
+    CreditDataPreloadRequested event,
+    Emitter<AppDataState> emit,
+  ) async {
+    if (_isCreditSyncInProgress) {
+      print('⚠️ Sync crédits déjà en cours, abandon');
+      return;
+    }
+
+    _isCreditSyncInProgress = true;
+    print('🚀 Pré-chargement des données de crédits...');
+
+    try {
+      // Charger toutes les données de crédits en parallèle
+      final futures = await Future.wait([
+        _creditsRepository.getUserCredits(),
+        _creditsRepository.getCreditPlans(),
+        _creditsRepository.getTransactionHistory(limit: 50),
+      ]);
+
+      final userCredits = futures[0] as UserCredits;
+      final creditPlans = futures[1] as List<CreditPlan>;
+      final transactions = futures[2] as List<CreditTransaction>;
+
+      _lastCreditUpdate = DateTime.now();
+
+      emit(state.copyWith(
+        userCredits: userCredits,
+        creditPlans: creditPlans,
+        creditTransactions: transactions,
+        isCreditDataLoaded: true,
+        lastError: null,
+      ));
+
+      print('✅ Données de crédits pré-chargées: ${userCredits.availableCredits} crédits, ${creditPlans.length} plans, ${transactions.length} transactions');
+
+    } catch (e) {
+      print('❌ Erreur pré-chargement crédits: $e');
+      emit(state.copyWith(
+        lastError: 'Erreur lors du chargement des crédits: $e',
+      ));
+    } finally {
+      _isCreditSyncInProgress = false;
+    }
+  }
+
+  /// Rafraîchissement des données de crédits
+  Future<void> _onCreditDataRefresh(
+    CreditDataRefreshRequested event,
+    Emitter<AppDataState> emit,
+  ) async {
+    await _refreshCreditData(emit, showLoading: true);
+  }
+
+  /// Synchronisation après utilisation de crédits
+  Future<void> _onCreditUsageCompleted(
+    CreditUsageCompletedInAppData event,
+    Emitter<AppDataState> emit,
+  ) async {
+    print('💳 Synchronisation après utilisation de ${event.amount} crédits');
+    
+    try {
+      // Rafraîchir les données sans loading pour une UX fluide
+      await _refreshCreditData(emit, showLoading: false);
+      
+      print('✅ Synchronisation post-utilisation réussie');
+    } catch (e) {
+      print('❌ Erreur synchronisation post-utilisation: $e');
+      // Ne pas émettre d'erreur pour ne pas perturber l'UX
+    }
+  }
+
+  /// Synchronisation après achat de crédits
+  Future<void> _onCreditPurchaseCompleted(
+    CreditPurchaseCompletedInAppData event,
+    Emitter<AppDataState> emit,
+  ) async {
+    print('💰 Synchronisation après achat de ${event.creditsAdded} crédits');
+    
+    try {
+      // Rafraîchir les données sans loading
+      await _refreshCreditData(emit, showLoading: false);
+      
+      print('✅ Synchronisation post-achat réussie');
+    } catch (e) {
+      print('❌ Erreur synchronisation post-achat: $e');
+    }
+  }
+
+  /// Mise à jour optimiste du solde
+  Future<void> _onCreditBalanceUpdated(
+    CreditBalanceUpdatedInAppData event,
+    Emitter<AppDataState> emit,
+  ) async {
+    if (state.userCredits == null) return;
+    
+    final updatedCredits = state.userCredits!.copyWith(
+      availableCredits: event.newBalance,
+    );
+    
+    emit(state.copyWith(userCredits: updatedCredits));
+    
+    if (event.isOptimistic) {
+      print('⚡ Mise à jour optimiste du solde: ${event.newBalance} crédits');
+    } else {
+      print('✅ Confirmation du solde: ${event.newBalance} crédits');
+    }
+  }
+
+  /// Nettoyage des données de crédits
+  Future<void> _onCreditDataClear(
+    CreditDataClearRequested event,
+    Emitter<AppDataState> emit,
+  ) async {
+    print('🗑️ Nettoyage des données de crédits');
+    
+    emit(state.copyWith(
+      userCredits: null,
+      creditPlans: [],
+      creditTransactions: [],
+      isCreditDataLoaded: false,
+    ));
+    
+    _lastCreditUpdate = null;
+    _lastCreditSync = null;
+  }
+
+  /// Méthode helper pour rafraîchir les données de crédits
+  Future<void> _refreshCreditData(Emitter<AppDataState> emit, {bool showLoading = true}) async {
+    if (_isCreditSyncInProgress) return;
+    
+    // Vérifier le timing pour éviter les appels trop fréquents
+    if (_lastCreditSync != null && 
+        DateTime.now().difference(_lastCreditSync!) < _minSyncInterval) {
+      print('⏱️ Sync crédits trop récente, abandon');
+      return;
+    }
+
+    _isCreditSyncInProgress = true;
+    _lastCreditSync = DateTime.now();
+
+    if (showLoading && !state.isLoading) {
+      emit(state.copyWith(isLoading: true));
+    }
+
+    try {
+      final creditData = await _loadCreditData();
+      
+      if (creditData != null) {
+        _lastCreditUpdate = DateTime.now();
+        emit(state.copyWith(
+          userCredits: creditData.userCredits,
+          creditPlans: creditData.creditPlans,
+          creditTransactions: creditData.transactions,
+          isCreditDataLoaded: true,
+          isLoading: false,
+          lastError: null,
+        ));
+      }
+    } catch (e) {
+      emit(state.copyWith(
+        isLoading: false,
+        lastError: 'Erreur lors du rafraîchissement des crédits: $e',
+      ));
+    } finally {
+      _isCreditSyncInProgress = false;
+    }
+  }
+
+  /// Charge les données de crédits depuis le repository
+  Future<CreditDataResult?> _loadCreditData() async {
+    try {
+      print('💳 Chargement des données de crédits...');
+      
+      final futures = await Future.wait([
+        _creditsRepository.getUserCredits(),
+        _creditsRepository.getCreditPlans(),
+        _creditsRepository.getTransactionHistory(limit: 50),
+      ]);
+
+      final userCredits = futures[0] as UserCredits;
+      final creditPlans = futures[1] as List<CreditPlan>;
+      final transactions = futures[2] as List<CreditTransaction>;
+
+      // 🆕 Pré-charger les produits IAP pour les achats
+      try {
+        await IAPService.preloadProducts(creditPlans);
+        print('✅ Produits IAP pré-chargés pour ${creditPlans.length} plans');
+      } catch (e) {
+        print('⚠️ Erreur pré-chargement IAP: $e');
+        // Ne pas faire échouer le chargement pour autant
+      }
+
+      return CreditDataResult(
+        userCredits: userCredits,
+        creditPlans: creditPlans,
+        transactions: transactions,
+      );
+    } catch (e) {
+      print('❌ Erreur chargement données crédits: $e');
+      return null;
+    }
   }
 
   Future<void> _onRouteAdded(
@@ -216,61 +440,72 @@ class AppDataBloc extends Bloc<AppDataEvent, AppDataState> {
     AppDataPreloadRequested event,
     Emitter<AppDataState> emit,
   ) async {
-    print('🚀 Début pré-chargement des données...');
-    
-    // Éviter les appels multiples pendant un preload
     if (_isFullSyncInProgress) {
-      print('⏳ Preload déjà en cours, ignoré');
-      return;
-    }
-    
-    // Vérifier si les données sont encore valides dans le cache
-    if (_isCacheValid() && _hasCompleteData()) {
-      print('✅ Données en cache valides, pas de rechargement nécessaire');
+      print('⚠️ Sync complète déjà en cours, abandon');
       return;
     }
 
     _isFullSyncInProgress = true;
     
-    emit(state.copyWith(
-      isLoading: true,
-      lastError: null,
-    ));
+    // Vérifie si le cache est encore valide pour éviter un rechargement
+    if (_isCacheValid() && _hasCompleteData()) {
+      print('📦 Cache valide, pas de rechargement nécessaire');
+      _isFullSyncInProgress = false;
+      return;
+    }
+
+    print('🚀 Pré-chargement complet des données...');
+    emit(state.copyWith(isLoading: true));
 
     try {
       // Charger les données en parallèle
-      final futures = <Future>[
+      final futures = await Future.wait([
         _loadActivityData(),
         _loadHistoricData(),
-      ];
-
-      final results = await Future.wait(futures, eagerError: false);
+        _loadCreditData(), // 🆕 Ajout des crédits
+      ]);
       
-      final activityData = results[0] as ActivityDataResult?;
-      final historicData = results[1] as List<SavedRoute>?;
+      final activityData = futures[0] as ActivityDataResult?;
+      final historicData = futures[1] as List<SavedRoute>?;
+      final creditData = futures[2] as CreditDataResult?; // 🆕
 
       // Mettre à jour le cache
       final now = DateTime.now();
       _lastCacheUpdate = now;
       _lastActivityUpdate = now;
       _lastHistoricUpdate = now;
+      _lastCreditUpdate = now;
       _lastFullSync = now;
 
       emit(state.copyWith(
-        isLoading: false,
-        isDataLoaded: true,
-        // Données d'activité
+        // Activité
         activityStats: activityData?.generalStats,
-        activityTypeStats: activityData?.typeStats,
-        periodStats: activityData?.periodStats,
-        personalGoals: activityData?.goals,
-        personalRecords: activityData?.records,
-        // Données d'historique
+        activityTypeStats: activityData?.typeStats ?? [],
+        periodStats: activityData?.periodStats ?? [],
+        personalGoals: activityData?.goals ?? [],
+        personalRecords: activityData?.records ?? [],
+        
+        // Historique
         savedRoutes: historicData ?? [],
+        
+        // 🆕 Crédits
+        userCredits: creditData?.userCredits,
+        creditPlans: creditData?.creditPlans ?? [],
+        creditTransactions: creditData?.transactions ?? [],
+        isCreditDataLoaded: creditData != null,
+        
+        // État
+        isLoading: false,
+        lastError: null,
+        lastUpdate: DateTime.now(),
+        isDataLoaded: true,
         lastCacheUpdate: _lastCacheUpdate,
       ));
 
-      print('✅ Pré-chargement terminé avec succès');
+      print('✅ Pré-chargement complet terminé');
+      print('📊 Activité: ${activityData != null ? "✅" : "❌"}');
+      print('📚 Historique: ${historicData?.length ?? 0} parcours');
+      print('💳 Crédits: ${creditData?.userCredits.availableCredits ?? 0} disponibles');
       
     } catch (e) {
       print('❌ Erreur lors du pré-chargement: $e');
@@ -288,21 +523,40 @@ class AppDataBloc extends Bloc<AppDataEvent, AppDataState> {
     AppDataRefreshRequested event,
     Emitter<AppDataState> emit,
   ) async {
-    // 🛡️ Protection contre les appels trop fréquents
-    if (_isFullSyncInProgress) {
-      print('⚠️ Sync complète déjà en cours, ignorée');
-      return;
+    if (_isFullSyncInProgress) return;
+
+    _isFullSyncInProgress = true;
+    print('🔄 Rafraîchissement complet...');
+
+    emit(state.copyWith(isLoading: true));
+
+    try {
+      // Rafraîchir toutes les données
+      await Future.wait([
+        _refreshActivityData(emit, showLoading: false),
+        _refreshHistoricData(emit, showLoading: false),
+        _refreshCreditData(emit, showLoading: false), // 🆕
+      ]);
+
+      _lastCacheUpdate = DateTime.now();
+      
+      emit(state.copyWith(
+        isLoading: false,
+        lastError: null,
+        lastUpdate: DateTime.now(),
+      ));
+
+      print('✅ Rafraîchissement complet terminé');
+
+    } catch (e) {
+      print('❌ Erreur rafraîchissement: $e');
+      emit(state.copyWith(
+        isLoading: false,
+        lastError: 'Erreur lors du rafraîchissement: $e',
+      ));
+    } finally {
+      _isFullSyncInProgress = false;
     }
-    
-    if (_lastFullSync != null && 
-        DateTime.now().difference(_lastFullSync!) < _minSyncInterval) {
-      print('⚠️ Sync complète trop récente, ignorée');
-      return;
-    }
-    
-    print('🔄 Rafraîchissement des données demandé');
-    _lastCacheUpdate = null; // Forcer le rechargement
-    add(const AppDataPreloadRequested());
   }
 
   /// 🆕 Rafraîchissement optimisé des données d'activité
@@ -440,6 +694,7 @@ class AppDataBloc extends Bloc<AppDataEvent, AppDataState> {
     _isFullSyncInProgress = false;
     _lastActivitySync = null;
     _lastHistoricSync = null;
+    _lastCreditUpdate = null;
     _lastFullSync = null;
     
     // Forcer le rechargement complet en ignorant le cache
@@ -502,8 +757,10 @@ class AppDataBloc extends Bloc<AppDataEvent, AppDataState> {
     _lastCacheUpdate = null;
     _lastActivityUpdate = null;
     _lastHistoricUpdate = null;
+    _lastCreditUpdate = null; // 🆕
     _lastActivitySync = null;
     _lastHistoricSync = null;
+    _lastCreditSync = null; // 🆕
     _lastFullSync = null;
     _isActivitySyncInProgress = false;
     _isHistoricSyncInProgress = false;
@@ -677,11 +934,26 @@ class AppDataBloc extends Bloc<AppDataEvent, AppDataState> {
 
   /// Vérifie si l'état contient des données complètes
   bool _hasCompleteData() {
-    return state.hasHistoricData && state.activityStats != null;
+    return state.hasHistoricData && 
+           state.activityStats != null && 
+           state.isCreditDataLoaded; // 🆕
   }
 
   /// Accesseur pour vérifier si les données sont prêtes
   bool get isDataReady => state.isDataLoaded && !state.isLoading;
+}
+
+/// 🆕 Classe helper pour les résultats de crédits
+class CreditDataResult {
+  final UserCredits userCredits;
+  final List<CreditPlan> creditPlans;
+  final List<CreditTransaction> transactions;
+
+  CreditDataResult({
+    required this.userCredits,
+    required this.creditPlans,
+    required this.transactions,
+  });
 }
 
 /// Classe helper pour les résultats d'activité (inchangée)

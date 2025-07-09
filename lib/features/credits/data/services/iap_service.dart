@@ -109,7 +109,7 @@ class IAPService {
 
     final bool launched = await _iap.buyConsumable(
       purchaseParam: purchaseParam,
-      autoConsume: Platform.isAndroid, // iOS ⇒ `completePurchase`
+      autoConsume: Platform.isIOS ? true : false, // ou supprimez complètement le paramètre
     );
 
     if (!launched) {

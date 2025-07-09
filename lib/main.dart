@@ -56,6 +56,7 @@ void main() async {
     );
     print('✅ Supabase initialisé');
     
+    
     // Initialiser les services avec pré-chargement de géolocalisation
     await AppInitializationService.initialize();
 

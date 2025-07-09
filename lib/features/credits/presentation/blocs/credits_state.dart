@@ -126,3 +126,30 @@ class CreditsError extends CreditsState {
   @override
   List<Object?> get props => [message, currentCredits];
 }
+
+// ➕ extension utilitaire (pas besoin d'importer dans chaque fichier)
+extension CreditsStateX on CreditsState {
+  /// Retourne le nombre de crédits disponibles s’il est connu, sinon null.
+  int? get availableCredits {
+    switch (this) {
+      case CreditsLoaded s:
+        return s.credits.availableCredits;
+      case CreditUsageSuccess s:
+        return s.updatedCredits.availableCredits;
+      case CreditUsageInProgress s:
+        return s.currentCredits.availableCredits;
+      case CreditPurchaseSuccess s:
+        return s.updatedCredits.availableCredits;
+      case CreditPlansLoaded s:
+        return s.currentCredits?.availableCredits;
+      case TransactionHistoryLoaded s:
+        return s.currentCredits?.availableCredits;
+      case InsufficientCreditsError s:
+        return s.currentCredits.availableCredits;
+      case CreditsError s:
+        return s.currentCredits?.availableCredits;
+      default:
+        return null;
+    }
+  }
+}
