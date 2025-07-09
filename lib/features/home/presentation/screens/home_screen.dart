@@ -14,14 +14,17 @@ import 'package:runaway/core/blocs/app_data/app_data_event.dart';
 import 'package:runaway/core/blocs/app_data/app_data_state.dart';
 import 'package:runaway/core/di/bloc_provider_extension.dart';
 import 'package:runaway/core/services/conversion_triggers.dart';
+import 'package:runaway/core/widgets/generation_limit_widget.dart';
 import 'package:runaway/core/widgets/loading_overlay.dart';
 import 'package:runaway/core/widgets/modal_dialog.dart';
 import 'package:runaway/core/widgets/modal_sheet.dart';
 import 'package:runaway/core/widgets/squircle_btn.dart';
+import 'package:runaway/features/auth/presentation/bloc/auth_state.dart';
 import 'package:runaway/features/auth/presentation/widgets/auth_text_field.dart';
 import 'package:runaway/features/home/presentation/widgets/floating_route_info_panel.dart';
 import 'package:runaway/features/route_generator/domain/models/route_parameters.dart';
 import 'package:runaway/features/route_generator/domain/models/saved_route.dart';
+import 'package:runaway/features/route_generator/presentation/blocs/extensions/route_generation_bloc_extensions.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' as sb;
 import 'package:hugeicons/hugeicons.dart';
 import 'package:geolocator/geolocator.dart' as gl;
@@ -129,6 +132,21 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
     _setupRouteGenerationListener();
 
     _initializeMapStyle();
+
+    context.authBloc.stream.listen((authState) {
+      print('🔄 AuthState changé: ${authState.runtimeType}');
+      
+      // Détecter si l'utilisateur s'est déconnecté/session expirée
+      if (authState is Unauthenticated) {
+        print('👋 Utilisateur déconnecté - nettoyage données guest si nécessaire');
+        // Note: les données guest ne sont nettoyées que lors de la CONNEXION, pas déconnexion
+      }
+      
+      if (authState is Authenticated) {
+        print('👤 Utilisateur connecté - nettoyage données guest');
+        context.routeGenerationBloc.clearGuestDataOnLogin();
+      }
+    });
   }
 
   @override
@@ -1659,32 +1677,112 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
   }
 
   // Gestionnaire de génération de route
-  void _handleGenerateRoute() {
-    setState(() {
-      _hasAutoSaved = false;
-    });
+  void _handleGenerateRoute() async {
+    print('🚀 === DÉBUT GÉNÉRATION AVEC VÉRIFICATION GUEST ===');
+    
+    try {
+      // 🆕 ÉTAPE 1 : Vérifier la capacité de génération (guest + authenticated)
+      final capability = await context.routeGenerationBloc.checkGenerationCapability(context.authBloc);
+      
+      print('📊 Capacité: ${capability.toString()}');
+      
+      if (!capability.canGenerate) {
+        print('❌ Génération refusée : ${capability.displayMessage}');
+        _showGenerationLimitedDialog(capability);
+        return;
+      }
+      
+      // 🆕 ÉTAPE 2 : Consommer la génération AVANT de lancer la génération
+      final consumed = await context.routeGenerationBloc.consumeGeneration(context.authBloc);
+      
+      print('💳 Consommation: ${consumed ? "✅ OK" : "❌ KO"}');
+      
+      if (!consumed) {
+        print('❌ Impossible de consommer la génération');
+        _showRouteGenerationError('Impossible de lancer la génération');
+        return;
+      }
+      
+      // 🆕 ÉTAPE 3 : Réinitialiser le flag auto-save
+      setState(() {
+        _hasAutoSaved = false;
+      });
 
-    final parametersState = context.routeParametersBloc.state;
-    final parameters = parametersState.parameters;
+      // 🆕 ÉTAPE 4 : Récupérer les paramètres et valider
+      final parametersState = context.routeParametersBloc.state;
+      final parameters = parametersState.parameters;
 
-    if (!parameters.isValid) {
-      _showRouteGenerationError('Paramètres invalides');
-      return;
+      if (!parameters.isValid) {
+        print('❌ Paramètres invalides');
+        _showRouteGenerationError('Paramètres invalides');
+        return;
+      }
+
+      print('✅ Paramètres valides, lancement génération...');
+      
+      // 🆕 ÉTAPE 5 : Lancer la génération (sans vérification de crédits supplémentaire)
+      context.routeGenerationBloc.add(
+        RouteGenerationRequested(
+          parameters,
+          mapboxMap: mapboxMap,
+          bypassCreditCheck: true, // 🆕 NOUVEAU FLAG POUR BYPASSER LA VÉRIFICATION
+        ),
+      );
+
+      // 🆕 ÉTAPE 6 : Déclencher les analytics si connecté
+      if (mounted) {
+        ConversionTriggers.onRouteGenerated(context);
+      }
+
+      print('🚀 Génération lancée: ${parameters.distanceKm}km, ${parameters.activityType.name}');
+      print('🚀 === FIN GÉNÉRATION AVEC VÉRIFICATION GUEST ===');
+      
+    } catch (e) {
+      print('❌ Erreur lors de la génération: $e');
+      _showRouteGenerationError('Erreur: $e');
     }
+  }
 
-    // 🆕 Passer mapboxMap pour la sauvegarde automatique
-    context.routeGenerationBloc.add(
-      RouteGenerationRequested(
-        parameters,
-        mapboxMap: mapboxMap,
+  // 🆕 NOUVELLE MÉTHODE : Afficher dialogue de limitation
+  void _showGenerationLimitedDialog(GenerationCapability capability) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(
+          capability.type == GenerationType.guest 
+              ? 'Générations gratuites épuisées'
+              : 'Crédits insuffisants'
+        ),
+        content: GenerationLimitWidget(
+          capability: capability,
+          showBackground: false,
+          onUpgrade: () {
+            Navigator.pop(context);
+            context.push('/manage-credits');
+          },
+          onLogin: () {
+            Navigator.pop(context);
+            _showLoginOptions();
+          },
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Fermer'),
+          ),
+        ],
       ),
     );
+  }
 
-    if (mounted) {
-      ConversionTriggers.onRouteGenerated(context);
-    }
-
-    print('🚀 Génération demandée: ${parameters.distanceKm}km, ${parameters.activityType.name}');
+  // 🆕 MÉTHODE HELPER : Afficher options de connexion
+  void _showLoginOptions() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => const LoginOptionsModal(),
+    );
   }
 
   void _showExportDialog() {
@@ -2083,20 +2181,35 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
                                             ),
                                             
                                             // Bouton générateur
-                                            IconBtn(
-                                              padding: 15.0,
-                                              backgroundColor: context.adaptiveBackground,
-                                              icon: HugeIcons.strokeRoundedAiMagic,
-                                              iconColor: context.adaptiveTextSecondary,
-                                              onPressed: openGenerator,
-                                              boxShadow: [
-                                                BoxShadow(
-                                                  color: Colors.black.withValues(alpha: 0.18),
-                                                  spreadRadius: 2,
-                                                  blurRadius: 30,
-                                                  offset: Offset(0, 0), // changes position of shadow
-                                                ),
-                                              ]
+                                            FutureBuilder<GenerationCapability>(
+                                              future: context.routeGenerationBloc.checkGenerationCapability(context.authBloc),
+                                              builder: (context, snapshot) {
+                                                final capability = snapshot.data;
+    
+                                                if (capability != null && !capability.canGenerate) {
+                                                  return GenerationLimitWidget(
+                                                    capability: capability,
+                                                    onUpgrade: () => context.push('/manage-credits'),
+                                                    onLogin: () => showAuthModal(context),
+                                                  );
+                                                }
+
+                                                return IconBtn(
+                                                  padding: 15.0,
+                                                  backgroundColor: context.adaptiveBackground,
+                                                  icon: HugeIcons.strokeRoundedAiMagic,
+                                                  iconColor: context.adaptiveTextSecondary,
+                                                  onPressed: openGenerator,
+                                                  boxShadow: [
+                                                    BoxShadow(
+                                                      color: Colors.black.withValues(alpha: 0.18),
+                                                      spreadRadius: 2,
+                                                      blurRadius: 30,
+                                                      offset: Offset(0, 0), // changes position of shadow
+                                                    ),
+                                                  ]
+                                                );
+                                              }
                                             ),
                                           ],
                                         ),

@@ -36,15 +36,17 @@ class ZoneAnalysisRequested extends RouteGenerationEvent {
 /// Événement pour générer un parcours avec les paramètres
 class RouteGenerationRequested extends RouteGenerationEvent {
   final RouteParameters parameters;
-  final MapboxMap? mapboxMap; // 🆕 Ajouter pour sauvegarde automatique
+  final MapboxMap? mapboxMap;
+  final bool bypassCreditCheck; // 🆕 NOUVEAU PARAMÈTRE
 
   const RouteGenerationRequested(
     this.parameters, {
     this.mapboxMap,
+    this.bypassCreditCheck = false, // 🆕 Par défaut false pour la compatibilité
   });
 
   @override
-  List<Object?> get props => [parameters, mapboxMap];
+  List<Object?> get props => [parameters, mapboxMap, bypassCreditCheck]; // 🆕 Ajouter dans props
 }
 
 /// 🆕 Sauvegarde de parcours avec capture de screenshot optionnelle

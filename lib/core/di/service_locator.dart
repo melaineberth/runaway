@@ -10,6 +10,7 @@ import 'package:runaway/core/blocs/notification/notification_bloc.dart';
 import 'package:runaway/core/blocs/notification/notification_event.dart';
 import 'package:runaway/core/blocs/theme_bloc/theme_bloc.dart';
 import 'package:runaway/core/services/app_data_initialization_service.dart';
+import 'package:runaway/core/services/guest_limitation_service.dart';
 import 'package:runaway/features/activity/data/repositories/activity_repository.dart';
 import 'package:runaway/features/auth/data/repositories/auth_repository.dart';
 import 'package:runaway/features/auth/presentation/bloc/auth_bloc.dart';
@@ -41,6 +42,10 @@ class ServiceLocator {
       bloc.add(NotificationInitializeRequested());
       return bloc;
     });
+
+    sl.registerLazySingleton<GuestLimitationService>(
+      () => GuestLimitationService.instance,
+    );
 
     // 🆕 CreditsBloc (avec référence à AppDataBloc)
     sl.registerLazySingleton<CreditsBloc>(() {
