@@ -4,6 +4,7 @@ import 'package:hydrated_bloc/hydrated_bloc.dart';
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:provider/provider.dart';
 import 'package:runaway/config/environment_config.dart';
 import 'package:runaway/config/router.dart';
 import 'package:runaway/config/theme.dart';
@@ -20,6 +21,7 @@ import 'package:runaway/core/widgets/auth_data_listener.dart';
 import 'package:runaway/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:runaway/features/credits/data/services/iap_service.dart';
 import 'package:runaway/features/credits/presentation/blocs/credits_bloc.dart';
+import 'package:runaway/features/home/presentation/screens/home_screen.dart';
 import 'package:runaway/l10n/app_localizations.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'core/blocs/app_bloc_observer.dart';
@@ -119,22 +121,25 @@ class _TrailixState extends State<Trailix> {
             builder: (context, localeState) {
               return BlocBuilder<ThemeBloc, ThemeState>(
                 builder: (context, themeState) {
-                  return MaterialApp.router(
-                    title: 'Trailix',
-                    debugShowCheckedModeBanner: false,
-                    routerConfig: router,
-                    theme: getAppTheme(Brightness.light),
-                    darkTheme: getAppTheme(Brightness.dark),
-                    themeMode: themeState.themeMode.toThemeMode(),
-                    locale: localeState.locale,
-                    localizationsDelegates: AppLocalizations.localizationsDelegates,
-                    supportedLocales: AppLocalizations.supportedLocales,
-                    builder: (context, child) {
-                      return MediaQuery(
-                        data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(1.0)),
-                        child: child ?? Container(),
-                      );
-                    },
+                  return ChangeNotifierProvider(
+                    create: (_) => HomeController(),
+                    child: MaterialApp.router(
+                      title: 'Trailix',
+                      debugShowCheckedModeBanner: false,
+                      routerConfig: router,
+                      theme: getAppTheme(Brightness.light),
+                      darkTheme: getAppTheme(Brightness.dark),
+                      themeMode: themeState.themeMode.toThemeMode(),
+                      locale: localeState.locale,
+                      localizationsDelegates: AppLocalizations.localizationsDelegates,
+                      supportedLocales: AppLocalizations.supportedLocales,
+                      builder: (context, child) {
+                        return MediaQuery(
+                          data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(1.0)),
+                          child: child ?? Container(),
+                        );
+                      },
+                    ),
                   );
                 }
               );

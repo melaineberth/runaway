@@ -155,7 +155,7 @@ class GenerationLimitWidget extends StatelessWidget {
       title: capability.type == GenerationType.guest 
         ? 'Générations gratuites épuisées'
         : 'Crédits épuisés', 
-      subtitle: capability.upgradeMessage ?? 'Impossible de générer plus de parcours', 
+      subtitle: 'Créez un compte gratuit pour plus de générations', 
       validLabel: "Créer un compte gratuit",
       onValid: onLogin ?? () => _showLoginOptions(context),
       cancelLabel: "Debug",
@@ -195,7 +195,7 @@ class LoginOptionsModal extends StatelessWidget {
             width: 40,
             height: 4,
             decoration: BoxDecoration(
-              color: context.colorScheme.onSurfaceVariant.withOpacity(0.4),
+              color: context.colorScheme.onSurfaceVariant.withValues(alpha: 0.4),
               borderRadius: BorderRadius.circular(2),
             ),
           ),

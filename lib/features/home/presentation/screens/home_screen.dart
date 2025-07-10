@@ -14,7 +14,7 @@ import 'package:runaway/core/blocs/app_data/app_data_event.dart';
 import 'package:runaway/core/blocs/app_data/app_data_state.dart';
 import 'package:runaway/core/di/bloc_provider_extension.dart';
 import 'package:runaway/core/services/conversion_triggers.dart';
-import 'package:runaway/core/widgets/generation_limit_widget.dart';
+import 'package:runaway/features/home/presentation/widgets/generation_limit_widget.dart';
 import 'package:runaway/core/widgets/loading_overlay.dart';
 import 'package:runaway/core/widgets/modal_dialog.dart';
 import 'package:runaway/core/widgets/modal_sheet.dart';
@@ -46,9 +46,22 @@ import 'package:runaway/features/route_generator/presentation/blocs/route_genera
 import 'package:supabase_flutter/supabase_flutter.dart' as su;
 import 'package:top_snackbar_flutter/top_snack_bar.dart';
 import '../../../route_generator/presentation/screens/route_parameter.dart' as gen;
-import '../../../../core/widgets/icon_btn.dart';
 import '../blocs/route_parameters_event.dart';
-import '../widgets/location_search_bar.dart';
+
+class HomeController extends ChangeNotifier {
+  // ---------- Générateur ----------
+  VoidCallback? _openGenerator;
+  void registerOpenGenerator(VoidCallback cb) => _openGenerator = cb;
+  void openGenerator() => _openGenerator?.call();
+
+  // ---------- Sélection de lieu ----------
+  void Function(double, double, String)? _onLocationSelected;
+  void registerLocationSelected(
+          void Function(double, double, String) cb) =>
+      _onLocationSelected = cb;
+  void selectLocation(double lon, double lat, String name) =>
+      _onLocationSelected?.call(lon, lat, name);
+}
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -135,6 +148,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
 
     _initializeMapStyle();
 
+    final ctl = context.read<HomeController>();
+
+    ctl.registerOpenGenerator(openGenerator); // ⬅️ déjà vu
+    ctl.registerLocationSelected(_onLocationSelected); // ⬅️ nouveau
+
     context.authBloc.stream.listen((authState) {
       print('🔄 AuthState changé: ${authState.runtimeType}');
       
@@ -149,6 +167,16 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
         context.routeGenerationBloc.clearGuestDataOnLogin();
       }
     });
+  }
+
+  @override
+  void dispose() {
+    _saveStateToService();
+    _fadeController.dispose();
+    _positionStream?.cancel();
+    _lottieController.dispose();
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
   }
 
   @override
@@ -1648,12 +1676,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
   }
 
   // === INTERFACE UTILISATEUR ===
-  /// 🎨 Ouvrir le sélecteur de style de carte
   void _openMapStyleSelector() {
-    showModalSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      child: MapStyleSelector(
+    _presentModalSheet<String>(
+      (_) => MapStyleSelector(
         currentStyleId: _currentMapStyleId,
         onStyleSelected: _onMapStyleSelected,
       ),
@@ -1661,10 +1686,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
   }
   
   void openGenerator() {
-    showModalSheet(
-      context: context, 
-      backgroundColor: Colors.transparent,
-      child: BlocProvider.value(
+    _presentModalSheet<String>(
+      (_) => BlocProvider.value(
         value: context.routeParametersBloc,
         child: BlocProvider.value(
           value: context.routeGenerationBloc,
@@ -1880,17 +1903,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
            current.avoidTraffic == saved.avoidTraffic;
   }
 
-  @override
-  void dispose() {
-    _saveStateToService();
-
-    _fadeController.dispose();
-    _positionStream?.cancel();
-    _lottieController.dispose();
-    WidgetsBinding.instance.removeObserver(this);
-    super.dispose();
-  }
-
   Future<T?> _presentModalSheet<T>(
     Widget Function(BuildContext) builder,
   ) async {
@@ -1910,6 +1922,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
     if (mounted && generatedRouteCoordinates != null) {
       _showRouteInfoModal();
     }
+
     return res;
   }
 
@@ -2076,7 +2089,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
                 body: FutureBuilder<GenerationCapability>(
                   future: context.routeGenerationBloc.checkGenerationCapability(context.authBloc),
                   builder: (context, snapshot) {
-                    final capability = snapshot.data;
+                    // final capability = snapshot.data;
 
                     return Stack(
                       alignment: Alignment.bottomCenter,
@@ -2098,103 +2111,104 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
                         if (_showLottieMarker && _lottieMarkerLat != null && _lottieMarkerLng != null)
                           _buildLottieMarker(),
                                   
-                          // Interface normale
-                          if (!isNavigationMode && !_isInNavigationMode)
-                          Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 30.0),
-                            child: SizedBox(
-                              width: MediaQuery.of(context).size.width,
-                              height: MediaQuery.of(context).size.height,
-                              child: SafeArea(
-                                child: Column(
-                                  children: [
-                                    Padding(
-                                      padding: const EdgeInsets.symmetric(horizontal: 20.0),
-                                      child: LocationSearchBar(
-                                        onLocationSelected: _onLocationSelected,
-                                        userLongitude: _userLongitude,
-                                        userLatitude: _userLatitude,
-                                      ),
-                                    ),
-                                  
-                                    40.h,
-                                  
-                                    Expanded(
-                                      child: Padding(
-                                        padding: const EdgeInsets.only(right: 20.0),
-                                        child: Row(
-                                          mainAxisAlignment: MainAxisAlignment.end,
-                                          crossAxisAlignment: CrossAxisAlignment.end,
-                                          children: [
-                                            Column(
-                                              spacing: 12.0,
-                                              mainAxisSize: MainAxisSize.min,
-                                              children: [
-                                                // Map style
-                                                IconBtn(
-                                                  padding: 15.0,
-                                                  backgroundColor: context.adaptiveBackground,
-                                                  icon: HugeIcons.strokeRoundedMaterialAndTexture,
-                                                  iconColor: context.adaptiveTextSecondary,
-                                                  onPressed: _openMapStyleSelector,
-                                                  boxShadow: [
-                                                    BoxShadow(
-                                                      color: Colors.black.withValues(alpha: 0.18),
-                                                      spreadRadius: 2,
-                                                      blurRadius: 30,
-                                                      offset: Offset(0, 0), // changes position of shadow
-                                                    ),
-                                                  ]
-                                                ),
-                                  
-                                                // Bouton retour position utilisateur
-                                                IconBtn(
-                                                  padding: 15.0,
-                                                  backgroundColor: context.adaptiveBackground,
-                                                  icon: _trackingMode == TrackingMode.userTracking
-                                                      ? HugeIcons.solidRoundedLocationShare02
-                                                      : HugeIcons.strokeRoundedLocationShare02,
-                                                  onPressed: _activateUserTracking,
-                                                  iconColor: _trackingMode == TrackingMode.userTracking
-                                                      ? AppColors.primary
-                                                      : context.adaptiveTextSecondary,
-                                                  boxShadow: [
-                                                    BoxShadow(
-                                                      color: Colors.black.withValues(alpha: 0.18),
-                                                      spreadRadius: 2,
-                                                      blurRadius: 30,
-                                                      offset: Offset(0, 0), // changes position of shadow
-                                                    ),
-                                                  ]
-                                                ),
-                                                
-                                                // Bouton générateur
-                                                IconBtn(
-                                                  padding: 15.0,
-                                                  backgroundColor: context.adaptiveBackground,
-                                                  icon: HugeIcons.strokeRoundedAiMagic,
-                                                  iconColor: context.adaptiveTextSecondary,
-                                                  onPressed: capability != null && !capability.canGenerate ? () => showLimitCapability(capability) : openGenerator,
-                                                  boxShadow: [
-                                                    BoxShadow(
-                                                      color: Colors.black.withValues(alpha: 0.18),
-                                                      spreadRadius: 2,
-                                                      blurRadius: 30,
-                                                      offset: Offset(0, 0), // changes position of shadow
-                                                    ),
-                                                  ]
-                                                ),
-                                              ],
+                        // Interface normale
+                        if (!isNavigationMode && !_isInNavigationMode)
+                        SizedBox(
+                          width: MediaQuery.of(context).size.width,
+                          height: MediaQuery.of(context).size.height,
+                          child: SafeArea(
+                            child: Padding(
+                              padding: const EdgeInsets.all(
+                                20.0,
+                              ),
+                              child: Column(
+                                children: [
+                                  // Right menu
+                                  Row(
+                                    spacing: 8.0,
+                                    mainAxisAlignment: MainAxisAlignment.end,
+                                    children: [
+                                      Container(
+                                        padding: EdgeInsets.symmetric(
+                                          horizontal: 5.0,
+                                          vertical: 5.0,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: context.adaptiveBackground,
+                                          borderRadius: BorderRadius.circular(100),
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: Colors.black.withValues(alpha: 0.15),
+                                              spreadRadius: 2,
+                                              blurRadius: 30,
+                                              offset: Offset(0, 0), // changes position of shadow
                                             ),
                                           ],
                                         ),
+                                        child: IconButton(
+                                          icon: Icon(
+                                            HugeIcons.solidRoundedFavourite,
+                                            size: 25.0,
+                                          ),
+                                          onPressed: () => context.push('/historic'),
+                                        ),
+                                      ),                                          
+                                      
+                                      // Left menu
+                                      Row(
+                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          Container(
+                                            padding: EdgeInsets.symmetric(
+                                              horizontal: 5.0,
+                                              vertical: 5.0,
+                                            ),
+                                            decoration: BoxDecoration(
+                                              color: context.adaptiveBackground,
+                                              borderRadius: BorderRadius.circular(100),
+                                              boxShadow: [
+                                                BoxShadow(
+                                                  color: Colors.black.withValues(alpha: 0.15),
+                                                  spreadRadius: 2,
+                                                  blurRadius: 30,
+                                                  offset: Offset(0, 0), // changes position of shadow
+                                                ),
+                                              ],
+                                            ),
+                                            child: Row(
+                                              spacing: 5.0,
+                                              children: [
+                                                // User tracking
+                                                IconButton(
+                                                  icon: Icon(
+                                                    HugeIcons.solidRoundedMapsGlobal01,
+                                                    color: _trackingMode == TrackingMode.userTracking
+                                                      ? AppColors.primary
+                                                      : context.adaptiveTextSecondary,
+                                                    size: 28.0,
+                                                  ),
+                                                  onPressed: _activateUserTracking,
+                                                ),
+                                                // Map style
+                                                IconButton(
+                                                  icon: Icon(
+                                                    HugeIcons.solidRoundedLayerMask01,
+                                                    size: 28.0,
+                                                  ),
+                                                  onPressed: _openMapStyleSelector,
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ],
                                       ),
-                                    ),
-                                  ],
-                                ),
+                                    ],
+                                  ),                                                                
+                                ],
                               ),
                             ),
                           ),
+                        ),
                       ],
                     );
                   }

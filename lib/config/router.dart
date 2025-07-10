@@ -4,7 +4,6 @@ import 'package:go_router/go_router.dart';
 import 'package:runaway/core/blocs/app_data/app_data_event.dart';
 import 'package:runaway/core/di/bloc_provider_extension.dart';
 import 'package:runaway/core/widgets/conversion_listener.dart';
-import 'package:runaway/core/widgets/main_scaffold.dart';
 import 'package:runaway/features/account/presentation/screens/account_screen.dart';
 import 'package:runaway/features/account/presentation/screens/edit_profile_screen.dart';
 import 'package:runaway/features/activity/presentation/screens/activity_screen.dart';
@@ -13,6 +12,7 @@ import 'package:runaway/features/auth/presentation/bloc/auth_state.dart';
 import 'package:runaway/features/auth/presentation/screens/onboarding_screen.dart';
 import 'package:runaway/features/credits/presentation/screens/credit_plans_screen.dart';
 import 'package:runaway/features/historic/presentation/screens/historic_screen.dart';
+import 'package:runaway/features/home/presentation/widgets/floating_location_search_panel.dart';
 import 'package:runaway/features/navigation/blocs/navigation_bloc.dart';
 import 'package:runaway/features/navigation/presentation/screens/live_navigation_screen.dart';
 import '../features/home/presentation/screens/home_screen.dart';
@@ -119,9 +119,26 @@ final GoRouter router = GoRouter(
     GoRoute(
       path: '/manage-credits',
       builder: (context, state) => CreditAwarePageWrapper(
-            child: const CreditPlansScreen(),
-          ),
+        child: const CreditPlansScreen(),
+      ),
     ),
+
+    GoRoute(
+      path: '/historic',
+      pageBuilder: (context, state) => NoTransitionPage(
+        key: state.pageKey,
+        child: HistoricScreen(),
+      ),
+    ),
+
+    GoRoute(
+      path: '/account',
+      pageBuilder: (context, state) => NoTransitionPage(
+        key: state.pageKey,
+        child: AccountScreen(),
+      ),
+    ),
+
 
     // Routes principales avec shell (navigation bottom)
     ShellRoute(
@@ -132,38 +149,35 @@ final GoRouter router = GoRouter(
       routes: [
         ShellRoute(
           builder: (BuildContext context, GoRouterState state, Widget child) {
-            return AuthWrapper(child: MainScaffold(child: child));
+            final ctl = context.read<HomeController>();
+
+            return Stack(
+              children: [
+                child,
+                if (state.matchedLocation.startsWith('/home'))
+                  Positioned(
+                    left: 0,
+                    right: 0,
+                    bottom: 30,
+                    child: Material(
+                      color: Colors.transparent,
+                      child: FloatingLocationSearchPanel(
+                        onPressed: ctl.openGenerator,                   
+                        onLocationSelected: ctl.selectLocation,
+                        onProfile: () => context.push('/account'),
+                      ),
+                    ),
+                  ),
+              ],
+            );
           },
           routes: [
-            // Route d'accueil - accessible à tous
+            
             GoRoute(
               path: '/home',
               pageBuilder: (context, state) => NoTransitionPage(
                 key: state.pageKey,
                 child: const HomeScreen(),
-              ),
-            ),
-            
-            // Routes protégées - nécessitent une authentification
-            GoRoute(
-              path: '/activity',
-              pageBuilder: (context, state) => NoTransitionPage(
-                key: state.pageKey,
-                child: ActivityScreen(),
-              ),
-            ),
-            GoRoute(
-              path: '/historic',
-              pageBuilder: (context, state) => NoTransitionPage(
-                key: state.pageKey,
-                child: HistoricScreen(),
-              ),
-            ),
-            GoRoute(
-              path: '/account',
-              pageBuilder: (context, state) => NoTransitionPage(
-                key: state.pageKey,
-                child: AccountScreen(),
               ),
             ),
           ],

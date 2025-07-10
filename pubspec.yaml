@@ -69,6 +69,7 @@ dependencies:
   in_app_purchase: ^3.2.3
   in_app_purchase_storekit: ^0.4.3
   in_app_purchase_android: ^0.4.0+2
+  flutter_keyboard_visibility: ^6.0.0
 
 dev_dependencies:
   flutter_test:

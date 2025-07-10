@@ -1,6 +1,8 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+import 'package:hugeicons/hugeicons.dart';
 import 'package:runaway/config/extensions.dart';
 import 'package:runaway/core/widgets/blurry_page.dart';
 
@@ -98,6 +100,10 @@ class _BlurryAppBarState extends State<BlurryAppBar> with TickerProviderStateMix
               color: context.adaptiveTextPrimary,
             ),
           ),
+        ),
+        leading: IconButton(
+          onPressed: () => context.pop(), 
+          icon: Icon(HugeIcons.strokeStandardArrowLeft02),
         ),
         flexibleSpace: AnimatedBuilder(
         animation: _appBarAnimation,

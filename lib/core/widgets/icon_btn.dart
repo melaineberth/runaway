@@ -16,6 +16,7 @@ class IconBtn extends StatelessWidget {
   final BoxBorder? border;
   final TextStyle? textStyle;
   final List<BoxShadow>? boxShadow;
+  final Widget? child;
 
   const IconBtn({
     super.key, 
@@ -32,6 +33,7 @@ class IconBtn extends StatelessWidget {
     this.border,
     this.textStyle,
     this.boxShadow,
+    this.child
   });
 
   @override
@@ -46,7 +48,7 @@ class IconBtn extends StatelessWidget {
           boxShadow: boxShadow,
           border: border,
         ),
-        child: Row(
+        child: child ?? Row(
           mainAxisSize: MainAxisSize.min,
           mainAxisAlignment: MainAxisAlignment.center,
           children: [

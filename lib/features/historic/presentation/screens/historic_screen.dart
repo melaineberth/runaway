@@ -327,6 +327,10 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
           style: context.bodySmall?.copyWith(color: context.adaptiveTextPrimary),
         ),
       ),
+      leading: IconButton(
+        onPressed: () => context.pop(), 
+        icon: Icon(HugeIcons.strokeStandardArrowLeft02),
+      ),
       flexibleSpace: activeBlur ? FlexibleSpaceBar(
         background: BackdropFilter(
           filter: ImageFilter.blur(sigmaX: 50, sigmaY: 50),

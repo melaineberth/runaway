@@ -158,6 +158,10 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
             ),
           ),
         ),
+        leading: IconButton(
+          onPressed: () => context.pop(), 
+          icon: Icon(HugeIcons.strokeStandardArrowLeft02),
+        ),
       ),
       body: AnimatedBuilder(
         animation: _fadeAnimation,
