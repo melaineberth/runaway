@@ -14,7 +14,6 @@ import 'package:runaway/features/auth/presentation/screens/email_confirmation_sc
 import 'package:runaway/features/auth/presentation/screens/onboarding_screen.dart';
 import 'package:runaway/features/credits/presentation/screens/credit_plans_screen.dart';
 import 'package:runaway/features/historic/presentation/screens/historic_screen.dart';
-import 'package:runaway/features/home/presentation/widgets/floating_location_search_panel.dart';
 import 'package:runaway/features/navigation/blocs/navigation_bloc.dart';
 import 'package:runaway/features/navigation/presentation/screens/live_navigation_screen.dart';
 import 'package:top_snackbar_flutter/top_snack_bar.dart';
@@ -178,39 +177,12 @@ final GoRouter router = GoRouter(
         return ConversionListener(child: child);
       },
       routes: [
-        ShellRoute(
-          builder: (BuildContext context, GoRouterState state, Widget child) {
-            final ctl = context.read<HomeController>();
-
-            return Stack(
-              children: [
-                child,
-                // if (state.matchedLocation.startsWith('/home'))
-                //   Positioned(
-                //     left: 0,
-                //     right: 0,
-                //     bottom: 30,
-                //     child: Material(
-                //       color: Colors.transparent,
-                //       child: FloatingLocationSearchPanel(
-                //         onPressed: ctl.openGenerator,                   
-                //         onLocationSelected: ctl.selectLocation,
-                //         onProfile: () => context.push('/account'),
-                //       ),
-                //     ),
-                //   ),
-              ],
-            );
-          },
-          routes: [
-            GoRoute(
-              path: '/home',
-              pageBuilder: (context, state) => NoTransitionPage(
-                key: state.pageKey,
-                child: const HomeScreen(),
-              ),
-            ),
-          ],
+        GoRoute(
+          path: '/home',
+          pageBuilder: (context, state) => NoTransitionPage(
+            key: state.pageKey,
+            child: const HomeScreen(),
+          ),
         ),
       ]
     )

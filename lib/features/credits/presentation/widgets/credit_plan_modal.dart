@@ -338,33 +338,6 @@ class _CreditPlanModalState extends State<CreditPlanModal> {
             ),
           ],
 
-          8.h,
-          TextButton(
-            onPressed: () async {
-              try {
-                print('🔄 Restauration explicite des achats demandée par l\'utilisateur');
-                
-                await IAPService.restorePurchasesExplicitly();
-
-                if (mounted) {
-                  context.refreshCreditData();
-                }
-
-                _showErrorSnackBar('Restauration terminée');
-              } catch (e) {
-                _showErrorSnackBar('Erreur lors de la restauration: $e');
-              }
-            },
-            child: Text(
-              'Restaurer les achats',
-              style: TextStyle(
-                color: context.adaptiveTextSecondary,
-                fontSize: 12,
-                decoration: TextDecoration.underline,
-              ),
-            ),
-          ),
-
           12.h,
 
           Text(

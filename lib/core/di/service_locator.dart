@@ -1,7 +1,3 @@
-// ============================================
-// CORRECTION du lib/core/di/service_locator.dart
-// ============================================
-
 import 'package:get_it/get_it.dart';
 import 'package:runaway/core/blocs/app_data/app_data_bloc.dart';
 import 'package:runaway/core/blocs/app_data/app_data_event.dart';
@@ -16,6 +12,7 @@ import 'package:runaway/features/auth/data/repositories/auth_repository.dart';
 import 'package:runaway/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:runaway/features/auth/presentation/bloc/auth_event.dart';
 import 'package:runaway/features/credits/data/repositories/credits_repository.dart';
+import 'package:runaway/features/credits/data/services/credit_verification_service.dart';
 import 'package:runaway/features/credits/presentation/blocs/credits_bloc.dart';
 import 'package:runaway/features/credits/presentation/blocs/credits_event.dart';
 import 'package:runaway/features/home/data/services/map_state_service.dart';
@@ -107,13 +104,16 @@ class ServiceLocator {
 
     // 🆕 RouteGenerationBloc utilise l'instance SINGLETON de CreditsBloc
     sl.registerFactory<RouteGenerationBloc>(() {
-      print('🔧 Création du RouteGenerationBloc...');
-      return RouteGenerationBloc(
-        routesRepository: sl<RoutesRepository>(), 
-        creditsBloc: sl<CreditsBloc>(), // 🔑 Utiliser l'instance singleton
-        creditsRepository: sl<CreditsRepository>(), // 🆕 Injecter le repository aussi
+      print('🔧 Création RouteGenerationBloc refactorisé...');
+      final bloc = RouteGenerationBloc(
+        routesRepository: sl<RoutesRepository>(),
+        creditService: sl<CreditVerificationService>(), // 🆕 Service dédié
+        appDataBloc: sl<AppDataBloc>(),
       );
+      print('✅ RouteGenerationBloc refactorisé créé');
+      return bloc;
     });
+
   }
 
   /// 🆕 Méthode helper pour initialiser les données au démarrage

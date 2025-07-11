@@ -3,11 +3,8 @@ import 'package:hydrated_bloc/hydrated_bloc.dart';
 import 'package:runaway/core/blocs/app_data/app_data_bloc.dart';
 import 'package:runaway/core/blocs/app_data/app_data_event.dart';
 import 'package:runaway/core/services/screenshot_service.dart';
-import 'package:runaway/features/credits/data/repositories/credits_repository.dart';
-import 'package:runaway/features/credits/presentation/blocs/credits_bloc.dart';
-import 'package:runaway/features/credits/presentation/blocs/credits_state.dart';
+import 'package:runaway/features/credits/data/services/credit_verification_service.dart';
 import 'package:runaway/features/route_generator/domain/models/saved_route.dart';
-import 'package:supabase_flutter/supabase_flutter.dart' as su;
 import '../../../data/repositories/routes_repository.dart';
 import '../../../data/services/graphhopper_api_service.dart';
 
@@ -15,22 +12,18 @@ import 'route_generation_event.dart';
 import 'route_generation_state.dart';
 
 /// BLoC pour gérer l'analyse de zone et la génération de parcours
-/// 🆕 Intégré avec l'architecture UI First pour les crédits
 class RouteGenerationBloc extends HydratedBloc<RouteGenerationEvent, RouteGenerationState> {
   final RoutesRepository _routesRepository;
-  final CreditsBloc _creditsBloc;
-  final CreditsRepository _creditsRepository;
-  final AppDataBloc? _appDataBloc; // 🆕 Référence à AppDataBloc
+  final CreditVerificationService _creditService; // 🆕 Service dédié aux crédits
+  final AppDataBloc? _appDataBloc;
 
   RouteGenerationBloc({
     RoutesRepository? routesRepository,
-    required CreditsBloc creditsBloc,
-    CreditsRepository? creditsRepository,
-    AppDataBloc? appDataBloc, // 🆕 Paramètre optionnel
+    required CreditVerificationService creditService, // 🆕 Injection du service
+    AppDataBloc? appDataBloc,
   }) : _routesRepository = routesRepository ?? RoutesRepository(),
-       _creditsBloc = creditsBloc,
-       _creditsRepository = creditsRepository ?? CreditsRepository(),
-       _appDataBloc = appDataBloc, // 🆕 Injection
+       _creditService = creditService, // 🆕 Service injecté
+       _appDataBloc = appDataBloc,
        super(const RouteGenerationState()) {
     
     on<ZoneAnalysisRequested>(_onZoneAnalysisRequested);
@@ -44,6 +37,19 @@ class RouteGenerationBloc extends HydratedBloc<RouteGenerationEvent, RouteGenera
     on<SyncPendingRoutesRequested>(_onSyncPendingRoutesRequested);
     on<RouteStateReset>(_onRouteStateReset);
   }
+
+  // ===== MÉTHODES PUBLIQUES SIMPLIFIÉES =====
+
+  /// Vérifie si l'utilisateur peut générer une route
+  Future<bool> canGenerateRoute() => _creditService.canGenerateRoute();
+
+  /// Récupère le nombre de crédits disponibles
+  Future<int> getAvailableCredits() => _creditService.getAvailableCredits();
+
+  /// Déclenche le pré-chargement des crédits si nécessaire
+  void ensureCreditDataLoaded() => _creditService.ensureCreditDataLoaded();
+
+  // ===== HANDLERS D'ÉVÉNEMENTS =====
 
   /// Analyse de zone simplifiée
   Future<void> _onZoneAnalysisRequested(
@@ -101,92 +107,45 @@ class RouteGenerationBloc extends HydratedBloc<RouteGenerationEvent, RouteGenera
         stateId: '$generationId-start',
       ));
 
-      // ===== 🆕 NOUVELLE LOGIQUE CONDITIONNELLE =====
-      bool hasEnoughCredits = true; // Par défaut OK pour les guests
-      int currentCredits = 0;
+      // ===== VÉRIFICATION DES CRÉDITS (SEULEMENT SI NÉCESSAIRE) =====
       
-      // 🔧 CORRECTION PRINCIPALE : Vérifier les crédits SEULEMENT si pas de bypass
       if (!event.bypassCreditCheck) {
         print('💳 === VÉRIFICATION CRÉDITS POUR UTILISATEUR AUTHENTIFIÉ ===');
         
-        // Vérification double de l'authentification
-        final currentUser = su.Supabase.instance.client.auth.currentUser;
-        if (currentUser == null) {
-          print('❌ Session Supabase expirée pendant la génération');
-          emit(state.copyWith(
-            isGeneratingRoute: false,
-            errorMessage: 'Session expirée. Veuillez vous reconnecter.',
-            stateId: '$generationId-session-expired',
-          ));
-          return;
-        }
-        
-        // Vérification crédits via AppDataBloc ou API
-        if (_appDataBloc != null && _appDataBloc.state.isCreditDataLoaded) {
-          currentCredits = _appDataBloc.state.availableCredits;
-          hasEnoughCredits = _appDataBloc.state.hasCredits && currentCredits >= REQUIRED_CREDITS;
-          
-          print('💰 Vérification crédits (UI First): $currentCredits disponibles, ${hasEnoughCredits ? "✅" : "❌"} suffisant');
-        } else {
-          // Fallback: vérification traditionnelle (plus lente)
-          print('⚠️ Données crédits non disponibles, vérification via API...');
-          try {
-            hasEnoughCredits = await _creditsBloc.hasEnoughCredits(REQUIRED_CREDITS);
-            currentCredits = await getAvailableCredits();
-            print('💰 Vérification crédits (API): $REQUIRED_CREDITS requis, $currentCredits disponibles → ${hasEnoughCredits ? "✅" : "❌"}');
-          } catch (e) {
-            print('❌ Erreur API crédits: $e');
-            emit(state.copyWith(
-              isGeneratingRoute: false,
-              errorMessage: 'Impossible de vérifier les crédits. Veuillez réessayer.',
-              stateId: '$generationId-credit-check-error',
-            ));
-            return;
-          }
-        }
+        // Utiliser le service dédié pour la vérification
+        final creditCheck = await _creditService.verifyCreditsForGeneration(
+          requiredCredits: REQUIRED_CREDITS,
+        );
 
-        // Gestion de l'insuffisance de crédits
-        if (!hasEnoughCredits) {
+        if (!creditCheck.isValid) {
           emit(state.copyWith(
             isGeneratingRoute: false,
-            errorMessage: 'Crédits insuffisants pour générer un parcours. Vous avez $currentCredits crédits, mais il en faut $REQUIRED_CREDITS.',
-            stateId: '$generationId-insufficient-credits',
+            errorMessage: creditCheck.errorMessage ?? 
+              'Crédits insuffisants pour générer un parcours. Vous avez ${creditCheck.availableCredits} crédits, mais il en faut ${creditCheck.requiredCredits}.',
+            stateId: '$generationId-credit-error',
           ));
           return;
         }
 
         print('✅ Crédits suffisants, lancement de la génération');
-
-        // Mise à jour optimiste du solde dans AppDataBloc
-        final newBalance = currentCredits - REQUIRED_CREDITS;
-        if (_appDataBloc != null) {
-          _appDataBloc.add(CreditBalanceUpdatedInAppData(
-            newBalance: newBalance,
-            isOptimistic: true,
-          ));
-          print('⚡ Mise à jour optimiste: $currentCredits → $newBalance crédits');
-        }
       } else {
-        print('🆕 === MODE GUEST - BYPASS TOTAL VÉRIFICATION CRÉDITS ===');
-        print('🆕 Génération guest autorisée, aucune vérification de crédits');
+        print('🆕 === MODE GUEST - BYPASS VÉRIFICATION CRÉDITS ===');
       }
       
       // ===== GÉNÉRATION DU PARCOURS =====
       
       print('🛣️ Génération du parcours via API...');
       final result = await GraphHopperApiService.generateRoute(parameters: event.parameters);
-
       print('✅ Génération réussie: ${result.coordinates.length} points, ${result.distanceKm}km');
 
-      // ===== UTILISATION DES CRÉDITS AVEC SYNCHRONISATION (SEULEMENT POUR AUTH) =====
+      // ===== CONSOMMATION DES CRÉDITS (SEULEMENT POUR UTILISATEURS AUTHENTIFIÉS) =====
       
       if (!event.bypassCreditCheck) {
-        // Consommer les crédits pour les utilisateurs authentifiés
-        print('💳 Utilisation de $REQUIRED_CREDITS crédit(s)...');
-        final usageResult = await _creditsRepository.useCredits(
+        print('💳 Consommation de $REQUIRED_CREDITS crédit(s)...');
+
+        final consumptionResult = await _creditService.consumeCreditsForGeneration(
           amount: REQUIRED_CREDITS,
-          reason: 'Route generation',
-          routeGenerationId: generationId,
+          generationId: generationId,
           metadata: {
             'activity_type': event.parameters.activityType.name,
             'distance_km': event.parameters.distanceKm,
@@ -195,30 +154,22 @@ class RouteGenerationBloc extends HydratedBloc<RouteGenerationEvent, RouteGenera
           },
         );
 
-        if (usageResult.success && usageResult.updatedCredits != null) {
-          print('✅ Utilisation de crédits réussie');
-          print('💰 Nouveau solde: ${usageResult.updatedCredits!.availableCredits}');
-        } else {
-          print('❌ Échec utilisation crédits: ${usageResult.errorMessage}');
-          
-          // Annuler la mise à jour optimiste
-          if (_appDataBloc != null) {
-            _appDataBloc.add(CreditBalanceUpdatedInAppData(
-              newBalance: currentCredits, // Restaurer la valeur originale
-              isOptimistic: false,
-            ));
-          }
-
+        if (!consumptionResult.success) {
           emit(state.copyWith(
             isGeneratingRoute: false,
-            errorMessage: 'Erreur lors de l\'utilisation des crédits: ${usageResult.errorMessage}',
-            stateId: '$generationId-credit-error',
+            errorMessage: consumptionResult.errorMessage ?? 'Erreur lors de l\'utilisation des crédits',
+            stateId: '$generationId-consumption-error',
           ));
           return;
         }
+
+        print('✅ Consommation réussie. Nouveau solde: ${consumptionResult.newBalance}');
+
       } else {
         print('🆕 === GÉNÉRATION GUEST - PAS D\'UTILISATION DE CRÉDITS ===');
       }
+
+      // ===== FINALISATION =====
 
       // Mettre à jour l'état avec le parcours généré
       emit(state.copyWith(
@@ -240,25 +191,10 @@ class RouteGenerationBloc extends HydratedBloc<RouteGenerationEvent, RouteGenera
 
     } catch (e) {
       print('❌ Erreur génération: $e');
-      
-      // Annuler la mise à jour optimiste en cas d'erreur (seulement si auth)
-      if (!event.bypassCreditCheck && _appDataBloc != null) {
-        try {
-          final realCredits = await _creditsRepository.getUserCredits();
-          _appDataBloc.add(CreditBalanceUpdatedInAppData(
-            newBalance: realCredits.availableCredits,
-            isOptimistic: false,
-          ));
-          print('🔧 Solde des crédits restauré: ${realCredits.availableCredits}');
-        } catch (creditError) {
-          print('⚠️ Impossible de restaurer le solde des crédits: $creditError');
-        }
-      }
-
       emit(state.copyWith(
         isGeneratingRoute: false,
-        errorMessage: 'Erreur lors de la génération du parcours: $e',
-        stateId: '$generationId-exception',
+        errorMessage: 'Erreur lors de la génération: $e',
+        stateId: '$generationId-error',
       ));
     }
   }
@@ -549,49 +485,6 @@ class RouteGenerationBloc extends HydratedBloc<RouteGenerationEvent, RouteGenera
     print('✅ === FIN NETTOYAGE COMPLET (CLEARED: $clearId-cleared) ===');
   }
 
-  // === 🆕 MÉTHODES UTILITAIRES AVEC UI FIRST ===
-
-  /// Vérifie si l'utilisateur peut générer un parcours (UI First)
-  Future<bool> canGenerateRoute() async {
-    try {
-      // Prioriser AppDataBloc si disponible
-      if (_appDataBloc != null && _appDataBloc.state.isCreditDataLoaded) {
-        return _appDataBloc.state.canGenerateRoute;
-      }
-      
-      // Fallback vers CreditsBloc
-      return await _creditsBloc.hasEnoughCredits(1);
-    } catch (e) {
-      print('❌ Erreur vérification possibilité génération: $e');
-      return false;
-    }
-  }
-
-  /// Récupère le nombre de crédits disponibles (UI First)
-  Future<int> getAvailableCredits() async {
-    try {
-      // Priorité 1: AppDataBloc si disponible
-      if (_appDataBloc != null && _appDataBloc.state.isCreditDataLoaded) {
-        return _appDataBloc.state.availableCredits;
-      }
-      
-      // Priorité 2: API directe
-      final userCredits = await _creditsRepository.getUserCredits();
-      return userCredits.availableCredits;
-    } catch (e) {
-      print('❌ Erreur récupération crédits: $e');
-      return 0;
-    }
-  }
-
-  /// 🆕 Déclenche le pré-chargement des crédits si nécessaire
-  void ensureCreditDataLoaded() {
-    if (_appDataBloc != null && !_appDataBloc.state.isCreditDataLoaded) {
-      print('💳 Déclenchement pré-chargement crédits depuis RouteGenerationBloc');
-      _appDataBloc.add(const CreditDataPreloadRequested());
-    }
-  }
-
   /// 🆕 Reset complet de l'état pour une nouvelle génération propre
   Future<void> _onRouteStateReset(
     RouteStateReset event,
@@ -677,46 +570,5 @@ class RouteGenerationBloc extends HydratedBloc<RouteGenerationEvent, RouteGenera
     } catch (e) {
       return null;
     }
-  }
-}
-
-/// 🆕 Extensions mises à jour avec AppDataBloc
-extension RouteGenerationBlocExtension on RouteGenerationBloc {
-  /// Helper pour vérifier rapidement si on peut générer (UI First)
-  Stream<bool> get canGenerateStream {
-    if (_appDataBloc != null) {
-      return _appDataBloc.stream.map((appDataState) {
-        return appDataState.canGenerateRoute;
-      });
-    }
-    
-    // Fallback vers CreditsBloc
-    return _creditsBloc.stream.map((creditsState) {
-      if (creditsState is CreditsLoaded) {
-        return creditsState.credits.canGenerate;
-      } else if (creditsState is CreditUsageSuccess) {
-        return creditsState.updatedCredits.canGenerate;
-      }
-      return false;
-    });
-  }
-
-  /// Helper pour obtenir le nombre de crédits en temps réel (UI First)
-  Stream<int> get availableCreditsStream {
-    if (_appDataBloc != null) {
-      return _appDataBloc.stream.map((appDataState) {
-        return appDataState.availableCredits;
-      });
-    }
-    
-    // Fallback vers CreditsBloc
-    return _creditsBloc.stream.map((creditsState) {
-      if (creditsState is CreditsLoaded) {
-        return creditsState.credits.availableCredits;
-      } else if (creditsState is CreditUsageSuccess) {
-        return creditsState.updatedCredits.availableCredits;
-      }
-      return 0;
-    });
   }
 }
