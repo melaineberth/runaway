@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:runaway/core/widgets/top_snackbar.dart';
 import 'package:runaway/features/credits/presentation/blocs/credits_bloc.dart';
 import 'package:runaway/features/credits/presentation/blocs/credits_state.dart';
 import 'package:runaway/features/credits/presentation/widgets/insufficient_credits_modal.dart';
+import 'package:top_snackbar_flutter/top_snack_bar.dart';
 
 class CreditsUtils {
   /// Vérifie les crédits et affiche une modal si insuffisants
@@ -58,27 +60,25 @@ class CreditsUtils {
   static void setupCreditsListener(BuildContext context) {
     context.read<CreditsBloc>().stream.listen((state) {
       if (state is CreditUsageSuccess) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(state.message),
-            backgroundColor: Colors.green[600],
-            duration: const Duration(seconds: 2),
+        showTopSnackBar(
+          Overlay.of(context),
+          TopSnackBar(
+            title: state.message,
           ),
         );
       } else if (state is CreditPurchaseSuccess) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(state.message),
-            backgroundColor: Colors.green[600],
-            duration: const Duration(seconds: 3),
+        showTopSnackBar(
+          Overlay.of(context),
+          TopSnackBar(
+            title: state.message,
           ),
         );
       } else if (state is CreditsError && state.currentCredits == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(state.message),
-            backgroundColor: Colors.red[600],
-            duration: const Duration(seconds: 3),
+        showTopSnackBar(
+          Overlay.of(context),
+          TopSnackBar(
+            isError: true,
+            title: state.message,
           ),
         );
       }

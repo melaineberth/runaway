@@ -424,10 +424,11 @@ class _CreditPlanModalState extends State<CreditPlanModal> {
   }
 
   void _showErrorSnackBar(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: Colors.red[600],
+    showTopSnackBar(
+      Overlay.of(context),
+      TopSnackBar(
+        isError: true,
+        title: message,
       ),
     );
   }

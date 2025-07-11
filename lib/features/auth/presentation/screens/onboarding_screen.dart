@@ -9,10 +9,12 @@ import 'package:image_picker/image_picker.dart';
 import 'package:runaway/config/extensions.dart';
 import 'package:runaway/core/di/bloc_provider_extension.dart';
 import 'package:runaway/core/widgets/squircle_container.dart';
+import 'package:runaway/core/widgets/top_snackbar.dart';
 import 'package:runaway/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:runaway/features/auth/presentation/bloc/auth_event.dart';
 import 'package:runaway/features/auth/presentation/bloc/auth_state.dart';
 import 'package:runaway/features/auth/presentation/widgets/auth_text_field.dart';
+import 'package:top_snackbar_flutter/top_snack_bar.dart';
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
@@ -104,10 +106,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(context.l10n.imagePickError(e.toString())),
-            backgroundColor: Colors.red,
+        showTopSnackBar(
+          Overlay.of(context),
+          TopSnackBar(
+            isError: true,
+            title: context.l10n.imagePickError(e.toString()),
           ),
         );
       }
@@ -167,12 +170,12 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               }
             });
           }
-          
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(errorMessage),
-              backgroundColor: errorMessage.contains('avatar') ? Colors.orange : Colors.red,
-              duration: Duration(seconds: errorMessage.contains('avatar') ? 6 : 4),
+
+          showTopSnackBar(
+            Overlay.of(context),
+            TopSnackBar(
+              isError: true,
+              title: errorMessage,
             ),
           );
         }

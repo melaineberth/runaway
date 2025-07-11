@@ -8,6 +8,7 @@ void showSignModal(BuildContext context, int index) {
   showModalSheet(
     context: context,
     isDismissible: false,
+    useSafeArea: true,
     backgroundColor: Colors.transparent,
     child: AuthScreen(initialIndex: index),
   );
@@ -27,9 +28,11 @@ void showAuthModal(BuildContext context) {
       cancelLabel: context.l10n.createAccount,
       onValid: () {
         showSignModal(context, 1);
+        // context.go('/auth/1'); // Login
       },
       onCancel: () {
         showSignModal(context, 0);
+        // context.go('/auth/0');
       },
     ),
   );

@@ -4,17 +4,20 @@ import 'package:go_router/go_router.dart';
 import 'package:runaway/core/blocs/app_data/app_data_event.dart';
 import 'package:runaway/core/di/bloc_provider_extension.dart';
 import 'package:runaway/core/widgets/conversion_listener.dart';
+import 'package:runaway/core/widgets/top_snackbar.dart';
 import 'package:runaway/features/account/presentation/screens/account_screen.dart';
 import 'package:runaway/features/account/presentation/screens/edit_profile_screen.dart';
-import 'package:runaway/features/activity/presentation/screens/activity_screen.dart';
 import 'package:runaway/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:runaway/features/auth/presentation/bloc/auth_state.dart';
+import 'package:runaway/features/auth/presentation/screens/auth_screen.dart';
+import 'package:runaway/features/auth/presentation/screens/email_confirmation_screen.dart';
 import 'package:runaway/features/auth/presentation/screens/onboarding_screen.dart';
 import 'package:runaway/features/credits/presentation/screens/credit_plans_screen.dart';
 import 'package:runaway/features/historic/presentation/screens/historic_screen.dart';
 import 'package:runaway/features/home/presentation/widgets/floating_location_search_panel.dart';
 import 'package:runaway/features/navigation/blocs/navigation_bloc.dart';
 import 'package:runaway/features/navigation/presentation/screens/live_navigation_screen.dart';
+import 'package:top_snackbar_flutter/top_snack_bar.dart';
 import '../features/home/presentation/screens/home_screen.dart';
 
 // Clé globale pour accéder au contexte du router
@@ -33,7 +36,7 @@ final GoRouter router = GoRouter(
     final String currentLocation = state.matchedLocation;
     
     // Pages d'authentification
-    final authPages = ['/login', '/signup', '/onboarding'];
+    final authPages = ['/login', '/signup', '/onboarding', '/email-confirmation'];
     final isOnAuthPage = authPages.contains(currentLocation);
     
     print('🧭 Router redirect: current=$currentLocation, authState=${authState.runtimeType}');
@@ -60,6 +63,13 @@ final GoRouter router = GoRouter(
         return '/home';
       }
     }
+
+    if (authState is EmailConfirmationRequired) {
+      if (currentLocation != '/email-confirmation') {
+        return '/email-confirmation?email=${Uri.encodeComponent(authState.email)}';
+      }
+      return null;
+    }
     
     // Pas de redirection nécessaire
     return null;
@@ -74,6 +84,20 @@ final GoRouter router = GoRouter(
         child: const OnboardingScreen(),
       ),
     ),
+    GoRoute(
+      path: '/auth/:index',
+      name: 'auth',
+      pageBuilder: (context, state) {
+        final indexStr = state.pathParameters['index'] ?? '0';
+        final initialIndex = int.tryParse(indexStr) ?? 0;
+
+        return NoTransitionPage(
+          key: state.pageKey,
+          child: AuthScreen(initialIndex: initialIndex),
+        );
+      },
+    ),
+
     GoRoute(
       path: '/live-navigation',
       name: 'live-navigation',
@@ -139,6 +163,13 @@ final GoRouter router = GoRouter(
       ),
     ),
 
+    GoRoute(
+      path: '/email-confirmation',
+      builder: (context, state) {
+        final email = state.uri.queryParameters['email'] ?? '';
+        return EmailConfirmationScreen(email: email);
+      },
+    ),
 
     // Routes principales avec shell (navigation bottom)
     ShellRoute(
@@ -172,7 +203,6 @@ final GoRouter router = GoRouter(
             );
           },
           routes: [
-            
             GoRoute(
               path: '/home',
               pageBuilder: (context, state) => NoTransitionPage(
@@ -275,11 +305,11 @@ class AuthWrapper extends StatelessWidget {
           // 🔧 CORRECTION: Délai pour éviter les conflits avec la navigation
           Future.delayed(const Duration(milliseconds: 200), () {
             if (context.mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('Erreur d\'authentification: ${authState.message}'),
-                  backgroundColor: Colors.red,
-                  duration: Duration(seconds: 4),
+              showTopSnackBar(
+                Overlay.of(context),
+                TopSnackBar(
+                  isError: true,
+                  title: 'Erreur d\'authentification: ${authState.message}',
                 ),
               );
             }

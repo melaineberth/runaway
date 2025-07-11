@@ -4,11 +4,12 @@ import 'package:go_router/go_router.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:runaway/config/extensions.dart';
 import 'package:runaway/core/widgets/icon_btn.dart';
-import 'package:runaway/core/widgets/modal_sheet.dart';
+import 'package:runaway/core/widgets/top_snackbar.dart';
 import 'package:runaway/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:runaway/features/auth/presentation/bloc/auth_state.dart';
 import 'package:runaway/features/auth/presentation/screens/login_screen.dart';
 import 'package:runaway/features/auth/presentation/screens/signup_screen.dart';
+import 'package:top_snackbar_flutter/top_snack_bar.dart';
 
 class AuthScreen extends StatefulWidget {
   final int initialIndex;
@@ -52,58 +53,61 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
         } else if (authState is ProfileIncomplete) {
           // Profil incomplet, aller vers l'onboarding
           context.go('/onboarding');
+        } else if (authState is EmailConfirmationRequired) {
+          // Email de confirmation requis
+          context.go('/email-confirmation?email=${Uri.encodeComponent(authState.email)}');
+        } else if (authState is PasswordResetSent) {
+          // Mot de passe réinitialisé
+          showTopSnackBar(
+            Overlay.of(context),
+            TopSnackBar(
+              title: 'Email de réinitialisation envoyé à ${authState.email}',
+            ),
+          );
         } else if (authState is AuthError) {
           // Afficher l'erreur
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(authState.message),
-              backgroundColor: Colors.red,
+          showTopSnackBar(
+            Overlay.of(context),
+            TopSnackBar(
+              isError: true,
+              title: authState.message,
             ),
           );
         }
       },
-      child: Stack(
-        children: [
-          ModalSheet(
-            child: BlocBuilder<AuthBloc, AuthState>(
-              builder: (context, authState) {
-                final isLoading = authState is AuthLoading;
-                
-                return Stack(
-                  children: [
-                    SizedBox(
-                      height: MediaQuery.of(context).size.height / 1.3,
-                      child: PageView(
-                      controller: _pageController,
-                      physics: const NeverScrollableScrollPhysics(),
-                        children: [
-                          SignupScreen(
-                            onSwitchToLogin: _switchToLogin,
-                            isLoading: isLoading,
-                          ),
-                          LoginScreen(
-                            onSwitchToSignup: _switchToSignup,
-                            isLoading: isLoading,
-                          ),
-                        ],
-                      ),
-                    ),                    
-                  ],
-                );
-              },
-            ),
-          ),
-          Positioned(
-            top: 15,
-            right: 15,
-            child: IconBtn(
+      child: Scaffold(
+        resizeToAvoidBottomInset: false,   
+        appBar: AppBar(
+          automaticallyImplyLeading: false,
+          actions: [
+            IconBtn(
               backgroundColor: Colors.transparent,
               icon: HugeIcons.solidRoundedCancelCircle,
               iconColor: context.adaptiveDisabled.withValues(alpha: 0.2),
               onPressed: () => context.pop(),
             ),  
-          ),
-        ],
+          ],
+        ),
+        body: BlocBuilder<AuthBloc, AuthState>(
+          builder: (context, authState) {
+            final isLoading = authState is AuthLoading;
+            
+            return PageView(
+            controller: _pageController,
+            physics: const NeverScrollableScrollPhysics(),
+              children: [
+                SignupScreen(
+                  onSwitchToLogin: _switchToLogin,
+                  isLoading: isLoading,
+                ),
+                LoginScreen(
+                  onSwitchToSignup: _switchToSignup,
+                  isLoading: isLoading,
+                ),
+              ],
+            );
+          },
+        ),
       ),
     );
   }

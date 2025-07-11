@@ -69,6 +69,38 @@ class AuthExceptionHandler {
         originalError: error,
       );
     }
+
+    // 🆕 Erreurs de mot de passe faible - gestion plus spécifique
+    if (errorMessage.contains('password is too weak') ||
+        errorMessage.contains('weak password') ||
+        errorMessage.contains('password does not meet') ||
+        errorMessage.contains('password must contain')) {
+      return SignUpException(
+        'Le mot de passe doit contenir au moins 8 caractères avec majuscule, minuscule, chiffre et symbole',
+        code: 'WEAK_PASSWORD',
+        originalError: error,
+      );
+    }
+    
+    // 🆕 Erreur de longueur de mot de passe
+    if (errorMessage.contains('password should be at least') ||
+        errorMessage.contains('password is too short')) {
+      return SignUpException(
+        'Le mot de passe doit contenir au moins 8 caractères',
+        code: 'PASSWORD_TOO_SHORT',
+        originalError: error,
+      );
+    }
+
+    if (errorMessage.contains('email not confirmed') ||
+        errorMessage.contains('email address not confirmed') ||
+        errorMessage.contains('confirm your email')) {
+      return AuthException(
+        'Email non confirmé. Vérifiez votre boîte mail.',
+        code: 'EMAIL_NOT_CONFIRMED',
+        originalError: error,
+      );
+    }
     
     // 🆕 Gestion des null checks pour Google
     if (errorMessage.contains('null check operator used on a null value')) {
@@ -172,7 +204,7 @@ class AuthExceptionHandler {
       case 'USER_ALREADY_EXISTS':
         return 'Un compte existe déjà avec cet email';
       case 'WEAK_PASSWORD':
-        return 'Le mot de passe doit contenir au moins 6 caractères';
+        return 'Le mot de passe doit contenir majuscule, minuscule, chiffre et symbole';
       case 'INVALID_EMAIL':
         return 'Format d\'email invalide';
       case 'SESSION_EXPIRED':
@@ -181,6 +213,8 @@ class AuthExceptionHandler {
         return 'Erreur lors de la sauvegarde du profil';
       case 'NETWORK_ERROR':
         return 'Problème de connexion internet';
+      case 'PASSWORD_TOO_SHORT':
+        return 'Le mot de passe doit contenir au moins 8 caractères';
       default:
         return exception.message;
     }

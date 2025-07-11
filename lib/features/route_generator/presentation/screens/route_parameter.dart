@@ -169,32 +169,6 @@ class _RouteParameterScreenState extends State<RouteParameterScreen> {
     );
   }
 
-  void showTopSnackBar(
-    context,
-    String message, {
-    Duration? duration,
-  }) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        dismissDirection: DismissDirection.up,
-        duration: duration ?? const Duration(milliseconds: 1000),
-        backgroundColor: Colors.green,
-        margin: EdgeInsets.only(
-          bottom: 20,
-          left: 10,
-          right: 10,
-        ),
-        behavior: SnackBarBehavior.floating,
-        content: Text(
-          message,
-          style: const TextStyle(
-            fontSize: 20,
-          ),
-        ),
-      ),
-    );
-  }  
-
   // 🆕 Gérer la génération avec vérification préalable des crédits
   Future<void> _handleGenerate() async {
     print('🔍 === VÉRIFICATION CRÉDITS AVANT GÉNÉRATION ===');

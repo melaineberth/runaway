@@ -788,4 +788,39 @@ Map<String, String?> getSocialUserInfo() {
       return await _generateUniqueUsername(baseName);
     }
   }
+
+  /* ───────── MOT DE PASSE OUBLIÉ ───────── */
+  Future<void> resetPassword({required String email}) async {
+    try {
+      print('🔐 Demande de réinitialisation de mot de passe pour: $email');
+      
+      await _supabase.auth.resetPasswordForEmail(
+        email.trim(),
+        redirectTo: '${dotenv.env['SUPABASE_URL']}/auth/v1/verify?type=recovery',
+      );
+      
+      print('✅ Email de réinitialisation envoyé');
+    } catch (e) {
+      print('❌ Erreur réinitialisation mot de passe: $e');
+      throw AuthExceptionHandler.handleSupabaseError(e);
+    }
+  }
+
+  /* ───────── RENVOI EMAIL DE CONFIRMATION ───────── */
+  Future<void> resendConfirmationEmail({required String email}) async {
+    try {
+      print('📧 Renvoi de l\'email de confirmation pour: $email');
+      
+      final response = await _supabase.auth.resend(
+        type: OtpType.signup,
+        email: email.trim(),
+      );
+      
+      print('✅ Email de confirmation renvoyé avec succès');
+      print('📧 Response: ${response.toString()}');
+    } catch (e) {
+      print('❌ Erreur renvoi email de confirmation: $e');
+      throw AuthExceptionHandler.handleSupabaseError(e);
+    }
+  }
 }

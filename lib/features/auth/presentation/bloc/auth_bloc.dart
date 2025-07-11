@@ -33,6 +33,9 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     on<DeleteAccountRequested>(_onDeleteAccount);
     on<NotificationSettingsToggleRequested>(_onNotificationSettingsToggle);
 
+    on<ForgotPasswordRequested>(_onForgotPassword);
+    on<ResendConfirmationRequested>(_onResendConfirmation);
+
     // handlers internes
     on<_InternalProfileLoaded>(_onInternalProfileLoaded);
     on<_InternalProfileIncomplete>((e, emit) => emit(ProfileIncomplete(e.user)));
@@ -84,7 +87,6 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     
     print('✅ Utilisateur authentifié: ${event.profile.username}');
   }
-
 
   // Ajouter cette méthode dans la classe AuthBloc :
   Future<void> _onUpdateProfile(UpdateProfileRequested event, Emitter<AuthState> emit) async {
@@ -234,9 +236,19 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       if (user == null) {
         return emit(AuthError('Échec de création de compte'));
       }
+
+      print('✅ Inscription réussie pour: ${user.email}');
+      print('📧 Email confirmé: ${user.emailConfirmedAt != null}');
       
-      print('✅ Inscription réussie, transition vers ProfileIncomplete');
-      emit(ProfileIncomplete(user));
+      // Toujours rediriger vers la confirmation d'email si configuré dans Supabase
+      // Supabase n'aura pas emailConfirmedAt si la confirmation est requise
+      if (user.emailConfirmedAt == null) {
+        print('📧 Email de confirmation requis pour: ${e.email}');
+        emit(EmailConfirmationRequired(e.email));
+      } else {
+        print('✅ Inscription réussie, transition vers ProfileIncomplete');
+        emit(ProfileIncomplete(user));
+      }
     } catch (err) {
       print('❌ Erreur inscription: $err');
       emit(AuthError(err.toString()));
@@ -383,6 +395,45 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     
     await _repo.logOut();
     emit(Unauthenticated());
+  }
+
+  Future<void> _onForgotPassword(ForgotPasswordRequested e, Emitter<AuthState> emit) async {
+    emit(AuthLoading());
+    try {
+      await _repo.resetPassword(email: e.email);
+      emit(PasswordResetSent(e.email));
+      
+      // Retourner à l'état non authentifié après 3 secondes
+      Future.delayed(const Duration(seconds: 3), () {
+        if (!isClosed) emit(Unauthenticated());
+      });
+    } catch (err) {
+      print('❌ Erreur mot de passe oublié: $err');
+      emit(AuthError(err.toString()));
+      
+      // Retourner à l'état précédent après l'erreur
+      Future.delayed(const Duration(seconds: 2), () {
+        if (!isClosed) emit(Unauthenticated());
+      });
+    }
+  }
+
+  Future<void> _onResendConfirmation(ResendConfirmationRequested e, Emitter<AuthState> emit) async {
+    // Ne pas émettre AuthLoading pour éviter de bloquer l'UI
+    try {
+      await _repo.resendConfirmationEmail(email: e.email);
+      print('✅ Email de confirmation renvoyé avec succès');
+      // Rester sur EmailConfirmationRequired pour maintenir l'écran
+      emit(EmailConfirmationRequired(e.email));
+    } catch (err) {
+      print('❌ Erreur renvoi confirmation: $err');
+      emit(AuthError(err.toString()));
+      
+      // Retourner à l'état précédent après l'erreur
+      Future.delayed(const Duration(seconds: 2), () {
+        if (!isClosed) emit(EmailConfirmationRequired(e.email));
+      });
+    }
   }
 
   @override

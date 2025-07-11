@@ -65,3 +65,21 @@ class NotificationSettingsToggleRequested extends AuthEvent {
   @override
   List<Object?> get props => [enabled];
 }
+
+class ForgotPasswordRequested extends AuthEvent {
+  final String email;
+  
+  ForgotPasswordRequested({required this.email});
+  
+  @override
+  List<Object?> get props => [email];
+}
+
+class ResendConfirmationRequested extends AuthEvent {
+  final String email;
+  
+  ResendConfirmationRequested({required this.email});
+  
+  @override
+  List<Object?> get props => [email];
+}
