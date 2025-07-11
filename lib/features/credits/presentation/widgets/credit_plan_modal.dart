@@ -343,8 +343,13 @@ class _CreditPlanModalState extends State<CreditPlanModal> {
             onPressed: () async {
               try {
                 print('🔄 Restauration explicite des achats demandée par l\'utilisateur');
+                
                 await IAPService.restorePurchasesExplicitly();
-                context.refreshCreditData();
+
+                if (mounted) {
+                  context.refreshCreditData();
+                }
+
                 _showErrorSnackBar('Restauration terminée');
               } catch (e) {
                 _showErrorSnackBar('Erreur lors de la restauration: $e');

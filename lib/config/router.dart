@@ -185,20 +185,20 @@ final GoRouter router = GoRouter(
             return Stack(
               children: [
                 child,
-                if (state.matchedLocation.startsWith('/home'))
-                  Positioned(
-                    left: 0,
-                    right: 0,
-                    bottom: 30,
-                    child: Material(
-                      color: Colors.transparent,
-                      child: FloatingLocationSearchPanel(
-                        onPressed: ctl.openGenerator,                   
-                        onLocationSelected: ctl.selectLocation,
-                        onProfile: () => context.push('/account'),
-                      ),
-                    ),
-                  ),
+                // if (state.matchedLocation.startsWith('/home'))
+                //   Positioned(
+                //     left: 0,
+                //     right: 0,
+                //     bottom: 30,
+                //     child: Material(
+                //       color: Colors.transparent,
+                //       child: FloatingLocationSearchPanel(
+                //         onPressed: ctl.openGenerator,                   
+                //         onLocationSelected: ctl.selectLocation,
+                //         onProfile: () => context.push('/account'),
+                //       ),
+                //     ),
+                //   ),
               ],
             );
           },

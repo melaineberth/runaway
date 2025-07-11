@@ -62,15 +62,22 @@ class _RoundedTextFieldState extends State<RoundedTextField> {
               FocusManager.instance.primaryFocus?.unfocus();
             },
             controller: widget.controller,
-            style: context.bodySmall?.copyWith(
+            style: context.bodyMedium?.copyWith(
+              fontWeight: FontWeight.w400,
+              fontSize: 18,
               color: widget.enabled ? context.adaptiveTextPrimary : context.adaptiveDisabled,
             ),
             onChanged: widget.onChanged,
             decoration: InputDecoration(
+              contentPadding: EdgeInsets.symmetric(
+                vertical: 10,
+              ),
               hintText: widget.hint,
               border: InputBorder.none,
               suffixText: widget.suffixText,
-              hintStyle: context.bodySmall?.copyWith(
+              hintStyle: context.bodyMedium?.copyWith(
+                fontWeight: FontWeight.w400,
+                fontSize: 18,
                 color: widget.enabled ? context.adaptiveDisabled : context.adaptiveTextSecondary,
               ),
               errorStyle: context.bodySmall?.copyWith(

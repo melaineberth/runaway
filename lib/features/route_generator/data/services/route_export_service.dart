@@ -238,22 +238,25 @@ class RouteExportService {
     final path = p.join(dir.path, fileName);
     await File(path).writeAsString(content, encoding: utf8);
 
-    final box = context.findRenderObject() as RenderBox?;
-    final origin = box != null
-      ? box.localToGlobal(Offset.zero) & box.size
-      : const Rect.fromLTWH(0, 0, 1, 1); // fallback
+    if (context.mounted) {
+      final box = context.findRenderObject() as RenderBox?;
+      
+      final origin = box != null
+        ? box.localToGlobal(Offset.zero) & box.size
+        : const Rect.fromLTWH(0, 0, 1, 1); // fallback
 
-     // 3. Partage
-    final params = ShareParams(
-      text: 'Parcours exporté depuis Runaway',
-      files: [XFile(path, mimeType: _mimeFromFormat(format))], 
-      sharePositionOrigin: origin
-    );
-    
-    final result = await SharePlus.instance.share(params);
+      // 3. Partage
+      final params = ShareParams(
+        text: 'Parcours exporté depuis Runaway',
+        files: [XFile(path, mimeType: _mimeFromFormat(format))], 
+        sharePositionOrigin: origin
+      );
+      
+      final result = await SharePlus.instance.share(params);
 
-    if (result.status == ShareResultStatus.success) {
-        print('Thank you for sharing the picture!');
+      if (result.status == ShareResultStatus.success) {
+          print('Thank you for sharing the picture!');
+      }
     }
   }
 

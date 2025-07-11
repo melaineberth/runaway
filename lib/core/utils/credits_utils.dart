@@ -22,15 +22,19 @@ class CreditsUtils {
     
     if (!hasEnough) {
       // Récupérer les crédits actuels pour la modal
-      final currentCredits = await creditsBloc.getCurrentCredits();
-      if (currentCredits != null) {
-        _showInsufficientCreditsModal(
-          context: context,
-          availableCredits: currentCredits.availableCredits,
-          requiredCredits: requiredCredits,
-          action: action,
-        );
+      final currentCredits = creditsBloc.getCurrentCredits();
+
+      if (context.mounted) {
+        if (currentCredits != null) {
+          _showInsufficientCreditsModal(
+            context: context,
+            availableCredits: currentCredits.availableCredits,
+            requiredCredits: requiredCredits,
+            action: action,
+          );
+        }
       }
+      
       return false;
     }
     
@@ -60,27 +64,33 @@ class CreditsUtils {
   static void setupCreditsListener(BuildContext context) {
     context.read<CreditsBloc>().stream.listen((state) {
       if (state is CreditUsageSuccess) {
-        showTopSnackBar(
-          Overlay.of(context),
-          TopSnackBar(
-            title: state.message,
-          ),
-        );
+        if (context.mounted) {
+          showTopSnackBar(
+            Overlay.of(context),
+            TopSnackBar(
+              title: state.message,
+            ),
+          );
+        }
       } else if (state is CreditPurchaseSuccess) {
-        showTopSnackBar(
-          Overlay.of(context),
-          TopSnackBar(
-            title: state.message,
-          ),
-        );
+        if (context.mounted) {
+          showTopSnackBar(
+            Overlay.of(context),
+            TopSnackBar(
+              title: state.message,
+            ),
+          );
+        }
       } else if (state is CreditsError && state.currentCredits == null) {
-        showTopSnackBar(
-          Overlay.of(context),
-          TopSnackBar(
-            isError: true,
-            title: state.message,
-          ),
-        );
+        if (context.mounted) {
+          showTopSnackBar(
+            Overlay.of(context),
+            TopSnackBar(
+              isError: true,
+              title: state.message,
+            ),
+          );
+        }
       }
     });
   }

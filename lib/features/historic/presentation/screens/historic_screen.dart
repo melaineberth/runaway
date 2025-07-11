@@ -320,6 +320,7 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
   PreferredSizeWidget _buildAppBar(bool activeBlur) {
     return AppBar(
       forceMaterialTransparency: true,
+      automaticallyImplyLeading: false,
       title: FadeTransition(
         opacity: _fadeAnimation,
         child: Text(
@@ -661,6 +662,7 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
       extendBodyBehindAppBar: true,
       appBar: AppBar(
         forceMaterialTransparency: true,
+        automaticallyImplyLeading: false,
         title: FadeTransition(
           opacity: _fadeAnimation,
           child: Text(

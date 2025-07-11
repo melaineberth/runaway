@@ -149,6 +149,7 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
       extendBodyBehindAppBar: true,
       appBar: AppBar(
         forceMaterialTransparency: true,
+        automaticallyImplyLeading: false,
         title: FadeTransition(
           opacity: _fadeAnimation,
           child: Text(
@@ -157,10 +158,6 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
               color: context.adaptiveTextPrimary,
             ),
           ),
-        ),
-        leading: IconButton(
-          onPressed: () => context.pop(), 
-          icon: Icon(HugeIcons.strokeStandardArrowLeft02),
         ),
       ),
       body: AnimatedBuilder(

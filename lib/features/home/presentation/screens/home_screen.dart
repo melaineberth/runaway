@@ -14,6 +14,7 @@ import 'package:runaway/core/blocs/app_data/app_data_event.dart';
 import 'package:runaway/core/blocs/app_data/app_data_state.dart';
 import 'package:runaway/core/di/bloc_provider_extension.dart';
 import 'package:runaway/core/services/conversion_triggers.dart';
+import 'package:runaway/features/home/presentation/widgets/floating_location_search_sheet.dart';
 import 'package:runaway/features/home/presentation/widgets/generation_limit_widget.dart';
 import 'package:runaway/core/widgets/loading_overlay.dart';
 import 'package:runaway/core/widgets/modal_dialog.dart';
@@ -164,7 +165,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
       
       if (authState is Authenticated) {
         print('👤 Utilisateur connecté - nettoyage données guest');
-        context.routeGenerationBloc.clearGuestDataOnLogin();
+        if (mounted) {
+          context.routeGenerationBloc.clearGuestDataOnLogin();
+        }
       }
     });
   }
@@ -1716,16 +1719,18 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
         showLimitCapability(capability);
         return;
       }
-      
-      // ÉTAPE 2 : Consommer la génération AVANT de lancer la génération
-      final consumed = await context.routeGenerationBloc.consumeGeneration(context.authBloc);
-      
-      print('💳 Consommation: ${consumed ? "✅ OK" : "❌ KO"}');
-      
-      if (!consumed) {
-        print('❌ Impossible de consommer la génération');
-        _showRouteGenerationError('Impossible de lancer la génération');
-        return;
+
+      if (mounted) {
+        // ÉTAPE 2 : Consommer la génération AVANT de lancer la génération
+        final consumed = await context.routeGenerationBloc.consumeGeneration(context.authBloc);
+        
+        if (!consumed) {
+          print('❌ Impossible de consommer la génération');
+          _showRouteGenerationError('Impossible de lancer la génération');
+          return;
+        }
+
+        print('💳 Consommation: ${consumed ? "✅ OK" : "❌ KO"}');
       }
       
       // ÉTAPE 3 : Réinitialiser le flag auto-save
@@ -1733,6 +1738,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
         _hasAutoSaved = false;
       });
 
+      if (mounted) {
       // ÉTAPE 4 : Récupérer les paramètres et valider
       final parametersState = context.routeParametersBloc.state;
       final parameters = parametersState.parameters;
@@ -1762,13 +1768,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
       );
 
       // ÉTAPE 7 : Déclencher les analytics si connecté
-      if (mounted) {
         ConversionTriggers.onRouteGenerated(context);
-      }
 
       print('🚀 Génération lancée: ${parameters.distanceKm}km, ${parameters.activityType.name}');
       print('🚀 === FIN GÉNÉRATION AVEC VÉRIFICATION GUEST ===');
       
+      }
     } catch (e) {
       print('❌ Erreur lors de la génération: $e');
       _showRouteGenerationError('Erreur: $e');
@@ -2113,102 +2118,139 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
                                   
                         // Interface normale
                         if (!isNavigationMode && !_isInNavigationMode)
-                        SizedBox(
-                          width: MediaQuery.of(context).size.width,
-                          height: MediaQuery.of(context).size.height,
-                          child: SafeArea(
-                            child: Padding(
-                              padding: const EdgeInsets.all(
-                                20.0,
-                              ),
-                              child: Column(
-                                children: [
-                                  // Right menu
-                                  Row(
-                                    spacing: 8.0,
-                                    mainAxisAlignment: MainAxisAlignment.end,
-                                    children: [
-                                      Container(
-                                        padding: EdgeInsets.symmetric(
-                                          horizontal: 5.0,
-                                          vertical: 5.0,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          color: context.adaptiveBackground,
-                                          borderRadius: BorderRadius.circular(100),
-                                          boxShadow: [
-                                            BoxShadow(
-                                              color: Colors.black.withValues(alpha: 0.15),
-                                              spreadRadius: 2,
-                                              blurRadius: 30,
-                                              offset: Offset(0, 0), // changes position of shadow
+                        Align(
+                          alignment: Alignment.topCenter,
+                          child: SizedBox(
+                            width: MediaQuery.of(context).size.width,
+                            height: MediaQuery.of(context).size.height * 0.94,
+                            child: SafeArea(
+                              child: Padding(
+                                padding: const EdgeInsets.all(20.0),
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  crossAxisAlignment: CrossAxisAlignment.end,
+                                  children: [
+                                    // Right menu
+                                    Row(
+                                      spacing: 8.0,
+                                      mainAxisAlignment: MainAxisAlignment.end,
+                                      children: [
+                                        Container(
+                                          padding: EdgeInsets.symmetric(
+                                            horizontal: 5.0,
+                                            vertical: 5.0,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: context.adaptiveBackground,
+                                            borderRadius: BorderRadius.circular(100),
+                                            boxShadow: [
+                                              BoxShadow(
+                                                color: Colors.black.withValues(alpha: 0.15),
+                                                spreadRadius: 2,
+                                                blurRadius: 30,
+                                                offset: Offset(0, 0), // changes position of shadow
+                                              ),
+                                            ],
+                                          ),
+                                          child: IconButton(
+                                            icon: Icon(
+                                              HugeIcons.solidRoundedFavourite,
+                                              size: 25.0,
+                                            ),
+                                            onPressed: () => context.push('/historic'),
+                                          ),
+                                        ),                                          
+                                        
+                                        // Left menu
+                                        Row(
+                                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                          children: [
+                                            Container(
+                                              padding: EdgeInsets.symmetric(
+                                                horizontal: 5.0,
+                                                vertical: 5.0,
+                                              ),
+                                              decoration: BoxDecoration(
+                                                color: context.adaptiveBackground,
+                                                borderRadius: BorderRadius.circular(100),
+                                                boxShadow: [
+                                                  BoxShadow(
+                                                    color: Colors.black.withValues(alpha: 0.15),
+                                                    spreadRadius: 2,
+                                                    blurRadius: 30,
+                                                    offset: Offset(0, 0), // changes position of shadow
+                                                  ),
+                                                ],
+                                              ),
+                                              child: Row(
+                                                spacing: 5.0,
+                                                children: [
+                                                  // User tracking
+                                                  IconButton(
+                                                    icon: Icon(
+                                                      HugeIcons.solidRoundedMapsGlobal01,
+                                                      color: _trackingMode == TrackingMode.userTracking
+                                                        ? AppColors.primary
+                                                        : context.adaptiveTextSecondary,
+                                                      size: 28.0,
+                                                    ),
+                                                    onPressed: _activateUserTracking,
+                                                  ),
+                                                  // Map style
+                                                  IconButton(
+                                                    icon: Icon(
+                                                      HugeIcons.solidRoundedLayerMask01,
+                                                      size: 28.0,
+                                                    ),
+                                                    onPressed: _openMapStyleSelector,
+                                                  ),
+                                                ],
+                                              ),
                                             ),
                                           ],
                                         ),
-                                        child: IconButton(
-                                          icon: Icon(
-                                            HugeIcons.solidRoundedFavourite,
-                                            size: 25.0,
-                                          ),
-                                          onPressed: () => context.push('/historic'),
-                                        ),
-                                      ),                                          
-                                      
-                                      // Left menu
-                                      Row(
-                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                        children: [
-                                          Container(
-                                            padding: EdgeInsets.symmetric(
-                                              horizontal: 5.0,
-                                              vertical: 5.0,
-                                            ),
-                                            decoration: BoxDecoration(
-                                              color: context.adaptiveBackground,
-                                              borderRadius: BorderRadius.circular(100),
-                                              boxShadow: [
-                                                BoxShadow(
-                                                  color: Colors.black.withValues(alpha: 0.15),
-                                                  spreadRadius: 2,
-                                                  blurRadius: 30,
-                                                  offset: Offset(0, 0), // changes position of shadow
-                                                ),
-                                              ],
-                                            ),
-                                            child: Row(
-                                              spacing: 5.0,
-                                              children: [
-                                                // User tracking
-                                                IconButton(
-                                                  icon: Icon(
-                                                    HugeIcons.solidRoundedMapsGlobal01,
-                                                    color: _trackingMode == TrackingMode.userTracking
-                                                      ? AppColors.primary
-                                                      : context.adaptiveTextSecondary,
-                                                    size: 28.0,
-                                                  ),
-                                                  onPressed: _activateUserTracking,
-                                                ),
-                                                // Map style
-                                                IconButton(
-                                                  icon: Icon(
-                                                    HugeIcons.solidRoundedLayerMask01,
-                                                    size: 28.0,
-                                                  ),
-                                                  onPressed: _openMapStyleSelector,
-                                                ),
-                                              ],
-                                            ),
+                                      ],
+                                    ),   
+                                                          
+                                    Container(
+                                      padding: EdgeInsets.symmetric(
+                                        horizontal: 6.0,
+                                        vertical: 6.0,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: context.adaptiveBackground,
+                                        borderRadius: BorderRadius.circular(100),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: Colors.black.withValues(alpha: 0.15),
+                                            spreadRadius: 2,
+                                            blurRadius: 30,
+                                            offset: Offset(0, 0), // changes position of shadow
                                           ),
                                         ],
                                       ),
-                                    ],
-                                  ),                                                                
-                                ],
+                                      child: IconButton(
+                                        icon: Icon(
+                                          HugeIcons.solidRoundedAiMagic,
+                                          size: 30.0,
+                                        ),
+                                        onPressed: openGenerator,
+                                      ),
+                                    ),                                                             
+                                  ],
+                                ),
                               ),
                             ),
                           ),
                         ),
+                        
+                        FloatingLocationSearchSheet(
+                          onLocationSelected: _onLocationSelected,
+                          userLongitude: _userLongitude,
+                          userLatitude: _userLatitude,
+                          onProfile: () => context.push('/account'),
+                        ),
+
                       ],
                     );
                   }
