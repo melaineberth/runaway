@@ -388,6 +388,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
       _userLongitude = newLng;
     });
 
+    // 💾 Sauvegarder toujours la position utilisateur dans le service
+    _mapStateService.saveUserPosition(newLat, newLng);
+
     // Mettre à jour la position sélectionnée si on est en mode user tracking
     if (_trackingMode == TrackingMode.userTracking) {
       setState(() {
@@ -395,16 +398,20 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
         _selectedLongitude = newLng;
       });
       
+      // 💾 Sauvegarder aussi la position sélectionnée
+      _mapStateService.saveSelectedPosition(newLat, newLng);
+      
       // Centrer la caméra sur la nouvelle position
       _centerOnUserLocation(animate: false);
+      
+      // 🔧 CORRECTION : Ne mettre à jour le BLoC QUE en mode userTracking
+      if (mounted) {
+        context.routeParametersBloc.add(
+          StartLocationUpdated(longitude: newLng, latitude: newLat),
+        );
+      }
     }
-
-    // Mettre à jour le BLoC
-    if (mounted) {
-      context.routeParametersBloc.add(
-        StartLocationUpdated(longitude: newLng, latitude: newLat),
-      );
-    }
+    // 🚫 En mode manual ou searchSelected, on ne touche PAS au BLoC !
   }
 
   // Gestion des changements d'état
@@ -1061,52 +1068,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
   }
 
   // === GESTION DES POSITIONS ===
-  void _updateSelectedPosition({
-    required double latitude,
-    required double longitude,
-    bool updateCamera = false,
-    bool addMarker = false,
-  }) {
-    setState(() {
-      _selectedLatitude = latitude;
-      _selectedLongitude = longitude;
-    });
-
-    // 💾 Sauvegarder dans le service
-    _mapStateService.saveSelectedPosition(latitude, longitude);
-
-    // Mettre à jour le BLoC
-    context.routeParametersBloc.add(
-      StartLocationUpdated(longitude: longitude, latitude: latitude),
-    );
-
-    // Mise à jour optionnelle de la caméra
-    if (updateCamera && mapboxMap != null) {
-      mapboxMap?.flyTo(
-        mp.CameraOptions(
-          center: mp.Point(coordinates: mp.Position(longitude, latitude)),
-          zoom: 12,
-          pitch: 0,
-          bearing: 0,
-        ),
-        mp.MapAnimationOptions(duration: 1000),
-      );
-    }
-
-    // Ajout optionnel d'un marqueur
-    if (addMarker) {
-      _addLocationMarker(longitude, latitude);
-    }
-  }
-
-  Future<void> _addLocationMarker(double longitude, double latitude) async {
-    if (mapboxMap == null) return;
-
-    print('🎯 Ajout marqueur à: ($latitude, $longitude)');
-    
-    // 🔧 FIX : Utiliser la nouvelle méthode corrigée
-    await _placeMarkerWithLottie(longitude, latitude);
-  }
 
   Future<void> _ensureCustomMarkerImage() async {
     if (mapboxMap == null) return;
@@ -1262,19 +1223,29 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
     if (_userLatitude != null && _userLongitude != null) {
       setState(() {
         _trackingMode = TrackingMode.userTracking;
+        // 🔧 IMPORTANT : Synchroniser immédiatement avec la position GPS
+        _selectedLatitude = _userLatitude!;
+        _selectedLongitude = _userLongitude!;
       });
 
-      // 💾 Sauvegarder le mode
+      // 💾 Sauvegarder le mode et la position
       _mapStateService.saveTrackingMode(_trackingMode);
+      _mapStateService.saveSelectedPosition(_userLatitude!, _userLongitude!);
 
-      _updateSelectedPosition(
-        latitude: _userLatitude!,
-        longitude: _userLongitude!,
-        updateCamera: true,
-      );
+      // 🔧 CORRECTION : Mettre à jour le bloc avec la position GPS actuelle
+      if (mounted) {
+        context.routeParametersBloc.add(
+          StartLocationUpdated(longitude: _userLongitude!, latitude: _userLatitude!),
+        );
+      }
 
+      // Centrer la caméra
+      _centerOnUserLocation(animate: true);
+      
       // Nettoyer les marqueurs car on suit la position en temps réel
       _clearLocationMarkers();
+      
+      print('✅ Mode UserTracking activé avec position GPS: $_userLatitude, $_userLongitude');
     }
   }
 
@@ -1296,6 +1267,29 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
         StartLocationUpdated(longitude: longitude, latitude: latitude),
       );
     }
+  }
+
+  Map<String, double> getGenerationPosition() {
+    // En priorité, utiliser la position sélectionnée
+    if (_selectedLatitude != null && _selectedLongitude != null) {
+      print('🎯 Position génération: sélectionnée ($_selectedLatitude, $_selectedLongitude)');
+      return {
+        'latitude': _selectedLatitude!,
+        'longitude': _selectedLongitude!,
+      };
+    }
+    
+    // Fallback sur la position utilisateur
+    if (_userLatitude != null && _userLongitude != null) {
+      print('🎯 Position génération: fallback utilisateur ($_userLatitude, $_userLongitude)');
+      return {
+        'latitude': _userLatitude!,
+        'longitude': _userLongitude!,
+      };
+    }
+    
+    // Erreur : aucune position disponible
+    throw Exception('Aucune position disponible pour la génération');
   }
 
   /// Sélection via recherche d'adresse
@@ -1331,7 +1325,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
       _mapStateService.clearMarkersAndRoute();
     }
     
-    // Mettre à jour la position
+    // 🔧 CORRECTION : Mettre à jour la position ET le mode SearchSelected
     setState(() {
       _trackingMode = TrackingMode.searchSelected;
       _selectedLatitude = latitude;
@@ -1353,11 +1347,18 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
           center: mp.Point(coordinates: mp.Position(longitude, latitude)),
           zoom: 12,
         ),
-        mp.MapAnimationOptions(duration: 1000),
+        mp.MapAnimationOptions(duration: 1200),
       );
     }
 
-    print('✅ Position de recherche définie avec sauvegarde: $placeName');
+    // 🔧 CORRECTION : Mettre à jour le BLoC avec la position recherchée
+    if (mounted) {
+      context.routeParametersBloc.add(
+        StartLocationUpdated(longitude: longitude, latitude: latitude),
+      );
+    }
+
+    print('✅ Position via recherche définie: $placeName');
   }
 
   // === GESTION DE LA CARTE ===
@@ -1597,7 +1598,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
         _mapStateService.clearMarkersAndRoute();
       }
       
-      // Mettre à jour la position
+      // 🔧 CORRECTION : Mettre à jour la position ET le mode
       setState(() {
         _trackingMode = TrackingMode.manual;
         _selectedLatitude = latitude;
@@ -1623,7 +1624,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
         );
       }
 
-      // Mettre à jour le BLoC
+      // 🔧 CORRECTION : Mettre à jour le BLoC avec la position manuelle
       if (mounted) {
         context.routeParametersBloc.add(
           StartLocationUpdated(longitude: longitude, latitude: latitude),

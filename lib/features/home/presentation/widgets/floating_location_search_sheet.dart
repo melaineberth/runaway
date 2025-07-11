@@ -45,7 +45,7 @@ class _FloatingLocationSearchSheetState extends State<FloatingLocationSearchShee
   late final ScrollController _scrollController;
   static const double _kCollapsedHeight = 92.0;
   static const double _kSnapMidRatio = 0.45;
-  static const double _kMaxRatio = 0.90;
+  static const double _kMaxRatio = 0.93;
   static const double _kMinCollapsedRatio = 0.082;
   static const Duration _kDebounceDelay = Duration(milliseconds: 500);
   static const Duration _kAnimationDelay = Duration(milliseconds: 100);
@@ -321,18 +321,30 @@ class _FloatingLocationSearchSheetState extends State<FloatingLocationSearchShee
     if (_isDisposed || !mounted) return;
     
     try {
+      print('🔍 Début de recherche pour: "$value"');
+      
       final results = await GeocodingService.searchAddress(
         value,
         longitude: widget.userLongitude,
         latitude: widget.userLatitude,
+        limit: 30, // 🆕 Test avec 20 résultats
       );
 
       if (_isDisposed || !mounted) return;
+
+      print('🔍 Résultats reçus dans FloatingLocationSearchSheet: ${results.length}');
+      
+      // 🐛 DEBUG: Afficher tous les résultats
+      for (int i = 0; i < results.length; i++) {
+        print('🔍 Résultat $i: ${results[i].placeName}');
+      }
 
       setState(() {
         _suggestions = results;
         _isLoading = false;
       });
+
+      print('🔍 _suggestions mis à jour avec ${_suggestions.length} éléments');
 
       _adjustSheetForNewSuggestions(results);
     } catch (e) {
@@ -444,7 +456,9 @@ class _FloatingLocationSearchSheetState extends State<FloatingLocationSearchShee
 
   /// 📋 Construit la vue scrollable
   Widget _buildScrollView(ScrollController scrollController) {
-    return Column(
+  return SingleChildScrollView(
+    physics: const NeverScrollableScrollPhysics(),
+    child: Column(
       mainAxisSize: MainAxisSize.min,
       children: [
         _buildSearchBar(),
@@ -455,12 +469,16 @@ class _FloatingLocationSearchSheetState extends State<FloatingLocationSearchShee
             parent: AlwaysScrollableScrollPhysics(),
           ),
           slivers: [
-            _buildSuggestionsList(),
+            SliverPadding(
+              padding: const EdgeInsets.only(bottom: 300), // 🆕 Correction et augmentation de l'espace
+              sliver: _buildSuggestionsList(),
+            ),
           ],
         ),
       ],
-    );
-  }
+    ),
+  );
+}
 
   /// 🔍 Construit la barre de recherche
   Widget _buildSearchBar() {
@@ -670,7 +688,7 @@ class _FloatingLocationSearchSheetState extends State<FloatingLocationSearchShee
       splashColor: context.adaptiveTextSecondary.withValues(alpha: 0.1),
       highlightColor: context.adaptiveTextSecondary.withValues(alpha: 0.05),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 10),
         child: Row(
           children: [
             _buildSuggestionIcon(),

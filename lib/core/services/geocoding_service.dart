@@ -7,16 +7,24 @@ class GeocodingService {
   static final String _accessToken = dotenv.get('MAPBOX_TOKEN');
   
   // Recherche d'adresses avec autocomplétion
-  static Future<List<AddressSuggestion>> searchAddress(String query, {double? longitude, double? latitude}) async {
+  static Future<List<AddressSuggestion>> searchAddress(
+    String query, {
+    double? longitude, 
+    double? latitude,
+    int limit = 30,
+  }) async {
     if (query.isEmpty) return [];
     
     try {
-      // Construire l'URL avec proximity pour favoriser les résultats proches
-      String url = '$_baseUrl/${Uri.encodeComponent(query)}.json?access_token=$_accessToken&limit=5&language=fr&types=address,poi';
+      // 🆕 Version alternative sans restriction de types
+      String url = '$_baseUrl/${Uri.encodeComponent(query)}.json?access_token=$_accessToken&limit=$limit&language=fr&autocomplete=true';
       
       if (longitude != null && latitude != null) {
         url += '&proximity=$longitude,$latitude';
       }
+      
+      print('🔍 URL de recherche: $url');
+      print('🔍 Limite demandée: $limit');
       
       final response = await http.get(Uri.parse(url));
       
@@ -24,17 +32,30 @@ class GeocodingService {
         final data = json.decode(response.body);
         final features = data['features'] as List;
         
-        return features.map((feature) => AddressSuggestion(
+        print('🔍 Nombre de résultats reçus de Mapbox: ${features.length}');
+        print('🔍 Query: "$query"');
+        
+        // 🐛 DEBUG: Afficher la réponse complète pour analyse
+        print('🔍 Réponse complète: ${json.encode(data)}');
+        
+        final suggestions = features.map((feature) => AddressSuggestion(
           id: feature['id'],
           placeName: feature['place_name'],
           center: [feature['center'][0], feature['center'][1]],
           relevance: feature['relevance'].toDouble(),
         )).toList();
+        
+        print('🔍 Nombre final de suggestions: ${suggestions.length}');
+        
+        return suggestions;
+      } else {
+        print('❌ Erreur HTTP: ${response.statusCode}');
+        print('❌ Response body: ${response.body}');
       }
       
       return [];
     } catch (e) {
-      print('Erreur lors de la recherche d\'adresse: $e');
+      print('❌ Erreur lors de la recherche d\'adresse: $e');
       return [];
     }
   }
