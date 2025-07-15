@@ -6,6 +6,8 @@ import 'package:runaway/core/blocs/app_data/app_data_bloc.dart';
 import 'package:runaway/core/blocs/app_data/app_data_state.dart';
 import 'package:runaway/core/di/bloc_provider_extension.dart';
 import 'package:runaway/core/errors/api_exceptions.dart';
+import 'package:runaway/core/extensions/monitoring_extensions.dart';
+import 'package:runaway/core/services/monitoring_service.dart';
 import 'package:runaway/core/widgets/modal_sheet.dart';
 import 'package:runaway/core/widgets/squircle_btn.dart';
 import 'package:runaway/core/widgets/squircle_container.dart';
@@ -41,8 +43,18 @@ class _CreditPlanModalState extends State<CreditPlanModal> {
     });
   }
 
-  void _handlePurchase() async {
+  void _handlePurchase(String planId, int credits, double price) async {
     if (selectedPlanId == null) return;
+
+    final operationId = MonitoringService.instance.trackOperation(
+      'credit_purchase',
+      description: 'Achat de crédits via IAP',
+      data: {
+        'plan_id': planId,
+        'credits': credits,
+        'price': price,
+      },
+    );
 
     try {
       print('🛒 Début processus d\'achat IAP pour plan: $selectedPlanId');
@@ -79,6 +91,21 @@ class _CreditPlanModalState extends State<CreditPlanModal> {
               paymentIntentId: transactionId,
             ),
           );
+
+          MonitoringService.instance.finishOperation(operationId, success: true);
+
+          // Métrique business importante
+          MonitoringService.instance.recordMetric(
+            'revenue',
+            price,
+            unit: 'eur',
+            tags: {
+              'source': 'credit_purchase',
+              'plan_id': planId,
+              'credits': credits.toString(),
+            },
+          );
+
         } else {
           _showErrorSnackBar('Erreur: ID de transaction manquant');
         }
@@ -99,7 +126,7 @@ class _CreditPlanModalState extends State<CreditPlanModal> {
         }
       }
       
-    } catch (e) {
+    } catch (e, stackTrace) {
       print('❌ Erreur processus achat: $e');
       
       String errorMessage = 'Erreur lors du paiement';
@@ -116,6 +143,19 @@ class _CreditPlanModalState extends State<CreditPlanModal> {
       
       if (mounted) {
         _showErrorSnackBar(errorMessage);
+
+        context.captureError(e, stackTrace, extra: {
+          'operation': 'credit_purchase',
+          'plan_id': planId,
+          'credits': credits,
+          'price': price,
+        });
+        
+        MonitoringService.instance.finishOperation(
+          operationId, 
+          success: false, 
+          errorMessage: e.toString(),
+        );
       }
     }
   }
@@ -319,7 +359,7 @@ class _CreditPlanModalState extends State<CreditPlanModal> {
 
           SquircleBtn(
             isPrimary: true,
-            onTap: selectedPlanId != null ? _handlePurchase : null,
+            onTap: selectedPlanId != null ? () => _handlePurchase : null,
             label: selectedPlanId != null 
               ? context.l10n.buySelectedPlan
               : context.l10n.selectPlan,

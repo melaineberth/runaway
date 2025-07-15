@@ -6,6 +6,8 @@ import 'package:runaway/config/extensions.dart';
 import 'package:runaway/core/blocs/app_data/app_data_bloc.dart';
 import 'package:runaway/core/blocs/app_data/app_data_state.dart';
 import 'package:runaway/core/di/bloc_provider_extension.dart';
+import 'package:runaway/core/extensions/monitoring_extensions.dart';
+import 'package:runaway/core/services/monitoring_service.dart';
 import 'package:runaway/core/widgets/blurry_page.dart';
 import 'package:runaway/core/widgets/squircle_btn.dart';
 import 'package:runaway/core/widgets/squircle_container.dart';
@@ -28,9 +30,12 @@ class CreditPlansScreen extends StatefulWidget {
 class _CreditPlansScreenState extends State<CreditPlansScreen> {
   String? selectedPlanId;
 
+  late String _screenLoadId;
+
   @override
   void initState() {
     super.initState();
+    _screenLoadId = context.trackScreenLoad('credit_plans_screen');
 
     // 🆕 Déclencher le pré-chargement si les données ne sont pas disponibles
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -38,43 +43,63 @@ class _CreditPlansScreenState extends State<CreditPlansScreen> {
         print('💳 Pré-chargement des données de crédits depuis CreditPlansScreen');
         context.preloadCreditData();
       }
+      context.finishScreenLoad(_screenLoadId);
+      _trackCreditsScreenView();
     });
+  }
+
+  void _trackCreditsScreenView() {
+    MonitoringService.instance.recordMetric(
+      'credits_screen_view',
+      1,
+      tags: {
+        'user_credits': context.availableCredits.toString(),
+        'has_credits': context.hasCredits.toString(),
+      },
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: context.adaptiveBackground,
-      appBar: AppBar(
+    return MonitoredScreen(
+      screenName: 'credit_plans',
+      screenData: {
+        'user_credits': context.availableCredits,
+        'has_credits': context.hasCredits,
+      },
+      child: Scaffold(
         backgroundColor: context.adaptiveBackground,
-        title: Text(
-          context.l10n.buyCredits,
-          style: context.bodySmall?.copyWith(
-            color: context.adaptiveTextPrimary,
+        appBar: AppBar(
+          backgroundColor: context.adaptiveBackground,
+          title: Text(
+            context.l10n.buyCredits,
+            style: context.bodySmall?.copyWith(
+              color: context.adaptiveTextPrimary,
+            ),
+          ),
+          leading: IconButton(
+            onPressed: () => context.pop(), 
+            icon: Icon(HugeIcons.strokeStandardArrowLeft02),
           ),
         ),
-        leading: IconButton(
-          onPressed: () => context.pop(), 
-          icon: Icon(HugeIcons.strokeStandardArrowLeft02),
-        ),
-      ),
-      body: MultiBlocListener(
-        listeners: [
-          // 🆕 Écouter les succès d'achat depuis CreditsBloc
-          BlocListener<CreditsBloc, CreditsState>(
-            listener: (context, state) {
-              if (state is CreditPurchaseSuccess) {
-                _showPurchaseSuccessDialog(state);
-              } else if (state is CreditsError) {
-                _showErrorSnackBar(state.message);
-              }
+        body: MultiBlocListener(
+          listeners: [
+            // 🆕 Écouter les succès d'achat depuis CreditsBloc
+            BlocListener<CreditsBloc, CreditsState>(
+              listener: (context, state) {
+                if (state is CreditPurchaseSuccess) {
+                  _showPurchaseSuccessDialog(state);
+                } else if (state is CreditsError) {
+                  _showErrorSnackBar(state.message);
+                }
+              },
+            ),
+          ],
+          child: BlocBuilder<AppDataBloc, AppDataState>(
+            builder: (context, appDataState) {
+              return _buildMainContent(appDataState);
             },
           ),
-        ],
-        child: BlocBuilder<AppDataBloc, AppDataState>(
-          builder: (context, appDataState) {
-            return _buildMainContent(appDataState);
-          },
         ),
       ),
     );

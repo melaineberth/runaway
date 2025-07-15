@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:runaway/config/extensions.dart';
+import 'package:runaway/core/extensions/monitoring_extensions.dart';
 import 'package:runaway/core/widgets/icon_btn.dart';
 import 'package:runaway/core/widgets/modal_sheet.dart';
 import 'package:runaway/core/widgets/top_snackbar.dart';
@@ -23,11 +24,17 @@ class AuthScreen extends StatefulWidget {
 
 class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateMixin {
   late PageController _pageController;
+  late String _screenLoadId;
 
   @override
   void initState() {
     super.initState();
     _pageController = PageController(initialPage: widget.initialIndex);
+    _screenLoadId = context.trackScreenLoad('auth_screen');
+    
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.finishScreenLoad(_screenLoadId);
+    });
   }
 
   @override
@@ -46,71 +53,74 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
 
   @override
   Widget build(BuildContext context) {
-    return BlocListener<AuthBloc, AuthState>(
-      listener: (context, authState) {
-        if (authState is Authenticated) {
-          Navigator.of(context).popUntil((route) => route.isFirst);
-          context.go('/home');
-        } else if (authState is ProfileIncomplete) {
-          // Profil incomplet, aller vers l'onboarding
-          context.go('/onboarding');
-        } else if (authState is EmailConfirmationRequired) {
-          // Email de confirmation requis
-          context.go('/email-confirmation?email=${Uri.encodeComponent(authState.email)}');
-        } else if (authState is PasswordResetSent) {
-          // Mot de passe réinitialisé
-          showTopSnackBar(
-            Overlay.of(context),
-            TopSnackBar(
-              title: 'Email de réinitialisation envoyé à ${authState.email}',
+    return MonitoredScreen(
+      screenName: 'auth',
+      child: BlocListener<AuthBloc, AuthState>(
+        listener: (context, authState) {
+          if (authState is Authenticated) {
+            Navigator.of(context).popUntil((route) => route.isFirst);
+            context.go('/home');
+          } else if (authState is ProfileIncomplete) {
+            // Profil incomplet, aller vers l'onboarding
+            context.go('/onboarding');
+          } else if (authState is EmailConfirmationRequired) {
+            // Email de confirmation requis
+            context.go('/email-confirmation?email=${Uri.encodeComponent(authState.email)}');
+          } else if (authState is PasswordResetSent) {
+            // Mot de passe réinitialisé
+            showTopSnackBar(
+              Overlay.of(context),
+              TopSnackBar(
+                title: 'Email de réinitialisation envoyé à ${authState.email}',
+              ),
+            );
+          } else if (authState is AuthError) {
+            // Afficher l'erreur
+            showTopSnackBar(
+              Overlay.of(context),
+              TopSnackBar(
+                isError: true,
+                title: authState.message,
+              ),
+            );
+          }
+        },
+        child: Stack(
+          children: [
+            ModalSheet(
+              child: BlocBuilder<AuthBloc, AuthState>(
+                builder: (context, authState) {
+                  final isLoading = authState is AuthLoading;
+                  
+                  return PageView(
+                  controller: _pageController,
+                  physics: const NeverScrollableScrollPhysics(),
+                    children: [
+                      SignupScreen(
+                        onSwitchToLogin: _switchToLogin,
+                        isLoading: isLoading,
+                      ),
+                      LoginScreen(
+                        onSwitchToSignup: _switchToSignup,
+                        isLoading: isLoading,
+                      ),
+                    ],
+                  );
+                },
+              ),
             ),
-          );
-        } else if (authState is AuthError) {
-          // Afficher l'erreur
-          showTopSnackBar(
-            Overlay.of(context),
-            TopSnackBar(
-              isError: true,
-              title: authState.message,
-            ),
-          );
-        }
-      },
-      child: Stack(
-        children: [
-          ModalSheet(
-            child: BlocBuilder<AuthBloc, AuthState>(
-              builder: (context, authState) {
-                final isLoading = authState is AuthLoading;
-                
-                return PageView(
-                controller: _pageController,
-                physics: const NeverScrollableScrollPhysics(),
-                  children: [
-                    SignupScreen(
-                      onSwitchToLogin: _switchToLogin,
-                      isLoading: isLoading,
-                    ),
-                    LoginScreen(
-                      onSwitchToSignup: _switchToSignup,
-                      isLoading: isLoading,
-                    ),
-                  ],
-                );
-              },
-            ),
-          ),
-          Positioned(
-            right: 15,
-            top: 15,
-            child: IconBtn(
-              backgroundColor: Colors.transparent,
-              icon: HugeIcons.solidRoundedCancelCircle,
-              iconColor: context.adaptiveDisabled.withValues(alpha: 0.2),
-              onPressed: () => context.pop(),
-            ),
-          ),  
-        ],
+            Positioned(
+              right: 15,
+              top: 15,
+              child: IconBtn(
+                backgroundColor: Colors.transparent,
+                icon: HugeIcons.solidRoundedCancelCircle,
+                iconColor: context.adaptiveDisabled.withValues(alpha: 0.2),
+                onPressed: () => context.pop(),
+              ),
+            ),  
+          ],
+        ),
       ),
     );
   }

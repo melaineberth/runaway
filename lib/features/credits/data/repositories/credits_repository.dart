@@ -1,5 +1,7 @@
 import 'package:runaway/core/errors/auth_exceptions.dart';
+import 'package:runaway/core/extensions/monitoring_extensions.dart';
 import 'package:runaway/core/services/cache_service.dart';
+import 'package:runaway/core/services/monitoring_service.dart';
 import 'package:runaway/features/credits/domain/models/user_credits.dart';
 import 'package:runaway/features/credits/domain/models/credit_plan.dart';
 import 'package:runaway/features/credits/domain/models/credit_transaction.dart';
@@ -49,10 +51,31 @@ class CreditsRepository {
       await _cache.set('cache_user_credits', credits);
       
       print('✅ Crédits récupérés: ${credits.availableCredits} disponibles');
+      
+      // 🆕 Métrique des crédits utilisateur
+      MonitoringService.instance.recordMetric(
+        'user_credits_loaded',
+        credits.availableCredits,
+        tags: {
+          'user_id': user.id,
+          'has_credits': (credits.availableCredits > 0).toString(),
+          'total_purchased': credits.totalCreditsPurchased.toString(),
+        },
+      );
+
       return credits;
       
-    } catch (e) {
+    } catch (e, stackTrace) {
       print('❌ Erreur récupération crédits: $e');
+
+      MonitoringService.instance.captureError(
+        e,
+        stackTrace,
+        context: 'CreditsRepository.getUserCredits',
+        extra: {
+          'user_id': user.id,
+        },
+      );
       
       // Tentative de récupération depuis le cache en cas d'erreur
       final cachedCreditsRaw = await _cache.get<Map>('cache_user_credits');
@@ -83,6 +106,7 @@ class CreditsRepository {
     required String reason,
     String? routeGenerationId,
     Map<String, dynamic>? metadata,
+    String? purpose,
   }) async {
     final user = _supabase.auth.currentUser;
     if (user == null) {
@@ -111,6 +135,29 @@ class CreditsRepository {
         if (result.newCredits != null) {
           await _cache.set('cache_user_credits', result.newCredits!);
         }
+
+        // 🆕 Tracking de l'utilisation des crédits
+        MonitoringService.instance.recordMetric(
+          'credits_used',
+          amount,
+          tags: {
+            'user_id': user.id,
+            'purpose': purpose,
+            'amount': amount.toString(),
+          },
+        );
+
+        // 🆕 Enregistrer la transaction
+        await _recordCreditTransaction(
+          userId: user.id,
+          amount: -amount,
+          transactionType: 'usage',
+          description: 'Utilisation pour $purpose',
+          metadata: {
+            'purpose': purpose,
+            'timestamp': DateTime.now().toIso8601String(),
+          },
+        );
         
         print('✅ Crédits utilisés avec succès. Nouveau solde: ${result.newCredits?.availableCredits}');
       } else {
@@ -130,6 +177,50 @@ class CreditsRepository {
       }
       
       throw NetworkException('Impossible d\'utiliser les crédits');
+    }
+  }
+
+  // 🆕 Méthode pour enregistrer les transactions avec monitoring
+  Future<void> _recordCreditTransaction({
+    required String userId,
+    required int amount,
+    required String transactionType,
+    String? description,
+    Map<String, dynamic>? metadata,
+  }) async {
+    try {
+      await _supabase
+          .from('credit_transactions')
+          .insertWithMonitoring<void>(
+            {
+              'user_id': userId,
+              'amount': amount,
+              'transaction_type': transactionType,
+              'description': description,
+              'metadata': metadata,
+              'created_at': DateTime.now().toIso8601String(),
+            },
+            tableName: 'credit_transactions',
+            context: 'CreditsRepository.recordTransaction',
+            extraData: {
+              'user_id': userId,
+              'transaction_type': transactionType,
+              'amount': amount,
+            },
+          );
+
+    } catch (e, stackTrace) {
+      MonitoringService.instance.captureError(
+        e,
+        stackTrace,
+        context: 'CreditsRepository.recordTransaction',
+        extra: {
+          'user_id': userId,
+          'amount': amount,
+          'transaction_type': transactionType,
+        },
+      );
+      // Ne pas relancer l'erreur pour éviter de bloquer l'opération principale
     }
   }
 

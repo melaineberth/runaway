@@ -1,4 +1,6 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:runaway/core/extensions/monitoring_extensions.dart';
+import 'package:runaway/core/services/monitoring_service.dart';
 import 'package:runaway/core/services/screenshot_service.dart';
 import 'package:runaway/features/activity/data/repositories/activity_repository.dart';
 import 'package:runaway/features/credits/data/repositories/credits_repository.dart';
@@ -440,6 +442,13 @@ class AppDataBloc extends Bloc<AppDataEvent, AppDataState> {
     AppDataPreloadRequested event,
     Emitter<AppDataState> emit,
   ) async {
+    trackEvent(event);
+
+    final operationId = MonitoringService.instance.trackOperation(
+      'app_data_preload',
+      description: 'Pré-chargement des données de l\'application',
+    );
+
     if (_isFullSyncInProgress) {
       print('⚠️ Sync complète déjà en cours, abandon');
       return;
@@ -506,13 +515,32 @@ class AppDataBloc extends Bloc<AppDataEvent, AppDataState> {
       print('📊 Activité: ${activityData != null ? "✅" : "❌"}');
       print('📚 Historique: ${historicData?.length ?? 0} parcours');
       print('💳 Crédits: ${creditData?.userCredits.availableCredits ?? 0} disponibles');
+
+      MonitoringService.instance.finishOperation(operationId, success: true);
+
+      // 🆕 Métriques de performance des données
+      MonitoringService.instance.recordMetric(
+        'app_data_loaded',
+        1,
+        tags: {
+          'routes_count': state.savedRoutes.length.toString(),
+          'activities_count': state.activityTypeStats.length.toString(),
+        },
+      );
       
-    } catch (e) {
-      print('❌ Erreur lors du pré-chargement: $e');
+    } catch (e, stackTrace) {
+      captureError(e, stackTrace, event: event, state: state);
+
       emit(state.copyWith(
         isLoading: false,
         lastError: 'Erreur lors du chargement: ${e.toString()}',
       ));
+
+      MonitoringService.instance.finishOperation(
+        operationId,
+        success: false,
+        errorMessage: e.toString(),
+      );
     } finally {
       _isFullSyncInProgress = false;
     }

@@ -1,7 +1,9 @@
 import 'dart:async';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:runaway/core/extensions/monitoring_extensions.dart';
 import 'package:runaway/core/services/app_data_initialization_service.dart';
+import 'package:runaway/core/services/monitoring_service.dart';
 import 'package:runaway/features/auth/data/repositories/auth_repository.dart';
 import 'package:runaway/features/auth/domain/models/profile.dart';
 import 'package:runaway/features/credits/presentation/blocs/credits_bloc.dart';
@@ -41,33 +43,65 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
 
     // FIX: Nouvelle logique pour le stream listener
     _sub = _repo.authChangesStream.listen((data) async {
-      final user = data.session?.user;
-      if (user == null) return add(_InternalLoggedOut());
-
-      // FIX: Utiliser skipCleanup pour éviter le nettoyage automatique
-      final p = await _repo.getProfile(user.id, skipCleanup: true);
-      
-      if (p == null) {
-        // Pas de profil trouvé - vérifier si c'est un compte vraiment corrompu
-        final isCorrupted = await _repo.isCorruptedAccount(user.id);
+      try {
+        final user = data.session?.user;
+        if (user == null) return add(_InternalLoggedOut());
         
-        if (isCorrupted) {
-          print('🧹 Compte corrompu détecté - nettoyage');
-          await _repo.cleanupCorruptedAccount();
-          add(_InternalLoggedOut());
+        // FIX: Utiliser skipCleanup pour éviter le nettoyage automatique
+        final p = await _repo.getProfile(user.id, skipCleanup: true);
+        
+        if (p == null) {
+          // Pas de profil trouvé - vérifier si c'est un compte vraiment corrompu
+          final isCorrupted = await _repo.isCorruptedAccount(user.id);
+          
+          if (isCorrupted) {
+            print('🧹 Compte corrompu détecté - nettoyage');
+            await _repo.cleanupCorruptedAccount();
+            add(_InternalLoggedOut());
+          } else {
+            print('✅ Nouveau compte sans profil - OK pour onboarding');
+            add(_InternalProfileIncomplete(user));
+          }
         } else {
-          print('✅ Nouveau compte sans profil - OK pour onboarding');
-          add(_InternalProfileIncomplete(user));
+          // FIX: Utiliser la méthode isComplete pour vérifier
+          if (!p.isComplete) {
+            print('⚠️ Profil trouvé mais incomplet');
+            add(_InternalProfileIncomplete(user));
+          } else {
+            print('✅ Profil complet trouvé');
+            add(_InternalProfileLoaded(p));
+          }
         }
-      } else {
-        // FIX: Utiliser la méthode isComplete pour vérifier
-        if (!p.isComplete) {
-          print('⚠️ Profil trouvé mais incomplet');
-          add(_InternalProfileIncomplete(user));
+
+        // 🆕 Tracking des changements d'état d'auth
+        MonitoringService.instance.recordMetric(
+          'auth_state_change',
+          1,
+          tags: {
+            'new_state': data.runtimeType.toString(),
+            'has_user': (data is Authenticated).toString(),
+          },
+        );
+        
+        // 🆕 Configurer l'utilisateur dans le monitoring
+        if (data is Authenticated) {
+          MonitoringService.instance.setUser(
+            userId: data.session!.user.id,
+            email: data.session!.user.email,
+            username: data.session!.user.userMetadata?['username'],
+            additionalData: {
+              'provider': data.session!.user.appMetadata['provider'] ?? 'unknown',
+              'created_at': data.session!.user.createdAt,
+            },
+          );
         } else {
-          print('✅ Profil complet trouvé');
-          add(_InternalProfileLoaded(p));
+          MonitoringService.instance.clearUser();
         }
+      } catch (e, stackTrace) {
+        captureError(e, stackTrace, extra: {
+          'context': 'auth_state_stream',
+          'auth_state': data.runtimeType.toString(),
+        });
       }
     });
   }
@@ -254,8 +288,21 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   }
 
   Future<void> _onLogin(LogInRequested e, Emitter<AuthState> emit) async {
-    emit(AuthLoading());
+    trackEvent(e, data: {
+      'has_email': e.email != null,
+    });
+
+    final operationId = MonitoringService.instance.trackOperation(
+      'user_login',
+      description: 'Connexion utilisateur',
+      data: {
+        'has_email': e.email != null,
+      },
+    );
+
     try {
+      emit(AuthLoading());
+      
       final p = await _repo.logIn(email: e.email, password: e.password);
       
       if (p == null) {
@@ -274,10 +321,38 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         }
       } else {
         emit(Authenticated(p));
+        MonitoringService.instance.finishOperation(operationId, success: true);
+
+        // 🆕 Métrique business - nouvel utilisateur connecté
+        MonitoringService.instance.recordMetric(
+          'user_login_success',
+          1,
+          tags: {
+            'is_new_user': 'false', // À déterminer selon votre logique
+          },
+        );
       }
-    } catch (err) {
-      print('❌ Erreur connexion: $err');
+    } catch (err, stackTrace) {
+      captureError(err, stackTrace, event: e, state: state, extra: {
+        'operation_id': operationId,
+      });
+
       emit(AuthError(err.toString()));
+
+      MonitoringService.instance.finishOperation(
+        operationId,
+        success: false,
+        errorMessage: err.toString(),
+      );
+      
+      // Métrique d'échec
+      MonitoringService.instance.recordMetric(
+        'user_login_failure',
+        1,
+        tags: {
+          'error_type': err.runtimeType.toString(),
+        },
+      );
     }
   }
 
@@ -378,21 +453,33 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   }
 
   Future<void> _onLogout(LogOutRequested e, Emitter<AuthState> emit) async {
-    emit(AuthLoading());
-    
-    // // 🆕 Nettoyer le cache des crédits
-    // if (_creditsBloc != null) {
-    //   _creditsBloc.add(const CreditsReset());
-    //   try {
-    //     final creditsRepo = CreditsRepository();
-    //     await creditsRepo.clearCache();
-    //   } catch (error) {
-    //     print('⚠️ Erreur nettoyage cache crédits: $error');
-    //   }
-    // }
-    
-    await _repo.logOut();
-    emit(Unauthenticated());
+    trackEvent(e);
+
+    final operationId = MonitoringService.instance.trackOperation(
+      'user_logout',
+      description: 'Déconnexion utilisateur',
+    );
+
+    try {
+      emit(AuthLoading());
+
+      await _repo.logOut();
+
+      emit(Unauthenticated());
+
+      MonitoringService.instance.finishOperation(operationId, success: true);
+      
+      // Nettoyer l'utilisateur du monitoring
+      MonitoringService.instance.clearUser();
+    } catch (err, stackTrace) {
+      captureError(err, stackTrace, event: e, state: state);
+      
+      MonitoringService.instance.finishOperation(
+        operationId,
+        success: false,
+        errorMessage: err.toString(),
+      );
+    }
   }
 
   Future<void> _onForgotPassword(ForgotPasswordRequested e, Emitter<AuthState> emit) async {

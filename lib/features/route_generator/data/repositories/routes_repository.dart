@@ -2,6 +2,7 @@
 
 import 'dart:convert';
 import 'package:runaway/config/extensions.dart';
+import 'package:runaway/core/services/monitoring_service.dart';
 import 'package:runaway/core/services/screenshot_service.dart';
 import 'package:runaway/features/route_generator/domain/models/activity_type.dart';
 import 'package:runaway/features/route_generator/domain/models/saved_route.dart';
@@ -18,6 +19,14 @@ class RoutesRepository {
   final Uuid _uuid = const Uuid();
   static const String _localCacheKey = 'cached_user_routes';
   static const String _pendingSyncKey = 'pending_sync_routes';
+
+  // 🆕 Helper pour catégoriser les distances
+  String _getDistanceRange(double distance) {
+    if (distance < 5) return '0-5km';
+    if (distance < 10) return '5-10km';
+    if (distance < 20) return '10-20km';
+    return '20km+';
+  }
 
   /// 🆕 Sauvegarde un nouveau parcours avec image_url
   Future<SavedRoute> saveRoute({
@@ -69,8 +78,33 @@ class RoutesRepository {
           await _markRouteForSync(route.id);
           print('📱 Route marquée pour sync ultérieure: ${route.id}');
         }
-      } catch (e) {
+
+        // 🆕 Métrique business - parcours sauvegardé
+        MonitoringService.instance.recordMetric(
+          'route_saved_repository',
+          1,
+          tags: {
+            'activity_type': parameters.activityType,
+            'distance_range': _getDistanceRange(parameters.distanceKm),
+            'coordinates_count': coordinates.length.toString(),
+            'has_terrain': (parameters.terrainType != null).toString(),
+          },
+        );
+      } catch (e, stackTrace) {
         print('❌ Erreur sync Supabase, sauvegarde en local: $e');
+
+        MonitoringService.instance.captureError(
+          e,
+          stackTrace,
+          context: 'RoutesRepository.saveRoute',
+          extra: {
+            'user_id': user.id,
+            'activity_type': parameters.activityType,
+            'distance_km': parameters.distanceKm,
+            'coordinates_count': coordinates.length,
+          },
+        );
+
         await _markRouteForSync(route.id);
       }
 
@@ -98,14 +132,34 @@ class RoutesRepository {
         
         // 3. Mettre à jour le cache local
         await _updateLocalCache(routes);
+
+        // 🆕 Métrique de chargement des parcours
+        MonitoringService.instance.recordMetric(
+          'user_routes_loaded',
+          routes.length,
+          tags: {
+            'user_id': user.id,
+            'routes_count': routes.length.toString(),
+          },
+        );
         
         return routes;
       } else {
         // Mode hors ligne : retourner le cache local
         return await _getLocalRoutes();
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
       print('❌ Erreur récupération Supabase, utilisation cache local: $e');
+
+      MonitoringService.instance.captureError(
+        e,
+        stackTrace,
+        context: 'RoutesRepository.getUserRoutes',
+        extra: {
+          'user_id': user.id,
+        },
+      );
+
       return await _getLocalRoutes();
     }
   }
@@ -149,7 +203,26 @@ class RoutesRepository {
               .eq('user_id', user.id);
           print('✅ Route supprimée de Supabase: $routeId');
         }
-      } catch (e) {
+
+        // 🆕 Métrique de suppression
+        MonitoringService.instance.recordMetric(
+          'route_deleted',
+          1,
+          tags: {
+            'user_id': user.id,
+          },
+        );
+      } catch (e, stackTrace) {
+        MonitoringService.instance.captureError(
+          e,
+          stackTrace,
+          context: 'RoutesRepository.deleteRoute',
+          extra: {
+            'route_id': routeId,
+            'user_id': user.id,
+          },
+        );
+
         print('❌ Erreur suppression Supabase: $e');
         // La suppression locale a déjà été faite
       }

@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:runaway/config/extensions.dart';
 import 'package:runaway/core/di/bloc_provider_extension.dart';
+import 'package:runaway/core/extensions/monitoring_extensions.dart';
+import 'package:runaway/core/services/monitoring_service.dart';
 import 'package:runaway/core/widgets/blurry_page.dart';
 import 'package:runaway/core/widgets/modal_sheet.dart';
 import 'package:runaway/core/widgets/squircle_btn.dart';
@@ -39,6 +41,8 @@ class RouteParameterScreen extends StatefulWidget {
 }
 
 class _RouteParameterScreenState extends State<RouteParameterScreen> {
+  late String _screenLoadId;
+
   @override
   void initState() {
     super.initState();
@@ -52,93 +56,124 @@ class _RouteParameterScreenState extends State<RouteParameterScreen> {
 
     // 🆕 Charger les crédits au démarrage
     context.creditsBloc.add(const CreditsRequested());
+
+    _screenLoadId = context.trackScreenLoad('route_parameter_screen');
+    
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.finishScreenLoad(_screenLoadId);
+    });
+  }
+
+  // 🆕 Tracking des changements de paramètres
+  void _trackParameterChange(String parameter, dynamic value) {
+    MonitoringService.instance.recordMetric(
+      'parameter_change',
+      1,
+      tags: {
+        'parameter': parameter,
+        'value': value.toString(),
+        'screen': 'route_parameter',
+      },
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    return ModalSheet(
-      padding: 0.0,
-      height: MediaQuery.of(context).size.height * 0.8,
-      child: BlocBuilder<RouteParametersBloc, RouteParametersState>(
-        builder: (context, state) {
-          return Stack(
-            children: [
-              BlurryPage(
-                color: context.adaptiveBackground,
-                contentPadding: const EdgeInsets.fromLTRB(30, 30, 30, kBottomNavigationBarHeight * 2.5),
-                children: [
-                  // Activité
-                  ActivitySelector(
-                    selectedActivity: state.parameters.activityType,
-                    onActivitySelected: (type) {
-                      context.routeParametersBloc.add(ActivityTypeChanged(type));
-                    },
-                  ),
-                  30.h,
-                    
-                  // Terrain
-                  TerrainSelector(
-                    selectedTerrain: state.parameters.terrainType,
-                    onTerrainSelected: (terrain) {
-                      context.routeParametersBloc.add(TerrainTypeChanged(terrain));
-                    },
-                  ),
-                  30.h,
-                    
-                  // Densité urbaine
-                  UrbanDensitySelector(
-                    selectedDensity: state.parameters.urbanDensity,
-                    onDensitySelected: (density) {
-                      context.routeParametersBloc.add(UrbanDensityChanged(density));
-                    },
-                  ),
-                  30.h,
-
-                  // Distance
-                  ParameterSlider(
-                    title: context.l10n.distance,
-                    value: state.parameters.distanceKm,
-                    min: state.parameters.activityType.minDistance,
-                    max: state.parameters.activityType.maxDistance,
-                    unit: "km",
-                    startIcon: HugeIcons.solidRoundedPinLocation03,
-                    endIcon: HugeIcons.solidRoundedFlag02,
-                    onChanged: (value) {
-                      context.routeParametersBloc.add(DistanceChanged(value));
-                    },
-                    enableHapticFeedback: true,
-                    hapticIntensity: HapticIntensity.light, // ✅ Plus subtil pour précision
-                  ),
-                  30.h,
-                
-                  // Dénivelé
-                  ParameterSlider(
-                    title: context.l10n.elevation,
-                    value: state.parameters.elevationGain,
-                    min: 0,
-                    max: state.parameters.distanceKm * state.parameters.terrainType.maxElevationGain,
-                    unit: "m",
-                    startIcon: HugeIcons.strokeRoundedRoute03,
-                    endIcon: HugeIcons.strokeRoundedRoute03,
-                    onChanged:  (value) {
-                      context.routeParametersBloc.add(ElevationGainChanged(value));
-                    },
-                    enableHapticFeedback: true,
-                    hapticIntensity: HapticIntensity.light, // ✅ Plus subtil pour précision
-                  ),
-                  30.h,
-                    
-                  // Options avancées
-                  _buildAdvancedOptions(state),
-                ],
-              ),
-              Align(
-                alignment: Alignment.bottomCenter,
-                child: _buildGenerateButton(),
-              ),
-            ],
-          );
-        }
+    return MonitoredScreen(
+      screenName: 'route_parameter',
+      screenData: {
+        'start_lat': widget.startLatitude,
+        'start_lng': widget.startLongitude,
+      },
+      child: ModalSheet(
+        padding: 0.0,
+        height: MediaQuery.of(context).size.height * 0.8,
+        child: BlocBuilder<RouteParametersBloc, RouteParametersState>(
+          builder: (context, state) {
+            return Stack(
+              children: [
+                BlurryPage(
+                  color: context.adaptiveBackground,
+                  contentPadding: const EdgeInsets.fromLTRB(30, 30, 30, kBottomNavigationBarHeight * 2.5),
+                  children: [
+                    // Activité
+                    ActivitySelector(
+                      selectedActivity: state.parameters.activityType,
+                      onActivitySelected: (type) {
+                        _trackParameterChange('activity_type', type);
+                        context.routeParametersBloc.add(ActivityTypeChanged(type));
+                      },
+                    ),
+                    30.h,
+                      
+                    // Terrain
+                    TerrainSelector(
+                      selectedTerrain: state.parameters.terrainType,
+                      onTerrainSelected: (terrain) {
+                        _trackParameterChange('terrain', terrain);
+                        context.routeParametersBloc.add(TerrainTypeChanged(terrain));
+                      },
+                    ),
+                    30.h,
+                      
+                    // Densité urbaine
+                    UrbanDensitySelector(
+                      selectedDensity: state.parameters.urbanDensity,
+                      onDensitySelected: (density) {
+                        _trackParameterChange('density', density);
+                        context.routeParametersBloc.add(UrbanDensityChanged(density));
+                      },
+                    ),
+                    30.h,
+      
+                    // Distance
+                    ParameterSlider(
+                      title: context.l10n.distance,
+                      value: state.parameters.distanceKm,
+                      min: state.parameters.activityType.minDistance,
+                      max: state.parameters.activityType.maxDistance,
+                      unit: "km",
+                      startIcon: HugeIcons.solidRoundedPinLocation03,
+                      endIcon: HugeIcons.solidRoundedFlag02,
+                      onChanged: (value) {
+                        _trackParameterChange('distance', value);
+                        context.routeParametersBloc.add(DistanceChanged(value));
+                      },
+                      enableHapticFeedback: true,
+                      hapticIntensity: HapticIntensity.light, // ✅ Plus subtil pour précision
+                    ),
+                    30.h,
+                  
+                    // Dénivelé
+                    ParameterSlider(
+                      title: context.l10n.elevation,
+                      value: state.parameters.elevationGain,
+                      min: 0,
+                      max: state.parameters.distanceKm * state.parameters.terrainType.maxElevationGain,
+                      unit: "m",
+                      startIcon: HugeIcons.strokeRoundedRoute03,
+                      endIcon: HugeIcons.strokeRoundedRoute03,
+                      onChanged:  (value) {
+                        _trackParameterChange('elevation', value);
+                        context.routeParametersBloc.add(ElevationGainChanged(value));
+                      },
+                      enableHapticFeedback: true,
+                      hapticIntensity: HapticIntensity.light, // ✅ Plus subtil pour précision
+                    ),
+                    30.h,
+                      
+                    // Options avancées
+                    _buildAdvancedOptions(state),
+                  ],
+                ),
+                Align(
+                  alignment: Alignment.bottomCenter,
+                  child: _buildGenerateButton(),
+                ),
+              ],
+            );
+          }
+        ),
       ),
     );
   }

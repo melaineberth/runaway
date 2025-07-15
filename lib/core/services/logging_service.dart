@@ -39,7 +39,7 @@ class LogEntry {
 
   Map<String, dynamic> toJson() {
     return {
-      'timestamp': timestamp.toIso8601String(),
+      'log_timestamp': timestamp.toIso8601String(),
       'level': level.name,
       'message': message,
       if (context != null) 'context': context,
@@ -51,7 +51,7 @@ class LogEntry {
 
   factory LogEntry.fromJson(Map<String, dynamic> json) {
     return LogEntry(
-      timestamp: DateTime.parse(json['timestamp']),
+      timestamp: DateTime.parse(json['log_timestamp']),
       level: LogLevel.values.firstWhere((e) => e.name == json['level']),
       message: json['message'],
       context: json['context'],

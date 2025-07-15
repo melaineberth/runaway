@@ -7,6 +7,7 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'package:path/path.dart' as p;
 import 'package:runaway/config/secure_config.dart';
 import 'package:runaway/core/errors/auth_exceptions.dart';
+import 'package:runaway/core/services/monitoring_service.dart';
 import 'package:runaway/features/auth/domain/models/profile.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' hide AuthException;
@@ -28,6 +29,14 @@ class AuthRepository {
     required String email,
     required String password,
   }) async {
+    
+    final operationId = MonitoringService.instance.trackApiRequest(
+      'auth.signUp',
+      'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: {'email': email},
+    );
+
     try {
       print('🔑 Tentative d\'inscription: $email');
       
@@ -38,19 +47,58 @@ class AuthRepository {
       
       if (resp.user != null) {
         print('✅ Inscription réussie pour: ${resp.user!.email}');
+
+        MonitoringService.instance.finishApiRequest(
+          operationId,
+          statusCode: 200,
+          responseSize: resp.toString().length,
+        );
+
+        // 🆕 Métrique business - nouveau compte créé
+        MonitoringService.instance.recordMetric(
+          'user_registration',
+          1,
+          tags: {
+            'source': 'email',
+          },
+        );
+
         return resp.user;
       } else {
         print('❌ Inscription échouée: aucun utilisateur retourné');
         throw SignUpException('Impossible de créer le compte');
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
       print('❌ Erreur inscription: $e');
+
+      MonitoringService.instance.finishApiRequest(
+        operationId,
+        statusCode: 400,
+        errorMessage: e.toString(),
+      );
+
+      MonitoringService.instance.captureError(
+        e,
+        stackTrace,
+        context: 'AuthRepository.signUp',
+        extra: {
+          'email': email,
+        },
+      );
+
       throw AuthExceptionHandler.handleSupabaseError(e);
     }
   }
 
   /* ───────── GOOGLE SIGN-IN ───────── */
   Future<Profile?> signInWithGoogle() async {
+    final operationId = MonitoringService.instance.trackApiRequest(
+      'auth.signInWithGoogle',
+      'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: {'provider': 'google'},
+    );
+
     try {
       print('🔑 Tentative de connexion Google');
 
@@ -104,21 +152,77 @@ class AuthRepository {
       
       // 4. Vérifier si un profil existe déjà (nouveau comportement)
       final existingProfile = await getProfile(response.user!.id, skipCleanup: true);
+
+      // 🆕 Monitoring de succès
+      MonitoringService.instance.finishApiRequest(
+        operationId,
+        statusCode: 200,
+        responseSize: response.toString().length,
+      );
+
       if (existingProfile != null && existingProfile.isComplete) {
         print('✅ Profil Google existant trouvé: ${existingProfile.username}');
+
+        // 🆕 Métrique business - utilisateur existant
+        MonitoringService.instance.recordMetric(
+          'user_login_success',
+          1,
+          tags: {
+            'method': 'google',
+            'is_returning_user': 'true',
+          },
+        );
+
         // Nettoyer les données temporaires
         _tempGoogleFullName = null;
         return existingProfile;
       }
 
-      
+      // 🆕 Métrique business - nouvel utilisateur
+      MonitoringService.instance.recordMetric(
+        'user_registration',
+        1,
+        tags: {
+          'source': 'google',
+          'needs_onboarding': 'true',
+        },
+      );
       
       // 5. Pour les nouveaux utilisateurs, retourner null pour forcer l'onboarding
       print('📝 Nouveau compte Google - sera dirigé vers l\'onboarding');
       return null;
       
-    } catch (e) {
+    } catch (e, stackTrace) {
       print('❌ Erreur Google Sign-In: $e');
+
+      // 🆕 Monitoring d'erreur
+      MonitoringService.instance.finishApiRequest(
+        operationId,
+        statusCode: 400,
+        errorMessage: e.toString(),
+      );
+
+      MonitoringService.instance.captureError(
+        e,
+        stackTrace,
+        context: 'AuthRepository.signInWithGoogle',
+        extra: {
+          'provider': 'google',
+          'step': _determineGoogleErrorStep(e),
+        },
+      );
+
+      // 🆕 Métrique d'échec
+      MonitoringService.instance.recordMetric(
+        'user_login_failure',
+        1,
+        tags: {
+          'method': 'google',
+          'error_type': e.runtimeType.toString(),
+          'error_category': _categorizeAuthError(e),
+        },
+      );
+
       // Nettoyer en cas d'erreur
       _tempGoogleFullName = null;
       throw AuthExceptionHandler.handleSupabaseError(e);
@@ -127,6 +231,13 @@ class AuthRepository {
 
   /* ───────── APPLE SIGN-IN ───────── */
   Future<Profile?> signInWithApple() async {
+    final operationId = MonitoringService.instance.trackApiRequest(
+      'auth.signInWithApple',
+      'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: {'provider': 'apple'},
+    );
+
     try {
       print('🔑 Tentative de connexion Apple');
       
@@ -179,19 +290,79 @@ class AuthRepository {
       
       // 6. Vérifier si un profil existe déjà
       final existingProfile = await getProfile(response.user!.id, skipCleanup: true);
+
+      // 🆕 Monitoring de succès
+      MonitoringService.instance.finishApiRequest(
+        operationId,
+        statusCode: 200,
+        responseSize: response.toString().length,
+      );
+
       if (existingProfile != null && existingProfile.isComplete) {
         print('✅ Profil Apple existant trouvé: ${existingProfile.username}');
+
+        // 🆕 Métrique business - utilisateur existant
+        MonitoringService.instance.recordMetric(
+          'user_login_success',
+          1,
+          tags: {
+            'method': 'apple',
+            'is_returning_user': 'true',
+          },
+        );
+
         // Nettoyer les données temporaires
         _tempAppleFullName = null;
         return existingProfile;
       }
+
+      // 🆕 Métrique business - nouvel utilisateur
+      MonitoringService.instance.recordMetric(
+        'user_registration',
+        1,
+        tags: {
+          'source': 'apple',
+          'needs_onboarding': 'true',
+          'has_name': (_tempAppleFullName != null).toString(),
+        },
+      );
       
       // 7. Pour les nouveaux utilisateurs, retourner null pour forcer l'onboarding
       print('📝 Nouveau compte Apple - sera dirigé vers l\'onboarding');
       return null;
       
-    } catch (e) {
+    } catch (e, stackTrace) {
       print('❌ Erreur Apple Sign-In: $e');
+
+      // 🆕 Monitoring d'erreur
+      MonitoringService.instance.finishApiRequest(
+        operationId,
+        statusCode: 400,
+        errorMessage: e.toString(),
+      );
+
+      MonitoringService.instance.captureError(
+        e,
+        stackTrace,
+        context: 'AuthRepository.signInWithApple',
+        extra: {
+          'provider': 'apple',
+          'step': _determineAppleErrorStep(e),
+          'has_identity_token': currentUser != null,
+        },
+      );
+
+      // 🆕 Métrique d'échec
+      MonitoringService.instance.recordMetric(
+        'user_login_failure',
+        1,
+        tags: {
+          'method': 'apple',
+          'error_type': e.runtimeType.toString(),
+          'error_category': _categorizeAuthError(e),
+        },
+      );
+
       // Nettoyer en cas d'erreur
       _tempAppleFullName = null;
       throw AuthExceptionHandler.handleSupabaseError(e);
@@ -212,6 +383,17 @@ class AuthRepository {
     required String username,
     File? avatar,
   }) async {
+    final operationId = MonitoringService.instance.trackOperation(
+      'complete_profile',
+      description: 'Complétion du profil utilisateur',
+      data: {
+        'user_id': userId,
+        'has_avatar': avatar != null,
+        'username_length': username.length,
+        'full_name_length': fullName.length,
+      },
+    );
+
     try {
       print('👤 Complétion du profil pour: $userId');
 
@@ -275,6 +457,28 @@ class AuthRepository {
       final profile = Profile.fromJson(data);
       print('✅ Profil complété: ${profile.username}');
 
+      // 🆕 Monitoring de succès
+      MonitoringService.instance.finishOperation(
+        operationId,
+        success: true,
+        data: {
+          'username': username,
+          'has_avatar': avatarUrl != null,
+          'avatar_upload_success': avatar != null ? avatarUrl != null : null,
+        },
+      );
+
+      // 🆕 Métrique business - profil complété
+      MonitoringService.instance.recordMetric(
+        'profile_completed',
+        1,
+        tags: {
+          'has_avatar': (avatarUrl != null).toString(),
+          'username_source': _determineUsernameSource(username),
+          'provider': _determineSignupProvider(user),
+        },
+      );
+
       // 5. MODIFICATION : Informer si l'avatar n'a pas pu être uploadé
       if (avatar != null && avatarUrl == null) {
         // On peut retourner le profil mais signaler que l'avatar a échoué
@@ -284,8 +488,27 @@ class AuthRepository {
 
       return profile;
       
-    } catch (e) {
+    } catch (e, stackTrace) {
       print('❌ Erreur complétion profil: $e');
+
+      // 🆕 Monitoring d'erreur
+      MonitoringService.instance.finishOperation(
+        operationId,
+        success: false,
+        errorMessage: e.toString(),
+      );
+
+      MonitoringService.instance.captureError(
+        e,
+        stackTrace,
+        context: 'AuthRepository.completeProfile',
+        extra: {
+          'user_id': userId,
+          'username': username,
+          'has_avatar': avatar != null,
+        },
+      );
+
       if (e is AuthException) {
         rethrow;
       }
@@ -298,6 +521,14 @@ class AuthRepository {
     required String email,
     required String password,
   }) async {
+
+    final operationId = MonitoringService.instance.trackApiRequest(
+      'auth.signInWithPassword',
+      'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: {'email': email, 'method': "email"},
+    );
+
     try {
       print('🔑 Tentative de connexion: $email');
       
@@ -321,10 +552,43 @@ class AuthRepository {
       } else {
         print('✅ Profil récupéré: ${profile.username}');
       }
+
+      MonitoringService.instance.finishApiRequest(
+        operationId,
+        statusCode: 200,
+        responseSize: resp.toString().length,
+      );
+
+      // 🆕 Métrique de succès d'authentification
+      MonitoringService.instance.recordMetric(
+        'auth_repository_success',
+        1,
+        tags: {
+          'method': 'email',
+          'operation': 'sign_in',
+        },
+      );
       
       return profile;
-    } catch (e) {
+    } catch (e, stackTrace) {
       print('❌ Erreur connexion: $e');
+
+      MonitoringService.instance.finishApiRequest(
+        operationId,
+        statusCode: 400,
+        errorMessage: e.toString(),
+      );
+
+      MonitoringService.instance.captureError(
+        e,
+        stackTrace,
+        context: 'AuthRepository.signIn',
+        extra: {
+          'method': "email",
+          'has_email': email != null,
+        },
+      );
+
       throw AuthExceptionHandler.handleSupabaseError(e);
     }
   }
@@ -456,10 +720,36 @@ class AuthRepository {
       final profile = Profile.fromJson(data);
       
       print('✅ Profil mis à jour: ${profile.username}');
+
+      // 🆕 Métrique de mise à jour profil
+      MonitoringService.instance.recordMetric(
+        'profile_updated',
+        1,
+        tags: {
+          'fields_updated': [
+            if (fullName != null) 'full_name',
+            if (avatar != null) 'avatar_url',
+          ].length.toString(),
+        },
+      );
+
       return profile;
-    } catch (e) {
+    } catch (e, stackTrace) {
       print('❌ Erreur mise à jour profil: $e');
       if (e is AuthException) {
+        MonitoringService.instance.captureError(
+          e,
+          stackTrace,
+          context: 'AuthRepository.updateProfile',
+          extra: {
+            'user_id': userId,
+            'updated_fields_count': [
+              if (fullName != null) 'full_name',
+              if (avatar != null) 'avatar_url',
+            ].length,
+          },
+        );
+
         rethrow;
       }
       throw AuthExceptionHandler.handleSupabaseError(e);
@@ -820,6 +1110,78 @@ Map<String, String?> getSocialUserInfo() {
     } catch (e) {
       print('❌ Erreur renvoi email de confirmation: $e');
       throw AuthExceptionHandler.handleSupabaseError(e);
+    }
+  }
+
+  /// Détermine à quelle étape l'erreur Google est survenue
+  String _determineGoogleErrorStep(dynamic error) {
+    final errorString = error.toString().toLowerCase();
+    if (errorString.contains('access token') || errorString.contains('id token')) {
+      return 'google_tokens';
+    } else if (errorString.contains('supabase') || errorString.contains('signin')) {
+      return 'supabase_auth';
+    } else if (errorString.contains('google')) {
+      return 'google_signin';
+    }
+    return 'unknown';
+  }
+
+  /// Détermine à quelle étape l'erreur Apple est survenue
+  String _determineAppleErrorStep(dynamic error) {
+    final errorString = error.toString().toLowerCase();
+    if (errorString.contains('available') || errorString.contains('not supported')) {
+      return 'apple_availability';
+    } else if (errorString.contains('credential') || errorString.contains('identity')) {
+      return 'apple_credentials';
+    } else if (errorString.contains('supabase') || errorString.contains('signin')) {
+      return 'supabase_auth';
+    }
+    return 'unknown';
+  }
+
+  /// Catégorise les erreurs d'authentification
+  String _categorizeAuthError(dynamic error) {
+    final errorString = error.toString().toLowerCase();
+    if (errorString.contains('network') || errorString.contains('timeout')) {
+      return 'network';
+    } else if (errorString.contains('cancelled') || errorString.contains('cancel')) {
+      return 'user_cancelled';
+    } else if (errorString.contains('available') || errorString.contains('supported')) {
+      return 'not_supported';
+    } else if (errorString.contains('token') || errorString.contains('credential')) {
+      return 'token_error';
+    }
+    return 'unknown';
+  }
+
+  /// Détermine la source du username (généré, saisi, etc.)
+  String _determineUsernameSource(String username) {
+    if (username.contains(RegExp(r'\d+$'))) {
+      return 'generated_with_number';
+    } else if (username.length < 6) {
+      return 'short_custom';
+    } else if (username.contains('.') || username.contains('_')) {
+      return 'custom_with_separator';
+    }
+    return 'custom';
+  }
+
+  /// Détermine le provider d'inscription depuis les métadonnées utilisateur
+  String _determineSignupProvider(User user) {
+    try {
+      final appMetadata = user.appMetadata;
+      if (appMetadata != null && appMetadata.containsKey('provider')) {
+        return appMetadata['provider'] as String? ?? 'unknown';
+      }
+      
+      // Fallback sur l'email
+      if (user.email?.contains('@') == true) {
+        return 'email';
+      }
+      
+      return 'unknown';
+    } catch (e) {
+      return 'unknown';
     }
   }
 }

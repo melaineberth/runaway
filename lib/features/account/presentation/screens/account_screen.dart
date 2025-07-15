@@ -18,6 +18,8 @@ import 'package:runaway/core/blocs/notification/notification_event.dart';
 import 'package:runaway/core/blocs/notification/notification_state.dart';
 import 'package:runaway/core/blocs/theme_bloc/theme_bloc.dart';
 import 'package:runaway/core/di/bloc_provider_extension.dart';
+import 'package:runaway/core/extensions/monitoring_extensions.dart';
+import 'package:runaway/core/services/monitoring_service.dart';
 import 'package:runaway/core/widgets/blurry_app_bar.dart';
 import 'package:runaway/core/widgets/blurry_page.dart';
 import 'package:runaway/core/widgets/icon_btn.dart';
@@ -46,17 +48,21 @@ class AccountScreen extends StatefulWidget {
 class _AccountScreenState extends State<AccountScreen> with TickerProviderStateMixin {
   late AnimationController _fadeController;
   late Animation<double> _fadeAnimation;
+
+  late String _screenLoadId;
   
   @override
   void initState() {
     super.initState();
     _initializeAnimations();
+    _screenLoadId = context.trackScreenLoad('account_screen');
 
     // Déclencher le pré-chargement uniquement si les données ne sont pas disponibles
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         print('💳 Pré-chargement des données de crédits depuis AccountScreen');
         context.refreshCreditData();
+        context.finishScreenLoad(_screenLoadId);
       }
     });
   }
@@ -129,17 +135,33 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
     }
   }
 
+  // 🆕 Méthodes pour tracker les actions du compte
+  void _trackAccountAction(String action, {Map<String, dynamic>? data}) {
+    MonitoringService.instance.recordMetric(
+      'account_action',
+      1,
+      tags: {
+        'action': action,
+        'screen': 'account',
+        ...?data,
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<AuthBloc, AuthState>(
-      builder: (_, authState) {          
-        // Si l'utilisateur est connecté, afficher le contenu
-        if (authState is Authenticated) {
-          return _buildAuthenticatedView(authState);
-        }
-
-        return _buildEmptyUnauthenticated();
-      },
+    return MonitoredScreen(
+      screenName: 'account_screen',
+      child: BlocBuilder<AuthBloc, AuthState>(
+        builder: (_, authState) {          
+          // Si l'utilisateur est connecté, afficher le contenu
+          if (authState is Authenticated) {
+            return _buildAuthenticatedView(authState);
+          }
+      
+          return _buildEmptyUnauthenticated();
+        },
+      ),
     );
   }
 
@@ -522,7 +544,7 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
           context,
           label: context.l10n.manageCredits,
           icon: HugeIcons.strokeRoundedWallet05,
-          onTap: isLoading ? null : () => context.push("/manage-credits"),
+          onTap: isLoading ? null : () => _navigateToCredits(),
           child: Row(
             children: [
               // Indicateur de statut visuel
@@ -822,8 +844,14 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
       ),
     );
   }
+  
+  void _navigateToCredits() {
+    _trackAccountAction('manage_credits_clicked');
+    context.push('/manage-credits');
+  }
 
   void _navigateToEditProfile(BuildContext context, Profile profile) {
+    _trackAccountAction('edit_profile_clicked');
     showModalSheet(
       context: context, 
       backgroundColor: Colors.transparent,
@@ -834,6 +862,7 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
   }
 
   void _showLogoutDialog(BuildContext context) {
+    _trackAccountAction('logout_dialog_opened');
     showModalSheet(
       context: context,
       backgroundColor: Colors.transparent,
@@ -853,6 +882,7 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
   }
 
   void _showDeleteAccountDialog(BuildContext context) {
+    _trackAccountAction('delete_account_dialog_opened');
     showModalSheet(
       context: context,
       backgroundColor: Colors.transparent,

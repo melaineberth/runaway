@@ -2,6 +2,8 @@ import 'dart:math' as math;
 import 'package:hydrated_bloc/hydrated_bloc.dart';
 import 'package:runaway/core/blocs/app_data/app_data_bloc.dart';
 import 'package:runaway/core/blocs/app_data/app_data_event.dart';
+import 'package:runaway/core/extensions/monitoring_extensions.dart';
+import 'package:runaway/core/services/monitoring_service.dart';
 import 'package:runaway/core/services/screenshot_service.dart';
 import 'package:runaway/features/credits/data/services/credit_verification_service.dart';
 import 'package:runaway/features/route_generator/domain/models/saved_route.dart';
@@ -96,6 +98,26 @@ class RouteGenerationBloc extends HydratedBloc<RouteGenerationEvent, RouteGenera
   ) async {
     const int REQUIRED_CREDITS = 1; // Coût d'une génération
     final generationId = DateTime.now().millisecondsSinceEpoch.toString();
+
+    trackEvent(event, data: {
+      'activity_type': event.parameters.activityType,
+      'distance_km': event.parameters.distanceKm,
+      'terrain_type': event.parameters.terrainType,
+      'start_lat': event.parameters.startLatitude,
+      'start_lng': event.parameters.startLongitude,
+    });
+
+    final operationId = MonitoringService.instance.trackOperation(
+      'route_generation',
+      description: 'Génération complète d\'un parcours',
+      data: {
+        'activity_type': event.parameters.activityType,
+        'distance_km': event.parameters.distanceKm,
+        'terrain_type': event.parameters.terrainType,
+        'urban_density': event.parameters.urbanDensity,
+        'start_coordinates': [event.parameters.startLatitude, event.parameters.startLongitude],
+      },
+    );
     
     try {
       print('🚀 === DÉBUT GÉNÉRATION UI FIRST (ID: $generationId) ===');
@@ -133,6 +155,17 @@ class RouteGenerationBloc extends HydratedBloc<RouteGenerationEvent, RouteGenera
       }
       
       // ===== GÉNÉRATION DU PARCOURS =====
+
+      // 🆕 Tracking du début de génération
+      MonitoringService.instance.recordMetric(
+        'route_generation_started',
+        1,
+        tags: {
+          'activity_type': event.parameters.activityType,
+          'distance_range': _getDistanceRange(event.parameters.distanceKm),
+          'terrain': event.parameters.terrainType,
+        },
+      );
       
       print('🛣️ Génération du parcours via API...');
       final result = await GraphHopperApiService.generateRoute(parameters: event.parameters);
@@ -189,13 +222,67 @@ class RouteGenerationBloc extends HydratedBloc<RouteGenerationEvent, RouteGenera
         print('🆓 Génération gratuite utilisée');
       }
 
-    } catch (e) {
-      print('❌ Erreur génération: $e');
+      MonitoringService.instance.finishOperation(
+        operationId,
+        success: true,
+        data: {
+          'actual_distance_km': result.distanceKm,
+          'actual_duration_min': result.durationMinutes,
+          'points_count': result.coordinates.length,
+        },
+      );
+
+      // 🆕 Métriques business importantes
+      MonitoringService.instance.recordMetric(
+        'route_generation_success',
+        1,
+        tags: {
+          'activity_type': event.parameters.activityType,
+          'requested_distance': event.parameters.distanceKm.toString(),
+          'actual_distance': result.distanceKm.toString(),
+        },
+      );
+
+      // 🆕 Utilisation des crédits
+      MonitoringService.instance.recordMetric(
+        'credits_used',
+        1,
+        tags: {
+          'purpose': 'route_generation',
+          'activity_type': event.parameters.activityType,
+        },
+      );
+
+    } catch (err, stackTrace) {
+
+      captureError(err, stackTrace, event: event, state: state, extra: {
+        'operation_id': operationId,
+        'parameters': event.parameters.toJson(),
+        'start_coordinates': [event.parameters.startLatitude, event.parameters.startLongitude],
+      });
+
       emit(state.copyWith(
         isGeneratingRoute: false,
-        errorMessage: 'Erreur lors de la génération: $e',
+        errorMessage: 'Erreur lors de la génération: $err',
         stateId: '$generationId-error',
       ));
+
+      MonitoringService.instance.finishOperation(
+        operationId,
+        success: false,
+        errorMessage: err.toString(),
+      );
+
+      // 🆕 Métrique d'échec avec catégorisation
+      MonitoringService.instance.recordMetric(
+        'route_generation_failure',
+        1,
+        tags: {
+          'error_type': err.runtimeType.toString(),
+          'activity_type': event.parameters.activityType,
+          'error_category': _categorizeError(err),
+        },
+      );
     }
   }
 
@@ -241,8 +328,7 @@ class RouteGenerationBloc extends HydratedBloc<RouteGenerationEvent, RouteGenera
       }
 
       // 2. 💾 Sauvegarder le parcours avec l'URL de l'image
-      final actualDistanceKm = state.routeMetadata?['distanceKm'] as double? ?? 
-          _calculateRouteDistance(state.generatedRoute!);
+      final actualDistanceKm = state.routeMetadata?['distanceKm'] as double? ?? _calculateRouteDistance(state.generatedRoute!);
       
       final savedRoute = await _routesRepository.saveRoute(
         name: event.name,
@@ -264,8 +350,7 @@ class RouteGenerationBloc extends HydratedBloc<RouteGenerationEvent, RouteGenera
       ));
 
       // 4. 🔄 Mettre à jour la liste des parcours sauvegardés
-      final updatedRoutes = List<SavedRoute>.from(state.savedRoutes)
-        ..add(savedRoute);
+      final updatedRoutes = List<SavedRoute>.from(state.savedRoutes)..add(savedRoute);
 
       emit(state.copyWith(
         isSavingRoute: false,
@@ -550,6 +635,28 @@ class RouteGenerationBloc extends HydratedBloc<RouteGenerationEvent, RouteGenera
     
     final double c = 2 * math.asin(math.sqrt(a));
     return earthRadius * c;
+  }
+
+  // 🆕 Helpers pour catégoriser les données
+  String _getDistanceRange(double? distance) {
+    if (distance == null) return 'unknown';
+    if (distance < 5) return '0-5km';
+    if (distance < 10) return '5-10km';
+    if (distance < 20) return '10-20km';
+    return '20km+';
+  }
+
+  String _categorizeError(dynamic error) {
+    final errorString = error.toString().toLowerCase();
+    if (errorString.contains('credit') || errorString.contains('insufficient')) {
+      return 'credits';
+    } else if (errorString.contains('network') || errorString.contains('timeout')) {
+      return 'network';
+    } else if (errorString.contains('location') || errorString.contains('coordinates')) {
+      return 'location';
+    } else {
+      return 'unknown';
+    }
   }
 
   @override

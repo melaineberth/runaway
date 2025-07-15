@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:geolocator/geolocator.dart' as gl;
+import 'package:runaway/core/services/monitoring_service.dart';
 
 /// Service pour pré-charger la géolocalisation avant l'affichage de la carte
 class LocationPreloadService {
@@ -63,6 +64,11 @@ class LocationPreloadService {
   /// 🎯 Obtenir une position FRAÎCHE (pas de cache système douteux)
   Future<gl.Position> _getFreshLocation() async {
     print('🎯 Obtention de la position ACTUELLE (pas de cache système)...');
+
+    final operationId = MonitoringService.instance.trackOperation(
+      'get_current_position',
+      description: 'Obtention de la position GPS actuelle',
+    );
     
     // 1. Vérifier les permissions
     await _checkAndRequestPermissions();
@@ -80,11 +86,39 @@ class LocationPreloadService {
       
       print('✅ Position actuelle obtenue: ${_formatPosition(currentPosition)}');
       print('📅 Timestamp: ${currentPosition.timestamp}');
+
+      MonitoringService.instance.finishOperation(operationId, success: true, data: {
+        'latitude': currentPosition.latitude,
+        'longitude': currentPosition.longitude,
+        'accuracy': currentPosition.accuracy,
+      });
+
+      // 🆕 Métrique de géolocalisation
+      MonitoringService.instance.recordMetric(
+        'location_obtained',
+        1,
+        tags: {
+          'accuracy': currentPosition.accuracy.toString(),
+          'source': 'gps',
+        },
+      );
       
       return currentPosition;
       
-    } catch (e) {
+    } catch (e, stackTrace) {
       print('❌ Erreur getCurrentPosition: $e');
+
+      MonitoringService.instance.finishOperation(
+        operationId,
+        success: false,
+        errorMessage: e.toString(),
+      );
+
+      MonitoringService.instance.captureError(
+        e,
+        stackTrace,
+        context: 'LocationPreloadService.getCurrentPosition',
+      );
       
       // 3. Fallback: essayer lastKnownPosition SEULEMENT si vraiment récente
       final fallbackPosition = await _tryRecentFallback();
