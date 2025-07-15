@@ -1707,78 +1707,97 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
 
   // Gestionnaire de génération de route
   void _handleGenerateRoute() async {
-    print('🚀 === DÉBUT GÉNÉRATION AVEC VÉRIFICATION GUEST ===');
-    
+    print('🚀 === GÉNÉRATION AVEC GESTION SMART DES CRÉDITS ===');
+  
     try {
-      // ÉTAPE 1 : Vérifier la capacité de génération (guest + authenticated)
-      final capability = await context.routeGenerationBloc.checkGenerationCapability(context.authBloc);
+      // Déterminer le type d'utilisateur
+      final authState = context.authBloc.state;
+      final isGuest = authState is! Authenticated || 
+                    su.Supabase.instance.client.auth.currentUser == null;
       
-      print('📊 Capacité: ${capability.toString()}');
-      
-      if (!capability.canGenerate) {
-        print('❌ Génération refusée : ${capability.displayMessage}');
-        showLimitCapability(capability);
-        return;
-      }
+      print('👤 Mode: ${isGuest ? "Guest" : "Authentifié"}');
 
-      if (mounted) {
-        // ÉTAPE 2 : Consommer la génération AVANT de lancer la génération
-        final consumed = await context.routeGenerationBloc.consumeGeneration(context.authBloc);
+      if (isGuest) {
+        // Logique guest existante (inchangée)
+        final capability = await context.routeGenerationBloc.checkGenerationCapability(context.authBloc);
         
-        if (!consumed) {
-          print('❌ Impossible de consommer la génération');
-          _showRouteGenerationError('Impossible de lancer la génération');
+        if (!capability.canGenerate) {
+          showLimitCapability(capability); // Cette modal est adaptée pour les guests
           return;
         }
 
-        print('💳 Consommation: ${consumed ? "✅ OK" : "❌ KO"}');
+        if (mounted) {
+          final consumed = await context.routeGenerationBloc.consumeGeneration(context.authBloc);
+          if (!consumed) {
+            _showRouteGenerationError('Impossible de lancer la génération');
+            return;
+          }
+        }
+      } else {
+        // 🆕 Logique pour utilisateurs authentifiés avec UI adaptée
+        final creditResult = await context.creditService.verifyCreditsForGeneration(requiredCredits: 1);
+        
+        if (!creditResult.isValid) {
+          print('❌ Crédits insuffisants pour utilisateur authentifié');
+          
+          // Utiliser la nouvelle UI spécialement conçue pour les utilisateurs connectés
+          _showInsufficientCreditsBottomSheet(
+            availableCredits: creditResult.availableCredits,
+            requiredCredits: creditResult.requiredCredits,
+          );
+          return;
+        }
       }
-      
-      // ÉTAPE 3 : Réinitialiser le flag auto-save
+
+      // Continuer avec la génération...
       setState(() {
         _hasAutoSaved = false;
       });
 
       if (mounted) {
-      // ÉTAPE 4 : Récupérer les paramètres et valider
-      final parametersState = context.routeParametersBloc.state;
-      final parameters = parametersState.parameters;
+        final parametersState = context.routeParametersBloc.state;
+        final parameters = parametersState.parameters;
 
-      if (!parameters.isValid) {
-        print('❌ Paramètres invalides');
-        _showRouteGenerationError('Paramètres invalides');
-        return;
-      }
+        if (!parameters.isValid) {
+          _showRouteGenerationError('Paramètres invalides');
+          return;
+        }
+        
+        context.routeGenerationBloc.add(
+          RouteGenerationRequested(
+            parameters,
+            mapboxMap: mapboxMap,
+            bypassCreditCheck: isGuest,
+          ),
+        );
 
-      print('✅ Paramètres valides, lancement génération...');
-      
-      // ÉTAPE 5 : Déterminer si c'est un guest ou un utilisateur connecté
-      final authState = context.authBloc.state;
-      final isGuest = authState is! Authenticated || 
-                    su.Supabase.instance.client.auth.currentUser == null;
-      
-      print('👤 Mode détecté: ${isGuest ? "Guest" : "Authentifié"}');
-      
-      // ÉTAPE 6 : Lancer la génération avec le bon bypass
-      context.routeGenerationBloc.add(
-        RouteGenerationRequested(
-          parameters,
-          mapboxMap: mapboxMap,
-          bypassCreditCheck: isGuest, // 🔧 CORRECTION : Bypass pour les guests uniquement
-        ),
-      );
-
-      // ÉTAPE 7 : Déclencher les analytics si connecté
         ConversionTriggers.onRouteGenerated(context);
-
-      print('🚀 Génération lancée: ${parameters.distanceKm}km, ${parameters.activityType.name}');
-      print('🚀 === FIN GÉNÉRATION AVEC VÉRIFICATION GUEST ===');
-      
+        print('🚀 Génération lancée avec succès');
       }
     } catch (e) {
-      print('❌ Erreur lors de la génération: $e');
+      print('❌ Erreur génération: $e');
       _showRouteGenerationError('Erreur: $e');
     }
+  }
+
+  void _showInsufficientCreditsBottomSheet({
+    required int availableCredits,
+    required int requiredCredits,
+  }) {
+    showModalSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      child: ModalDialog(
+        title: 'Crédits épuisés',
+        subtitle: "Vous avez $availableCredits crédit${availableCredits > 1 ? 's' : ''} disponible${availableCredits > 1 ? 's' : ''}. Il vous en faut au moins $requiredCredits pour générer un nouveau parcours.",
+        validLabel: "Acheter des crédits",
+        cancelLabel: "Plus tard",
+        onValid: () {
+          context.pop();
+          context.push('/manage-credits');
+        },
+      ),
+    );
   }
 
   void _showExportDialog() {

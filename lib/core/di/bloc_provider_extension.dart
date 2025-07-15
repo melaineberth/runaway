@@ -6,6 +6,7 @@ import 'package:runaway/core/blocs/locale/locale_bloc.dart';
 import 'package:runaway/core/blocs/notification/notification_bloc.dart';
 import 'package:runaway/core/blocs/theme_bloc/theme_bloc.dart';
 import 'package:runaway/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:runaway/features/credits/data/services/credit_verification_service.dart';
 import 'package:runaway/features/credits/domain/models/credit_plan.dart';
 import 'package:runaway/features/credits/domain/models/credit_transaction.dart';
 import 'package:runaway/features/credits/presentation/blocs/credits_bloc.dart';
@@ -16,7 +17,7 @@ import 'service_locator.dart';
 
 /// Extension pour accéder facilement aux blocs via GetIt
 extension BlocAccess on BuildContext {
-  // Accès direct aux blocs singleton
+  // ===== ACCÈS DIRECT AUX BLOCS SINGLETON =====
   NotificationBloc get notificationBloc => sl<NotificationBloc>();
   AppDataBloc get appDataBloc => sl<AppDataBloc>();
   AuthBloc get authBloc => sl<AuthBloc>();
@@ -24,7 +25,10 @@ extension BlocAccess on BuildContext {
   ThemeBloc get themeBloc => sl<ThemeBloc>();
   CreditsBloc get creditsBloc => read<CreditsBloc>();
   
-  // Pour les blocs avec instances multiples, utiliser le context comme avant
+  // ===== ACCÈS AUX SERVICES =====
+  CreditVerificationService get creditService => sl<CreditVerificationService>(); // 🆕
+  
+  // ===== BLOCS AVEC INSTANCES MULTIPLES =====
   NavigationBloc get navigationBloc => read<NavigationBloc>();
   RouteParametersBloc get routeParametersBloc => read<RouteParametersBloc>();
   RouteGenerationBloc get routeGenerationBloc => read<RouteGenerationBloc>();
@@ -47,12 +51,59 @@ extension BlocAccess on BuildContext {
   List<CreditPlan> get activeCreditPlans => appDataBloc.state.activePlans;
   
   /// Plan populaire
-  CreditPlan? get popularCreditPlan => appDataBloc.state.popularPlan;
+  CreditPlan? get popularCreditPlan => 
+    appDataBloc.state.activePlans.cast<CreditPlan?>().firstWhere(
+      (plan) => plan?.isPopular == true,
+      orElse: () => null,
+    );
   
   /// Transactions récentes
-  List<CreditTransaction> get recentTransactions => appDataBloc.state.recentTransactions;
+  List<CreditTransaction> get recentCreditTransactions => 
+    appDataBloc.state.recentTransactions;
 
   // ===== 🆕 MÉTHODES D'ACTION POUR LES CRÉDITS =====
+
+  /// Vérifie de manière asynchrone si l'utilisateur peut générer une route
+  /// Utilise le service dédié pour plus de fiabilité
+  Future<bool> canGenerateRouteAsync() async {
+    try {
+      return await creditService.canGenerateRoute();
+    } catch (e) {
+      print('❌ Erreur vérification génération async: $e');
+      return false;
+    }
+  }
+
+  /// Récupère le nombre de crédits disponibles de manière asynchrone
+  /// Utilise le service dédié pour les données les plus à jour
+  Future<int> getAvailableCreditsAsync() async {
+    try {
+      return await creditService.getAvailableCredits();
+    } catch (e) {
+      print('❌ Erreur récupération crédits async: $e');
+      return 0;
+    }
+  }
+
+  /// Déclenche le pré-chargement des crédits si nécessaire
+  void ensureCreditDataLoaded() {
+    creditService.ensureCreditDataLoaded();
+  }
+
+  /// Vérifie les crédits pour une génération spécifique
+  Future<CreditVerificationResult> verifyCreditForGeneration({int requiredCredits = 1}) async {
+    try {
+      return await creditService.verifyCreditsForGeneration(requiredCredits: requiredCredits);
+    } catch (e) {
+      print('❌ Erreur vérification crédits pour génération: $e');
+      return CreditVerificationResult(
+        hasEnoughCredits: false,
+        availableCredits: 0,
+        requiredCredits: requiredCredits,
+        errorMessage: 'Erreur lors de la vérification des crédits',
+      );
+    }
+  }
   
   /// Rafraîchit les données de crédits
   void refreshCreditData() {
@@ -101,6 +152,14 @@ extension BlocAccess on BuildContext {
   }
 
   // ===== 🆕 MÉTHODES HELPER POUR LES AUTRES DONNÉES =====
+
+  /// Vérifie si les données principales sont prêtes
+  bool get isAppDataReady => appDataBloc.state.isDataReady;
+    
+  /// Nettoie les données de l'application
+  void clearAppData() {
+    appDataBloc.add(const AppDataClearRequested());
+  }
   
   /// Vérifie si toutes les données sont chargées
   bool get isAllDataLoaded => appDataBloc.state.isDataLoaded;
@@ -127,6 +186,34 @@ extension BlocAccess on BuildContext {
   /// Rafraîchit les données d'historique
   void refreshHistoricData() {
     appDataBloc.add(const HistoricDataRefreshRequested());
+  }
+
+  // ===== MÉTHODES DE DEBUG =====
+  
+  /// Affiche les statistiques des crédits pour debug
+  void debugCreditStats() {
+    final state = appDataBloc.state;
+    print('🎯 === DEBUG CREDIT STATS ===');
+    print('💳 Available Credits: ${state.availableCredits}');
+    print('📊 Has Credits: ${state.hasCredits}');
+    print('✅ Can Generate Route: ${state.canGenerateRoute}');
+    print('📦 Credit Data Loaded: ${state.isCreditDataLoaded}');
+    print('📋 Active Plans: ${state.activePlans.length}');
+    print('🔄 Recent Transactions: ${state.recentTransactions.length}');
+    print('🎯 === END DEBUG STATS ===');
+  }
+
+  /// Affiche les statistiques générales de l'app pour debug
+  void debugAppStats() {
+    final state = appDataBloc.state;
+    print('🎯 === DEBUG APP STATS ===');
+    print('⚡ Is Loading: ${state.isLoading}');
+    print('📊 Data Ready: ${state.isDataReady}');
+    print('🏃 Activity Data: ${state.hasActivityData}');
+    print('📋 Historic Data: ${state.hasHistoricData}');
+    print('💳 Credit Data: ${state.hasCreditData}');
+    print('❌ Last Error: ${state.lastError}');
+    print('🎯 === END APP STATS ===');
   }
 }
 
@@ -207,5 +294,40 @@ class RouteGenerationPageWrapper extends StatelessWidget {
       ],
       child: CreditAwarePageWrapper(child: child),
     );
+  }
+}
+
+/// Extension pour accéder aux méthodes avancées de crédits
+extension CreditAdvancedAccess on BuildContext {
+  
+  /// Vérifie les crédits et affiche un message d'erreur si insuffisant
+  Future<bool> checkCreditsWithUserFeedback({
+    int requiredCredits = 1,
+    String? customErrorMessage,
+  }) async {
+    final result = await verifyCreditForGeneration(requiredCredits: requiredCredits);
+    
+    if (!result.isValid) {
+      // Ici vous pourriez afficher un snackbar ou une modal
+      // En fonction de votre système de notifications
+      print('⚠️ Crédits insuffisants: ${result.errorMessage}');
+      return false;
+    }
+    
+    return true;
+  }
+
+  /// Méthode utilitaire pour la génération de route avec vérification intégrée
+  Future<bool> canGenerateRouteWithPreload() async {
+    // S'assurer que les données sont chargées
+    ensureCreditDataLoaded();
+    
+    // Attendre un court instant pour le pré-chargement si nécessaire
+    if (!isCreditDataLoaded) {
+      await Future.delayed(const Duration(milliseconds: 500));
+    }
+    
+    // Vérifier via le service
+    return await canGenerateRouteAsync();
   }
 }

@@ -31,8 +31,24 @@ class ServiceLocator {
     sl.registerLazySingleton<MapStateService>(() => MapStateService());
     sl.registerLazySingleton<CreditsRepository>(() => CreditsRepository());
 
+    // ===== SERVICES =====
+
+    sl.registerLazySingleton<GuestLimitationService>(
+      () => GuestLimitationService.instance,
+    );
+
+    // 🆕 CreditVerificationService - Service dédié aux crédits
+    sl.registerLazySingleton<CreditVerificationService>(() {
+      print('🔧 Création du CreditVerificationService...');
+      return CreditVerificationService(
+        creditsRepository: sl<CreditsRepository>(),
+        creditsBloc: sl<CreditsBloc>(),
+        appDataBloc: sl<AppDataBloc>(),
+      );
+    });
+
     // ===== BLOCS PRINCIPAUX =====
-    
+
     // NotificationBloc
     sl.registerLazySingleton<NotificationBloc>(() {
       final bloc = NotificationBloc();
@@ -40,22 +56,7 @@ class ServiceLocator {
       return bloc;
     });
 
-    sl.registerLazySingleton<GuestLimitationService>(
-      () => GuestLimitationService.instance,
-    );
-
-    // 🆕 CreditsBloc (avec référence à AppDataBloc)
-    sl.registerLazySingleton<CreditsBloc>(() {
-      print('🔧 Création du CreditsBloc intégré...');
-      final creditsBloc = CreditsBloc(
-        creditsRepository: sl<CreditsRepository>(),
-        appDataBloc: sl<AppDataBloc>(), // 🆕 Injection du AppDataBloc
-      );
-      print('✅ CreditsBloc créé avec intégration AppDataBloc');
-      return creditsBloc;
-    });
-
-    // 🆕 AppDataBloc (avec CreditsRepository)
+    // AppDataBloc (avec CreditsRepository)
     sl.registerLazySingleton<AppDataBloc>(() {
       print('🔧 Création du AppDataBloc avec support crédits...');
       final appDataBloc = AppDataBloc(
@@ -72,6 +73,17 @@ class ServiceLocator {
       return appDataBloc;
     });
 
+    // 🆕 CreditsBloc (avec référence à AppDataBloc)
+    sl.registerLazySingleton<CreditsBloc>(() {
+      print('🔧 Création du CreditsBloc intégré...');
+      final creditsBloc = CreditsBloc(
+        creditsRepository: sl<CreditsRepository>(),
+        appDataBloc: sl<AppDataBloc>(), // 🆕 Injection du AppDataBloc
+      );
+      print('✅ CreditsBloc créé avec intégration AppDataBloc');
+      return creditsBloc;
+    });
+
     // 🆕 AuthBloc utilise l'instance SINGLETON de CreditsBloc
     sl.registerLazySingleton<AuthBloc>(() {
       print('🔧 Création du AuthBloc...');
@@ -79,22 +91,29 @@ class ServiceLocator {
         authRepository: sl<AuthRepository>(),
         creditsBloc: sl<CreditsBloc>(), // 🔑 Utiliser l'instance singleton
       );
+
       // Déclencher l'initialisation de l'authentification
       authBloc.add(AppStarted());
       return authBloc;
     });
 
     sl.registerLazySingleton<LocaleBloc>(() {
+      print('🔧 Création du LocaleBloc...');
       final localeBloc = LocaleBloc();
+      print('✅ LocaleBloc créé');
       localeBloc.add(const LocaleInitialized());
       return localeBloc;
     });
 
     sl.registerLazySingleton<ThemeBloc>(() {
+      print('🔧 Création du ThemeBloc...');
       final themeBloc = ThemeBloc();
+      print('✅ ThemeBloc créé');
       themeBloc.add(const ThemeInitialized());
       return themeBloc;
     });
+
+    // ===== BLOCS AVEC INSTANCES MULTIPLES =====
 
     // Factory pour les blocs qui peuvent avoir plusieurs instances
     sl.registerFactory<RouteParametersBloc>(() => RouteParametersBloc(
@@ -114,6 +133,16 @@ class ServiceLocator {
       return bloc;
     });
 
+    print('🎯 === INITIALISATION SERVICE LOCATOR TERMINÉE ===');
+    print('📊 Services enregistrés: ${sl.allReadySync()}');
+    
+    // Log des services principaux
+    print('🔧 Services principaux:');
+    print('   - AppDataBloc: ${sl.isRegistered<AppDataBloc>()}');
+    print('   - CreditsBloc: ${sl.isRegistered<CreditsBloc>()}');
+    print('   - CreditVerificationService: ${sl.isRegistered<CreditVerificationService>()}');
+    print('   - AuthBloc: ${sl.isRegistered<AuthBloc>()}');
+    print('   - RouteGenerationBloc (factory): ${sl.isRegistered<RouteGenerationBloc>()}');
   }
 
   /// 🆕 Méthode helper pour initialiser les données au démarrage
@@ -167,4 +196,32 @@ class ServiceLocator {
   static void dispose() {
     sl.reset();
   }
+
+  /// Méthode de nettoyage pour les tests
+  static Future<void> reset() async {
+    print('🧹 Reset du Service Locator...');
+    await sl.reset();
+    print('✅ Service Locator reseté');
+  }
+}
+
+/// Extensions pour accéder facilement aux services via GetIt
+extension ServiceAccess on Object {
+  // Services
+  CreditVerificationService get creditService => sl<CreditVerificationService>();
+  GuestLimitationService get guestService => sl<GuestLimitationService>();
+  
+  // Repositories
+  CreditsRepository get creditsRepository => sl<CreditsRepository>();
+  RoutesRepository get routesRepository => sl<RoutesRepository>();
+  AuthRepository get authRepository => sl<AuthRepository>();
+  ActivityRepository get activityRepository => sl<ActivityRepository>();
+  
+  // Blocs singleton
+  AppDataBloc get appDataBloc => sl<AppDataBloc>();
+  CreditsBloc get creditsBloc => sl<CreditsBloc>();
+  AuthBloc get authBloc => sl<AuthBloc>();
+  NotificationBloc get notificationBloc => sl<NotificationBloc>();
+  LocaleBloc get localeBloc => sl<LocaleBloc>();
+  ThemeBloc get themeBloc => sl<ThemeBloc>();
 }
