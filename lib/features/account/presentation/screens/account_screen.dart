@@ -854,6 +854,7 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
     _trackAccountAction('edit_profile_clicked');
     showModalSheet(
       context: context, 
+      isDismissible: false,
       backgroundColor: Colors.transparent,
       child: EditProfileScreen(
         profile: profile,

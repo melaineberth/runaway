@@ -380,8 +380,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> with TickerProvid
       child: SquircleBtn(
         isPrimary: true,
         isLoading: isLoading,
-        onTap: _hasChanges ? _saveProfile : null,
-        label: context.l10n.complete,
+        onTap: _hasChanges ? _saveProfile : () => context.pop(),
+        label: _hasChanges ? context.l10n.complete :  "Quitter",
       ),
     );
   }

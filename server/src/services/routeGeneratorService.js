@@ -3,6 +3,7 @@ const logger = require("../config/logger");
 const graphhopperCloud = require("./graphhopperCloudService");
 const routeQualityService = require("./routeQualityService");
 const { metricsService } = require("./metricsService");
+const groqService = require("./groqService");
 
 class RouteGeneratorService {
   constructor() {
@@ -31,6 +32,18 @@ class RouteGeneratorService {
    */
   async generateRoute(params) {
     const startTime = Date.now();
+
+    let aiTweaks;
+    try {
+      aiTweaks = await groqService.suggestGenerationTweaks(params);
+      if (aiTweaks && typeof aiTweaks === 'object') {
+        params = { ...params, ...aiTweaks };
+        logger.info('Applied Groq AI tweaks', { aiTweaks });
+      }
+    } catch (err) {
+      logger.warn('Groq AI tweak retrieval failed', err.message);
+    }
+
     const {
       startLat,
       startLon,
@@ -107,6 +120,7 @@ class RouteGeneratorService {
           // Ajouter les métadonnées enrichies
           fixedRoute.metadata = {
             ...fixedRoute.metadata,
+            aiTweaks,
             quality: qualityValidation.quality,
             generationAttempts: attempt,
             strategiesUsed: attemptedStrategies,
