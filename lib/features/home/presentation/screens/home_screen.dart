@@ -2002,6 +2002,25 @@ class _HomeScreenState extends State<HomeScreen>
     return res;
   }
 
+  Future<T?> _presentPushNavigate<T>(
+    String pagePath,
+  ) async {
+    // 1️⃣ Masquer le panneau s’il est visible
+    _removeRouteInfoPanel();
+
+    // 2️⃣ Pousser la route modal‑sheet
+    final T? res = await context.push<T>(
+      pagePath,
+    );
+
+    // 3️⃣ Quand la route se ferme, remettre le panneau (si la route existe tjs)
+    if (mounted && generatedRouteCoordinates != null) {
+      _showRouteInfoModal();
+    }
+
+    return res;
+  }
+
   /// Retire proprement le panneau s’il est encore monté
   void _removeRouteInfoPanel() {
     if (_routeInfoEntry?.mounted ?? false) {
@@ -2158,16 +2177,14 @@ class _HomeScreenState extends State<HomeScreen>
           cancelLabel: context.l10n.createAccount,
           onValid: () {
             showSignModal(context, 1);
-            // context.go('/auth/1'); // Login
           },
           onCancel: () {
             showSignModal(context, 0);
-            // context.go('/auth/0');
           },
         ));
       }
     } else {
-      context.push(path);
+      _presentPushNavigate(path);
     }
   }
 
