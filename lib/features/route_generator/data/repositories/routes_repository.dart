@@ -1,6 +1,7 @@
 // lib/features/route_generator/data/repositories/routes_repository.dart
 
 import 'dart:convert';
+import 'package:runaway/config/extensions.dart';
 import 'package:runaway/core/services/screenshot_service.dart';
 import 'package:runaway/features/route_generator/domain/models/activity_type.dart';
 import 'package:runaway/features/route_generator/domain/models/saved_route.dart';
@@ -27,52 +28,54 @@ class RoutesRepository {
     int? estimatedDuration,
     String? imageUrl,
   }) async {
-    final user = _supabase.auth.currentUser;
-    if (user == null) {
-      throw Exception('Utilisateur non connecté');
-    }
-
-    // Générer un ID unique pour le parcours
-    final routeId = _uuid.v4();
-
-     // 🔧 S'assurer que la date est en temps local
-  final now = DateTime.now().toLocal();
-
-    print('💾 Sauvegarde parcours: $name');
-    print('🖼️ Image URL: ${imageUrl ?? "Aucune"}');
-
-    final route = SavedRoute(
-      id: routeId,
-      name: name,
-      parameters: parameters,
-      coordinates: coordinates,
-      createdAt: now,
-      actualDistance: actualDistance,
-      actualDuration: estimatedDuration,
-      imageUrl: imageUrl, // Utiliser l'URL fournie (peut être null)
-    );
-
-    // 1. Sauvegarder localement immédiatement
-    await _saveRouteLocally(route);
-
-    // 2. Essayer de synchroniser avec Supabase
-    try {
-      if (await _isConnected()) {
-        await _saveRouteToSupabase(route, user.id);
-        // Marquer comme synchronisé
-        await _markRouteSynced(route.id);
-        print('✅ Route synchronisée avec Supabase: ${route.id}');
-      } else {
-        // Marquer pour synchronisation ultérieure
-        await _markRouteForSync(route.id);
-        print('📱 Route marquée pour sync ultérieure: ${route.id}');
+    return await withValidSession(() async {
+      final user = _supabase.auth.currentUser;
+      if (user == null) {
+        throw Exception('Utilisateur non connecté');
       }
-    } catch (e) {
-      print('❌ Erreur sync Supabase, sauvegarde en local: $e');
-      await _markRouteForSync(route.id);
-    }
 
-    return route;
+      // Générer un ID unique pour le parcours
+      final routeId = _uuid.v4();
+
+      // 🔧 S'assurer que la date est en temps local
+      final now = DateTime.now().toLocal();
+
+      print('💾 Sauvegarde parcours: $name');
+      print('🖼️ Image URL: ${imageUrl ?? "Aucune"}');
+
+      final route = SavedRoute(
+        id: routeId,
+        name: name,
+        parameters: parameters,
+        coordinates: coordinates,
+        createdAt: now,
+        actualDistance: actualDistance,
+        actualDuration: estimatedDuration,
+        imageUrl: imageUrl, // Utiliser l'URL fournie (peut être null)
+      );
+
+      // 1. Sauvegarder localement immédiatement
+      await _saveRouteLocally(route);
+
+      // 2. Essayer de synchroniser avec Supabase
+      try {
+        if (await _isConnected()) {
+          await _saveRouteToSupabase(route, user.id);
+          // Marquer comme synchronisé
+          await _markRouteSynced(route.id);
+          print('✅ Route synchronisée avec Supabase: ${route.id}');
+        } else {
+          // Marquer pour synchronisation ultérieure
+          await _markRouteForSync(route.id);
+          print('📱 Route marquée pour sync ultérieure: ${route.id}');
+        }
+      } catch (e) {
+        print('❌ Erreur sync Supabase, sauvegarde en local: $e');
+        await _markRouteForSync(route.id);
+      }
+
+      return route;
+    });
   }
 
   /// Récupère tous les parcours de l'utilisateur

@@ -3,9 +3,9 @@ import 'dart:io';
 import 'dart:math';
 
 import 'package:crypto/crypto.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:path/path.dart' as p;
+import 'package:runaway/config/secure_config.dart';
 import 'package:runaway/core/errors/auth_exceptions.dart';
 import 'package:runaway/features/auth/domain/models/profile.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
@@ -54,9 +54,8 @@ class AuthRepository {
     try {
       print('🔑 Tentative de connexion Google');
 
-      final webClientId = dotenv.env['WEB_CLIENT_ID'];
-      
-      final iosClientId = dotenv.env['IOS_CLIENT_ID'];
+      final webClientId = SecureConfig.googleWebClientId;
+      final iosClientId = SecureConfig.googleIosClientId;
       
       // 1. Initier la connexion Google
       final GoogleSignIn googleSignIn = GoogleSignIn(
@@ -796,7 +795,7 @@ Map<String, String?> getSocialUserInfo() {
       
       await _supabase.auth.resetPasswordForEmail(
         email.trim(),
-        redirectTo: '${dotenv.env['SUPABASE_URL']}/auth/v1/verify?type=recovery',
+        redirectTo: '${SecureConfig.supabaseUrl}/auth/v1/verify?type=recovery',
       );
       
       print('✅ Email de réinitialisation envoyé');

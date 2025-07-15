@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:runaway/config/colors.dart';
+import 'package:runaway/core/services/session_manager.dart';
 import 'package:runaway/features/route_generator/domain/models/route_parameters.dart';
 import 'package:runaway/l10n/app_localizations.dart';
 
@@ -145,4 +146,14 @@ extension ThemeExtension on BuildContext {
   Color get adaptiveBlack => isDarkMode ? Colors.black : Colors.white;
   Color get adaptiveBorder => isDarkMode ? Colors.white12 : Colors.black12;
   Color get adaptiveDisabled => isDarkMode ? Colors.white38 : Colors.black38;
+}
+
+extension SessionValidation on Object {
+  /// Vérifie que la session est valide avant d'exécuter une action critique
+  Future<T> withValidSession<T>(Future<T> Function() action) async {
+    if (!SessionManager.instance.isSessionValid()) {
+      throw Exception('Session invalide ou expirée');
+    }
+    return await action();
+  }
 }

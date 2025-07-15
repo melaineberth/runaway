@@ -132,17 +132,6 @@ class ServiceLocator {
       print('✅ RouteGenerationBloc refactorisé créé');
       return bloc;
     });
-
-    print('🎯 === INITIALISATION SERVICE LOCATOR TERMINÉE ===');
-    print('📊 Services enregistrés: ${sl.allReadySync()}');
-    
-    // Log des services principaux
-    print('🔧 Services principaux:');
-    print('   - AppDataBloc: ${sl.isRegistered<AppDataBloc>()}');
-    print('   - CreditsBloc: ${sl.isRegistered<CreditsBloc>()}');
-    print('   - CreditVerificationService: ${sl.isRegistered<CreditVerificationService>()}');
-    print('   - AuthBloc: ${sl.isRegistered<AuthBloc>()}');
-    print('   - RouteGenerationBloc (factory): ${sl.isRegistered<RouteGenerationBloc>()}');
   }
 
   /// 🆕 Méthode helper pour initialiser les données au démarrage

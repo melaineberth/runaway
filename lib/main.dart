@@ -1,12 +1,13 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:hydrated_bloc/hydrated_bloc.dart';
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:provider/provider.dart';
-import 'package:runaway/config/environment_config.dart';
 import 'package:runaway/config/router.dart';
+import 'package:runaway/config/secure_config.dart';
 import 'package:runaway/config/theme.dart';
 import 'package:runaway/core/blocs/app_data/app_data_bloc.dart';
 import 'package:runaway/core/blocs/locale/locale_bloc.dart';
@@ -17,11 +18,11 @@ import 'package:runaway/core/services/app_initialization_service.dart';
 import 'package:runaway/core/services/conversion_service.dart';
 import 'package:runaway/core/services/notification_service.dart';
 import 'package:runaway/core/services/route_data_sync_wrapper.dart';
+import 'package:runaway/core/services/session_manager.dart';
 import 'package:runaway/core/widgets/auth_data_listener.dart';
 import 'package:runaway/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:runaway/features/credits/data/services/iap_service.dart';
 import 'package:runaway/features/credits/presentation/blocs/credits_bloc.dart';
-import 'package:runaway/features/home/presentation/screens/home_screen.dart';
 import 'package:runaway/l10n/app_localizations.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'core/blocs/app_bloc_observer.dart';
@@ -38,10 +39,20 @@ void main() async {
     // Charger les variables d'environnement
     await dotenv.load(fileName: ".env");
 
-    // Valider la configuration d'environnement
-    EnvironmentConfig.validate();
+    // Initialiser Supabase
+    await Supabase.initialize(
+      url: SecureConfig.supabaseUrl,
+      anonKey: SecureConfig.supabaseAnonKey,
+    );
+    print('✅ Supabase initialisé');
 
-    // 🆕 Initialiser IAP
+    // 🆕 SÉCURISATION: Utiliser la configuration sécurisée
+    SecureConfig.validateConfiguration();
+
+    // 🆕 Initialiser le gestionnaire de session
+    SessionManager.instance.startSessionMonitoring();
+
+    // Initialiser IAP
     await IAPService.initialize();
 
     // Initialiser HydratedBloc pour la persistance
@@ -51,21 +62,12 @@ void main() async {
     );
     print('✅ HydratedBloc storage initialisé');
 
-    // Initialiser Supabase
-    await Supabase.initialize(
-      url: dotenv.get('SUPABASE_URL'),
-      anonKey: dotenv.get('SUPABASE_ANON_KEY'),
-    );
-    print('✅ Supabase initialisé');
-    
-    
     // Initialiser les services avec pré-chargement de géolocalisation
     await AppInitializationService.initialize();
 
     // Configurer Mapbox
-    String mapBoxToken = dotenv.get('MAPBOX_TOKEN');
-    MapboxOptions.setAccessToken(mapBoxToken);
-    print('✅ Mapbox configuré');
+    MapboxOptions.setAccessToken(SecureConfig.mapboxToken);
+    print('✅ Mapbox configuré avec token sécurisé');
 
     await NotificationService.instance.initialize();
     await ConversionService.instance.initializeSession();
@@ -78,6 +80,7 @@ void main() async {
     
   } catch (e) {
     print('❌ Erreur lors de l\'initialisation: $e');
+    SessionManager.instance.stopSessionMonitoring(); // Nettoyage en cas d'erreur
     runApp(ErrorApp(error: e.toString()));
   }
 }
@@ -90,10 +93,26 @@ class Trailix extends StatefulWidget {
 }
 
 class _TrailixState extends State<Trailix> {
+  StreamSubscription<SessionEvent>? _sessionSubscription;
+
+  @override
+  void initState() {
+    super.initState();
+    
+    // 🆕 Écouter les événements de session
+    _sessionSubscription = SessionManager.instance.sessionEvents.listen((event) {
+      if (event.status == SessionStatus.expired || event.status == SessionStatus.error) {
+        // Rediriger vers l'écran de connexion ou afficher un message
+        print('⚠️ Session ${event.status}: ${event.reason}');
+      }
+    });
+  }
 
   @override
   void dispose() {
     // Nettoyer les services
+    _sessionSubscription?.cancel();
+    SessionManager.instance.dispose();
     NotificationService.instance.dispose();
     ServiceLocator.dispose();
     super.dispose();
@@ -121,25 +140,22 @@ class _TrailixState extends State<Trailix> {
             builder: (context, localeState) {
               return BlocBuilder<ThemeBloc, ThemeState>(
                 builder: (context, themeState) {
-                  return ChangeNotifierProvider(
-                    create: (_) => HomeController(),
-                    child: MaterialApp.router(
-                      title: 'Trailix',
-                      debugShowCheckedModeBanner: false,
-                      routerConfig: router,
-                      theme: getAppTheme(Brightness.light),
-                      darkTheme: getAppTheme(Brightness.dark),
-                      themeMode: themeState.themeMode.toThemeMode(),
-                      locale: localeState.locale,
-                      localizationsDelegates: AppLocalizations.localizationsDelegates,
-                      supportedLocales: AppLocalizations.supportedLocales,
-                      builder: (context, child) {
-                        return MediaQuery(
-                          data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(1.0)),
-                          child: child ?? Container(),
-                        );
-                      },
-                    ),
+                  return MaterialApp.router(
+                    title: 'Trailix',
+                    debugShowCheckedModeBanner: false,
+                    routerConfig: router,
+                    theme: getAppTheme(Brightness.light),
+                    darkTheme: getAppTheme(Brightness.dark),
+                    themeMode: themeState.themeMode.toThemeMode(),
+                    locale: localeState.locale,
+                    localizationsDelegates: AppLocalizations.localizationsDelegates,
+                    supportedLocales: AppLocalizations.supportedLocales,
+                    builder: (context, child) {
+                      return MediaQuery(
+                        data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(1.0)),
+                        child: child ?? Container(),
+                      );
+                    },
                   );
                 }
               );

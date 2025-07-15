@@ -18,12 +18,10 @@ import 'package:runaway/features/home/presentation/widgets/floating_location_sea
 import 'package:runaway/features/home/presentation/widgets/generation_limit_widget.dart';
 import 'package:runaway/core/widgets/loading_overlay.dart';
 import 'package:runaway/core/widgets/modal_dialog.dart';
-import 'package:runaway/core/widgets/modal_sheet.dart';
-import 'package:runaway/core/widgets/squircle_btn.dart';
 import 'package:runaway/features/auth/presentation/bloc/auth_state.dart';
-import 'package:runaway/features/auth/presentation/widgets/auth_text_field.dart';
 import 'package:runaway/features/home/presentation/widgets/floating_route_info_panel.dart';
 import 'package:runaway/features/home/presentation/widgets/guest_generation_indicator.dart';
+import 'package:runaway/features/home/presentation/widgets/save_route_sheet.dart';
 import 'package:runaway/features/route_generator/domain/models/route_parameters.dart';
 import 'package:runaway/features/route_generator/domain/models/saved_route.dart';
 import 'package:runaway/features/route_generator/presentation/blocs/extensions/route_generation_bloc_extensions.dart';
@@ -48,21 +46,6 @@ import 'package:supabase_flutter/supabase_flutter.dart' as su;
 import 'package:top_snackbar_flutter/top_snack_bar.dart';
 import '../../../route_generator/presentation/screens/route_parameter.dart' as gen;
 import '../blocs/route_parameters_event.dart';
-
-class HomeController extends ChangeNotifier {
-  // ---------- Générateur ----------
-  VoidCallback? _openGenerator;
-  void registerOpenGenerator(VoidCallback cb) => _openGenerator = cb;
-  void openGenerator() => _openGenerator?.call();
-
-  // ---------- Sélection de lieu ----------
-  void Function(double, double, String)? _onLocationSelected;
-  void registerLocationSelected(
-          void Function(double, double, String) cb) =>
-      _onLocationSelected = cb;
-  void selectLocation(double lon, double lat, String name) =>
-      _onLocationSelected?.call(lon, lat, name);
-}
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -148,11 +131,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
     _setupRouteGenerationListener();
 
     _initializeMapStyle();
-
-    final ctl = context.read<HomeController>();
-
-    ctl.registerOpenGenerator(openGenerator); // ⬅️ déjà vu
-    ctl.registerLocationSelected(_onLocationSelected); // ⬅️ nouveau
 
     context.authBloc.stream.listen((authState) {
       print('🔄 AuthState changé: ${authState.runtimeType}');
@@ -2375,79 +2353,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
           ),
         );
       },
-    );
-  }
-}
-
-class SaveRouteSheet extends StatefulWidget {
-  final String initialValue;                // <-- seulement la valeur
-  const SaveRouteSheet({required this.initialValue, super.key});
-
-  @override
-  State<SaveRouteSheet> createState() => _SaveRouteSheetState();
-}
-
-class _SaveRouteSheetState extends State<SaveRouteSheet> {
-  late final TextEditingController _ctl;
-
-  @override
-  void initState() {
-    super.initState();
-    _ctl = TextEditingController(text: widget.initialValue);
-  }
-
-  @override
-  void dispose() {
-    _ctl.dispose();                         // <-- libéré au bon moment
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-
-    return ModalSheet(
-      child: Padding(
-        padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              "Choisissez un nom",
-              style: context.bodySmall?.copyWith(
-                color: context.adaptiveTextPrimary,
-              ),
-            ),
-            2.h,
-            Text(
-              "Vous pourrez le modifier ultérieurement",
-              style: context.bodySmall?.copyWith(
-                color: context.adaptiveTextSecondary,
-                fontSize: 15,
-                fontWeight: FontWeight.w500
-              ),
-            ),
-            20.h,
-            AuthTextField(
-              controller: _ctl,
-              hint: 'Nom du parcours',
-              maxLines: 1,
-            ),
-              
-            12.h,
-
-            SquircleBtn(
-              isPrimary: true,
-              onTap: () {
-                final name = _ctl.text.trim();
-                if (name.isEmpty) return;
-                context.pop(name);
-              }, // 🆕 Désactiver si loading
-              label: context.l10n.save,
-            ),              
-          ],
-        ),
-      ),
     );
   }
 }

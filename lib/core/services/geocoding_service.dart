@@ -1,10 +1,12 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:runaway/config/secure_config.dart';
 
 class GeocodingService {
   static final String _baseUrl = 'https://api.mapbox.com/geocoding/v5/mapbox.places';
-  static final String _accessToken = dotenv.get('MAPBOX_TOKEN');
+
+  // 🆕 SÉCURISATION: Utiliser le token sécurisé avec lazy loading
+  static String get _accessToken => SecureConfig.mapboxToken;
   
   // Recherche d'adresses avec autocomplétion
   static Future<List<AddressSuggestion>> searchAddress(
