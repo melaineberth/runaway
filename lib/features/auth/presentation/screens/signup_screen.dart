@@ -87,90 +87,88 @@ class _SignupScreenState extends State<SignupScreen> {
   
   @override
   Widget build(BuildContext context) {
-    return Padding(
-        padding: const EdgeInsets.all(20.0),
-        child: Column(
-          children: [
-            _buildSignUpInfo(),
-            40.h,
-            _buildSocialButtons(),
-            30.h,
-            LabelDivider(
-              label: context.l10n.orDivider,
+    return Column(
+      children: [
+        const Spacer(),
+        _buildSignUpInfo(),
+        40.h,
+        _buildSocialButtons(),
+        30.h,
+        LabelDivider(
+          label: context.l10n.orDivider,
+        ),
+        30.h,
+        Form(
+          key: _formKey,
+          child: Padding(
+            padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+            child: Column(
+              children: [
+                AuthTextField(
+                  hint: context.l10n.emailHint,
+                  validator: emailValidator,
+                  controller: _emailController,
+                  enabled: !widget.isLoading,
+                ),
+                10.h,
+                AuthTextField(
+                  hint: context.l10n.passwordHint,
+                  obscureText: true,
+                  validator: passwordValidator,
+                  controller: _passwordController,
+                  enabled: !widget.isLoading,
+                ),
+                // 🆕 Ajouter l'indicateur de force
+                PasswordStrengthIndicator(
+                  password: _passwordController.text,
+                  isVisible: _showPasswordStrength,
+                ),
+                10.h,
+                AuthTextField(
+                  hint: context.l10n.confirmPasswordHint,
+                  obscureText: true,
+                  validator: (v) => v == _passwordController.text 
+                      ? null 
+                      : context.l10n.passwordsDontMatchError,
+                  controller: _confirmPasswordController,
+                  enabled: !widget.isLoading,
+                ),
+              ],
             ),
-            30.h,
-            Form(
-              key: _formKey,
-              child: Padding(
-                padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
-                child: Column(
-                  children: [
-                    AuthTextField(
-                      hint: context.l10n.emailHint,
-                      validator: emailValidator,
-                      controller: _emailController,
-                      enabled: !widget.isLoading,
-                    ),
-                    10.h,
-                    AuthTextField(
-                      hint: context.l10n.passwordHint,
-                      obscureText: true,
-                      validator: passwordValidator,
-                      controller: _passwordController,
-                      enabled: !widget.isLoading,
-                    ),
-                    // 🆕 Ajouter l'indicateur de force
-                    PasswordStrengthIndicator(
-                      password: _passwordController.text,
-                      isVisible: _showPasswordStrength,
-                    ),
-                    10.h,
-                    AuthTextField(
-                      hint: context.l10n.confirmPasswordHint,
-                      obscureText: true,
-                      validator: (v) => v == _passwordController.text 
-                          ? null 
-                          : context.l10n.passwordsDontMatchError,
-                      controller: _confirmPasswordController,
-                      enabled: !widget.isLoading,
-                    ),
-                  ],
+          ),
+        ),
+        10.h,
+        
+        _buildSignUpButton(),
+        
+        25.h,
+        const Spacer(),
+        Text.rich(
+          TextSpan(
+            children: [
+              TextSpan(
+                text: context.l10n.haveAccount,
+                style: context.bodySmall?.copyWith(
+                  fontSize: 15,
+                  color: context.adaptiveTextPrimary,
+                  fontWeight: FontWeight.w500,
                 ),
               ),
-            ),
-            10.h,
-            
-            _buildSignUpButton(),
-            
-            25.h,
-            const Spacer(),
-            Text.rich(
               TextSpan(
-                children: [
-                  TextSpan(
-                    text: context.l10n.haveAccount,
-                    style: context.bodySmall?.copyWith(
-                      fontSize: 15,
-                      color: context.adaptiveTextPrimary,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  TextSpan(
-                    text: ' ${context.l10n.logIn}',
-                    style: context.bodySmall?.copyWith(
-                      fontSize: 15,
-                      color: context.adaptivePrimary,
-                      fontWeight: FontWeight.w700,
-                    ),
-                    recognizer: TapGestureRecognizer()..onTap = widget.onSwitchToLogin,
-                  ),
-                ],
+                text: ' ${context.l10n.logIn}',
+                style: context.bodySmall?.copyWith(
+                  fontSize: 15,
+                  color: context.adaptivePrimary,
+                  fontWeight: FontWeight.w700,
+                ),
+                recognizer: TapGestureRecognizer()..onTap = widget.onSwitchToLogin,
               ),
-            ),
-            10.h,
-          ],
+            ],
+          ),
         ),
-      );
+        10.h,
+      ],
+    );
   }
 
   Widget _buildSignUpInfo() {

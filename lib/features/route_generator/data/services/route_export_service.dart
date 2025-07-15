@@ -40,8 +40,6 @@ class RouteExportService {
         return _generateGPX(coordinates, metadata, routeName);
       case RouteExportFormat.kml:
         return _generateKML(coordinates, metadata, routeName);
-      case RouteExportFormat.json:
-        return _generateJSON(coordinates, metadata, routeName);
     }
   }
 
@@ -188,35 +186,6 @@ class RouteExportService {
     return buffer.toString();
   }
 
-  /// Génère un fichier JSON
-  static String _generateJSON(
-    List<List<double>> coordinates,
-    Map<String, dynamic> metadata,
-    String routeName,
-  ) {
-    final data = {
-      'name': routeName,
-      'type': 'Feature',
-      'properties': {
-        'name': routeName,
-        'description': 'Parcours généré par Runaway',
-        'distance_km': metadata['distanceKm'],
-        'duration_minutes': metadata['durationMinutes'],
-        'elevation_gain': metadata['elevationGain'],
-        'activity_type': metadata['parameters']?['activity_type'],
-        'is_loop': metadata['is_loop'],
-        'generated_at': metadata['generatedAt'],
-        'points_count': coordinates.length,
-      },
-      'geometry': {
-        'type': 'LineString',
-        'coordinates': coordinates,
-      },
-    };
-    
-    return const JsonEncoder.withIndent('  ').convert(data);
-  }
-
   /// Génère un nom de fichier basé sur les métadonnées
   static String _generateRouteName(Map<String, dynamic> metadata) {
     final now = DateTime.now();
@@ -267,17 +236,14 @@ class RouteExportService {
         return 'application/gpx+xml';
       case RouteExportFormat.kml:
         return 'application/vnd.google-earth.kml+xml';
-      case RouteExportFormat.json:
-        return 'application/json';
     }
   }
 }
 
 /// Formats d'export disponibles
 enum RouteExportFormat {
-  gpx('gpx', 'GPX', 'Format standard GPS'),
-  kml('kml', 'KML', 'Google Earth / Google Maps'),
-  json('json', 'JSON', 'Format universel de données');
+  gpx('gpx', 'Fichier GPS (GPX)', 'À importer dans Garmin, Strava…'),
+  kml('kml', 'Google Maps / Earth (KML)', 'Pour visualiser le parcours en 2D / 3D');
 
   const RouteExportFormat(this.extension, this.displayName, this.description);
   

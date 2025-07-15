@@ -4,7 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 class GuestLimitationService {
   static const String _keyGuestGenerations = 'guest_generations_count';
   static const String _keyFirstUseDate = 'guest_first_use_date';
-  static const int _maxGuestGenerations = 3; // 🔧 CHANGÉ : 3 générations gratuites pour les guests
+  static const int _maxGuestGenerations = 10; // 🔧 Générations gratuites pour les guests
   static const Duration _limitPeriod = Duration(days: 30); // Période de 30 jours
 
   static GuestLimitationService? _instance;

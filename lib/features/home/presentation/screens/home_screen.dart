@@ -13,7 +13,9 @@ import 'package:runaway/core/blocs/app_data/app_data_bloc.dart';
 import 'package:runaway/core/blocs/app_data/app_data_event.dart';
 import 'package:runaway/core/blocs/app_data/app_data_state.dart';
 import 'package:runaway/core/di/bloc_provider_extension.dart';
+import 'package:runaway/core/extensions/monitoring_extensions.dart';
 import 'package:runaway/core/services/conversion_triggers.dart';
+import 'package:runaway/core/services/monitoring_service.dart';
 import 'package:runaway/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:runaway/features/home/presentation/widgets/floating_location_search_sheet.dart';
 import 'package:runaway/features/home/presentation/widgets/generation_limit_widget.dart';
@@ -56,10 +58,10 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen>
-    with WidgetsBindingObserver, TickerProviderStateMixin {
+class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, TickerProviderStateMixin {
   // 🆕 Service de persistance
   final MapStateService _mapStateService = MapStateService();
+  late String _screenLoadId;
 
   // === MAPBOX ===
   mp.MapboxMap? mapboxMap;
@@ -123,37 +125,41 @@ class _HomeScreenState extends State<HomeScreen>
     super.initState();
     WidgetsBinding.instance.addObserver(this);
 
-    _initializeAnimationControllers();
-    _restoreStateFromService();
-
-    // Restaurer le style depuis le service
-    _restoreMapStyleFromService();
-
-    _preloadLocationInBackground();
-
-    _setupRouteGenerationListener();
-
-    _initializeMapStyle();
-
-    context.authBloc.stream.listen((authState) {
-      print('🔄 AuthState changé: ${authState.runtimeType}');
-
-      // Détecter si l'utilisateur s'est déconnecté/session expirée
-      if (authState is Unauthenticated) {
-        print(
-          '👋 Utilisateur déconnecté - nettoyage données guest si nécessaire',
-        );
-        // Note: les données guest ne sont nettoyées que lors de la CONNEXION, pas déconnexion
-      }
-
-      if (authState is Authenticated) {
-        print('👤 Utilisateur connecté - nettoyage données guest');
-        if (mounted) {
-          context.routeGenerationBloc.clearGuestDataOnLogin();
-        }
-      }
-    });
+    // 🆕 Démarrer le tracking de chargement d'écran
+    _screenLoadId = context.trackScreenLoad('home_screen');
+    
+    // Simuler une initialisation
+    _initializeScreen();
   }
+
+  Future<void> _initializeScreen() async {
+    try {
+      // Simuler des opérations d'initialisation
+      _initializeAnimationControllers();
+      _restoreStateFromService();
+      _restoreMapStyleFromService();
+      _preloadLocationInBackground();
+      _setupRouteGenerationListener();
+      _initializeMapStyle();
+      
+      // 🆕 Terminer le tracking avec succès
+      context.finishScreenLoad(_screenLoadId);
+      
+      // 🆕 Enregistrer une métrique de performance
+      context.recordMetric('screen_load_time', 500, unit: 'ms');
+      
+    } catch (e, stackTrace) {
+      // 🆕 Terminer le tracking avec erreur
+      context.finishScreenLoad(_screenLoadId, error: e);
+      
+      // 🆕 Capturer l'erreur avec contexte
+      context.captureError(e, stackTrace, extra: {
+        'screen': 'home',
+        'phase': 'initialization',
+      });
+    }
+  }
+
 
   @override
   void dispose() {
@@ -1754,7 +1760,14 @@ class _HomeScreenState extends State<HomeScreen>
 
   // Gestionnaire de génération de route
   void _handleGenerateRoute() async {
-    print('🚀 === GÉNÉRATION AVEC GESTION SMART DES CRÉDITS ===');
+    final operationId = MonitoringService.instance.trackOperation(
+      'user_generate_route',
+      description: 'Utilisateur lance génération de parcours',
+      data: {
+        'source_screen': 'home',
+        'user_action': 'button_press',
+      },
+    );
 
     try {
       // Déterminer le type d'utilisateur
@@ -1827,10 +1840,27 @@ class _HomeScreenState extends State<HomeScreen>
 
         ConversionTriggers.onRouteGenerated(context);
         print('🚀 Génération lancée avec succès');
+
+        // 🆕 Enregistrer l'action utilisateur
+        context.recordMetric('user_action', 1, unit: 'count');
+        
+        MonitoringService.instance.finishOperation(operationId, success: true);
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
       print('❌ Erreur génération: $e');
       _showRouteGenerationError('Erreur: $e');
+      MonitoringService.instance.finishOperation(
+        operationId, 
+        success: false, 
+        errorMessage: e.toString(),
+      );
+      
+      if (mounted) {
+        context.captureError(e, stackTrace, extra: {
+          'action': 'generate_route',
+          'source': 'button_press',
+        });
+      }
     }
   }
 
@@ -1868,7 +1898,6 @@ class _HomeScreenState extends State<HomeScreen>
       (_) => ExportFormatDialog(
         onGpxSelected: () => _exportRoute(RouteExportFormat.gpx),
         onKmlSelected: () => _exportRoute(RouteExportFormat.kml),
-        onJsonSelected: () => _exportRoute(RouteExportFormat.json),
       ),
     );
   }

@@ -197,7 +197,6 @@ class _HistoricCardState extends State<HistoricCard> {
       child: ExportFormatDialog(
         onGpxSelected: () => _exportRoute(RouteExportFormat.gpx),
         onKmlSelected: () => _exportRoute(RouteExportFormat.kml),
-        onJsonSelected: () => _exportRoute(RouteExportFormat.json),
       ),
     );
   }

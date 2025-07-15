@@ -8,13 +8,11 @@ import 'package:runaway/features/route_generator/data/services/route_export_serv
 class ExportFormatDialog extends StatelessWidget {
   final VoidCallback onGpxSelected;
   final VoidCallback onKmlSelected;
-  final VoidCallback onJsonSelected;
 
   const ExportFormatDialog({
     super.key,
     required this.onGpxSelected,
     required this.onKmlSelected,
-    required this.onJsonSelected,
   });
 
   @override
@@ -34,7 +32,7 @@ class ExportFormatDialog extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Choisissez le format d\'export :',
+                'Choisissez le format d\'export',
                 style: context.bodySmall?.copyWith(
                   color: context.adaptiveTextSecondary,
                   fontSize: 15,
@@ -65,9 +63,6 @@ class ExportFormatDialog extends StatelessWidget {
                           case RouteExportFormat.kml:
                             onKmlSelected();
                             break;
-                          case RouteExportFormat.json:
-                            onJsonSelected();
-                            break;
                         }
                       },
                     ),
@@ -91,9 +86,6 @@ class ExportFormatDialog extends StatelessWidget {
       case RouteExportFormat.kml:
         icon = HugeIcons.strokeRoundedEarth;
         break;
-      case RouteExportFormat.json:
-        icon = HugeIcons.strokeRoundedFileScript;
-        break;
     }
 
     return SquircleContainer(
@@ -115,7 +107,7 @@ class ExportFormatDialog extends StatelessWidget {
               size: 25,
             ),
           ),
-          15.w,
+          10.w,
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -127,7 +119,6 @@ class ExportFormatDialog extends StatelessWidget {
                     fontWeight: FontWeight.w600,
                   ),
                 ),
-                SizedBox(height: 4),
                 Text(
                   format.description,
                   style: context.bodySmall?.copyWith(

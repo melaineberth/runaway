@@ -48,87 +48,85 @@ class _LoginScreenState extends State<LoginScreen> {
   
   @override
   Widget build(BuildContext context) {
-    return Padding(
-        padding: const EdgeInsets.all(20.0),
-        child: Column(
-          children: [
-            _buildSignInInfo(),
-            40.h,
-            _buildSocialButtons(),
-            30.h,
-            LabelDivider(),
-            30.h,
-            Form(
-              key: _formKey,
-              child: Padding(
-                padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    AuthTextField(
-                      hint: context.l10n.emailHint,
-                      validator: emailValidator,
-                      controller: _emailController,
-                      enabled: !widget.isLoading,
-                    ),
-                    10.h,
-                    AuthTextField(
-                      hint: context.l10n.passwordHint,
-                      obscureText: true,
-                      validator: passwordValidator,
-                      controller: _passwordController,
-                      enabled: !widget.isLoading,
-                    ),
-                    20.h,
-                    Align(
-                      alignment: Alignment.centerRight,
-                      child: GestureDetector(
-                        onTap: widget.isLoading ? null : _showForgotPasswordDialog,
-                        child: Text(
-                          context.l10n.forgotPassword,
-                          style: context.bodySmall?.copyWith(
-                            fontSize: 14,
-                            color: context.adaptiveTextPrimary,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
+    return Column(
+      children: [
+        const Spacer(),
+        _buildSignInInfo(),
+        40.h,
+        _buildSocialButtons(),
+        30.h,
+        LabelDivider(),
+        30.h,
+        Form(
+          key: _formKey,
+          child: Padding(
+            padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                AuthTextField(
+                  hint: context.l10n.emailHint,
+                  validator: emailValidator,
+                  controller: _emailController,
+                  enabled: !widget.isLoading,
+                ),
+                10.h,
+                AuthTextField(
+                  hint: context.l10n.passwordHint,
+                  obscureText: true,
+                  validator: passwordValidator,
+                  controller: _passwordController,
+                  enabled: !widget.isLoading,
+                ),
+                20.h,
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: GestureDetector(
+                    onTap: widget.isLoading ? null : _showForgotPasswordDialog,
+                    child: Text(
+                      context.l10n.forgotPassword,
+                      style: context.bodySmall?.copyWith(
+                        fontSize: 14,
+                        color: context.adaptiveTextPrimary,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
-                  ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        20.h,
+        _buildSignInButton(),
+        const Spacer(),
+        Text.rich(
+          TextSpan(
+            children: [
+              TextSpan(
+                text: context.l10n.createAccountQuestion,
+                style: context.bodySmall?.copyWith(
+                  fontSize: 15,
+                  color: context.adaptiveTextPrimary,
+                  fontWeight: FontWeight.w500,
                 ),
               ),
-            ),
-            20.h,
-            _buildSignInButton(),
-            const Spacer(),
-            Text.rich(
               TextSpan(
-                children: [
-                  TextSpan(
-                    text: context.l10n.createAccountQuestion,
-                    style: context.bodySmall?.copyWith(
-                      fontSize: 15,
-                      color: context.adaptiveTextPrimary,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  TextSpan(
-                    text: ' ${context.l10n.signUp}',
-                    style: context.bodySmall?.copyWith(
-                      fontSize: 15,
-                      color: context.adaptivePrimary,
-                      fontWeight: FontWeight.w700,
-                    ),
-                    recognizer: TapGestureRecognizer()..onTap = widget.onSwitchToSignup,
-                  ),
-                ],
+                text: ' ${context.l10n.signUp}',
+                style: context.bodySmall?.copyWith(
+                  fontSize: 15,
+                  color: context.adaptivePrimary,
+                  fontWeight: FontWeight.w700,
+                ),
+                recognizer: TapGestureRecognizer()..onTap = widget.onSwitchToSignup,
               ),
-            ),
-            10.h,
-          ],
+            ],
+          ),
         ),
-      );
+        10.h,
+      ],
+    );
   }
 
   Widget _buildSignInInfo() {

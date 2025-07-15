@@ -60,9 +60,7 @@ class MonitoringService {
       );
 
       // 5. Créer la table de logs si nécessaire
-      if (SecureConfig.isSupabaseLoggingEnabled) {
-        await _ensureSupabaseTablesExist();
-      }
+      print('ℹ️ Vérification tables Supabase reportée après initialisation Supabase');
 
     } catch (e, stackTrace) {
       print('❌ Erreur initialisation MonitoringService: $e');
@@ -79,6 +77,17 @@ class MonitoringService {
       } catch (sentryError) {
         print('❌ Impossible d\'envoyer l\'erreur vers Sentry: $sentryError');
       }
+    }
+  }
+
+  /// 🆕 Vérifie les tables Supabase après initialisation
+  Future<void> checkSupabaseTablesLater() async {
+    if (!_isInitialized || !SecureConfig.isSupabaseLoggingEnabled) return;
+
+    try {
+      await _ensureSupabaseTablesExist();
+    } catch (e) {
+      print('❌ Erreur vérification tables Supabase: $e');
     }
   }
 

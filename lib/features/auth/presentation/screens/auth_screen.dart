@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:runaway/config/extensions.dart';
 import 'package:runaway/core/widgets/icon_btn.dart';
+import 'package:runaway/core/widgets/modal_sheet.dart';
 import 'package:runaway/core/widgets/top_snackbar.dart';
 import 'package:runaway/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:runaway/features/auth/presentation/bloc/auth_state.dart';
@@ -75,39 +76,41 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
           );
         }
       },
-      child: Scaffold(
-        resizeToAvoidBottomInset: false,   
-        appBar: AppBar(
-          automaticallyImplyLeading: false,
-          actions: [
-            IconBtn(
+      child: Stack(
+        children: [
+          ModalSheet(
+            child: BlocBuilder<AuthBloc, AuthState>(
+              builder: (context, authState) {
+                final isLoading = authState is AuthLoading;
+                
+                return PageView(
+                controller: _pageController,
+                physics: const NeverScrollableScrollPhysics(),
+                  children: [
+                    SignupScreen(
+                      onSwitchToLogin: _switchToLogin,
+                      isLoading: isLoading,
+                    ),
+                    LoginScreen(
+                      onSwitchToSignup: _switchToSignup,
+                      isLoading: isLoading,
+                    ),
+                  ],
+                );
+              },
+            ),
+          ),
+          Positioned(
+            right: 15,
+            top: 15,
+            child: IconBtn(
               backgroundColor: Colors.transparent,
               icon: HugeIcons.solidRoundedCancelCircle,
               iconColor: context.adaptiveDisabled.withValues(alpha: 0.2),
               onPressed: () => context.pop(),
-            ),  
-          ],
-        ),
-        body: BlocBuilder<AuthBloc, AuthState>(
-          builder: (context, authState) {
-            final isLoading = authState is AuthLoading;
-            
-            return PageView(
-            controller: _pageController,
-            physics: const NeverScrollableScrollPhysics(),
-              children: [
-                SignupScreen(
-                  onSwitchToLogin: _switchToLogin,
-                  isLoading: isLoading,
-                ),
-                LoginScreen(
-                  onSwitchToSignup: _switchToSignup,
-                  isLoading: isLoading,
-                ),
-              ],
-            );
-          },
-        ),
+            ),
+          ),  
+        ],
       ),
     );
   }
