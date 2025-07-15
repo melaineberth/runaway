@@ -4,9 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:runaway/core/services/app_data_initialization_service.dart';
 import 'package:runaway/features/auth/data/repositories/auth_repository.dart';
 import 'package:runaway/features/auth/domain/models/profile.dart';
-import 'package:runaway/features/credits/data/repositories/credits_repository.dart';
 import 'package:runaway/features/credits/presentation/blocs/credits_bloc.dart';
-import 'package:runaway/features/credits/presentation/blocs/credits_event.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' as supabase;
 import 'auth_event.dart';
 import 'auth_state.dart';
@@ -382,16 +380,16 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   Future<void> _onLogout(LogOutRequested e, Emitter<AuthState> emit) async {
     emit(AuthLoading());
     
-    // 🆕 Nettoyer le cache des crédits
-    if (_creditsBloc != null) {
-      _creditsBloc.add(const CreditsReset());
-      try {
-        final creditsRepo = CreditsRepository();
-        await creditsRepo.clearCache();
-      } catch (error) {
-        print('⚠️ Erreur nettoyage cache crédits: $error');
-      }
-    }
+    // // 🆕 Nettoyer le cache des crédits
+    // if (_creditsBloc != null) {
+    //   _creditsBloc.add(const CreditsReset());
+    //   try {
+    //     final creditsRepo = CreditsRepository();
+    //     await creditsRepo.clearCache();
+    //   } catch (error) {
+    //     print('⚠️ Erreur nettoyage cache crédits: $error');
+    //   }
+    // }
     
     await _repo.logOut();
     emit(Unauthenticated());

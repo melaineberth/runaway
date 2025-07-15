@@ -216,7 +216,7 @@ class CreditsBloc extends Bloc<CreditsEvent, CreditsState> {
   ) async {
     try {
       // Rafraîchir les crédits utilisateur après l'achat
-      final updatedCredits = await _creditsRepository.refreshUserCredits();
+      final updatedCredits = await _creditsRepository.getUserCredits();
       
       // Récupérer le plan acheté
       final plans = await _creditsRepository.getCreditPlans();
@@ -290,7 +290,7 @@ class CreditsBloc extends Bloc<CreditsEvent, CreditsState> {
     emit(const CreditsLoading());
 
     try {
-      final transactions = await _creditsRepository.getTransactionHistory(
+      final transactions = await _creditsRepository.getCreditTransactions(
         limit: event.limit,
         offset: event.offset,
       );

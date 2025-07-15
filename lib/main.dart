@@ -36,52 +36,161 @@ void main() async {
     // Observer pour debug
     Bloc.observer = AppBlocObserver();
 
-    // Charger les variables d'environnement
-    await dotenv.load(fileName: ".env");
+    // ✅ PHASE 1 : Initialisation parallèle des services critiques
+    await _initializeCriticalServices();
 
-    // Initialiser Supabase
-    await Supabase.initialize(
-      url: SecureConfig.supabaseUrl,
-      anonKey: SecureConfig.supabaseAnonKey,
-    );
-    print('✅ Supabase initialisé');
+    // ✅ PHASE 2 : Initialisation parallèle des services secondaires  
+    await _initializeSecondaryServices();
 
-    // 🆕 SÉCURISATION: Utiliser la configuration sécurisée
-    SecureConfig.validateConfiguration();
-
-    // 🆕 Initialiser le gestionnaire de session
-    SessionManager.instance.startSessionMonitoring();
-
-    // Initialiser IAP
-    await IAPService.initialize();
-
-    // Initialiser HydratedBloc pour la persistance
-    final directory = await getApplicationDocumentsDirectory();
-    HydratedBloc.storage = await HydratedStorage.build(
-      storageDirectory: HydratedStorageDirectory(directory.path),
-    );
-    print('✅ HydratedBloc storage initialisé');
-
-    // Initialiser les services avec pré-chargement de géolocalisation
-    await AppInitializationService.initialize();
-
-    // Configurer Mapbox
-    MapboxOptions.setAccessToken(SecureConfig.mapboxToken);
-    print('✅ Mapbox configuré avec token sécurisé');
-
-    await NotificationService.instance.initialize();
-    await ConversionService.instance.initializeSession();
-
-    // Initialiser l'injection de dépendances
-    await ServiceLocator.init();
-    print('✅ ServiceLocator initialisé');
+    // ✅ PHASE 3 : Finalisation
+    await _finalizeInitialization();
     
     runApp(const Trailix());
     
   } catch (e) {
     print('❌ Erreur lors de l\'initialisation: $e');
-    SessionManager.instance.stopSessionMonitoring(); // Nettoyage en cas d'erreur
+    SessionManager.instance.stopSessionMonitoring();
     runApp(ErrorApp(error: e.toString()));
+  }
+}
+
+/// Phase 1 : Services critiques en parallèle
+Future<void> _initializeCriticalServices() async {
+  print('🚀 Phase 1 : Initialisation services critiques...');
+  
+  await Future.wait([
+    // Configuration et environnement
+    _loadEnvironmentConfig(),
+    // Storage local pour HydratedBloc
+    _initializeHydratedStorage(),
+  ]);
+  
+  print('✅ Phase 1 terminée');
+}
+
+/// Phase 2 : Services secondaires en parallèle
+Future<void> _initializeSecondaryServices() async {
+  print('🚀 Phase 2 : Initialisation services secondaires...');
+  
+  // ✅ D'abord Supabase, puis les services qui en dépendent
+  await _initializeSupabase();
+  
+  await Future.wait([
+    // Services externes (après Supabase)
+    _initializeIAP(),
+    _initializeSessionMonitoring(), // ✅ Maintenant après Supabase
+    // Services de notification
+    _initializeNotificationServices(),
+  ]);
+  
+  print('✅ Phase 2 terminée');
+}
+
+/// Phase 3 : Finalisation et DI
+Future<void> _finalizeInitialization() async {
+  print('🚀 Phase 3 : Finalisation...');
+  
+  await Future.wait([
+    // Configuration Mapbox
+    _configureMapbox(),
+    // Initialisation des services app
+    AppInitializationService.initialize(),
+    // Injection de dépendances
+    ServiceLocator.init(),
+    // Services de conversion
+    _initializeConversionService(),
+  ]);
+  
+  print('✅ Phase 3 terminée');
+}
+
+// ===== SERVICES INDIVIDUELS =====
+
+Future<void> _loadEnvironmentConfig() async {
+  try {
+    await dotenv.load(fileName: ".env");
+    SecureConfig.validateConfiguration();
+    print('✅ Configuration environnement chargée');
+  } catch (e) {
+    print('❌ Erreur chargement environnement: $e');
+    rethrow;
+  }
+}
+
+Future<void> _initializeHydratedStorage() async {
+  try {
+    final directory = await getApplicationDocumentsDirectory();
+    HydratedBloc.storage = await HydratedStorage.build(
+      storageDirectory: HydratedStorageDirectory(directory.path),
+    );
+    print('✅ HydratedBloc storage initialisé');
+  } catch (e) {
+    print('❌ Erreur HydratedStorage: $e');
+    rethrow;
+  }
+}
+
+Future<void> _initializeSupabase() async {
+  try {
+    await Supabase.initialize(
+      url: SecureConfig.supabaseUrl,
+      anonKey: SecureConfig.supabaseAnonKey,
+    );
+    print('✅ Supabase initialisé');
+  } catch (e) {
+    print('❌ Erreur Supabase: $e');
+    rethrow;
+  }
+}
+
+/// ✅ Session monitoring maintenant après Supabase
+Future<void> _initializeSessionMonitoring() async {
+  try {
+    SessionManager.instance.startSessionMonitoring();
+    print('✅ Session monitoring démarré');
+  } catch (e) {
+    print('⚠️ Erreur session monitoring (non bloquant): $e');
+    // Non critique, continue l'initialisation
+  }
+}
+
+Future<void> _initializeIAP() async {
+  try {
+    await IAPService.initialize();
+    print('✅ IAP initialisé');
+  } catch (e) {
+    print('⚠️ Erreur IAP (non bloquant): $e');
+    // Non critique pour le démarrage
+  }
+}
+
+Future<void> _initializeNotificationServices() async {
+  try {
+    await NotificationService.instance.initialize();
+    print('✅ Notifications initialisées');
+  } catch (e) {
+    print('⚠️ Erreur notifications (non bloquant): $e');
+    // Non critique pour le démarrage
+  }
+}
+
+Future<void> _configureMapbox() async {
+  try {
+    MapboxOptions.setAccessToken(SecureConfig.mapboxToken);
+    print('✅ Mapbox configuré');
+  } catch (e) {
+    print('⚠️ Erreur Mapbox (non bloquant): $e');
+    // Non critique pour le démarrage
+  }
+}
+
+Future<void> _initializeConversionService() async {
+  try {
+    await ConversionService.instance.initializeSession();
+    print('✅ Service de conversion initialisé');
+  } catch (e) {
+    print('⚠️ Erreur service conversion (non bloquant): $e');
+    // Non critique pour le démarrage
   }
 }
 

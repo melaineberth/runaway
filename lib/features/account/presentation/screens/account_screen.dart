@@ -18,7 +18,6 @@ import 'package:runaway/core/blocs/notification/notification_event.dart';
 import 'package:runaway/core/blocs/notification/notification_state.dart';
 import 'package:runaway/core/blocs/theme_bloc/theme_bloc.dart';
 import 'package:runaway/core/di/bloc_provider_extension.dart';
-import 'package:runaway/core/mixins/auth_guard_mixin.dart';
 import 'package:runaway/core/widgets/blurry_app_bar.dart';
 import 'package:runaway/core/widgets/blurry_page.dart';
 import 'package:runaway/core/widgets/icon_btn.dart';
@@ -44,7 +43,7 @@ class AccountScreen extends StatefulWidget {
   State<AccountScreen> createState() => _AccountScreenState();
 }
 
-class _AccountScreenState extends State<AccountScreen> with TickerProviderStateMixin, AuthGuardMixin<AccountScreen> {
+class _AccountScreenState extends State<AccountScreen> with TickerProviderStateMixin {
   late AnimationController _fadeController;
   late Animation<double> _fadeAnimation;
   
@@ -563,7 +562,6 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
       },
     );
   }
-
 
   Widget _buildAppVersion() {
     return Column(

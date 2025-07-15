@@ -1,26 +1,41 @@
-import 'dart:convert';
 import 'package:runaway/core/errors/auth_exceptions.dart';
+import 'package:runaway/core/services/cache_service.dart';
 import 'package:runaway/features/credits/domain/models/user_credits.dart';
 import 'package:runaway/features/credits/domain/models/credit_plan.dart';
 import 'package:runaway/features/credits/domain/models/credit_transaction.dart';
 import 'package:runaway/features/credits/domain/models/credit_usage_result.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
+/// Repository optimisé pour les crédits avec CacheService intégré
 class CreditsRepository {
   final SupabaseClient _supabase = Supabase.instance.client;
-  static const String _creditsCacheKey = 'cached_user_credits';
-  static const String _plansCacheKey = 'cached_credit_plans';
+  final CacheService _cache = CacheService.instance;
 
-  /// Récupère les crédits de l'utilisateur connecté
-  Future<UserCredits> getUserCredits() async {
+  /// Récupère les crédits de l'utilisateur connecté avec cache intelligent
+  Future<UserCredits> getUserCredits({bool forceRefresh = false}) async {
     final user = _supabase.auth.currentUser;
     if (user == null) {
       throw SessionException('Utilisateur non connecté');
     }
 
+    // Vérifier le cache d'abord (sauf si forceRefresh)
+    if (!forceRefresh) {
+      // ✅ FIX: Récupérer comme Map puis convertir
+      final cachedCreditsRaw = await _cache.get<Map>('cache_user_credits');
+      if (cachedCreditsRaw != null) {
+        try {
+          final cachedCredits = UserCredits.fromJson(Map<String, dynamic>.from(cachedCreditsRaw));
+          print('📦 Crédits récupérés depuis le cache: ${cachedCredits.availableCredits}');
+          return cachedCredits;
+        } catch (e) {
+          print('❌ Erreur conversion cache crédits: $e');
+          // Continuer vers l'API si erreur de conversion
+        }
+      }
+    }
+
     try {
-      print('💰 Récupération des crédits pour: ${user.id}');
+      print('🌐 Récupération des crédits depuis l\'API pour: ${user.id}');
       
       final data = await _supabase
           .from('user_credits')
@@ -30,8 +45,8 @@ class CreditsRepository {
 
       final credits = UserCredits.fromJson(data);
       
-      // Cache local pour mode offline
-      await _cacheCredits(credits);
+      // Mise en cache avec expiration
+      await _cache.set('cache_user_credits', credits);
       
       print('✅ Crédits récupérés: ${credits.availableCredits} disponibles');
       return credits;
@@ -39,11 +54,16 @@ class CreditsRepository {
     } catch (e) {
       print('❌ Erreur récupération crédits: $e');
       
-      // Tentative de récupération depuis le cache
-      final cachedCredits = await _getCachedCredits();
-      if (cachedCredits != null) {
-        print('📦 Crédits récupérés depuis le cache');
-        return cachedCredits;
+      // Tentative de récupération depuis le cache en cas d'erreur
+      final cachedCreditsRaw = await _cache.get<Map>('cache_user_credits');
+      if (cachedCreditsRaw != null) {
+        try {
+          final cachedCredits = UserCredits.fromJson(Map<String, dynamic>.from(cachedCreditsRaw));
+          print('📦 Crédits récupérés depuis le cache de secours');
+          return cachedCredits;
+        } catch (e) {
+          print('❌ Erreur conversion cache de secours: $e');
+        }
       }
       
       if (e is PostgrestException) {
@@ -57,7 +77,7 @@ class CreditsRepository {
     }
   }
 
-  /// Utilise des crédits pour une action
+  /// Utilise des crédits avec transaction atomique et cache intelligent
   Future<CreditUsageResult> useCredits({
     required int amount,
     required String reason,
@@ -69,61 +89,72 @@ class CreditsRepository {
       throw SessionException('Utilisateur non connecté');
     }
 
-    if (amount <= 0) {
-      throw ValidationException([
-        ValidationError(field: 'amount', message: 'Le nombre de crédits doit être positif')
-      ]);
-    }
-
     try {
-      print('💸 Utilisation de $amount crédits pour: $reason');
+      print('💰 Utilisation de $amount crédits pour: $reason');
       
-      // Appel de la fonction PostgreSQL pour garantir l'atomicité
-      final result = await _supabase.rpc('process_credit_transaction', params: {
-        'p_user_id': user.id,
-        'p_amount': -amount, // Négatif pour utilisation
-        'p_transaction_type': 'usage',
-        'p_description': reason,
-        'p_route_generation_id': routeGenerationId,
-        'p_metadata': metadata ?? {},
+      // Appel de la fonction Supabase avec transaction atomique
+      final response = await _supabase.rpc('use_credits', params: {
+        'user_id': user.id,
+        'amount': amount,
+        'reason': reason,
+        'route_generation_id': routeGenerationId,
+        'metadata': metadata,
       });
 
-      if (result['success'] == true) {
-        // Récupérer les crédits mis à jour
-        final updatedCredits = await getUserCredits();
+      final result = CreditUsageResult.fromJson(response);
+      
+      if (result.success) {
+        // Invalider le cache des crédits après utilisation
+        await _cache.invalidateCreditsCache();
         
-        print('✅ Crédits utilisés avec succès. Solde: ${updatedCredits.availableCredits}');
+        // Optionnel: Mettre à jour le cache avec les nouvelles données
+        if (result.newCredits != null) {
+          await _cache.set('cache_user_credits', result.newCredits!);
+        }
         
-        return CreditUsageResult.success(
-          updatedCredits: updatedCredits,
-          transactionId: result['transaction_id'],
-        );
+        print('✅ Crédits utilisés avec succès. Nouveau solde: ${result.newCredits?.availableCredits}');
       } else {
-        throw Exception('Échec de la transaction: ${result['error'] ?? 'Erreur inconnue'}');
+        print('❌ Échec utilisation crédits: ${result.error}');
       }
+      
+      return result;
       
     } catch (e) {
       print('❌ Erreur utilisation crédits: $e');
       
-      if (e.toString().contains('Crédits insuffisants')) {
-        return CreditUsageResult.failure(
-          errorMessage: 'Vous n\'avez pas assez de crédits pour cette action',
+      if (e is PostgrestException) {
+        throw ServerException(
+          'Erreur lors de l\'utilisation des crédits',
+          e.code?.isNotEmpty == true ? int.tryParse(e.code!) ?? 500 : 500,
         );
       }
       
-      return CreditUsageResult.failure(
-        errorMessage: 'Erreur lors de l\'utilisation des crédits',
-      );
+      throw NetworkException('Impossible d\'utiliser les crédits');
     }
   }
 
-  /// Achète des crédits selon un plan
-  Future<UserCredits> refreshUserCredits() => getUserCredits();
+  /// Récupère les plans de crédits disponibles avec cache long terme
+  Future<List<CreditPlan>> getCreditPlans({bool forceRefresh = false}) async {
+    // Cache avec durée plus longue pour les plans (ils changent rarement)
+    if (!forceRefresh) {
+      // ✅ FIX: Récupérer comme List<dynamic> puis convertir
+      final cachedPlansRaw = await _cache.get<List>('cache_credit_plans');
+      if (cachedPlansRaw != null) {
+        try {
+          final cachedPlans = cachedPlansRaw
+              .map((item) => CreditPlan.fromJson(item as Map<String, dynamic>))
+              .toList();
+          print('📦 Plans récupérés depuis le cache: ${cachedPlans.length} plans');
+          return cachedPlans;
+        } catch (e) {
+          print('❌ Erreur conversion cache plans: $e');
+          // Continuer vers l'API si erreur de conversion
+        }
+      }
+    }
 
-  /// Récupère tous les plans de crédits disponibles
-  Future<List<CreditPlan>> getCreditPlans() async {
     try {
-      print('📋 Récupération des plans de crédits');
+      print('🌐 Récupération des plans depuis l\'API');
       
       final data = await _supabase
           .from('credit_plans')
@@ -131,56 +162,128 @@ class CreditsRepository {
           .eq('is_active', true)
           .order('price');
 
-      final plans = (data as List<dynamic>)
-          .map((planData) => CreditPlan.fromJson(planData))
-          .toList();
+      final plans = data.map((item) => CreditPlan.fromJson(item)).toList();
       
-      // Cache local
-      await _cachePlans(plans);
+      // Cache avec expiration longue (2 heures)
+      await _cache.set('cache_credit_plans', plans, 
+        customExpiration: const Duration(hours: 2));
       
-      print('✅ ${plans.length} plans récupérés');
+      print('✅ Plans récupérés: ${plans.length} plans disponibles');
       return plans;
       
     } catch (e) {
       print('❌ Erreur récupération plans: $e');
       
-      // Tentative de récupération depuis le cache
-      final cachedPlans = await _getCachedPlans();
-      if (cachedPlans != null && cachedPlans.isNotEmpty) {
-        print('📦 Plans récupérés depuis le cache');
-        return cachedPlans;
+      // Tentative de récupération depuis le cache en cas d'erreur
+      final cachedPlansRaw = await _cache.get<List>('cache_credit_plans');
+      if (cachedPlansRaw != null) {
+        try {
+          final cachedPlans = cachedPlansRaw
+              .map((item) => CreditPlan.fromJson(item as Map<String, dynamic>))
+              .toList();
+          print('📦 Plans récupérés depuis le cache de secours');
+          return cachedPlans;
+        } catch (e) {
+          print('❌ Erreur conversion cache de secours: $e');
+        }
       }
       
-      throw NetworkException('Impossible de récupérer les plans de crédits');
+      if (e is PostgrestException) {
+        throw ServerException(
+          'Erreur lors de la récupération des plans',
+          e.code?.isNotEmpty == true ? int.tryParse(e.code!) ?? 500 : 500,
+        );
+      }
+      
+      throw NetworkException('Impossible de récupérer les plans');
     }
   }
 
-  /// Récupère un plan spécifique par son ID
-  Future<CreditPlan?> getCreditPlan(String planId) async {
-    try {
-      final data = await _supabase
-          .from('credit_plans')
-          .select()
-          .eq('id', planId)
-          .eq('is_active', true)
-          .maybeSingle();
+  /// Récupère l'historique des transactions avec pagination et cache
+    Future<List<CreditTransaction>> getCreditTransactions({
+    int limit = 20,
+    int offset = 0,
+    bool forceRefresh = false,
+  }) async {
+    final user = _supabase.auth.currentUser;
+    if (user == null) {
+      throw SessionException('Utilisateur non connecté');
+    }
 
-      if (data == null) {
-        return null;
+    final cacheKey = 'cache_credit_transactions_${offset}_$limit';
+    
+    // Vérifier le cache
+    if (!forceRefresh) {
+      // ✅ FIX: Récupérer comme List<dynamic> puis convertir
+      final cachedTransactionsRaw = await _cache.get<List>(cacheKey);
+      if (cachedTransactionsRaw != null) {
+        try {
+          final cachedTransactions = cachedTransactionsRaw
+              .map((item) => CreditTransaction.fromJson(item as Map<String, dynamic>))
+              .toList();
+          print('📦 Transactions récupérées depuis le cache: ${cachedTransactions.length}');
+          return cachedTransactions;
+        } catch (e) {
+          print('❌ Erreur conversion cache transactions: $e');
+          // Continuer vers l'API si erreur de conversion
+        }
       }
+    }
 
-      return CreditPlan.fromJson(data);
+    try {
+      print('🌐 Récupération des transactions depuis l\'API');
+      
+      final data = await _supabase
+          .from('credit_transactions')
+          .select()
+          .eq('user_id', user.id)
+          .order('created_at', ascending: false)
+          .limit(limit)
+          .range(offset, offset + limit - 1);
+
+      final transactions = data.map((item) => CreditTransaction.fromJson(item)).toList();
+      
+      // Cache avec expiration courte (5 minutes)
+      await _cache.set(cacheKey, transactions, 
+        customExpiration: const Duration(minutes: 5));
+      
+      print('✅ Transactions récupérées: ${transactions.length}');
+      return transactions;
       
     } catch (e) {
-      print('❌ Erreur récupération plan $planId: $e');
-      return null;
+      print('❌ Erreur récupération transactions: $e');
+      
+      // Tentative de récupération depuis le cache
+      final cachedTransactionsRaw = await _cache.get<List>(cacheKey);
+      if (cachedTransactionsRaw != null) {
+        try {
+          final cachedTransactions = cachedTransactionsRaw
+              .map((item) => CreditTransaction.fromJson(item as Map<String, dynamic>))
+              .toList();
+          print('📦 Transactions récupérées depuis le cache de secours');
+          return cachedTransactions;
+        } catch (e) {
+          print('❌ Erreur conversion cache de secours: $e');
+        }
+      }
+      
+      if (e is PostgrestException) {
+        throw ServerException(
+          'Erreur lors de la récupération des transactions',
+          e.code?.isNotEmpty == true ? int.tryParse(e.code!) ?? 500 : 500,
+        );
+      }
+      
+      throw NetworkException('Impossible de récupérer les transactions');
     }
   }
 
-  /// Récupère l'historique des transactions
-  Future<List<CreditTransaction>> getTransactionHistory({
-    int limit = 50,
-    int offset = 0,
+  /// Ajoute des crédits après un achat IAP
+  Future<UserCredits> addCredits({
+    required int amount,
+    required String transactionId,
+    required String productId,
+    Map<String, dynamic>? metadata,
   }) async {
     final user = _supabase.auth.currentUser;
     if (user == null) {
@@ -188,98 +291,67 @@ class CreditsRepository {
     }
 
     try {
-      print('📊 Récupération historique transactions (limit: $limit, offset: $offset)');
+      print('💰 Ajout de $amount crédits après achat IAP');
       
-      final data = await _supabase
-          .from('credit_transactions')
-          .select()
-          .eq('user_id', user.id)
-          .order('created_at', ascending: false)
-          .range(offset, offset + limit - 1);
+      // Appel de la fonction Supabase avec transaction atomique
+      final response = await _supabase.rpc('add_credits', params: {
+        'user_id': user.id,
+        'amount': amount,
+        'transaction_id': transactionId,
+        'product_id': productId,
+        'metadata': metadata,
+      });
 
-      final transactions = (data as List<dynamic>)
-          .map((transactionData) => CreditTransaction.fromJson(transactionData))
-          .toList();
+      final newCredits = UserCredits.fromJson(response);
       
-      print('✅ ${transactions.length} transactions récupérées');
-      return transactions;
+      // Invalider tout le cache crédits après ajout
+      await _cache.invalidateCreditsCache();
+      
+      // Mettre à jour le cache avec les nouvelles données
+      await _cache.set('cache_user_credits', newCredits);
+      
+      print('✅ Crédits ajoutés avec succès. Nouveau solde: ${newCredits.availableCredits}');
+      return newCredits;
       
     } catch (e) {
-      print('❌ Erreur récupération historique: $e');
-      throw NetworkException('Impossible de récupérer l\'historique');
+      print('❌ Erreur ajout crédits: $e');
+      
+      if (e is PostgrestException) {
+        throw ServerException(
+          'Erreur lors de l\'ajout des crédits',
+          e.code?.isNotEmpty == true ? int.tryParse(e.code!) ?? 500 : 500,
+        );
+      }
+      
+      throw NetworkException('Impossible d\'ajouter les crédits');
     }
   }
 
+  /// Invalide spécifiquement le cache des crédits
+  Future<void> invalidateCreditsCache() async {
+    await _cache.invalidateCreditsCache();
+    print('🧹 Cache crédits invalidé');
+  }
+
   /// Vérifie si l'utilisateur a suffisamment de crédits
-  Future<bool> hasEnoughCredits(int requiredCredits) async {
+  Future<bool> hasEnoughCredits(int requiredAmount) async {
     try {
       final credits = await getUserCredits();
-      return credits.availableCredits >= requiredCredits;
+      return credits.availableCredits >= requiredAmount;
     } catch (e) {
       print('❌ Erreur vérification crédits: $e');
       return false;
     }
   }
 
-  // ============================================
-  // MÉTHODES PRIVÉES POUR LE CACHE LOCAL
-  // ============================================
-
-  Future<void> _cacheCredits(UserCredits credits) async {
+  /// Obtient le solde actuel rapidement (cache uniquement)
+  Future<int> getQuickBalance() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString(_creditsCacheKey, jsonEncode(credits.toJson()));
+      final cachedCredits = await _cache.get<UserCredits>('cache_user_credits');
+      return cachedCredits?.availableCredits ?? 0;
     } catch (e) {
-      print('⚠️ Erreur cache crédits: $e');
-    }
-  }
-
-  Future<UserCredits?> _getCachedCredits() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final cached = prefs.getString(_creditsCacheKey);
-      if (cached != null) {
-        return UserCredits.fromJson(jsonDecode(cached));
-      }
-    } catch (e) {
-      print('⚠️ Erreur lecture cache crédits: $e');
-    }
-    return null;
-  }
-
-  Future<void> _cachePlans(List<CreditPlan> plans) async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final plansJson = plans.map((plan) => plan.toJson()).toList();
-      await prefs.setString(_plansCacheKey, jsonEncode(plansJson));
-    } catch (e) {
-      print('⚠️ Erreur cache plans: $e');
-    }
-  }
-
-  Future<List<CreditPlan>?> _getCachedPlans() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final cached = prefs.getString(_plansCacheKey);
-      if (cached != null) {
-        final plansJson = jsonDecode(cached) as List<dynamic>;
-        return plansJson.map((planData) => CreditPlan.fromJson(planData)).toList();
-      }
-    } catch (e) {
-      print('⚠️ Erreur lecture cache plans: $e');
-    }
-    return null;
-  }
-
-  /// Clear cache (utile pour logout)
-  Future<void> clearCache() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.remove(_creditsCacheKey);
-      await prefs.remove(_plansCacheKey);
-      print('🧹 Cache crédits nettoyé');
-    } catch (e) {
-      print('⚠️ Erreur nettoyage cache: $e');
+      print('❌ Erreur lecture solde rapide: $e');
+      return 0;
     }
   }
 }

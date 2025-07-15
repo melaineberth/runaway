@@ -98,7 +98,7 @@ class AppDataBloc extends Bloc<AppDataEvent, AppDataState> {
       final futures = await Future.wait([
         _creditsRepository.getUserCredits(),
         _creditsRepository.getCreditPlans(),
-        _creditsRepository.getTransactionHistory(limit: 50),
+        _creditsRepository.getCreditTransactions(limit: 50),
       ]);
 
       final userCredits = futures[0] as UserCredits;
@@ -258,7 +258,7 @@ class AppDataBloc extends Bloc<AppDataEvent, AppDataState> {
       final futures = await Future.wait([
         _creditsRepository.getUserCredits(),
         _creditsRepository.getCreditPlans(),
-        _creditsRepository.getTransactionHistory(limit: 50),
+        _creditsRepository.getCreditTransactions(limit: 50),
       ]);
 
       final userCredits = futures[0] as UserCredits;

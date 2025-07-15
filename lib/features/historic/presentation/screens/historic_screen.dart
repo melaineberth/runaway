@@ -9,7 +9,6 @@ import 'package:runaway/core/blocs/app_data/app_data_bloc.dart';
 import 'package:runaway/core/blocs/app_data/app_data_event.dart';
 import 'package:runaway/core/blocs/app_data/app_data_state.dart';
 import 'package:runaway/core/di/bloc_provider_extension.dart';
-import 'package:runaway/core/mixins/auth_guard_mixin.dart';
 import 'package:runaway/core/services/conversion_triggers.dart';
 import 'package:runaway/core/widgets/blurry_app_bar.dart';
 import 'package:runaway/core/widgets/blurry_page.dart';
@@ -39,7 +38,7 @@ class HistoricScreen extends StatefulWidget {
   State<HistoricScreen> createState() => _HistoricScreenState();
 }
 
-class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStateMixin, AuthGuardMixin<HistoricScreen> {
+class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStateMixin {
   bool isEditMode = true;
 
   // 🎭 Animation Controllers
