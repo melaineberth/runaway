@@ -1,4 +1,9 @@
+import 'dart:async';
+
 import 'package:hydrated_bloc/hydrated_bloc.dart';
+import 'package:runaway/core/services/logging_service.dart';
+import 'package:runaway/core/services/monitoring_service.dart';
+import 'package:runaway/features/route_generator/data/validation/route_parameters_validator.dart';
 import 'route_parameters_event.dart';
 import 'route_parameters_state.dart';
 import 'package:runaway/features/route_generator/domain/models/route_parameters.dart';
@@ -7,32 +12,31 @@ import 'package:runaway/features/route_generator/domain/models/terrain_type.dart
 import 'package:runaway/features/route_generator/domain/models/urban_density.dart';
 
 class RouteParametersBloc extends HydratedBloc<RouteParametersEvent, RouteParametersState> {
+  // Cache de validation pour éviter les recalculs
+  ValidationResult? _lastValidationResult;
+  RouteParameters? _lastValidatedParameters;
+  
+  // Debounce pour la validation en temps réel
+  Timer? _validationTimer;
+  static const Duration _validationDelay = Duration(milliseconds: 300);
+  
   RouteParametersBloc({
     required double startLongitude,
     required double startLatitude,
   }) : super(RouteParametersState(
-          parameters: RouteParameters(
-            activityType: ActivityType.running,
-            terrainType: TerrainType.mixed,
-            urbanDensity: UrbanDensity.mixed,
-            distanceKm: 5.0,
-            elevationGain: 0.0,
-            startLongitude: startLongitude,
-            startLatitude: startLatitude,
-          ),
-          history: [
-            RouteParameters(
-              activityType: ActivityType.running,
-              terrainType: TerrainType.mixed,
-              urbanDensity: UrbanDensity.mixed,
-              distanceKm: 5.0,
-              elevationGain: 0.0,
-              startLongitude: startLongitude,
-              startLatitude: startLatitude,
-            ),
-          ],
-          historyIndex: 0,
-        )) {
+    parameters: RouteParameters(
+      activityType: ActivityType.running,
+      terrainType: TerrainType.mixed,
+      urbanDensity: UrbanDensity.mixed,
+      distanceKm: 5.0,
+      elevationGain: 0.0,
+      startLongitude: 0.0,
+      startLatitude: 0.0,
+      isLoop: true,
+      avoidTraffic: true,
+      preferScenic: false,
+    ),
+  )) {
     on<ActivityTypeChanged>(_onActivityTypeChanged);
     on<TerrainTypeChanged>(_onTerrainTypeChanged);
     on<UrbanDensityChanged>(_onUrbanDensityChanged);
@@ -48,114 +52,106 @@ class RouteParametersBloc extends HydratedBloc<RouteParametersEvent, RouteParame
     on<LoopToggled>(_onLoopToggled);
     on<AvoidTrafficToggled>(_onAvoidTrafficToggled);
     on<PreferScenicToggled>(_onPreferScenicToggled);
+
+    // 🆕 AJOUTER : Gestionnaire pour l'événement ParametersValidated
+    on<ParametersValidated>(_onParametersValidated);
+    on<ValidationRequested>(_onValidationRequested);
+    on<QuickValidationRequested>(_onQuickValidationRequested);
+    on<ValidationHelpRequested>(_onValidationHelpRequested);
   }
 
-  void _onActivityTypeChanged(
-    ActivityTypeChanged event,
-    Emitter<RouteParametersState> emit,
-  ) {
-    final type = event.activityType;
-    double newDistance = state.parameters.distanceKm;
+  Future<void> _onActivityTypeChanged(
+    ActivityTypeChanged event, 
+    Emitter<RouteParametersState> emit
+  ) async {
+    LoggingService.instance.info(
+      'RouteParametersBloc',
+      'Changement type d\'activité',
+      data: {'from': state.parameters.activityType.name, 'to': event.activityType.name},
+    );
+
+    final newParameters = state.parameters.copyWith(
+      activityType: event.activityType,
+    );
+
+    // Auto-ajustement de la distance si nécessaire
+    final adjustedParameters = _autoAdjustParametersForActivity(newParameters, event.activityType);
     
-    if (newDistance < type.minDistance) {
-      newDistance = type.minDistance;
-    } else if (newDistance > type.maxDistance) {
-      newDistance = type.maxDistance;
-    }
-
-    _updateParameters(
-      emit,
-      state.parameters.copyWith(
-        activityType: type,
-        distanceKm: newDistance,
-      ),
-    );
-  }
-
-  void _onTerrainTypeChanged(
-    TerrainTypeChanged event,
-    Emitter<RouteParametersState> emit,
-  ) {
-    // ✅ CORRECTION : Ne plus forcer une élévation "suggérée"
-    // Juste vérifier que l'élévation actuelle ne dépasse pas le nouveau maximum du terrain
-    final maxElevation = state.parameters.distanceKm * event.terrainType.maxElevationGain;
-    final currentElevation = state.parameters.elevationGain;
-    final adjustedElevation = currentElevation > maxElevation ? maxElevation : currentElevation;
+    final newState = _addToHistory(state, adjustedParameters);
+    emit(newState);
     
-    _updateParameters(
-      emit,
-      state.parameters.copyWith(
-        terrainType: event.terrainType,
-        elevationGain: adjustedElevation, // ✅ Garde la valeur actuelle ou l'ajuste au max si nécessaire
-      ),
-    );
-  }
-
-  void _onUrbanDensityChanged(
-    UrbanDensityChanged event,
-    Emitter<RouteParametersState> emit,
-  ) {
-    _updateParameters(
-      emit,
-      state.parameters.copyWith(urbanDensity: event.urbanDensity),
-    );
-  }
-
-  void _onDistanceChanged(
-    DistanceChanged event,
-    Emitter<RouteParametersState> emit,
-  ) {
-    final km = event.distanceKm;
+    // Validation automatique différée
+    _scheduleValidation(adjustedParameters);
     
-    if (km < state.parameters.activityType.minDistance || 
-        km > state.parameters.activityType.maxDistance) {
-      emit(state.copyWith(
-        errorMessage: 'Distance invalide pour ${state.parameters.activityType.title}',
-      ));
-      return;
-    }
+    // Tracking analytique
+    MonitoringService.instance.recordMetric(
+      'activity_type_changed',
+      1,
+      tags: {
+        'new_type': event.activityType.name,
+        'auto_adjusted': (adjustedParameters != newParameters).toString(),
+      },
+    );
+  }
+
+  Future<void> _onDistanceChanged(
+    DistanceChanged event, 
+    Emitter<RouteParametersState> emit
+  ) async {
+    final newParameters = state.parameters.copyWith(distanceKm: event.distanceKm);
+    final newState = _addToHistory(state, newParameters);
+    emit(newState);
     
-    // ✅ CORRECTION : Ne plus modifier automatiquement l'élévation
-    // Juste vérifier que l'élévation actuelle ne dépasse pas le nouveau maximum
-    final maxElevation = km * state.parameters.terrainType.maxElevationGain;
-    final currentElevation = state.parameters.elevationGain;
-    final adjustedElevation = currentElevation > maxElevation ? maxElevation : currentElevation;
-
-    _updateParameters(
-      emit,
-      state.parameters.copyWith(
-        distanceKm: km,
-        elevationGain: adjustedElevation, // ✅ Garde la valeur actuelle ou l'ajuste au max si nécessaire
-      ),
-    );
+    // Validation en temps réel pour la distance
+    _scheduleValidation(newParameters);
   }
 
-  void _onElevationGainChanged(
-    ElevationGainChanged event,
-    Emitter<RouteParametersState> emit,
-  ) {
-    if (event.elevationGain < 0) return;
-
-    final maxElevation = state.parameters.distanceKm * state.parameters.terrainType.maxElevationGain;
-    final elevation = event.elevationGain > maxElevation ? maxElevation : event.elevationGain;
-
-    _updateParameters(
-      emit,
-      state.parameters.copyWith(elevationGain: elevation),
-    );
+  Future<void> _onElevationGainChanged(
+    ElevationGainChanged event, 
+    Emitter<RouteParametersState> emit
+  ) async {
+    final newParameters = state.parameters.copyWith(elevationGain: event.elevationGain);
+    final newState = _addToHistory(state, newParameters);
+    emit(newState);
+    
+    _scheduleValidation(newParameters);
   }
 
-  void _onStartLocationUpdated(
-    StartLocationUpdated event,
-    Emitter<RouteParametersState> emit,
-  ) {
-    _updateParameters(
-      emit,
-      state.parameters.copyWith(
-        startLongitude: event.longitude,
-        startLatitude: event.latitude,
-      ),
+  Future<void> _onTerrainTypeChanged(
+    TerrainTypeChanged event, 
+    Emitter<RouteParametersState> emit
+  ) async {
+    final newParameters = state.parameters.copyWith(terrainType: event.terrainType);
+    final newState = _addToHistory(state, newParameters);
+    emit(newState);
+    
+    _scheduleValidation(newParameters);
+  }
+
+  Future<void> _onUrbanDensityChanged(
+    UrbanDensityChanged event, 
+    Emitter<RouteParametersState> emit
+  ) async {
+    final newParameters = state.parameters.copyWith(urbanDensity: event.urbanDensity);
+    final newState = _addToHistory(state, newParameters);
+    emit(newState);
+    
+    _scheduleValidation(newParameters);
+  }
+
+  Future<void> _onStartLocationUpdated(
+    StartLocationUpdated event, 
+    Emitter<RouteParametersState> emit
+  ) async {
+    final newParameters = state.parameters.copyWith(
+      startLatitude: event.latitude,
+      startLongitude: event.longitude,
     );
+    
+    emit(state.copyWith(parameters: newParameters));
+    
+    // Validation immédiate pour la position
+    _performImmediateValidation(newParameters, emit);
   }
 
   void _onPresetApplied(
@@ -253,33 +249,102 @@ class RouteParametersBloc extends HydratedBloc<RouteParametersEvent, RouteParame
     }
   }
 
-  void _onLoopToggled(
-    LoopToggled event,
-    Emitter<RouteParametersState> emit,
-  ) {
-    _updateParameters(
-      emit,
-      state.parameters.copyWith(isLoop: event.isLoop),
-    );
+  Future<void> _onLoopToggled(
+    LoopToggled event, 
+    Emitter<RouteParametersState> emit
+  ) async {
+    final newParameters = state.parameters.copyWith(isLoop: event.isLoop);
+    final newState = _addToHistory(state, newParameters);
+    emit(newState);
+    
+    _scheduleValidation(newParameters);
   }
 
   void _onAvoidTrafficToggled(
     AvoidTrafficToggled event,
     Emitter<RouteParametersState> emit,
   ) {
-    _updateParameters(
-      emit,
-      state.parameters.copyWith(avoidTraffic: event.avoidTraffic),
-    );
+    final newParameters = state.parameters.copyWith(avoidTraffic: event.avoidTraffic);
+    final newState = _addToHistory(state, newParameters);
+    emit(newState);
+    
+    _scheduleValidation(newParameters);
   }
 
   void _onPreferScenicToggled(
     PreferScenicToggled event,
     Emitter<RouteParametersState> emit,
   ) {
-    _updateParameters(
-      emit,
-      state.parameters.copyWith(preferScenic: event.preferScenic),
+    final newParameters = state.parameters.copyWith(preferScenic: event.preferScenic);
+    final newState = _addToHistory(state, newParameters);
+    emit(newState);
+    
+    _scheduleValidation(newParameters);
+  }
+
+  Future<void> _onParametersValidated(
+    ParametersValidated event, 
+    Emitter<RouteParametersState> emit
+  ) async {
+    _cacheValidationResult(event.parameters, event.validationResult);
+    
+    emit(state.copyWith(
+      validationResult: event.validationResult,
+      errorMessage: event.validationResult.hasErrors ? event.validationResult.firstErrorMessage : null,
+    ));
+  }
+
+  Future<void> _onValidationRequested(
+    ValidationRequested event, 
+    Emitter<RouteParametersState> emit
+  ) async {
+    LoggingService.instance.info('RouteParametersBloc', 'Validation complète demandée');
+    
+    final validationResult = RouteParametersValidator.validate(state.parameters);
+    _cacheValidationResult(state.parameters, validationResult);
+    
+    emit(state.copyWith(
+      validationResult: validationResult,
+      errorMessage: validationResult.hasErrors ? validationResult.firstErrorMessage : null,
+    ));
+    
+    MonitoringService.instance.recordMetric(
+      'full_validation_performed',
+      1,
+      tags: {
+        'is_valid': validationResult.isValid.toString(),
+        'error_count': validationResult.errors.length.toString(),
+        'warning_count': validationResult.warnings.length.toString(),
+      },
+    );
+  }
+
+  Future<void> _onQuickValidationRequested(
+    QuickValidationRequested event, 
+    Emitter<RouteParametersState> emit
+  ) async {
+    final isValid = RouteParametersValidator.isQuickValid(state.parameters);
+    
+    if (!isValid) {
+      // Si la validation rapide échoue, faire une validation complète
+      add(const ValidationRequested());
+    } else {
+      // Effacer les erreurs précédentes si la validation rapide passe
+      emit(state.copyWith(errorMessage: null));
+    }
+  }
+
+  Future<void> _onValidationHelpRequested(
+    ValidationHelpRequested event, 
+    Emitter<RouteParametersState> emit
+  ) async {
+    final helpMessage = RouteParametersValidator.getHelpMessage(event.field, state.parameters);
+    
+    // Vous pouvez stocker le message d'aide dans l'état si nécessaire
+    // Pour l'instant, on log juste le message
+    LoggingService.instance.info(
+      'RouteParametersBloc',
+      'Aide demandée pour ${event.field}: $helpMessage',
     );
   }
 
@@ -309,6 +374,89 @@ class RouteParametersBloc extends HydratedBloc<RouteParametersEvent, RouteParame
       historyIndex: newIndex,
       errorMessage: null,
     ));
+  }
+
+  // === MÉTHODES UTILITAIRES ===
+
+  /// Auto-ajuste les paramètres selon l'activité
+  RouteParameters _autoAdjustParametersForActivity(
+    RouteParameters parameters, 
+    ActivityType newActivity
+  ) {
+    var adjusted = parameters;
+    
+    // Ajuster la distance si elle dépasse les limites
+    if (parameters.distanceKm < newActivity.minDistance) {
+      adjusted = adjusted.copyWith(distanceKm: newActivity.minDistance);
+      LoggingService.instance.info(
+        'RouteParametersBloc',
+        'Distance auto-ajustée au minimum',
+        data: {'new_distance': newActivity.minDistance.toString()},
+      );
+    } else if (parameters.distanceKm > newActivity.maxDistance) {
+      adjusted = adjusted.copyWith(distanceKm: newActivity.maxDistance);
+      LoggingService.instance.info(
+        'RouteParametersBloc',
+        'Distance auto-ajustée au maximum',
+        data: {'new_distance': newActivity.maxDistance.toString()},
+      );
+    }
+    
+    // Ajuster le terrain selon l'activité
+    if (newActivity == ActivityType.cycling && parameters.terrainType == TerrainType.hilly) {
+      // Suggérer un terrain plus adapté au vélo
+      adjusted = adjusted.copyWith(terrainType: TerrainType.mixed);
+    }
+    
+    return adjusted;
+  }
+
+  /// Ajoute les paramètres à l'historique
+  RouteParametersState _addToHistory(RouteParametersState currentState, RouteParameters newParameters) {
+    final newHistory = currentState.history.take(currentState.historyIndex + 1).toList()
+      ..add(newParameters);
+    
+    // Limiter la taille de l'historique
+    if (newHistory.length > 50) {
+      newHistory.removeAt(0);
+    }
+    
+    return currentState.copyWith(
+      parameters: newParameters,
+      history: newHistory,
+      historyIndex: newHistory.length - 1,
+      errorMessage: null,
+    );
+  }
+
+  /// Programme une validation différée
+  void _scheduleValidation(RouteParameters parameters) {
+    _validationTimer?.cancel();
+    _validationTimer = Timer(_validationDelay, () {
+      if (!isClosed) {
+        add(ParametersValidated(
+          parameters: parameters,
+          validationResult: RouteParametersValidator.validate(parameters),
+        ));
+      }
+    });
+  }
+
+  // Effectue une validation immédiate
+  void _performImmediateValidation(RouteParameters parameters, Emitter<RouteParametersState> emit) {
+    final validationResult = RouteParametersValidator.validate(parameters);
+    _cacheValidationResult(parameters, validationResult);
+    
+    emit(state.copyWith(
+      validationResult: validationResult,
+      errorMessage: validationResult.hasErrors ? validationResult.firstErrorMessage : null,
+    ));
+  }
+  
+  /// Cache le résultat de validation
+  void _cacheValidationResult(RouteParameters parameters, ValidationResult result) {
+    _lastValidatedParameters = parameters;
+    _lastValidationResult = result;
   }
 
   String? validateParameters() {

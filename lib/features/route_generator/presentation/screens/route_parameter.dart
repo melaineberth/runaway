@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hugeicons/hugeicons.dart';
@@ -6,6 +7,7 @@ import 'package:runaway/config/extensions.dart';
 import 'package:runaway/core/di/bloc_provider_extension.dart';
 import 'package:runaway/core/extensions/monitoring_extensions.dart';
 import 'package:runaway/core/services/monitoring_service.dart';
+import 'package:runaway/core/services/permission_service.dart';
 import 'package:runaway/core/widgets/blurry_page.dart';
 import 'package:runaway/core/widgets/modal_sheet.dart';
 import 'package:runaway/core/widgets/squircle_btn.dart';
@@ -13,6 +15,7 @@ import 'package:runaway/core/widgets/tick_slider.dart';
 import 'package:runaway/features/credits/presentation/blocs/credits_bloc.dart';
 import 'package:runaway/features/credits/presentation/blocs/credits_event.dart';
 import 'package:runaway/features/credits/presentation/blocs/credits_state.dart';
+import 'package:runaway/features/route_generator/data/validation/route_parameters_validator.dart';
 
 import '../../../home/presentation/blocs/route_parameters_bloc.dart';
 import '../../../home/presentation/blocs/route_parameters_event.dart';
@@ -40,12 +43,30 @@ class RouteParameterScreen extends StatefulWidget {
   State<RouteParameterScreen> createState() => _RouteParameterScreenState();
 }
 
-class _RouteParameterScreenState extends State<RouteParameterScreen> {
+class _RouteParameterScreenState extends State<RouteParameterScreen> with TickerProviderStateMixin {
   late String _screenLoadId;
+  late AnimationController _validationAnimationController;
+  late Animation<double> _validationScaleAnimation;
+
+  bool _isValidating = false;
+  ValidationResult? _currentValidation;
+  List<AppPermissionStatus> _missingPermissions = [];
 
   @override
   void initState() {
     super.initState();
+
+    _validationAnimationController = AnimationController(
+      duration: const Duration(milliseconds: 300),
+      vsync: this,
+    );
+    _validationScaleAnimation = Tween<double>(
+      begin: 0.95,
+      end: 1.0,
+    ).animate(CurvedAnimation(
+      parent: _validationAnimationController,
+      curve: Curves.easeOutBack,
+    ));
 
     context.routeParametersBloc.add(
       StartLocationUpdated(
@@ -54,14 +75,44 @@ class _RouteParameterScreenState extends State<RouteParameterScreen> {
       ),
     );
 
-    // 🆕 Charger les crédits au démarrage
+    _initializeScreen();
+  }
+
+  Future<void> _initializeScreen() async {
+    // Mettre à jour la position de départ
+    context.routeParametersBloc.add(
+      StartLocationUpdated(
+        longitude: widget.startLongitude,
+        latitude: widget.startLatitude,
+      ),
+    );
+
+    // Charger les crédits
     context.creditsBloc.add(const CreditsRequested());
 
-    _screenLoadId = context.trackScreenLoad('route_parameter_screen');
+    // Vérifier les permissions
+    await _checkPermissions();
+
+    // Tracking de l'écran
+    _screenLoadId = context.trackScreenLoad('enhanced_route_parameter_screen');
     
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.finishScreenLoad(_screenLoadId);
+      _performInitialValidation();
     });
+  }
+
+  Future<void> _checkPermissions() async {
+    final permissions = await PermissionService.instance.checkAllPermissions();
+    final missing = permissions.values
+        .where((p) => p.needsAction && p.permission == AppPermission.location)
+        .toList();
+    
+    if (missing.isNotEmpty) {
+      setState(() {
+        _missingPermissions = missing;
+      });
+    }
   }
 
   // 🆕 Tracking des changements de paramètres
@@ -77,6 +128,43 @@ class _RouteParameterScreenState extends State<RouteParameterScreen> {
     );
   }
 
+  void _performInitialValidation() {
+    final state = context.routeParametersBloc.state;
+    final validation = RouteParametersValidator.validate(state.parameters);
+    
+    setState(() {
+      _currentValidation = validation;
+    });
+    
+    if (!validation.isValid) {
+      _validationAnimationController.forward();
+    }
+  }
+
+  @override
+  void dispose() {
+    _validationAnimationController.dispose();
+    super.dispose();
+  }
+
+  void _handleParametersChanged(BuildContext context, RouteParametersState state) {
+    // Validation en temps réel
+    final validation = RouteParametersValidator.validate(state.parameters);
+    
+    if (validation != _currentValidation) {
+      setState(() {
+        _currentValidation = validation;
+      });
+      
+      if (!validation.isValid) {
+        _validationAnimationController.forward();
+        HapticFeedback.lightImpact();
+      } else {
+        _validationAnimationController.reverse();
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return MonitoredScreen(
@@ -88,7 +176,8 @@ class _RouteParameterScreenState extends State<RouteParameterScreen> {
       child: ModalSheet(
         padding: 0.0,
         height: MediaQuery.of(context).size.height * 0.8,
-        child: BlocBuilder<RouteParametersBloc, RouteParametersState>(
+        child: BlocConsumer<RouteParametersBloc, RouteParametersState>(
+          listener: _handleParametersChanged,
           builder: (context, state) {
             return Stack(
               children: [
@@ -99,9 +188,9 @@ class _RouteParameterScreenState extends State<RouteParameterScreen> {
                     // Activité
                     ActivitySelector(
                       selectedActivity: state.parameters.activityType,
-                      onActivitySelected: (type) {
-                        _trackParameterChange('activity_type', type);
-                        context.routeParametersBloc.add(ActivityTypeChanged(type));
+                      onActivitySelected: (activity) {
+                        context.routeParametersBloc.add(ActivityTypeChanged(activity));
+                        _trackParameterChange('activity_type', activity.name);
                       },
                     ),
                     30.h,
@@ -110,8 +199,8 @@ class _RouteParameterScreenState extends State<RouteParameterScreen> {
                     TerrainSelector(
                       selectedTerrain: state.parameters.terrainType,
                       onTerrainSelected: (terrain) {
-                        _trackParameterChange('terrain', terrain);
                         context.routeParametersBloc.add(TerrainTypeChanged(terrain));
+                        _trackParameterChange('terrain_type', terrain.name);
                       },
                     ),
                     30.h,
@@ -120,8 +209,8 @@ class _RouteParameterScreenState extends State<RouteParameterScreen> {
                     UrbanDensitySelector(
                       selectedDensity: state.parameters.urbanDensity,
                       onDensitySelected: (density) {
-                        _trackParameterChange('density', density);
                         context.routeParametersBloc.add(UrbanDensityChanged(density));
+                        _trackParameterChange('urban_density', density.name);
                       },
                     ),
                     30.h,
@@ -135,9 +224,9 @@ class _RouteParameterScreenState extends State<RouteParameterScreen> {
                       unit: "km",
                       startIcon: HugeIcons.solidRoundedPinLocation03,
                       endIcon: HugeIcons.solidRoundedFlag02,
-                      onChanged: (value) {
-                        _trackParameterChange('distance', value);
-                        context.routeParametersBloc.add(DistanceChanged(value));
+                      onChanged: (distance) {
+                        context.routeParametersBloc.add(DistanceChanged(distance));
+                        _trackParameterChange('distance', distance);
                       },
                       enableHapticFeedback: true,
                       hapticIntensity: HapticIntensity.light, // ✅ Plus subtil pour précision
@@ -153,9 +242,9 @@ class _RouteParameterScreenState extends State<RouteParameterScreen> {
                       unit: "m",
                       startIcon: HugeIcons.strokeRoundedRoute03,
                       endIcon: HugeIcons.strokeRoundedRoute03,
-                      onChanged:  (value) {
-                        _trackParameterChange('elevation', value);
-                        context.routeParametersBloc.add(ElevationGainChanged(value));
+                      onChanged: (elevation) {
+                        context.routeParametersBloc.add(ElevationGainChanged(elevation));
+                        _trackParameterChange('elevation_gain', elevation);
                       },
                       enableHapticFeedback: true,
                       hapticIntensity: HapticIntensity.light, // ✅ Plus subtil pour précision

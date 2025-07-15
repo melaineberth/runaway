@@ -1,5 +1,7 @@
 import 'package:equatable/equatable.dart';
+import 'package:runaway/features/route_generator/data/validation/route_parameters_validator.dart';
 import 'package:runaway/features/route_generator/domain/models/activity_type.dart';
+import 'package:runaway/features/route_generator/domain/models/route_parameters.dart';
 import 'package:runaway/features/route_generator/domain/models/terrain_type.dart';
 import 'package:runaway/features/route_generator/domain/models/urban_density.dart';
 
@@ -142,4 +144,48 @@ class PreferScenicToggled extends RouteParametersEvent {
 
   @override
   List<Object?> get props => [preferScenic];
+}
+
+/// Demande une validation complète avec détails des erreurs et avertissements
+class ValidationRequested extends RouteParametersEvent {
+  const ValidationRequested();
+}
+
+/// Demande une validation rapide (juste les erreurs critiques)
+class QuickValidationRequested extends RouteParametersEvent {
+  const QuickValidationRequested();
+}
+
+/// Événement interne : paramètres validés avec résultat
+class ParametersValidated extends RouteParametersEvent {
+  final RouteParameters parameters;
+  final ValidationResult validationResult;
+
+  const ParametersValidated({
+    required this.parameters,
+    required this.validationResult,
+  });
+
+  @override
+  List<Object?> get props => [parameters, validationResult];
+}
+
+/// Demande d'aide contextuelle pour un champ
+class ValidationHelpRequested extends RouteParametersEvent {
+  final String field;
+
+  const ValidationHelpRequested(this.field);
+
+  @override
+  List<Object?> get props => [field];
+}
+
+/// Validation en temps réel activée/désactivée
+class RealTimeValidationToggled extends RouteParametersEvent {
+  final bool enabled;
+
+  const RealTimeValidationToggled(this.enabled);
+
+  @override
+  List<Object?> get props => [enabled];
 }

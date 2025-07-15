@@ -1617,6 +1617,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
     }
   }
 
+  void _dismissRouteInfoModal() {
+    _routeInfoEntry?.remove();
+    _routeInfoEntry = null;
+  }
+
   Future<void> _activateManualSelectionAtPosition(
     double longitude,
     double latitude,
@@ -1632,6 +1637,24 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
 
       // Nettoyer parcours existant
       if (generatedRouteCoordinates != null) {
+        final bool? shouldContinue = await _presentModalSheet<bool>((_) {
+          return ModalDialog(
+            title: "Voulez-vous vraiment continuer?",
+            subtitle: "Cette action supprimera le parcours précédemment généré, il sera alors irrécupérable!",
+            validLabel: "Continuer",
+            cancelLabel: "Annuler",
+            onValid: () => context.pop(true),
+            onCancel: () => context.pop(false),
+          );
+        });
+
+        // L’utilisateur annule ou ferme la feuille : on arrête tout
+        if (shouldContinue != true) return;
+
+        // 🔐 Ajoute ça AVANT de remettre l’état à zéro
+        _dismissRouteInfoModal();
+
+        // L’utilisateur confirme : on nettoie l’ancien parcours
         print('🧹 Nettoyage du parcours existant');
 
         if (routeLineManager != null && mapboxMap != null) {
@@ -1668,8 +1691,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
       });
 
       // 💾 Sauvegarder le nouveau mode et position
-      _mapStateService.saveTrackingMode(_trackingMode);
-      _mapStateService.saveSelectedPosition(latitude, longitude);
+      _mapStateService
+      ..saveTrackingMode(_trackingMode)
+      ..saveSelectedPosition(latitude, longitude);
 
       // Placer le marqueur avec transition fluide
       await _clearLocationMarkers();

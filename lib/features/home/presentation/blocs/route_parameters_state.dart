@@ -1,4 +1,5 @@
 import 'package:equatable/equatable.dart';
+import 'package:runaway/features/route_generator/data/validation/route_parameters_validator.dart';
 import 'package:runaway/features/route_generator/domain/models/route_parameters.dart';
 
 import '../../../route_generator/domain/models/activity_type.dart';
@@ -11,6 +12,7 @@ class RouteParametersState extends Equatable {
   final int historyIndex;
   final List<RouteParameters> favorites;
   final String? errorMessage;
+  final ValidationResult? validationResult;
 
   const RouteParametersState({
     required this.parameters,
@@ -18,10 +20,12 @@ class RouteParametersState extends Equatable {
     this.historyIndex = -1,
     this.favorites = const [],
     this.errorMessage,
+    this.validationResult,
   });
 
   bool get canUndo => historyIndex > 0;
   bool get canRedo => historyIndex < history.length - 1;
+  bool get isValid => validationResult?.isValid ?? RouteParametersValidator.isQuickValid(parameters);
 
   RouteParametersState copyWith({
     RouteParameters? parameters,
@@ -29,6 +33,7 @@ class RouteParametersState extends Equatable {
     int? historyIndex,
     List<RouteParameters>? favorites,
     String? errorMessage,
+    ValidationResult? validationResult,
   }) {
     return RouteParametersState(
       parameters: parameters ?? this.parameters,
@@ -36,6 +41,7 @@ class RouteParametersState extends Equatable {
       historyIndex: historyIndex ?? this.historyIndex,
       favorites: favorites ?? this.favorites,
       errorMessage: errorMessage,
+      validationResult: validationResult ?? this.validationResult,
     );
   }
 
@@ -88,10 +94,11 @@ class RouteParametersState extends Equatable {
 
   @override
   List<Object?> get props => [
-        parameters,
-        history,
-        historyIndex,
-        favorites,
-        errorMessage,
-      ];
+    parameters,
+    history,
+    historyIndex,
+    favorites,
+    errorMessage,
+    validationResult,
+  ];
 }
