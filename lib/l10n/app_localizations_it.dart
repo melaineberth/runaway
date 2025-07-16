@@ -930,4 +930,70 @@ class AppLocalizationsIt extends AppLocalizations {
   String creditsLeft(int count) {
     return '$count credito/i rimanente/i';
   }
+
+  @override
+  String get elevationRange => 'Elevation range';
+
+  @override
+  String get minElevation => 'Minimum elevation';
+
+  @override
+  String get maxElevation => 'Maximum elevation';
+
+  @override
+  String get difficulty => 'Difficulty';
+
+  @override
+  String get maxIncline => 'Maximum incline';
+
+  @override
+  String get waypointsCount => 'Waypoints';
+
+  @override
+  String get points => 'pts';
+
+  @override
+  String get surfacePreference => 'Surface';
+
+  @override
+  String get naturalPaths => 'Natural paths';
+
+  @override
+  String get pavedRoads => 'Paved roads';
+
+  @override
+  String get mixed => 'Mixed';
+
+  @override
+  String get avoidHighways => 'Avoid highways';
+
+  @override
+  String get avoidMajorRoads => 'Avoid major roads';
+
+  @override
+  String get prioritizeParks => 'Prioritize parks';
+
+  @override
+  String get preferGreenSpaces => 'Prefer green spaces';
+
+  @override
+  String get elevationLoss => 'Elevation loss';
+
+  @override
+  String get duration => 'Duration';
+
+  @override
+  String get calories => 'Calories';
+
+  @override
+  String get scenic => 'Scenic';
+
+  @override
+  String get maxSlope => 'Max slope';
+
+  @override
+  String get highlights => 'Highlights';
+
+  @override
+  String get surfaces => 'Surfaces';
 }

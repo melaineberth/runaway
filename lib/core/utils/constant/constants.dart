@@ -21,7 +21,7 @@ void showAuthModal(BuildContext context) {
     backgroundColor: Colors.transparent,
     child: ModalDialog(
       isDismissible: true,
-      imgPath: "assets/img/lock.png",
+      imgPath: 'https://cdn.lottielab.com/l/13mdUjaB8g6HWu.json',
       title: context.l10n.notLoggedIn,
       subtitle: context.l10n.loginOrCreateAccountHint,
       validLabel: context.l10n.logIn,

@@ -14,6 +14,7 @@ class ParameterSlider extends StatelessWidget {
   final String? subtitle;
   final IconData startIcon;
   final IconData endIcon;
+  final TextStyle? style;
 
   // ✅ NOUVEAU : Paramètres haptiques optionnels
   final bool enableHapticFeedback;
@@ -33,6 +34,7 @@ class ParameterSlider extends StatelessWidget {
     this.subtitle,
     this.enableHapticFeedback = true, // ✅ Activé par défaut
     this.hapticIntensity = HapticIntensity.custom, // ✅ Mode intelligent par défaut
+    this.style,
   });
 
   @override
@@ -42,7 +44,7 @@ class ParameterSlider extends StatelessWidget {
       children: [
         Text(
           title,
-          style: context.bodySmall?.copyWith(
+          style: style ?? context.bodySmall?.copyWith(
             color: context.adaptiveTextPrimary,
           ),
         ),

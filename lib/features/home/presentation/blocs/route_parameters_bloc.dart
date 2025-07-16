@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:hydrated_bloc/hydrated_bloc.dart';
 import 'package:runaway/core/helper/services/logging_service.dart';
@@ -29,7 +30,13 @@ class RouteParametersBloc extends HydratedBloc<RouteParametersEvent, RouteParame
       terrainType: TerrainType.mixed,
       urbanDensity: UrbanDensity.mixed,
       distanceKm: 5.0,
-      elevationGain: 0.0,
+      elevationRange: const ElevationRange(min: 0, max: 100), // 🔧 Valeur sûre au lieu de 0
+      difficulty: DifficultyLevel.moderate,
+      maxInclinePercent: 12.0,
+      preferredWaypoints: 3,
+      avoidHighways: true,
+      prioritizeParks: false,
+      surfacePreference: 0.5,
       startLongitude: 0.0,
       startLatitude: 0.0,
       isLoop: true,
@@ -41,7 +48,7 @@ class RouteParametersBloc extends HydratedBloc<RouteParametersEvent, RouteParame
     on<TerrainTypeChanged>(_onTerrainTypeChanged);
     on<UrbanDensityChanged>(_onUrbanDensityChanged);
     on<DistanceChanged>(_onDistanceChanged);
-    on<ElevationGainChanged>(_onElevationGainChanged);
+    on<ElevationRangeChanged>(_onElevationRangeChanged);
     on<StartLocationUpdated>(_onStartLocationUpdated);
     on<PresetApplied>(_onPresetApplied);
     on<FavoriteAdded>(_onFavoriteAdded);
@@ -52,6 +59,14 @@ class RouteParametersBloc extends HydratedBloc<RouteParametersEvent, RouteParame
     on<LoopToggled>(_onLoopToggled);
     on<AvoidTrafficToggled>(_onAvoidTrafficToggled);
     on<PreferScenicToggled>(_onPreferScenicToggled);
+
+    on<DifficultyChanged>(_onDifficultyChanged);
+    on<MaxInclineChanged>(_onMaxInclineChanged);
+    on<PreferredWaypointsChanged>(_onPreferredWaypointsChanged);
+    on<AvoidHighwaysToggled>(_onAvoidHighwaysToggled);
+    on<PrioritizeParksToggled>(_onPrioritizeParksToggled);
+    on<SurfacePreferenceChanged>(_onSurfacePreferenceChanged);
+    on<DifficultyPresetApplied>(_onDifficultyPresetApplied);
 
     // 🆕 AJOUTER : Gestionnaire pour l'événement ParametersValidated
     on<ParametersValidated>(_onParametersValidated);
@@ -74,8 +89,8 @@ class RouteParametersBloc extends HydratedBloc<RouteParametersEvent, RouteParame
       activityType: event.activityType,
     );
 
-    // Auto-ajustement de la distance si nécessaire
-    final adjustedParameters = _autoAdjustParametersForActivity(newParameters, event.activityType);
+    // 🆕 UTILISER _adjustParametersForActivity ici
+    final adjustedParameters = _adjustParametersForActivity(newParameters);
     
     final newState = _addToHistory(state, adjustedParameters);
     emit(newState);
@@ -106,15 +121,30 @@ class RouteParametersBloc extends HydratedBloc<RouteParametersEvent, RouteParame
     _scheduleValidation(newParameters);
   }
 
-  Future<void> _onElevationGainChanged(
-    ElevationGainChanged event, 
-    Emitter<RouteParametersState> emit
-  ) async {
-    final newParameters = state.parameters.copyWith(elevationGain: event.elevationGain);
-    final newState = _addToHistory(state, newParameters);
-    emit(newState);
+  void _onElevationRangeChanged(
+    ElevationRangeChanged event,
+    Emitter<RouteParametersState> emit,
+  ) {
+    final updatedParameters = state.parameters.copyWith(
+      elevationRange: event.elevationRange,
+    );
     
-    _scheduleValidation(newParameters);
+    final updatedState = _addToHistory(state, updatedParameters);
+    emit(updatedState);
+    
+    // Validation différée pour UX fluide
+    _scheduleValidation(updatedParameters);
+    
+    // Metrics
+    MonitoringService.instance.recordMetric(
+      'elevation_range_changed',
+      1,
+      tags: {
+        'min': event.elevationRange.min,
+        'max': event.elevationRange.max,
+        'activity': updatedParameters.activityType.id,
+      },
+    );
   }
 
   Future<void> _onTerrainTypeChanged(
@@ -282,6 +312,155 @@ class RouteParametersBloc extends HydratedBloc<RouteParametersEvent, RouteParame
     _scheduleValidation(newParameters);
   }
 
+  // 🆕 Handler pour le changement de difficulté
+  void _onDifficultyChanged(
+    DifficultyChanged event,
+    Emitter<RouteParametersState> emit,
+  ) {
+    final updatedParameters = state.parameters.copyWith(
+      difficulty: event.difficulty,
+    );
+    
+    final updatedState = _addToHistory(state, updatedParameters);
+    emit(updatedState);
+    
+    _scheduleValidation(updatedParameters);
+    
+    MonitoringService.instance.recordMetric(
+      'difficulty_changed',
+      1,
+      tags: {
+        'difficulty': event.difficulty.id,
+        'level': event.difficulty.level,
+      },
+    );
+  }
+
+  // 🆕 Handler pour la pente maximale
+  void _onMaxInclineChanged(
+    MaxInclineChanged event,
+    Emitter<RouteParametersState> emit,
+  ) {
+    final updatedParameters = state.parameters.copyWith(
+      maxInclinePercent: event.maxInclinePercent,
+    );
+    
+    final updatedState = _addToHistory(state, updatedParameters);
+    emit(updatedState);
+    
+    _scheduleValidation(updatedParameters);
+  }
+
+  // 🆕 Handler pour les points d'intérêt
+  void _onPreferredWaypointsChanged(
+    PreferredWaypointsChanged event,
+    Emitter<RouteParametersState> emit,
+  ) {
+    final updatedParameters = state.parameters.copyWith(
+      preferredWaypoints: event.waypoints,
+    );
+    
+    final updatedState = _addToHistory(state, updatedParameters);
+    emit(updatedState);
+    
+    _scheduleValidation(updatedParameters);
+  }
+
+  // 🆕 Handler pour éviter les autoroutes
+  void _onAvoidHighwaysToggled(
+    AvoidHighwaysToggled event,
+    Emitter<RouteParametersState> emit,
+  ) {
+    final updatedParameters = state.parameters.copyWith(
+      avoidHighways: event.avoidHighways,
+    );
+    
+    final updatedState = _addToHistory(state, updatedParameters);
+    emit(updatedState);
+    
+    _performImmediateValidation(updatedParameters, emit);
+  }
+
+  // 🆕 Handler pour prioriser les parcs
+  void _onPrioritizeParksToggled(
+    PrioritizeParksToggled event,
+    Emitter<RouteParametersState> emit,
+  ) {
+    final updatedParameters = state.parameters.copyWith(
+      prioritizeParks: event.prioritizeParks,
+    );
+    
+    final updatedState = _addToHistory(state, updatedParameters);
+    emit(updatedState);
+    
+    _performImmediateValidation(updatedParameters, emit);
+  }
+
+  // 🆕 Handler pour la préférence de surface
+  void _onSurfacePreferenceChanged(
+    SurfacePreferenceChanged event,
+    Emitter<RouteParametersState> emit,
+  ) {
+    final updatedParameters = state.parameters.copyWith(
+      surfacePreference: event.surfacePreference,
+    );
+    
+    final updatedState = _addToHistory(state, updatedParameters);
+    emit(updatedState);
+    
+    _scheduleValidation(updatedParameters);
+  }
+
+  // 🆕 Handler pour appliquer un preset de difficulté
+  void _onDifficultyPresetApplied(
+    DifficultyPresetApplied event,
+    Emitter<RouteParametersState> emit,
+  ) {
+    RouteParameters presetParameters;
+    
+    switch (event.difficulty) {
+      case DifficultyLevel.easy:
+        presetParameters = RouteParameters.beginnerPreset(
+          startLongitude: event.startLongitude,
+          startLatitude: event.startLatitude,
+        );
+        break;
+      case DifficultyLevel.moderate:
+        presetParameters = RouteParameters.intermediatePreset(
+          startLongitude: event.startLongitude,
+          startLatitude: event.startLatitude,
+        );
+        break;
+      case DifficultyLevel.hard:
+      case DifficultyLevel.expert:
+        presetParameters = RouteParameters.advancedPreset(
+          startLongitude: event.startLongitude,
+          startLatitude: event.startLatitude,
+        );
+        break;
+    }
+    
+    // Garde quelques paramètres actuels si pertinents
+    final mergedParameters = presetParameters.copyWith(
+      activityType: state.parameters.activityType, // Garde l'activité sélectionnée
+      preferredStartTime: state.parameters.preferredStartTime,
+    );
+    
+    final updatedState = _addToHistory(state, mergedParameters);
+    emit(updatedState);
+    
+    _performImmediateValidation(mergedParameters, emit);
+    
+    MonitoringService.instance.recordMetric(
+      'difficulty_preset_applied',
+      1,
+      tags: {
+        'preset': event.difficulty.id,
+        'activity': mergedParameters.activityType.id,
+      },
+    );
+  }
+
   Future<void> _onParametersValidated(
     ParametersValidated event, 
     Emitter<RouteParametersState> emit
@@ -377,40 +556,6 @@ class RouteParametersBloc extends HydratedBloc<RouteParametersEvent, RouteParame
   }
 
   // === MÉTHODES UTILITAIRES ===
-
-  /// Auto-ajuste les paramètres selon l'activité
-  RouteParameters _autoAdjustParametersForActivity(
-    RouteParameters parameters, 
-    ActivityType newActivity
-  ) {
-    var adjusted = parameters;
-    
-    // Ajuster la distance si elle dépasse les limites
-    if (parameters.distanceKm < newActivity.minDistance) {
-      adjusted = adjusted.copyWith(distanceKm: newActivity.minDistance);
-      LoggingService.instance.info(
-        'RouteParametersBloc',
-        'Distance auto-ajustée au minimum',
-        data: {'new_distance': newActivity.minDistance.toString()},
-      );
-    } else if (parameters.distanceKm > newActivity.maxDistance) {
-      adjusted = adjusted.copyWith(distanceKm: newActivity.maxDistance);
-      LoggingService.instance.info(
-        'RouteParametersBloc',
-        'Distance auto-ajustée au maximum',
-        data: {'new_distance': newActivity.maxDistance.toString()},
-      );
-    }
-    
-    // Ajuster le terrain selon l'activité
-    if (newActivity == ActivityType.cycling && parameters.terrainType == TerrainType.hilly) {
-      // Suggérer un terrain plus adapté au vélo
-      adjusted = adjusted.copyWith(terrainType: TerrainType.mixed);
-    }
-    
-    return adjusted;
-  }
-
   /// Ajoute les paramètres à l'historique
   RouteParametersState _addToHistory(RouteParametersState currentState, RouteParameters newParameters) {
     final newHistory = currentState.history.take(currentState.historyIndex + 1).toList()
@@ -469,6 +614,49 @@ class RouteParametersBloc extends HydratedBloc<RouteParametersEvent, RouteParame
       }
     }
     return null;
+  }
+
+  RouteParameters _adjustParametersForActivity(RouteParameters parameters) {
+    var adjusted = parameters;
+    
+    // Ajustements spécifiques par activité
+    switch (parameters.activityType) {
+      case ActivityType.walking:
+        // Pour la marche : réduire la vitesse, accepter plus de pentes
+        adjusted = adjusted.copyWith(
+          maxInclinePercent: math.min(parameters.maxInclinePercent, 15.0),
+          surfacePreference: math.max(parameters.surfacePreference, 0.3), // Plus de chemins naturels
+        );
+        break;
+        
+      case ActivityType.cycling:
+        // Pour le vélo : limiter les pentes, préférer les routes
+        adjusted = adjusted.copyWith(
+          maxInclinePercent: math.min(parameters.maxInclinePercent, 12.0),
+          surfacePreference: math.min(parameters.surfacePreference, 0.8), // Plus de routes
+          avoidHighways: false, // Les cyclistes peuvent utiliser certaines routes principales
+        );
+        break;
+        
+      case ActivityType.running:
+        // Pour la course : équilibré
+        adjusted = adjusted.copyWith(
+          maxInclinePercent: math.min(parameters.maxInclinePercent, 15.0),
+        );
+        break;
+    }
+    
+    // Ajustement de la plage d'élévation selon le terrain
+    if (parameters.terrainType == TerrainType.flat && parameters.elevationRange.max > 100) {
+      adjusted = adjusted.copyWith(
+        elevationRange: ElevationRange(
+          min: 0,
+          max: math.min(parameters.elevationRange.max, 100),
+        ),
+      );
+    }
+    
+    return adjusted;
   }
 
   @override

@@ -432,7 +432,7 @@ class RoutesRepository {
       final createdAtUtc = route.createdAt.toUtc();
       print('🕒 Sauvegarde date UTC: ${createdAtUtc.toIso8601String()} (original local: ${route.createdAt})');
       
-      await _supabase.from('user_routes').insert({ // 🔧 Correction : saved_routes → user_routes
+      await _supabase.from('user_routes').insert({
         'id': route.id,
         'user_id': userId,
         'name': route.name,
@@ -442,7 +442,7 @@ class RoutesRepository {
         'urban_density': route.parameters.urbanDensity.id,
         'is_loop': route.parameters.isLoop,
         'avoid_traffic': route.parameters.avoidTraffic,
-        'elevation_gain': route.parameters.elevationGain,
+        'elevation_gain': route.parameters.elevationGain, // 🔄 Utilise le getter de compatibilité
         'coordinates': route.coordinates,
         'start_latitude': route.coordinates.isNotEmpty ? route.coordinates.first[1] : null,
         'start_longitude': route.coordinates.isNotEmpty ? route.coordinates.first[0] : null,
@@ -453,6 +453,14 @@ class RoutesRepository {
         'times_used': route.timesUsed,
         'last_used_at': route.lastUsedAt?.toUtc().toIso8601String(),
         'image_url': route.imageUrl,
+        'difficulty': route.parameters.difficulty.id,
+        'max_incline_percent': route.parameters.maxInclinePercent,
+        'preferred_waypoints': route.parameters.preferredWaypoints,
+        'avoid_highways': route.parameters.avoidHighways,
+        'prioritize_parks': route.parameters.prioritizeParks,
+        'surface_preference': route.parameters.surfacePreference,
+        'elevation_range_min': route.parameters.elevationRange.min,
+        'elevation_range_max': route.parameters.elevationRange.max,
       });
 
       print('✅ Route sauvée dans Supabase avec image: ${route.id}');
@@ -503,6 +511,19 @@ class RoutesRepository {
         }
       }
 
+      // 🆕 Construire ElevationRange depuis les nouvelles colonnes ou fallback ancien
+      ElevationRange elevationRange;
+      if (data['elevation_range_min'] != null && data['elevation_range_max'] != null) {
+        elevationRange = ElevationRange(
+          min: (data['elevation_range_min'] as num).toDouble(),
+          max: (data['elevation_range_max'] as num).toDouble(),
+        );
+      } else {
+        // Fallback vers elevation_gain pour compatibilité
+        final elevationGain = (data['elevation_gain'] as num?)?.toDouble() ?? 0.0;
+        elevationRange = ElevationRange(min: 0, max: elevationGain);
+      }
+
       return SavedRoute(
         id: data['id'],
         name: data['name'],
@@ -511,7 +532,13 @@ class RoutesRepository {
           terrainType: _parseTerrainType(data['terrain_type']),
           urbanDensity: _parseUrbanDensity(data['urban_density']),
           distanceKm: (data['distance_km'] as num).toDouble(),
-          elevationGain: (data['elevation_gain'] as num).toDouble(),
+          elevationRange: elevationRange,
+          difficulty: _parseDifficulty(data['difficulty'] as String?),
+          maxInclinePercent: (data['max_incline_percent'] as num?)?.toDouble() ?? 12.0,
+          preferredWaypoints: data['preferred_waypoints'] as int? ?? 3,
+          avoidHighways: data['avoid_highways'] as bool? ?? true,
+          prioritizeParks: data['prioritize_parks'] as bool? ?? false,
+          surfacePreference: (data['surface_preference'] as num?)?.toDouble() ?? 0.5,
           startLongitude: (data['start_longitude'] as num).toDouble(),
           startLatitude: (data['start_latitude'] as num).toDouble(),
           isLoop: data['is_loop'] ?? true,
@@ -523,12 +550,12 @@ class RoutesRepository {
             List<double>.from(coord)
           )
         ),
-        createdAt: createdAt, // 🔧 Date correctement convertie
+        createdAt: createdAt,
         actualDistance: data['actual_distance_km']?.toDouble(),
         actualDuration: data['estimated_duration_minutes'],
         isSynced: true,
         timesUsed: data['times_used'] ?? 0,
-        lastUsedAt: lastUsedAt, // 🔧 Date correctement convertie
+        lastUsedAt: lastUsedAt,
         imageUrl: data['image_url'],
       );
     }).toList();
@@ -563,6 +590,15 @@ class RoutesRepository {
     await prefs.setString(_localCacheKey, jsonEncode(routesJson));
     
     print('💾 Route sauvée localement: ${route.id} - Image: ${route.hasImage ? "✅" : "❌"}');
+  }
+
+  // Méthode de parsing manquante :
+  DifficultyLevel _parseDifficulty(String? id) {
+    if (id == null) return DifficultyLevel.moderate;
+    return DifficultyLevel.values.firstWhere(
+      (difficulty) => difficulty.id == id,
+      orElse: () => DifficultyLevel.moderate,
+    );
   }
 
   /// 🆕 Récupération locale avec support image_url

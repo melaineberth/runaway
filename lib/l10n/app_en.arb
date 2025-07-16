@@ -1237,5 +1237,94 @@
     "placeholders": {
       "count": { "type": "int", "example": "5" }
     }
+  },
+
+  "elevationRange": "Elevation range",
+  "@elevationRange": {
+    "description": "Total elevation gain and loss over a route"
+  },
+  "minElevation": "Minimum elevation",
+  "@minElevation": {
+    "description": "Lowest elevation reached in the route"
+  },
+  "maxElevation": "Maximum elevation",
+  "@maxElevation": {
+    "description": "Highest elevation reached in the route"
+  },
+  "difficulty": "Difficulty",
+  "@difficulty": {
+    "description": "Level of difficulty of the route (easy, medium, hard)"
+  },
+  "maxIncline": "Maximum incline",
+  "@maxIncline": {
+    "description": "Steepest incline on the route"
+  },
+  "waypointsCount": "Waypoints",
+  "@waypointsCount": {
+    "description": "Number of points of interest or checkpoints on the route"
+  },
+  "points": "pts",
+  "@points": {
+    "description": "Points unit for the user (e.g., 45 pts earned)"
+  },
+  "surfacePreference": "Surface",
+  "@surfacePreference": {
+    "description": "User preference for the type of surface on the route"
+  },
+  "naturalPaths": "Natural paths",
+  "@naturalPaths": {
+    "description": "Surface option for natural trails (dirt, gravel, forest paths)"
+  },
+  "pavedRoads": "Paved roads",
+  "@pavedRoads": {
+    "description": "Surface option for asphalt or paved roads"
+  },
+  "mixed": "Mixed",
+  "@mixed": {
+    "description": "Surface option combining natural paths and paved roads"
+  },
+  "avoidHighways": "Avoid highways",
+  "@avoidHighways": {
+    "description": "Preference to exclude highways from the route"
+  },
+  "avoidMajorRoads": "Avoid major roads",
+  "@avoidMajorRoads": {
+    "description": "Preference to avoid large or busy roads"
+  },
+  "prioritizeParks": "Prioritize parks",
+  "@prioritizeParks": {
+    "description": "Preference to go through or along parks"
+  },
+  "preferGreenSpaces": "Prefer green spaces",
+  "@preferGreenSpaces": {
+    "description": "Preference to include green spaces in the route"
+  },
+  "elevationLoss": "Elevation loss",
+  "@elevationLoss": {
+    "description": "Total elevation descent over the course of the route"
+  },
+  "duration": "Duration",
+  "@duration": {
+    "description": "Estimated duration of the route (in minutes or hours)"
+  },
+  "calories": "Calories",
+  "@calories": {
+    "description": "Estimated number of calories burned on the route"
+  },
+  "scenic": "Scenic",
+  "@scenic": {
+    "description": "How scenic or visually pleasant the route is"
+  },
+  "maxSlope": "Max slope",
+  "@maxSlope": {
+    "description": "Maximum slope value on the route (uphill or downhill)"
+  },
+  "highlights": "Highlights",
+  "@highlights": {
+    "description": "Key points or notable places along the route"
+  },
+  "surfaces": "Surfaces",
+  "@surfaces": {
+    "description": "Types of surfaces found or available on the route"
   }
 }

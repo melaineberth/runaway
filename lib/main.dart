@@ -6,6 +6,8 @@ import 'package:hydrated_bloc/hydrated_bloc.dart';
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:runaway/core/blocs/connectivity/connectivity_cubit.dart';
+import 'package:runaway/core/helper/services/connectivity_service.dart';
 import 'package:runaway/core/helper/services/logging_service.dart';
 import 'package:runaway/core/router/router.dart';
 import 'package:runaway/core/helper/config/secure_config.dart';
@@ -153,6 +155,7 @@ Future<void> _initializeSecondaryServices() async {
     _initializeSessionMonitoring(),
     // Services de notification
     _initializeNotificationServices(),
+    _initializeConnectivityService(),
   ]);
   
   print('✅ Phase 2 terminée');
@@ -359,6 +362,20 @@ Future<void> _initializeConversionService() async {
   }
 }
 
+Future<void> _initializeConnectivityService() async {
+  final opId = MonitoringService.instance.trackOperation(
+      'init_connectivity',
+      description: 'Initialisation du service de connectivité');
+  try {
+    await ConnectivityService.instance.initialize();
+    MonitoringService.instance.finishOperation(opId, success: true);
+  } catch (e) {
+    MonitoringService.instance.finishOperation(
+        opId, success: false, errorMessage: e.toString());
+    rethrow;
+  }
+}
+
 class Trailix extends StatefulWidget {
   const Trailix({super.key});
 
@@ -403,6 +420,7 @@ class _TrailixState extends State<Trailix> {
         BlocProvider<LocaleBloc>.value(value: sl<LocaleBloc>()),
         BlocProvider<ThemeBloc>.value(value: sl<ThemeBloc>()),
         BlocProvider<CreditsBloc>.value(value: sl<CreditsBloc>()),
+        BlocProvider<ConnectivityCubit>.value(value: sl<ConnectivityCubit>()),
         
         // Factory pour les blocs qui peuvent avoir plusieurs instances
         BlocProvider<RouteParametersBloc>(create: (_) => sl<RouteParametersBloc>()),

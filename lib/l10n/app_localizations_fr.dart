@@ -276,7 +276,7 @@ class AppLocalizationsFr extends AppLocalizations {
   String get notLoggedIn => 'Vous n\'êtes pas connecté';
 
   @override
-  String get loginOrCreateAccountHint => 'Pour accéder à cette page, veuillez vous connecter ou créer un compte.';
+  String get loginOrCreateAccountHint => 'Pour accéder à cette page, veuillez vous connecter ou créer un compte';
 
   @override
   String get logIn => 'Se connecter';
@@ -930,4 +930,70 @@ class AppLocalizationsFr extends AppLocalizations {
   String creditsLeft(int count) {
     return '$count crédit(s) restant(s)';
   }
+
+  @override
+  String get elevationRange => 'Plage de dénivelé';
+
+  @override
+  String get minElevation => 'Dénivelé minimum';
+
+  @override
+  String get maxElevation => 'Dénivelé maximum';
+
+  @override
+  String get difficulty => 'Difficulté';
+
+  @override
+  String get maxIncline => 'Pente maximale';
+
+  @override
+  String get waypointsCount => 'Points d\'intérêt';
+
+  @override
+  String get points => 'pts';
+
+  @override
+  String get surfacePreference => 'Surface';
+
+  @override
+  String get naturalPaths => 'Chemins naturels';
+
+  @override
+  String get pavedRoads => 'Routes goudronnées';
+
+  @override
+  String get mixed => 'Mixte';
+
+  @override
+  String get avoidHighways => 'Éviter autoroutes';
+
+  @override
+  String get avoidMajorRoads => 'Éviter routes principales';
+
+  @override
+  String get prioritizeParks => 'Privilégier parcs';
+
+  @override
+  String get preferGreenSpaces => 'Préférer espaces verts';
+
+  @override
+  String get elevationLoss => 'Dénivelé négatif';
+
+  @override
+  String get duration => 'Durée';
+
+  @override
+  String get calories => 'Calories';
+
+  @override
+  String get scenic => 'Paysage';
+
+  @override
+  String get maxSlope => 'Pente max';
+
+  @override
+  String get highlights => 'Points d\'intérêt';
+
+  @override
+  String get surfaces => 'Surfaces';
 }

@@ -1892,6 +1892,138 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{count} credit(s) left'**
   String creditsLeft(int count);
+
+  /// Total elevation gain and loss over a route
+  ///
+  /// In en, this message translates to:
+  /// **'Elevation range'**
+  String get elevationRange;
+
+  /// Lowest elevation reached in the route
+  ///
+  /// In en, this message translates to:
+  /// **'Minimum elevation'**
+  String get minElevation;
+
+  /// Highest elevation reached in the route
+  ///
+  /// In en, this message translates to:
+  /// **'Maximum elevation'**
+  String get maxElevation;
+
+  /// Level of difficulty of the route (easy, medium, hard)
+  ///
+  /// In en, this message translates to:
+  /// **'Difficulty'**
+  String get difficulty;
+
+  /// Steepest incline on the route
+  ///
+  /// In en, this message translates to:
+  /// **'Maximum incline'**
+  String get maxIncline;
+
+  /// Number of points of interest or checkpoints on the route
+  ///
+  /// In en, this message translates to:
+  /// **'Waypoints'**
+  String get waypointsCount;
+
+  /// Points unit for the user (e.g., 45 pts earned)
+  ///
+  /// In en, this message translates to:
+  /// **'pts'**
+  String get points;
+
+  /// User preference for the type of surface on the route
+  ///
+  /// In en, this message translates to:
+  /// **'Surface'**
+  String get surfacePreference;
+
+  /// Surface option for natural trails (dirt, gravel, forest paths)
+  ///
+  /// In en, this message translates to:
+  /// **'Natural paths'**
+  String get naturalPaths;
+
+  /// Surface option for asphalt or paved roads
+  ///
+  /// In en, this message translates to:
+  /// **'Paved roads'**
+  String get pavedRoads;
+
+  /// Surface option combining natural paths and paved roads
+  ///
+  /// In en, this message translates to:
+  /// **'Mixed'**
+  String get mixed;
+
+  /// Preference to exclude highways from the route
+  ///
+  /// In en, this message translates to:
+  /// **'Avoid highways'**
+  String get avoidHighways;
+
+  /// Preference to avoid large or busy roads
+  ///
+  /// In en, this message translates to:
+  /// **'Avoid major roads'**
+  String get avoidMajorRoads;
+
+  /// Preference to go through or along parks
+  ///
+  /// In en, this message translates to:
+  /// **'Prioritize parks'**
+  String get prioritizeParks;
+
+  /// Preference to include green spaces in the route
+  ///
+  /// In en, this message translates to:
+  /// **'Prefer green spaces'**
+  String get preferGreenSpaces;
+
+  /// Total elevation descent over the course of the route
+  ///
+  /// In en, this message translates to:
+  /// **'Elevation loss'**
+  String get elevationLoss;
+
+  /// Estimated duration of the route (in minutes or hours)
+  ///
+  /// In en, this message translates to:
+  /// **'Duration'**
+  String get duration;
+
+  /// Estimated number of calories burned on the route
+  ///
+  /// In en, this message translates to:
+  /// **'Calories'**
+  String get calories;
+
+  /// How scenic or visually pleasant the route is
+  ///
+  /// In en, this message translates to:
+  /// **'Scenic'**
+  String get scenic;
+
+  /// Maximum slope value on the route (uphill or downhill)
+  ///
+  /// In en, this message translates to:
+  /// **'Max slope'**
+  String get maxSlope;
+
+  /// Key points or notable places along the route
+  ///
+  /// In en, this message translates to:
+  /// **'Highlights'**
+  String get highlights;
+
+  /// Types of surfaces found or available on the route
+  ///
+  /// In en, this message translates to:
+  /// **'Surfaces'**
+  String get surfaces;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

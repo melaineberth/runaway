@@ -5,33 +5,33 @@ import 'package:runaway/core/helper/extensions/extensions.dart';
 import 'package:runaway/core/widgets/blurry_page.dart';
 import 'package:runaway/core/widgets/icon_btn.dart';
 import 'package:runaway/core/widgets/squircle_btn.dart';
+import 'package:runaway/features/home/domain/models/route_metrics.dart';
 import 'package:runaway/features/route_generator/domain/models/route_parameters.dart';
 
 /// Widget pour afficher les informations de la route générée
 class RouteInfoCard extends StatelessWidget {
   final String routeName;
-  final double distance;
+  final RouteParameters parameters;
+  final RouteMetrics metrics;
   final bool isLoop;
-  final int waypointCount;
-  final RouteParameters? parameters; // Paramètres du parcours
   final VoidCallback onClear;
   final VoidCallback onShare;
-  final VoidCallback onSave; // Callback de sauvegarde
-  final bool isSaving; // État de sauvegarde en cours
-  final bool isAlreadySaved; // Indique si le parcours est déjà sauvegardé
+  final VoidCallback onSave;
+  final bool isSaving;
+  final bool isAlreadySaved;
 
   const RouteInfoCard({
     super.key,
     required this.routeName,
-    required this.distance,
+    required this.parameters,
+    required this.metrics,
     required this.isLoop,
-    required this.waypointCount,
-    this.parameters,
     required this.onClear,
     required this.onShare,
-    required this.onSave, 
+    required this.onSave,
     this.isSaving = false,
     this.isAlreadySaved = false,
+
   });
 
   @override
@@ -104,44 +104,43 @@ class RouteInfoCard extends StatelessWidget {
         physics: const BouncingScrollPhysics(),
         contentPadding: const EdgeInsets.symmetric(horizontal: 30),
         children: [
-          // Type d'activité
-          _InfoChip(
-            icon: parameters!.activityType.icon,
-            label: parameters!.activityType.title,
-          ),
-          10.w,
-          // Distance
-          _InfoChip(
-            icon: HugeIcons.solidRoundedNavigator01,
-            label: '${distance.toStringAsFixed(1)} km',
-          ),
-          10.w,
           // Type de terrain
           _InfoChip(
-            icon: getTerrainIcon(parameters!.terrainType.id),
-            label: parameters!.terrainType.title,
+            icon: getTerrainIcon(parameters.terrainType.id),
+            label: parameters.terrainType.title,
           ),
           10.w,
+          
           // Densité urbaine
           _InfoChip(
-            icon: getUrbanDensityIcon(parameters!.urbanDensity.id),
-            label: parameters!.urbanDensity.title,
+            icon: getUrbanDensityIcon(parameters.urbanDensity.id),
+            label: parameters.urbanDensity.title,
           ),
           10.w,
-          // Dénivelé (si > 0)
-          if (parameters!.elevationGain > 0)
-            _InfoChip(
-              icon: HugeIcons.solidSharpMountain,
-              label: '${parameters!.elevationGain.toStringAsFixed(0)}m',
-            ),
-            10.w,
-          // Type de parcours (boucle/simple)
+          
+          // Type de parcours
           _InfoChip(
             icon: isLoop 
                 ? HugeIcons.solidRoundedRepeat
                 : HugeIcons.strokeRoundedArrowRight01,
             label: isLoop ? context.l10n.pathLoop : context.l10n.pathSimple,
           ),
+          10.w,
+          
+          // Score paysage
+          if (metrics.scenicScore > 6)
+            _InfoChip(
+              icon: HugeIcons.solidRoundedImage01,
+              label: '${context.l10n.scenic} ${metrics.scenicScore.toStringAsFixed(1)}/10',
+            ),
+          10.w,
+          
+          // Pente maximale
+          if (metrics.maxIncline > 5)
+            _InfoChip(
+              icon: HugeIcons.strokeRoundedMountain,
+              label: '${context.l10n.maxSlope} ${metrics.maxIncline.toStringAsFixed(1)}%',
+            ),
         ],
       ),
     );

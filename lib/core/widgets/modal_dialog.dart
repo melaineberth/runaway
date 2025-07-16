@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hugeicons/hugeicons.dart';
+import 'package:lottie/lottie.dart';
 import 'package:runaway/core/helper/extensions/extensions.dart';
 import 'package:runaway/core/widgets/icon_btn.dart';
 import 'package:runaway/core/widgets/modal_sheet.dart';
@@ -42,14 +43,16 @@ class ModalDialog extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               if (imgPath != null) ...[
-                SizedBox(
-                  width: 120,
-                  height: 120,
-                  child: Image.asset(imgPath!),
+                Lottie.network(
+                  width: 100,
+                  repeat: false,
+                  fit: BoxFit.fill,
+                  imgPath!,
+                  filterQuality: FilterQuality.high,
                 ),
-                30.h,
+                20.h,
               ],
-              Text(
+              Text( 
                 title,
                 style: context.bodyMedium?.copyWith(
                   fontSize: 22,

@@ -57,13 +57,83 @@ class SearchRadiusChanged extends RouteParametersEvent {
   List<Object?> get props => [radiusInMeters];
 }
 
-class ElevationGainChanged extends RouteParametersEvent {
-  final double elevationGain;
+class ElevationRangeChanged extends RouteParametersEvent {
+  final ElevationRange elevationRange;
 
-  const ElevationGainChanged(this.elevationGain);
+  const ElevationRangeChanged(this.elevationRange);
 
   @override
-  List<Object?> get props => [elevationGain];
+  List<Object> get props => [elevationRange];
+}
+
+class DifficultyChanged extends RouteParametersEvent {
+  final DifficultyLevel difficulty;
+
+  const DifficultyChanged(this.difficulty);
+
+  @override
+  List<Object> get props => [difficulty];
+}
+
+class MaxInclineChanged extends RouteParametersEvent {
+  final double maxInclinePercent;
+
+  const MaxInclineChanged(this.maxInclinePercent);
+
+  @override
+  List<Object> get props => [maxInclinePercent];
+}
+
+class PreferredWaypointsChanged extends RouteParametersEvent {
+  final int waypoints;
+
+  const PreferredWaypointsChanged(this.waypoints);
+
+  @override
+  List<Object> get props => [waypoints];
+}
+
+class AvoidHighwaysToggled extends RouteParametersEvent {
+  final bool avoidHighways;
+
+  const AvoidHighwaysToggled(this.avoidHighways);
+
+  @override
+  List<Object> get props => [avoidHighways];
+}
+
+class PrioritizeParksToggled extends RouteParametersEvent {
+  final bool prioritizeParks;
+
+  const PrioritizeParksToggled(this.prioritizeParks);
+
+  @override
+  List<Object> get props => [prioritizeParks];
+}
+
+class SurfacePreferenceChanged extends RouteParametersEvent {
+  final double surfacePreference;
+
+  const SurfacePreferenceChanged(this.surfacePreference);
+
+  @override
+  List<Object> get props => [surfacePreference];
+}
+
+// 🆕 Événement pour appliquer un preset de difficulté
+class DifficultyPresetApplied extends RouteParametersEvent {
+  final DifficultyLevel difficulty;
+  final double startLongitude;
+  final double startLatitude;
+
+  const DifficultyPresetApplied({
+    required this.difficulty,
+    required this.startLongitude,
+    required this.startLatitude,
+  });
+
+  @override
+  List<Object> get props => [difficulty, startLongitude, startLatitude];
 }
 
 class StartLocationUpdated extends RouteParametersEvent {

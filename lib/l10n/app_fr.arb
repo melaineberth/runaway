@@ -364,7 +364,7 @@
   "@notLoggedIn": {
     "description": "Titre informant l'utilisateur qu'il doit d'abord s'authentifier."
   },
-  "loginOrCreateAccountHint": "Pour accéder à cette page, veuillez vous connecter ou créer un compte.",
+  "loginOrCreateAccountHint": "Pour accéder à cette page, veuillez vous connecter ou créer un compte",
   "@loginOrCreateAccountHint": {
     "description": "Explication affichée sous le titre indiquant pourquoi l'authentification est requise."
   },
@@ -1272,5 +1272,94 @@
         "example": "5"
       }
     }
+  },
+
+  "elevationRange": "Plage de dénivelé",
+  "@elevationRange": {
+    "description": "Plage totale de dénivelé positif et négatif d'un parcours"
+  },
+  "minElevation": "Dénivelé minimum",
+  "@minElevation": {
+    "description": "Dénivelé minimum atteint dans le parcours (altitude la plus basse)"
+  },
+  "maxElevation": "Dénivelé maximum",
+  "@maxElevation": {
+    "description": "Dénivelé maximum atteint dans le parcours (altitude la plus haute)"
+  },
+  "difficulty": "Difficulté",
+  "@difficulty": {
+    "description": "Niveau de difficulté du parcours (facile, moyen, difficile)"
+  },
+  "maxIncline": "Pente maximale",
+  "@maxIncline": {
+    "description": "Inclinaison maximale rencontrée sur le parcours"
+  },
+  "waypointsCount": "Points d'intérêt",
+  "@waypointsCount": {
+    "description": "Nombre de points d'intérêt ou d'étapes sur le parcours"
+  },
+  "points": "pts",
+  "@points": {
+    "description": "Unité de points pour l'utilisateur (ex. : 45 pts gagnés)"
+  },
+  "surfacePreference": "Surface",
+  "@surfacePreference": {
+    "description": "Préférence utilisateur concernant le type de surface du parcours"
+  },
+  "naturalPaths": "Chemins naturels",
+  "@naturalPaths": {
+    "description": "Option de surface indiquant des chemins naturels (terre, sentiers)"
+  },
+  "pavedRoads": "Routes goudronnées",
+  "@pavedRoads": {
+    "description": "Option de surface indiquant des routes goudronnées ou asphaltées"
+  },
+  "mixed": "Mixte",
+  "@mixed": {
+    "description": "Option de surface indiquant un mélange entre chemins naturels et goudronnés"
+  },
+  "avoidHighways": "Éviter autoroutes",
+  "@avoidHighways": {
+    "description": "Préférence pour éviter les autoroutes dans le parcours"
+  },
+  "avoidMajorRoads": "Éviter routes principales",
+  "@avoidMajorRoads": {
+    "description": "Préférence pour éviter les grandes routes ou axes principaux"
+  },
+  "prioritizeParks": "Privilégier parcs",
+  "@prioritizeParks": {
+    "description": "Préférence pour traverser ou longer des parcs"
+  },
+  "preferGreenSpaces": "Préférer espaces verts",
+  "@preferGreenSpaces": {
+    "description": "Préférence pour inclure des espaces verts dans le parcours"
+  },
+  "elevationLoss": "Dénivelé négatif",
+  "@elevationLoss": {
+    "description": "Perte d'altitude cumulée sur le parcours"
+  },
+  "duration": "Durée",
+  "@duration": {
+    "description": "Durée estimée du parcours (exprimée en minutes ou heures)"
+  },
+  "calories": "Calories",
+  "@calories": {
+    "description": "Estimation des calories brûlées sur le parcours"
+  },
+  "scenic": "Paysage",
+  "@scenic": {
+    "description": "Niveau de beauté ou d'intérêt paysager du parcours"
+  },
+  "maxSlope": "Pente max",
+  "@maxSlope": {
+    "description": "Valeur maximale de pente sur le parcours (positif ou négatif)"
+  },
+  "highlights": "Points d'intérêt",
+  "@highlights": {
+    "description": "Résumé ou éléments clés d’un parcours, comme des lieux remarquables"
+  },
+  "surfaces": "Surfaces",
+  "@surfaces": {
+    "description": "Types de surface rencontrés ou disponibles dans le parcours"
   }
 }

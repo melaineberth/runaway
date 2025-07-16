@@ -47,7 +47,7 @@ import 'package:runaway/features/route_generator/presentation/blocs/route_genera
 import 'package:runaway/features/route_generator/presentation/blocs/route_generation/route_generation_state.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' as su;
 import 'package:top_snackbar_flutter/top_snack_bar.dart';
-import '../../../route_generator/presentation/screens/route_parameter.dart'
+import '../../../route_generator/presentation/screens/route_parameter_screen.dart'
     as gen;
 import '../blocs/route_parameters_event.dart';
 
@@ -2232,7 +2232,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
       if (mounted) {
         _presentModalSheet((_) => ModalDialog(
           isDismissible: true,
-          imgPath: "assets/img/lock.png",
+          imgPath: "https://cdn.lottielab.com/l/13mdUjaB8g6HWu.json",
           title: context.l10n.notLoggedIn,
           subtitle: context.l10n.loginOrCreateAccountHint,
           validLabel: context.l10n.logIn,

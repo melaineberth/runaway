@@ -69,6 +69,13 @@ class RouteParametersState extends Equatable {
   }
 
   static RouteParameters _parametersFromJson(Map<String, dynamic> json) {
+    // 🆕 Support pour les nouveaux paramètres avec fallback sur les anciens
+    ElevationRange? elevationRange;
+    
+    if (json['elevation_range'] != null) {
+      elevationRange = ElevationRange.fromJson(json['elevation_range'] as Map<String, dynamic>);
+    } 
+
     return RouteParameters(
       activityType: ActivityType.values.firstWhere(
         (a) => a.id == json['activity_type'],
@@ -82,13 +89,23 @@ class RouteParametersState extends Equatable {
         (u) => u.id == json['urban_density'],
         orElse: () => UrbanDensity.mixed,
       ),
-      distanceKm: json['distance_km'] ?? 5.0,
-      elevationGain: json['elevation_gain'] ?? 0.0,
-      startLongitude: json['start_longitude'] ?? 0.0,
-      startLatitude: json['start_latitude'] ?? 0.0,
-      isLoop: json['is_loop'] ?? true,
-      avoidTraffic: json['avoid_traffic'] ?? true,
-      preferScenic: json['prefer_scenic'] ?? true,
+      distanceKm: (json['distance_km'] as num?)?.toDouble() ?? 5.0,
+      elevationRange: elevationRange!,
+      // 🆕 Nouveaux paramètres avec valeurs par défaut
+      difficulty: DifficultyLevel.values.firstWhere(
+        (d) => d.id == json['difficulty'],
+        orElse: () => DifficultyLevel.moderate,
+      ),
+      maxInclinePercent: (json['max_incline_percent'] as num?)?.toDouble() ?? 12.0,
+      preferredWaypoints: json['preferred_waypoints'] as int? ?? 3,
+      avoidHighways: json['avoid_highways'] as bool? ?? true,
+      prioritizeParks: json['prioritize_parks'] as bool? ?? false,
+      surfacePreference: (json['surface_preference'] as num?)?.toDouble() ?? 0.5,
+      startLongitude: (json['start_longitude'] as num?)?.toDouble() ?? 0.0,
+      startLatitude: (json['start_latitude'] as num?)?.toDouble() ?? 0.0,
+      isLoop: json['is_loop'] as bool? ?? true,
+      avoidTraffic: json['avoid_traffic'] as bool? ?? true,
+      preferScenic: json['prefer_scenic'] as bool? ?? true,
     );
   }
 

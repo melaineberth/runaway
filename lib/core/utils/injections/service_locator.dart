@@ -1,11 +1,13 @@
 import 'package:get_it/get_it.dart';
 import 'package:runaway/core/blocs/app_data/app_data_bloc.dart';
 import 'package:runaway/core/blocs/app_data/app_data_event.dart';
+import 'package:runaway/core/blocs/connectivity/connectivity_cubit.dart';
 import 'package:runaway/core/blocs/locale/locale_bloc.dart';
 import 'package:runaway/core/blocs/notification/notification_bloc.dart';
 import 'package:runaway/core/blocs/notification/notification_event.dart';
 import 'package:runaway/core/blocs/theme_bloc/theme_bloc.dart';
 import 'package:runaway/core/helper/services/app_data_initialization_service.dart';
+import 'package:runaway/core/helper/services/connectivity_service.dart';
 import 'package:runaway/core/helper/services/guest_limitation_service.dart';
 import 'package:runaway/features/activity/data/repositories/activity_repository.dart';
 import 'package:runaway/features/auth/data/repositories/auth_repository.dart';
@@ -46,6 +48,14 @@ class ServiceLocator {
         appDataBloc: sl<AppDataBloc>(),
       );
     });
+
+    // --- Connectivité ----------------------
+    sl.registerLazySingleton<ConnectivityService>(() => ConnectivityService.instance);
+
+    // Initialisation synchrone avant que les Cubits n’en dépendent.
+    await sl<ConnectivityService>().initialize();
+
+    sl.registerLazySingleton<ConnectivityCubit>(() => ConnectivityCubit(sl<ConnectivityService>()));
 
     // ===== BLOCS PRINCIPAUX =====
 

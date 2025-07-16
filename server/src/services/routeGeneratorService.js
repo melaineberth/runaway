@@ -14,17 +14,17 @@ class RouteGeneratorService {
       backoffMultiplier: 1.5       // ✅ AUGMENTÉ : délais plus longs
     };
     
-    // NOUVEAUX PARAMÈTRES POUR GÉNÉRATION ORGANIQUE
+    // ✅ NOUVEAUX PARAMÈTRES POUR GÉNÉRATION ORGANIQUE (CORRIGÉS)
     this.organicConfig = {
-      minWaypoints: 3,           // ✅ RÉDUIRE : Minimum waypoints pour compatibilité API
-      maxWaypoints: 4,           // ✅ RÉDUIRE : Maximum pour respecter limite GraphHopper (5 points max)
+      minWaypoints: 1,           // ✅ RÉDUIRE : Minimum waypoints 
+      maxWaypoints: 3,           // ✅ CRITIQUE : Maximum 3 waypoints (+ départ = 4 points total)
       waypointSpread: 0.3,       // Spread des waypoints (30% de la distance)
       organicnessFactor: 0.7,    // Facteur d'organicité (0-1)
       naturalCurveFactor: 1.2,   // Facteur de courbure naturelle
       avoidanceRadius: 200       // Rayon d'évitement des segments droits
     };
     
-    console.log("🔧 RouteGeneratorService amélioré avec génération organique");
+    console.log("🔧 RouteGeneratorService amélioré avec génération organique - API GraphHopper compliant");
   }
 
   /**
@@ -32,7 +32,7 @@ class RouteGeneratorService {
    */
   async generateRoute(params) {
     const startTime = Date.now();
-
+  
     let aiTweaks;
     try {
       aiTweaks = await groqService.suggestGenerationTweaks(params);
@@ -43,7 +43,8 @@ class RouteGeneratorService {
     } catch (err) {
       logger.warn('Groq AI tweak retrieval failed', err.message);
     }
-
+  
+    // 🆕 EXTRACTION DES NOUVEAUX PARAMÈTRES
     const {
       startLat,
       startLon,
@@ -51,30 +52,59 @@ class RouteGeneratorService {
       distanceKm,
       terrainType,
       urbanDensity,
+      // Anciens paramètres maintenus pour compatibilité
       elevationGain,
+      // 🆕 Nouveaux paramètres
+      elevationRange,
+      difficulty = 'moderate',
+      maxInclinePercent = 12.0,
+      preferredWaypoints = 3,
+      avoidHighways = true,
+      prioritizeParks = false,
+      surfacePreference = 0.5,
       isLoop,
       avoidTraffic,
       preferScenic,
     } = params;
-
-    logger.info("Organic route generation started", {
+  
+    // 🆕 MIGRATION : gérer elevationRange ou elevationGain
+    const actualElevationRange = elevationRange || {
+      min: 0,
+      max: elevationGain || 0
+    };
+  
+    logger.info("Enhanced route generation started", {
       requestId: params.requestId,
       activityType,
       distanceKm,
       terrainType,
+      difficulty,
+      elevationRange: actualElevationRange,
+      maxInclinePercent,
+      preferredWaypoints,
+      surfacePreference,
       startCoords: [startLat, startLon],
       maxAttempts: this.retryConfig.maxAttempts
     });
-
+  
     let lastError;
     let attemptedStrategies = [];
-
-    // Nouvelles stratégies incluant la génération organique
-    const strategies = this.getEnhancedGenerationStrategies(params);
-
+  
+    // 🆕 STRATÉGIES ENRICHIES avec nouveaux paramètres
+    const strategies = this.getEnhancedGenerationStrategies({
+      ...params,
+      elevationRange: actualElevationRange,
+      difficulty,
+      maxInclinePercent,
+      preferredWaypoints,
+      avoidHighways,
+      prioritizeParks,
+      surfacePreference
+    });
+  
     for (let attempt = 1; attempt <= this.retryConfig.maxAttempts; attempt++) {
       try {
-        logger.info(`Organic route generation attempt ${attempt}/${this.retryConfig.maxAttempts}`);
+        logger.info(`Enhanced route generation attempt ${attempt}/${this.retryConfig.maxAttempts}`);
     
         const strategy = strategies[(attempt - 1) % strategies.length];
         attemptedStrategies.push(strategy.name);
@@ -82,42 +112,78 @@ class RouteGeneratorService {
         logger.info(`Using enhanced strategy: ${strategy.name}`, {
           isOrganic: strategy.isOrganic,
           waypointCount: strategy.params.waypointCount,
-          organicness: strategy.params.organicnessFactor
+          difficulty: difficulty,
+          maxIncline: maxInclinePercent
         });
     
-        // Générer le parcours avec la stratégie améliorée
+        // 🆕 GÉNÉRATION avec paramètres enrichis
         let route;
         if (strategy.isOrganic) {
-          route = await this.generateOrganicRoute(params, strategy);
+          route = await this.generateOrganicRoute({
+            ...params,
+            elevationRange: actualElevationRange,
+            difficulty,
+            maxInclinePercent,
+            preferredWaypoints,
+            avoidHighways,
+            prioritizeParks,
+            surfacePreference
+          }, strategy);
         } else if (isLoop) {
-          route = await this.generateLoopRouteWithStrategy(params, strategy);
+          route = await this.generateLoopRouteWithStrategy({
+            ...params,
+            elevationRange: actualElevationRange,
+            difficulty,
+            maxInclinePercent,
+            preferredWaypoints,
+            avoidHighways,
+            prioritizeParks,
+            surfacePreference
+          }, strategy);
         } else {
-          route = await this.generatePointToPointRouteWithStrategy(params, strategy);
+          route = await this.generatePointToPointRouteWithStrategy({
+            ...params,
+            elevationRange: actualElevationRange,
+            difficulty,
+            maxInclinePercent,
+            preferredWaypoints,
+            avoidHighways,
+            prioritizeParks,
+            surfacePreference
+          }, strategy);
         }
     
-        // Validation de qualité améliorée
-        const qualityValidation = routeQualityService.validateRoute(route, params);
+        // Validation de qualité
+        const qualityValidation = routeQualityService.validateRoute(route, {
+          ...params,
+          elevationRange: actualElevationRange,
+          difficulty,
+          maxInclinePercent
+        });
     
         logger.info('Enhanced route quality validation:', {
           attempt,
           isValid: qualityValidation.isValid,
           quality: qualityValidation.quality,
-          aestheticsScore: qualityValidation.metrics.aesthetics?.score || 0,
-          complexityScore: qualityValidation.metrics.complexity?.score || 0,
+          difficulty: difficulty,
           actualDistance: route.distance / 1000
         });
     
-        // ✅ CRITÈRES TRÈS ASSOUPLIS : Accepter presque tout sauf "critical"
         const isAcceptableQuality = qualityValidation.quality !== 'critical';
     
         if (isAcceptableQuality) {
-          const { route: fixedRoute, fixes } = routeQualityService.autoFixRoute(route, params);
+          const { route: fixedRoute, fixes } = routeQualityService.autoFixRoute(route, {
+            ...params,
+            elevationRange: actualElevationRange,
+            difficulty,
+            maxInclinePercent
+          });
           
           if (fixes.length > 0) {
-            logger.info('Applied auto-fixes for organic route:', fixes);
+            logger.info('Applied auto-fixes for enhanced route:', fixes);
           }
     
-          // Ajouter les métadonnées enrichies
+          // 🆕 MÉTADONNÉES ENRICHIES
           fixedRoute.metadata = {
             ...fixedRoute.metadata,
             aiTweaks,
@@ -127,66 +193,51 @@ class RouteGeneratorService {
             appliedFixes: fixes,
             validationMetrics: qualityValidation.metrics,
             isOrganic: strategy.isOrganic,
-            aestheticsScore: qualityValidation.metrics.aesthetics?.score || 0,
-            complexityScore: qualityValidation.metrics.complexity?.score || 0
+            // Nouveaux paramètres dans les métadonnées
+            difficulty: difficulty,
+            elevationRange: actualElevationRange,
+            maxInclinePercent: maxInclinePercent,
+            preferredWaypoints: preferredWaypoints,
+            surfacePreference: surfacePreference,
+            avoidHighways: avoidHighways,
+            prioritizeParks: prioritizeParks
           };
     
           const duration = Date.now() - startTime;
-          logger.info("Organic route generation completed successfully", {
+          logger.info("Enhanced route generation completed successfully", {
             requestId: params.requestId,
             duration: `${duration}ms`,
             attempts: attempt,
             quality: qualityValidation.quality,
+            difficulty: difficulty,
             distance: fixedRoute.distance / 1000,
             coordinatesCount: fixedRoute.coordinates.length,
-            strategy: strategy.name,
-            aestheticsScore: qualityValidation.metrics.aesthetics?.score || 0
+            strategy: strategy.name
           });
     
           metricsService.recordRouteGeneration(true, fixedRoute.distance / 1000);
           return fixedRoute;
         }
-
-         // ✅ FIX: Vérification finale pour les boucles
-        if (params.isLoop && finalRoute.coordinates.length > 1) {
-          const start = finalRoute.coordinates[0];
-          const end = finalRoute.coordinates[finalRoute.coordinates.length - 1];
-          const distance = turf.distance(start, end, { units: 'meters' });
-
-          if (distance > 50) {
-            logger.warn('Final loop closure check - forcing closure', {
-              distance: Math.round(distance),
-              requestId: params.requestId
-            });
-
-            // Forcer la fermeture finale
-            finalRoute.coordinates[finalRoute.coordinates.length - 1] = [...start];
-            
-            // Marquer comme corrigé
-            if (!finalRoute.metadata.appliedFixes) {
-              finalRoute.metadata.appliedFixes = [];
-            }
-            finalRoute.metadata.appliedFixes.push('final_loop_closure');
-          }
-        }
-    
-        // Si la qualité n'est pas acceptable, ajuster la stratégie
+  
         lastError = new Error(`Route quality insufficient: ${qualityValidation.quality}`);
     
       } catch (error) {
         lastError = error;
-        logger.warn(`Organic route generation attempt ${attempt} failed:`, {
+        logger.warn(`Enhanced route generation attempt ${attempt} failed:`, {
           error: error.message,
           strategy: attemptedStrategies[attemptedStrategies.length - 1]
         });
     
-        // ✅ GESTION SPÉCIFIQUE ERREUR 429 (Rate Limiting)
         if (error.message.includes('429') || error.message.includes('Too Many Requests')) {
           logger.warn('GraphHopper API rate limit reached, trying fallback strategy');
           
-          // Fallback immédiat vers round_trip simple
           try {
-            const fallbackRoute = await this.generateSimpleFallbackRoute(params);
+            const fallbackRoute = await this.generateSimpleFallbackRoute({
+              ...params,
+              elevationRange: actualElevationRange,
+              difficulty,
+              avoidHighways
+            });
             logger.info('Fallback route generated successfully due to rate limiting');
             
             metricsService.recordRouteGeneration(true, fallbackRoute.distance / 1000);
@@ -198,26 +249,26 @@ class RouteGeneratorService {
         }
     
         if (attempt < this.retryConfig.maxAttempts) {
-          const delay = 2000 * Math.pow(this.retryConfig.backoffMultiplier, attempt - 1); // ✅ DÉLAI PLUS LONG
+          const delay = 2000 * Math.pow(this.retryConfig.backoffMultiplier, attempt - 1);
           logger.info(`Waiting ${delay}ms before next attempt due to API limits`);
           await new Promise(resolve => setTimeout(resolve, delay));
         }
       }
     }
-
+  
     // Toutes les tentatives ont échoué
     const duration = Date.now() - startTime;
-    logger.error("Organic route generation failed after all attempts", {
+    logger.error("Enhanced route generation failed after all attempts", {
       requestId: params.requestId,
       duration: `${duration}ms`,
       attempts: this.retryConfig.maxAttempts,
       strategiesUsed: attemptedStrategies,
       lastError: lastError.message
     });
-
+  
     metricsService.recordRouteGeneration(false);
-    throw new Error(`Unable to generate acceptable organic route after ${this.retryConfig.maxAttempts} attempts. Last error: ${lastError.message}`);
-  }
+    throw new Error(`Unable to generate acceptable enhanced route after ${this.retryConfig.maxAttempts} attempts. Last error: ${lastError.message}`);
+  }  
 
   async generateWithProgressiveFallback(params) {
     const maxAttempts = 5; // Plus d'attempts avec stratégies différentes
@@ -344,22 +395,33 @@ class RouteGeneratorService {
  * NOUVELLE : Génération de fallback simple en cas de rate limiting
  */
   async generateSimpleFallbackRoute(params) {
-    const { startLat, startLon, distanceKm, isLoop } = params;
-    const profile = graphhopperCloud.selectProfile(params.activityType, params.terrainType, params.preferScenic);
-
-    logger.info('Generating simple fallback route due to API constraints');
-
+    const { 
+      startLat, 
+      startLon, 
+      distanceKm, 
+      isLoop,
+      avoidHighways = true 
+    } = params;
+    
+    const profile = graphhopperCloud.selectProfile(
+      params.activityType, 
+      params.terrainType, 
+      params.preferScenic
+    );
+  
+    logger.info('Generating enhanced fallback route due to API constraints');
+  
     if (isLoop) {
-      // Round trip simple avec un seul point
       return await graphhopperCloud.getRoute({
         points: [{ lat: startLat, lon: startLon }],
         profile,
         algorithm: 'round_trip',
         roundTripDistance: distanceKm * 1000,
-        roundTripSeed: Math.floor(Math.random() * 1000)
+        roundTripSeed: Math.floor(Math.random() * 1000),
+        avoidHighways: avoidHighways, // 🆕 Utiliser le paramètre
+        details: ['surface'] // 🆕 Demander infos surface
       });
     } else {
-      // Générer un point de destination simple
       const bearing = Math.random() * 360;
       const targetDistance = distanceKm * 0.8;
       
@@ -369,13 +431,14 @@ class RouteGeneratorService {
         bearing,
         { units: "kilometers" }
       );
-
+  
       return await graphhopperCloud.getRoute({
         points: [
           { lat: startLat, lon: startLon },
           { lat: endpoint.geometry.coordinates[1], lon: endpoint.geometry.coordinates[0] }
         ],
-        profile
+        profile,
+        avoidHighways: avoidHighways // 🆕 Utiliser le paramètre
       });
     }
   }
@@ -384,122 +447,220 @@ class RouteGeneratorService {
    * NOUVELLE : Stratégies de génération améliorées avec approche organique
    */
   getEnhancedGenerationStrategies(params) {
-    const { distanceKm, isLoop, terrainType, preferScenic, activityType } = params;
+    const { 
+      distanceKm, 
+      isLoop, 
+      terrainType, 
+      preferScenic, 
+      activityType,
+      difficulty = 'moderate',
+      maxInclinePercent = 12.0,
+      preferredWaypoints = 3,
+      avoidHighways = true,
+      prioritizeParks = false,
+      surfacePreference = 0.5,
+      elevationRange = { min: 0, max: 0 }
+    } = params;
     
     const baseSearchRadius = Math.max(2000, distanceKm * 800);
     const baseRoundTripDistance = distanceKm * 1000;
   
+    // 🆕 AJUSTEMENT SELON LA DIFFICULTÉ
+    const difficultyMultipliers = {
+      'easy': { organic: 0.4, waypoints: 0.7, radius: 0.8 },
+      'moderate': { organic: 0.6, waypoints: 1.0, radius: 1.0 },
+      'hard': { organic: 0.8, waypoints: 1.3, radius: 1.2 },
+      'expert': { organic: 0.9, waypoints: 1.5, radius: 1.4 }
+    };
+  
+    const diffMultiplier = difficultyMultipliers[difficulty] || difficultyMultipliers['moderate'];
+  
+    // ✅ CALCUL INTELLIGENT DU NOMBRE DE WAYPOINTS AVEC LIMITE STRICTE
+    const rawWaypointCount = preferredWaypoints * diffMultiplier.waypoints;
+    const adaptiveWaypointCount = Math.min(
+      this.organicConfig.maxWaypoints, // Limite absolue de la classe
+      Math.max(
+        this.organicConfig.minWaypoints,
+        Math.floor(rawWaypointCount / 2)
+      )
+    );
+
+    logger.info('Enhanced strategies waypoint calculation', {
+      difficulty,
+      preferredWaypoints,
+      rawCalculation: rawWaypointCount,
+      adaptiveCount: adaptiveWaypointCount,
+      maxAllowed: this.organicConfig.maxWaypoints
+    });
+
     const strategies = [
-      // Stratégie 1: Génération organique avancée (NOUVEAU)
+      // Stratégie 1: Organique adaptée à la difficulté
       {
-        name: 'organic_natural',
+        name: 'organic_adaptive',
         isOrganic: true,
         params: {
-          waypointCount: Math.min(2, Math.max(1, Math.floor(distanceKm * 0.2))), // ✅ RÉDUIT
-          organicnessFactor: 0.8,
-          naturalCurveFactor: 1.3,
-          searchRadius: baseSearchRadius * 0.8,
-          avoidStraightLines: true,
-          useNaturalCurves: true,
-          spreadPattern: 'natural'
+          waypointCount: adaptiveWaypointCount,
+          organicnessFactor: 0.7 * diffMultiplier.organic,
+          naturalCurveFactor: 1.2 + (difficulty === 'expert' ? 0.3 : 0),
+          searchRadius: baseSearchRadius * diffMultiplier.radius,
+          avoidStraightLines: difficulty !== 'easy',
+          useNaturalCurves: surfacePreference < 0.7,
+          spreadPattern: 'adaptive',
+          // 🆕 Nouveaux paramètres intégrés
+          maxInclinePercent: maxInclinePercent,
+          prioritizeParks: prioritizeParks,
+          surfacePreference: surfacePreference,
+          avoidHighways: avoidHighways
         }
       },
   
-      // Stratégie 2: Génération organique modérée (NOUVEAU)
+      // Stratégie 2: Contrôlée selon surface et parcs
       {
-        name: 'organic_balanced',
-        isOrganic: true,
-        params: {
-          waypointCount: Math.min(2, Math.max(1, Math.floor(distanceKm * 0.15))), // ✅ RÉDUIT
-          organicnessFactor: 0.6,
-          naturalCurveFactor: 1.1,
-          searchRadius: baseSearchRadius,
-          avoidStraightLines: true,
-          spreadPattern: 'balanced'
-        }
-      },
-  
-      // Stratégie 3: Multi-waypoints contrôlés amélioré
-      {
-        name: 'controlled_multi_waypoint',
+        name: 'surface_optimized',
         isOrganic: false,
         params: {
           useWaypoints: true,
-          waypointCount: Math.min(2, Math.max(1, Math.floor(distanceKm / 5))), // ✅ TRÈS RÉDUIT
-          searchRadius: baseSearchRadius * 0.7,
+          waypointCount: Math.min(adaptiveWaypointCount, 2), // ✅ Plus conservateur
+          searchRadius: baseSearchRadius * (prioritizeParks ? 1.3 : 0.9),
           algorithm: 'auto',
-          waypointDistribution: 'strategic'
+          waypointDistribution: prioritizeParks ? 'park_focused' : 'standard',
+          preferAsphalt: surfacePreference > 0.7,
+          preferNatural: surfacePreference < 0.3,
+          avoidHighways: avoidHighways,
+          maxInclinePercent: maxInclinePercent
         }
       },
   
-      // Stratégie 4: Optimisée traditionnelle améliorée
+      // Stratégie 3: Élevation consciente  
       {
-        name: 'enhanced_traditional',
+        name: 'elevation_aware',
         isOrganic: false,
         params: {
           searchRadius: baseSearchRadius,
           roundTripDistance: baseRoundTripDistance,
           algorithm: isLoop ? 'round_trip' : 'auto',
-          seed: this.generateSmartSeed(params),
-          avoidHighways: true,
-          details: ['surface', 'road_class'],
-          enhancedRouting: true
+          seed: this.generateElevationAwareSeed(params),
+          avoidHighways: avoidHighways,
+          targetElevationGain: elevationRange.max,
+          maxInclinePercent: maxInclinePercent,
+          preferHilly: elevationRange.max > 200,
+          details: ['surface', 'road_class', 'elevation']
         }
       },
   
-      // Stratégie 5: Fallback organique conservateur (NOUVEAU)
+      // Stratégie 4: Fallback adaptatif (ultra conservateur)
       {
-        name: 'organic_conservative',
-        isOrganic: true,
+        name: 'adaptive_fallback',
+        isOrganic: difficulty === 'expert',
         params: {
-          waypointCount: Math.min(2, Math.max(1, Math.floor(distanceKm * 0.3))), // ✅ LIMITER
-          organicnessFactor: 0.4,
-          naturalCurveFactor: 1.0,
-          searchRadius: Math.min(5000, baseSearchRadius * 0.6),
+          waypointCount: Math.min(1, adaptiveWaypointCount), // ✅ 1 waypoint maximum en fallback
+          organicnessFactor: 0.3 * diffMultiplier.organic,
+          searchRadius: Math.min(5000, baseSearchRadius * 0.8),
           avoidStraightLines: false,
-          spreadPattern: 'conservative'
+          spreadPattern: 'simple',
+          maxInclinePercent: Math.min(maxInclinePercent, 15.0),
+          avoidHighways: avoidHighways,
+          surfacePreference: Math.max(0.3, surfacePreference)
         }
       }
     ];
   
+    logger.info('Generated enhanced strategies with API compliance', {
+      difficulty,
+      adaptiveWaypointCount,
+      maxWaypointsAllowed: this.organicConfig.maxWaypoints,
+      surfacePreference,
+      prioritizeParks,
+      strategiesCount: strategies.length
+    });
+  
     return strategies;
   }
+
+  generateElevationAwareSeed(params) {
+    const { 
+      startLat, 
+      startLon, 
+      distanceKm, 
+      activityType, 
+      elevationRange = { min: 0, max: 0 },
+      difficulty = 'moderate'
+    } = params;
+    
+    const latInt = Math.floor(startLat * 1000);
+    const lonInt = Math.floor(startLon * 1000);
+    const distInt = Math.floor(distanceKm * 100);
+    const activityHash = activityType.split('').reduce((a, b) => a + b.charCodeAt(0), 0);
+    const elevationHash = Math.floor(elevationRange.max * 10);
+    const difficultyHash = difficulty.split('').reduce((a, b) => a + b.charCodeAt(0), 0);
+    
+    return (latInt + lonInt + distInt + activityHash + elevationHash + difficultyHash) % 1000000;
+  }  
 
   /**
    * NOUVELLE : Génération de parcours organique
    */
   async generateOrganicRoute(params, strategy) {
-    // ✅ FIX: Déléguer entièrement à GraphHopper Cloud Service
-    const { startLat, startLon, distanceKm } = params;
-    const profile = graphhopperCloud.selectProfile(params.activityType, params.terrainType, params.preferScenic);
+    const { 
+      startLat, 
+      startLon, 
+      distanceKm,
+      avoidHighways = true,
+      prioritizeParks = false,
+      surfacePreference = 0.5,
+      maxInclinePercent = 12.0
+    } = params;
+    
+    const profile = graphhopperCloud.selectProfile(
+      params.activityType, 
+      params.terrainType, 
+      params.preferScenic
+    );
   
-    logger.info('Delegating organic route generation to GraphHopper Cloud', {
+    logger.info('Generating enhanced organic route', {
       strategy: strategy.name,
       organicnessFactor: strategy.params.organicnessFactor,
-      waypointCount: strategy.params.waypointCount
+      waypointCount: strategy.params.waypointCount,
+      avoidHighways,
+      prioritizeParks,
+      surfacePreference
     });
   
-    // Utiliser les paramètres de la stratégie pour configurer GraphHopper
+    // 🆕 PARAMÈTRES ENRICHIS pour GraphHopper
     const ghParams = {
       points: [{ lat: startLat, lon: startLon }],
       profile,
       algorithm: 'round_trip',
       roundTripDistance: distanceKm * 1000,
       roundTripSeed: Math.floor(Math.random() * 1000000),
+      // 🆕 Paramètres enrichis
       avoidTraffic: params.avoidTraffic,
-      // Paramètres organiques transmis à GraphHopper
+      avoidHighways: avoidHighways,
+      // Transmission des paramètres organiques
       _forceOrganic: true,
       _organicnessFactor: strategy.params.organicnessFactor,
       _avoidStraightLines: strategy.params.avoidStraightLines,
-      _forceCurves: strategy.params.useNaturalCurves
+      _forceCurves: strategy.params.useNaturalCurves,
+      _maxInclinePercent: maxInclinePercent,
+      _prioritizeParks: prioritizeParks,
+      _surfacePreference: surfacePreference
     };
   
-    // ✅ FIX: Appeler directement GraphHopper Cloud
+    // 🆕 AJUSTEMENTS SELON SURFACE PREFERENCE
+    if (surfacePreference < 0.3) {
+      // Préférence chemins naturels
+      ghParams.details = ['surface', 'road_class'];
+      ghParams._preferUnpaved = true;
+    } else if (surfacePreference > 0.7) {
+      // Préférence asphalte
+      ghParams._preferPaved = true;
+    }
+  
     const route = await graphhopperCloud.getRoute(ghParams);
   
-    // ✅ FIX: Forcer la fermeture de boucle
+    // Forcer la fermeture de boucle
     return this.ensureLoopClosure(route, { lat: startLat, lon: startLon });
-  }
+  }  
   
   /**
    * FIX: Garantir la fermeture de boucle
@@ -552,42 +713,72 @@ class RouteGeneratorService {
   /**
    * NOUVELLE : Génération de waypoints organiques
    */
-  generateOrganicWaypoints(centerPoint, targetDistance, organicnessFactor) {
+  generateOrganicWaypoints(centerPoint, targetDistance, organicnessFactor, enhancedParams = {}) {
+    const {
+      preferredWaypoints = 3,
+      prioritizeParks = false,
+      surfacePreference = 0.5,
+      difficulty = 'moderate'
+    } = enhancedParams;
+  
     const waypoints = [centerPoint];
     
-    // OPTIMISATION: Placement intelligent basé sur la distance
-    const MAX_INTERMEDIATE_WAYPOINTS = 2;
+    // ✅ CALCUL ADAPTATIF avec limites strictes de l'API
+    const difficultyFactors = {
+      'easy': 1,
+      'moderate': 1.5,
+      'hard': 2,
+      'expert': 2
+    };
+  
+    const rawWaypointCount = Math.floor(preferredWaypoints * difficultyFactors[difficulty] / 3);
+    const waypointCount = Math.min(
+      this.organicConfig.maxWaypoints, // Limite absolue (3)
+      Math.max(
+        this.organicConfig.minWaypoints, // Minimum (1)
+        rawWaypointCount
+      )
+    );
     
-    // Stratégie adaptative selon la distance
-    let waypointCount;
-    if (targetDistance < 3000) {
-      waypointCount = 1; // Un seul waypoint pour courtes distances
-    } else if (targetDistance < 10000) {
-      waypointCount = 2; // Deux waypoints pour distances moyennes
-    } else {
-      waypointCount = MAX_INTERMEDIATE_WAYPOINTS;
-    }
+    const baseRadius = Math.min(
+      (targetDistance / 1000) / (2 * Math.PI) * 1.2,
+      12 // Maximum 12km de rayon pour rester raisonnable
+    );
     
-    const baseRadius = (targetDistance / 1000) / (2 * Math.PI) * 1.2;
+    // 🆕 AJUSTEMENT SELON SURFACE avec limite
+    const radiusMultiplier = surfacePreference < 0.3 ? 1.2 : 1.0;
+    const adjustedRadius = baseRadius * radiusMultiplier;
     
-    // AMÉLIORATION: Distribution asymétrique pour plus de variété
+    logger.info('Enhanced waypoint generation with strict API limits', {
+      preferredWaypoints,
+      rawCalculation: rawWaypointCount,
+      actualWaypointCount: waypointCount,
+      maxAllowed: this.organicConfig.maxWaypoints,
+      difficulty,
+      prioritizeParks,
+      surfacePreference,
+      adjustedRadius: adjustedRadius.toFixed(2) + 'km',
+      totalPointsGenerated: waypointCount + 1 // +1 pour le point de départ
+    });
+  
+    // Utiliser le nombre d'or pour une distribution naturelle
     const goldenRatio = 1.618;
-    const angleOffsets = waypointCount === 1 
-      ? [goldenRatio * 137.5] // Angle d'or pour un point
-      : [120, 240]; // Distribution triangulaire pour 2 points
+    const angleStep = 360 / waypointCount;
     
     for (let i = 0; i < waypointCount; i++) {
-      // Variation de distance plus intelligente
-      const distanceVariation = 0.6 + (Math.random() * 0.8); // 60-140% du rayon
-      const radiusWithVariation = baseRadius * distanceVariation;
+      const distanceVariation = 0.7 + (Math.random() * 0.6); // 70% à 130%
+      const radiusWithVariation = adjustedRadius * distanceVariation;
       
-      // Angle avec perturbation organique
-      const baseAngle = angleOffsets[i];
-      const angleVariation = (Math.random() - 0.5) * 60 * organicnessFactor;
-      const finalAngle = baseAngle + angleVariation;
+      // Angle de base avec variation du nombre d'or
+      const baseAngle = angleStep * i;
+      const goldenVariation = (i * goldenRatio * 137.5) % 360; // Suite de Fibonacci angulaire
+      const organicVariation = (Math.random() - 0.5) * 45 * organicnessFactor; // ±22.5° max
+      const finalAngle = (baseAngle + goldenVariation + organicVariation) % 360;
       
-      // Ajouter une composante spirale pour éviter la symétrie
-      const spiralOffset = Math.sin(i * Math.PI / waypointCount) * 20;
+      // 🆕 BONUS SPIRAL contrôlé pour parks
+      const spiralOffset = prioritizeParks 
+        ? Math.sin(i * Math.PI / waypointCount) * 15 // Réduit de 30 à 15 degrés
+        : Math.sin(i * Math.PI / waypointCount) * 10;
       
       const waypoint = turf.destination(
         [centerPoint.lon, centerPoint.lat],
@@ -602,10 +793,29 @@ class RouteGeneratorService {
       });
     }
     
-    logger.info('Optimized waypoint generation', {
-      targetDistance,
-      waypointCount,
-      strategy: targetDistance < 3000 ? 'single_point' : 'multi_point'
+    // ✅ VALIDATION FINALE
+    if (waypoints.length > 5) {
+      logger.error('CRITICAL: Generated too many waypoints for GraphHopper API', {
+        generated: waypoints.length,
+        maxAllowed: 5,
+        waypointCount,
+        centerPoint
+      });
+      
+      // Garder seulement les 4 premiers waypoints (+ centre = 5 total)
+      const safeLimitedWaypoints = waypoints.slice(0, 4);
+      logger.warn('Applied emergency waypoint limiting', {
+        original: waypoints.length,
+        limited: safeLimitedWaypoints.length
+      });
+      
+      return safeLimitedWaypoints;
+    }
+    
+    logger.info('Organic waypoints generated successfully with API compliance', {
+      totalWaypoints: waypoints.length,
+      isAPICompliant: waypoints.length <= 5,
+      generatedWaypoints: waypointCount
     });
     
     return waypoints;
@@ -943,18 +1153,28 @@ class RouteGeneratorService {
    * NOUVELLE : Calcul du nombre optimal de waypoints
    */
   calculateOptimalWaypointCount(distanceKm, activityType) {
-    // ✅ LIMITER SELON L'API GRAPHHOPPER (max 5 points = 4 waypoints + départ)
+    // ✅ LIMITER STRICTEMENT SELON L'API GRAPHHOPPER (max 5 points = 4 waypoints + départ)
     const baseCount = {
-      'running': Math.max(2, Math.min(3, Math.floor(distanceKm * 0.4))),    // ✅ RÉDUIRE
-      'cycling': Math.max(2, Math.min(3, Math.floor(distanceKm * 0.3))),    // ✅ RÉDUIRE
-      'walking': Math.max(2, Math.min(4, Math.floor(distanceKm * 0.5))),    // ✅ RÉDUIRE
-      'hiking': Math.max(2, Math.min(4, Math.floor(distanceKm * 0.6)))      // ✅ RÉDUIRE
+      'running': Math.max(1, Math.min(2, Math.floor(distanceKm * 0.15))),    // ✅ TRÈS RÉDUIT
+      'cycling': Math.max(1, Math.min(2, Math.floor(distanceKm * 0.12))),    // ✅ TRÈS RÉDUIT  
+      'walking': Math.max(1, Math.min(3, Math.floor(distanceKm * 0.18))),    // ✅ RÉDUIT
+      'hiking': Math.max(1, Math.min(3, Math.floor(distanceKm * 0.20)))      // ✅ RÉDUIT
     };
   
     const count = baseCount[activityType] || baseCount['running'];
     
-    // ✅ GARANTIR QUE LE TOTAL (waypoints + départ + arrivée) <= 5
-    return Math.min(count, 3); // Max 3 waypoints intermédiaires + départ + arrivée = 5 points
+    // ✅ GARANTIR QUE LE TOTAL (waypoints + départ) <= 4 points pour sécurité
+    const safeCount = Math.min(count, 3); // Max 3 waypoints intermédiaires + départ = 4 points
+    
+    logger.info('Calculated optimal waypoint count', {
+      activityType,
+      distanceKm,
+      baseCalculation: count,
+      safeLimitedCount: safeCount,
+      totalPoints: safeCount + 1 // +1 pour le point de départ
+    });
+    
+    return safeCount;
   }
 
   /**

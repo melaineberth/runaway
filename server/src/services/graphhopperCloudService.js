@@ -189,11 +189,25 @@ class GraphHopperCloudService {
     const turf = require('@turf/turf');
     const waypoints = [centerPoint];
     
-    // Calculer le nombre optimal de waypoints
-    const waypointCount = Math.max(6, Math.min(12, Math.floor(targetDistance / 800)));
+    // ✅ FIX : Limiter strictement à 3 waypoints maximum (+ départ = 4 points total)
+    const MAX_WAYPOINTS = 3; 
+    const waypointCount = Math.min(
+      MAX_WAYPOINTS, 
+      Math.max(1, Math.floor(targetDistance / 2000)) // 1 waypoint par 2km minimum
+    );
+    
+    logger.info('Generating organic waypoints with API compliance', {
+      targetDistance,
+      maxAllowed: MAX_WAYPOINTS,
+      calculated: waypointCount,
+      totalPoints: waypointCount + 1 // +1 pour le point de départ
+    });
     
     // Rayon de base pour la distribution
-    const baseRadius = (targetDistance / 1000) / (2 * Math.PI) * 1.2; // En km
+    const baseRadius = Math.min(
+      (targetDistance / 1000) / (2 * Math.PI) * 1.2, // Rayon théorique
+      15 // Maximum 15km de rayon pour éviter les waypoints trop éloignés
+    );
     
     for (let i = 0; i < waypointCount; i++) {
       const waypoint = this.generateOrganicWaypoint(
@@ -206,8 +220,14 @@ class GraphHopperCloudService {
       waypoints.push(waypoint);
     }
 
-    // Retourner au centre pour fermer la boucle
-    waypoints.push(centerPoint);
+    // ✅ IMPORTANT : Ne pas ajouter le point de retour pour round_trip
+    // GraphHopper gère automatiquement le retour au point de départ
+
+    logger.info('Organic waypoints generated successfully', {
+      waypointsGenerated: waypoints.length,
+      apiCompliant: waypoints.length <= 5,
+      baseRadius: baseRadius.toFixed(2) + 'km'
+    });
 
     return waypoints;
   }
@@ -218,22 +238,21 @@ class GraphHopperCloudService {
   generateOrganicWaypoint(center, baseRadius, index, totalCount, organicnessFactor) {
     const turf = require('@turf/turf');
     
-    // Distribution angulaire avec variations organiques
+    // Distribution angulaire équilibrée
     let angle = (360 / totalCount) * index;
     
-    // Ajouter de la variation organique
-    const organicVariation = (Math.random() - 0.5) * 60 * organicnessFactor; // ±30° max
+    // Ajouter de la variation organique (réduite pour éviter les waypoints trop chaotiques)
+    const organicVariation = (Math.random() - 0.5) * 40 * organicnessFactor; // ±20° max au lieu de ±30°
     angle += organicVariation;
     
-    // Distance avec variation organique
-    const radiusVariation = 0.7 + (Math.random() * 0.6); // 70% à 130% du rayon de base
-    const organicRadius = baseRadius * radiusVariation * (1 + organicnessFactor * 0.3);
+    // Distance avec variation contrôlée
+    const radiusVariation = 0.8 + (Math.random() * 0.4); // 80% à 120% du rayon de base
+    const organicRadius = baseRadius * radiusVariation * (1 + organicnessFactor * 0.2);
     
-    // Ajouter un effet spiral léger pour plus d'organicité
-    if (organicnessFactor > 0.5) {
-      const spiralFactor = Math.sin((index / totalCount) * Math.PI * 2) * organicnessFactor;
-      angle += spiralFactor * 15;
-      // organicRadius *= (1 + spiralFactor * 0.2);
+    // Effet spiral léger et contrôlé
+    if (organicnessFactor > 0.5 && totalCount > 1) {
+      const spiralFactor = Math.sin((index / totalCount) * Math.PI * 2) * organicnessFactor * 0.5;
+      angle += spiralFactor * 10; // Réduit de 15 à 10 degrés
     }
 
     const waypoint = turf.destination(
