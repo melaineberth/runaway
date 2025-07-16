@@ -1,6 +1,6 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'package:runaway/config/secure_config.dart';
+import 'package:runaway/core/helper/config/secure_config.dart';
 
 class GeocodingService {
   static final String _baseUrl = 'https://api.mapbox.com/geocoding/v5/mapbox.places';

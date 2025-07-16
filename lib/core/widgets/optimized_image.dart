@@ -4,8 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
-import 'package:runaway/core/services/monitoring_service.dart';
-import 'package:runaway/core/services/logging_service.dart';
+import 'package:runaway/core/helper/services/monitoring_service.dart';
+import 'package:runaway/core/helper/services/logging_service.dart';
 import 'package:visibility_detector/visibility_detector.dart';
 
 /// Configuration d'optimisation d'image

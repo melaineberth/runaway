@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 // import 'package:progressive_blur/progressive_blur.dart';
-import 'package:runaway/config/extensions.dart';
+import 'package:runaway/core/helper/extensions/extensions.dart';
 import 'package:smooth_gradient/smooth_gradient.dart';
 
 class BlurryPage extends StatefulWidget {

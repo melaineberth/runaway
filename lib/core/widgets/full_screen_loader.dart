@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:runaway/config/extensions.dart';
+import 'package:runaway/core/helper/extensions/extensions.dart';
 import 'package:runaway/core/widgets/particles_spark.dart';
 import 'package:runaway/core/widgets/particles_spark_loader.dart';
 

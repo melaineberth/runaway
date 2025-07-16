@@ -1,6 +1,6 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:runaway/config/extensions.dart';
+import 'package:runaway/core/helper/extensions/extensions.dart';
 import 'package:runaway/core/widgets/tick_slider.dart';
 
 class ParameterSlider extends StatelessWidget {

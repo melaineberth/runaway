@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:runaway/core/blocs/app_data/app_data_event.dart';
-import 'package:runaway/core/di/bloc_provider_extension.dart';
+import 'package:runaway/core/utils/injections/bloc_provider_extension.dart';
 import 'package:runaway/core/widgets/conversion_listener.dart';
 import 'package:runaway/core/widgets/top_snackbar.dart';
 import 'package:runaway/features/account/presentation/screens/account_screen.dart';
@@ -17,7 +17,7 @@ import 'package:runaway/features/historic/presentation/screens/historic_screen.d
 import 'package:runaway/features/navigation/blocs/navigation_bloc.dart';
 import 'package:runaway/features/navigation/presentation/screens/live_navigation_screen.dart';
 import 'package:top_snackbar_flutter/top_snack_bar.dart';
-import '../features/home/presentation/screens/home_screen.dart';
+import '../../features/home/presentation/screens/home_screen.dart';
 
 // Clé globale pour accéder au contexte du router
 final GlobalKey<NavigatorState> _rootNavigatorKey = GlobalKey<NavigatorState>();

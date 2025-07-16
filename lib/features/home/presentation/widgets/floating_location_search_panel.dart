@@ -5,14 +5,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_keyboard_visibility/flutter_keyboard_visibility.dart';
 import 'package:hugeicons/hugeicons.dart';
-import 'package:runaway/config/extensions.dart';
+import 'package:runaway/core/helper/extensions/extensions.dart';
 import 'package:runaway/core/widgets/blurry_page.dart';
 import 'package:runaway/core/widgets/rounded_text_field.dart';
 import 'package:runaway/core/widgets/squircle_container.dart';
 import 'package:runaway/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:runaway/features/auth/presentation/bloc/auth_state.dart';
 
-import '../../../../core/services/geocoding_service.dart';
+import '../../../route_generator/data/services/geocoding_service.dart';
 
 // 🍎 Courbes d'animation personnalisées inspirées d'Apple
 class AppleCurves {

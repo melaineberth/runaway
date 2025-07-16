@@ -4,7 +4,7 @@ import 'dart:ui' as ui;
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart';
-import 'package:runaway/config/colors.dart';
+import 'package:runaway/core/styles/colors.dart';
 import 'package:runaway/features/home/data/services/map_state_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 

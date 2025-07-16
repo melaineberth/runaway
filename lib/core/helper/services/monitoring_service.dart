@@ -1,13 +1,13 @@
 import 'dart:async';
 
 import 'package:runaway/core/blocs/app_bloc_observer.dart';
-import 'package:runaway/core/helper/services/crash_reporting_service.dart';
-import 'package:runaway/core/helper/services/logging_service.dart';
-import 'package:runaway/core/helper/services/performance_monitoring_service.dart';
+import 'package:runaway/core/helper/config/secure_config.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-import '../helper/config/secure_config.dart';
+import 'crash_reporting_service.dart';
+import 'logging_service.dart';
+import 'performance_monitoring_service.dart';
 
 /// Service principal de monitoring qui orchestre tous les autres services
 class MonitoringService {

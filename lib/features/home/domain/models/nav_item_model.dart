@@ -1,6 +1,6 @@
 import 'package:flutter/widgets.dart';
 import 'package:hugeicons/hugeicons.dart';
-import 'package:runaway/config/extensions.dart';
+import 'package:runaway/core/helper/extensions/extensions.dart';
 
 enum NavItemModel {
   home(

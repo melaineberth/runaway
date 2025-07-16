@@ -1,7 +1,7 @@
 import 'dart:async';
 
-import 'package:runaway/core/services/reverse_geocoding_service.dart';
-import 'package:runaway/core/services/location_preload_service.dart';
+import 'package:runaway/features/route_generator/data/services/reverse_geocoding_service.dart';
+import 'package:runaway/core/helper/services/location_preload_service.dart';
 
 /// Service pour initialiser les différents composants de l'application au démarrage
 class AppInitializationService {

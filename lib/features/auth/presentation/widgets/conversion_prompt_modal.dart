@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
-import 'package:runaway/config/extensions.dart';
-import 'package:runaway/core/services/conversion_service.dart';
+import 'package:runaway/core/helper/extensions/extensions.dart';
+import 'package:runaway/core/helper/services/conversion_service.dart';
 import 'package:runaway/core/widgets/modal_sheet.dart';
 import 'package:runaway/core/widgets/squircle_container.dart';
 

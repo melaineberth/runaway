@@ -2,8 +2,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:hugeicons/hugeicons.dart';
-import 'package:runaway/config/extensions.dart';
-import 'package:runaway/core/di/bloc_provider_extension.dart';
+import 'package:runaway/core/helper/extensions/extensions.dart';
+import 'package:runaway/core/utils/injections/bloc_provider_extension.dart';
 import 'package:runaway/core/widgets/modal_dialog.dart';
 import 'package:runaway/core/widgets/squircle_btn.dart';
 import 'package:runaway/core/widgets/squircle_container.dart';

@@ -275,19 +275,9 @@ class SecureConfig {
     try {
       print('🔒 Validation configuration sécurisée...');
       print('🔒 Mode: ${kIsProduction ? 'PRODUCTION' : 'DEVELOPMENT'}');
-      
-      // Valider toutes les clés critiques existantes
-      final _ = mapboxToken;
-      final __ = supabaseUrl;
-      final ___ = supabaseAnonKey;
-      final ____ = googleWebClientId;
-      final _____ = googleIosClientId;
-      
+            
       // 🆕 Valider la configuration monitoring
       if (isCrashReportingEnabled || isPerformanceMonitoringEnabled) {
-        final ______ = sentryDsn;
-        final _______ = sentryEnvironment;
-        final ________ = sentryRelease;
         print('✅ Configuration Sentry validée');
       }
       

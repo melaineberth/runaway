@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
-import 'package:runaway/config/extensions.dart';
+import 'package:runaway/core/helper/extensions/extensions.dart';
 import 'package:runaway/core/blocs/app_data/app_data_bloc.dart';
 import 'package:runaway/core/blocs/app_data/app_data_state.dart';
-import 'package:runaway/core/di/bloc_provider_extension.dart';
+import 'package:runaway/core/utils/injections/bloc_provider_extension.dart';
 import 'package:runaway/core/errors/api_exceptions.dart';
-import 'package:runaway/core/extensions/monitoring_extensions.dart';
-import 'package:runaway/core/services/monitoring_service.dart';
+import 'package:runaway/core/helper/extensions/monitoring_extensions.dart';
+import 'package:runaway/core/helper/services/monitoring_service.dart';
 import 'package:runaway/core/widgets/modal_sheet.dart';
 import 'package:runaway/core/widgets/squircle_btn.dart';
 import 'package:runaway/core/widgets/squircle_container.dart';

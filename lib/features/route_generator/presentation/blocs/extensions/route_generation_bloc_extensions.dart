@@ -1,4 +1,4 @@
-import 'package:runaway/core/services/guest_limitation_service.dart';
+import 'package:runaway/core/helper/services/guest_limitation_service.dart';
 import 'package:runaway/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:runaway/features/auth/presentation/bloc/auth_state.dart';
 import 'package:runaway/features/route_generator/presentation/blocs/route_generation/route_generation_bloc.dart';

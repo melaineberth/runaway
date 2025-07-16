@@ -10,16 +10,16 @@ import 'package:flutter_svg/svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:package_info_plus/package_info_plus.dart';
-import 'package:runaway/config/extensions.dart';
+import 'package:runaway/core/helper/extensions/extensions.dart';
 import 'package:runaway/core/blocs/app_data/app_data_bloc.dart';
 import 'package:runaway/core/blocs/app_data/app_data_state.dart';
 import 'package:runaway/core/blocs/notification/notification_bloc.dart';
 import 'package:runaway/core/blocs/notification/notification_event.dart';
 import 'package:runaway/core/blocs/notification/notification_state.dart';
 import 'package:runaway/core/blocs/theme_bloc/theme_bloc.dart';
-import 'package:runaway/core/di/bloc_provider_extension.dart';
-import 'package:runaway/core/extensions/monitoring_extensions.dart';
-import 'package:runaway/core/services/monitoring_service.dart';
+import 'package:runaway/core/utils/injections/bloc_provider_extension.dart';
+import 'package:runaway/core/helper/extensions/monitoring_extensions.dart';
+import 'package:runaway/core/helper/services/monitoring_service.dart';
 import 'package:runaway/core/widgets/blurry_app_bar.dart';
 import 'package:runaway/core/widgets/blurry_page.dart';
 import 'package:runaway/core/widgets/icon_btn.dart';
@@ -152,15 +152,30 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
   Widget build(BuildContext context) {
     return MonitoredScreen(
       screenName: 'account_screen',
-      child: BlocBuilder<AuthBloc, AuthState>(
-        builder: (_, authState) {          
-          // Si l'utilisateur est connecté, afficher le contenu
-          if (authState is Authenticated) {
-            return _buildAuthenticatedView(authState);
+      child: BlocListener<AuthBloc, AuthState>(
+        listener: (context, authState) {
+          // Redirection automatique après déconnexion/suppression
+          if (authState is Unauthenticated) {
+            print('🧭 Utilisateur déconnecté, redirection vers HomeScreen');
+            
+            // Petit délai pour laisser l'animation se terminer
+            Future.delayed(const Duration(milliseconds: 100), () {
+              if (context.mounted) {
+                context.go('/home');
+              }
+            });
           }
-      
-          return _buildEmptyUnauthenticated();
         },
+        child: BlocBuilder<AuthBloc, AuthState>(
+          builder: (_, authState) {          
+            // Si l'utilisateur est connecté, afficher le contenu
+            if (authState is Authenticated) {
+              return _buildAuthenticatedView(authState);
+            }
+        
+            return _buildEmptyUnauthenticated();
+          },
+        ),
       ),
     );
   }

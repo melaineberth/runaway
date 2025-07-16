@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:runaway/core/widgets/squircle_container.dart';
-import '../../../../config/extensions.dart';
+import '../../../../core/helper/extensions/extensions.dart';
 import '../../domain/models/activity_stats.dart';
 
 class StatsOverviewCard extends StatelessWidget {

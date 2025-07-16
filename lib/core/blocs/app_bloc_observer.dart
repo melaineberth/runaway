@@ -1,8 +1,8 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:runaway/config/secure_config.dart';
-import 'package:runaway/core/services/crash_reporting_service.dart';
-import 'package:runaway/core/services/logging_Service.dart';
-import 'package:runaway/core/services/performance_monitoring_service.dart';
+import 'package:runaway/core/helper/config/secure_config.dart';
+import 'package:runaway/core/helper/services/crash_reporting_service.dart';
+import 'package:runaway/core/helper/services/logging_service.dart';
+import 'package:runaway/core/helper/services/performance_monitoring_service.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 
 class AppBlocObserver extends BlocObserver {

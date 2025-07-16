@@ -1,8 +1,8 @@
 import 'dart:async';
 
 import 'package:hydrated_bloc/hydrated_bloc.dart';
-import 'package:runaway/core/services/logging_service.dart';
-import 'package:runaway/core/services/monitoring_service.dart';
+import 'package:runaway/core/helper/services/logging_service.dart';
+import 'package:runaway/core/helper/services/monitoring_service.dart';
 import 'package:runaway/features/route_generator/data/validation/route_parameters_validator.dart';
 import 'route_parameters_event.dart';
 import 'route_parameters_state.dart';

@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'package:geolocator/geolocator.dart' as gl;
-import 'package:runaway/core/services/monitoring_service.dart';
+import 'package:runaway/core/helper/services/monitoring_service.dart';
 
 /// Service pour pré-charger la géolocalisation avant l'affichage de la carte
 class LocationPreloadService {

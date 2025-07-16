@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:hydrated_bloc/hydrated_bloc.dart';
-import 'package:runaway/core/services/theme_service.dart';
+import 'package:runaway/core/helper/services/theme_service.dart';
 
 part 'theme_event.dart';
 part 'theme_state.dart';

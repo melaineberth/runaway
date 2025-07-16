@@ -3,7 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:pull_down_button/pull_down_button.dart';
 import 'package:runaway/core/widgets/icon_btn.dart';
-import '../../../../config/extensions.dart';
+import '../../../../core/helper/extensions/extensions.dart';
 import '../../../../core/widgets/squircle_container.dart';
 import '../../domain/models/activity_stats.dart';
 

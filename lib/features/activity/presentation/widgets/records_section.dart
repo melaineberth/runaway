@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
-import '../../../../config/extensions.dart';
+import '../../../../core/helper/extensions/extensions.dart';
 import '../../../../core/widgets/squircle_container.dart';
 import '../../domain/models/activity_stats.dart';
 

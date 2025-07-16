@@ -3,7 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:runaway/core/widgets/modal_sheet.dart';
 import 'package:runaway/core/widgets/squircle_container.dart';
-import '../../../../config/extensions.dart';
+import '../../../../core/helper/extensions/extensions.dart';
 import '../../domain/models/activity_stats.dart';
 import '../../../route_generator/domain/models/activity_type.dart';
 

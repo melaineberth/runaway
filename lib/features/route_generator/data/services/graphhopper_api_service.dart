@@ -1,9 +1,9 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'package:runaway/config/environment_config.dart';
 import 'package:runaway/core/errors/api_exceptions.dart';
 import 'package:runaway/core/errors/error_handler.dart';
+import 'package:runaway/core/helper/config/environment_config.dart';
 import 'package:runaway/features/route_generator/domain/models/activity_type.dart';
 import 'package:runaway/features/route_generator/domain/models/graphhopper_route_result.dart';
 import 'package:runaway/features/route_generator/domain/models/terrain_type.dart';

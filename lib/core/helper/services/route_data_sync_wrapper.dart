@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:runaway/core/di/bloc_provider_extension.dart';
-import 'package:runaway/core/services/route_data_sync_service.dart';
+import 'package:runaway/core/utils/injections/bloc_provider_extension.dart';
+import 'package:runaway/core/helper/services/route_data_sync_service.dart';
 
 /// Widget wrapper qui initialise automatiquement la synchronisation des données
 /// entre RouteGenerationBloc et AppDataBloc

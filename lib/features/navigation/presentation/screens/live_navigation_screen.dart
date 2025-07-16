@@ -8,15 +8,15 @@ import 'package:flutter_compass/flutter_compass.dart';
 import 'package:go_router/go_router.dart';
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart' as mp;
 import 'package:hugeicons/hugeicons.dart';
-import 'package:runaway/config/colors.dart';
-import 'package:runaway/core/di/bloc_provider_extension.dart';
+import 'package:runaway/core/styles/colors.dart';
+import 'package:runaway/core/utils/injections/bloc_provider_extension.dart';
 import 'package:runaway/core/widgets/icon_btn.dart';
 import 'package:runaway/core/widgets/modal_dialog.dart';
 import 'package:runaway/core/widgets/squircle_container.dart';
 import 'package:runaway/features/navigation/blocs/navigation_bloc.dart';
 import 'package:runaway/features/navigation/blocs/navigation_event.dart';
 import 'package:runaway/features/navigation/blocs/navigation_state.dart';
-import '../../../../config/extensions.dart';
+import '../../../../core/helper/extensions/extensions.dart';
 import '../../domain/models/navigation_models.dart';
 
 class LiveNavigationArgs {

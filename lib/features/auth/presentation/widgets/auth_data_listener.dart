@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:runaway/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:runaway/features/auth/presentation/bloc/auth_state.dart';
-import 'package:runaway/core/services/app_data_initialization_service.dart';
+import 'package:runaway/core/helper/services/app_data_initialization_service.dart';
 
 /// Widget qui écoute les changements d'authentification et déclenche le pré-chargement
 class AuthDataListener extends StatelessWidget {

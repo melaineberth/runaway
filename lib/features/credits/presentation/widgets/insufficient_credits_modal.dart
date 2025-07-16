@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:runaway/config/extensions.dart';
+import 'package:runaway/core/helper/extensions/extensions.dart';
 import 'package:runaway/core/widgets/modal_sheet.dart';
 import 'package:runaway/core/widgets/squircle_container.dart';
 import 'package:runaway/features/credits/presentation/screens/credit_plans_screen.dart';

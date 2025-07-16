@@ -1,6 +1,6 @@
 import 'package:bounce/bounce.dart';
 import 'package:flutter/material.dart';
-import 'package:runaway/config/extensions.dart';
+import 'package:runaway/core/helper/extensions/extensions.dart';
 import '../../domain/models/urban_density.dart';
 
 class UrbanDensitySelector extends StatelessWidget {

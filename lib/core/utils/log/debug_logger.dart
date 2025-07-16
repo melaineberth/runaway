@@ -1,5 +1,5 @@
 import 'package:flutter/foundation.dart';
-import 'package:runaway/config/secure_config.dart';
+import 'package:runaway/core/helper/config/secure_config.dart';
 
 class DebugLogger {
   static bool get _shouldLog => kDebugMode || !SecureConfig.kIsProduction;

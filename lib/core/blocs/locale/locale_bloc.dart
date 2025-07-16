@@ -1,6 +1,6 @@
 import 'dart:ui';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:runaway/core/services/locale_service.dart';
+import 'package:runaway/core/helper/services/locale_service.dart';
 
 part 'locale_event.dart';
 part 'locale_state.dart';

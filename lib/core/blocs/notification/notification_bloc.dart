@@ -1,5 +1,5 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:runaway/core/services/notification_service.dart';
+import 'package:runaway/core/helper/services/notification_service.dart';
 import 'notification_event.dart';
 import 'notification_state.dart';
 

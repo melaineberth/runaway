@@ -1,7 +1,7 @@
 import 'package:bounce/bounce.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import 'package:runaway/config/extensions.dart';
+import 'package:runaway/core/helper/extensions/extensions.dart';
 import 'package:runaway/core/widgets/squircle_container.dart';
 
 class SquircleBtn extends StatelessWidget {

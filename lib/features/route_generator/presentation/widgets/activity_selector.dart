@@ -1,7 +1,7 @@
 import 'package:bounce/bounce.dart';
 import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
-import 'package:runaway/config/extensions.dart';
+import 'package:runaway/core/helper/extensions/extensions.dart';
 import 'package:runaway/core/widgets/squircle_container.dart';
 import '../../domain/models/activity_type.dart';
 

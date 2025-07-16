@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart' as mp;
 import 'package:geolocator/geolocator.dart' as gl;
 import 'package:hugeicons/hugeicons.dart';
-import 'package:runaway/core/services/location_preload_service.dart';
+import 'package:runaway/core/helper/services/location_preload_service.dart';
 
 /// Widget qui charge la géolocalisation AVANT d'afficher la carte
 /// pour un démarrage fluide comme Apple Plans

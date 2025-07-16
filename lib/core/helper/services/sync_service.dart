@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'package:runaway/core/services/cache_service.dart';
+import 'package:runaway/core/helper/services/cache_service.dart';
 import 'package:runaway/features/credits/data/repositories/credits_repository.dart';
 import 'package:runaway/features/route_generator/data/repositories/routes_repository.dart';
 import 'package:runaway/features/activity/data/repositories/activity_repository.dart';

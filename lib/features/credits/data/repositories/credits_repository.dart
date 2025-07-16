@@ -1,7 +1,8 @@
+import 'dart:convert';
+
 import 'package:runaway/core/errors/auth_exceptions.dart';
-import 'package:runaway/core/extensions/monitoring_extensions.dart';
-import 'package:runaway/core/services/cache_service.dart';
-import 'package:runaway/core/services/monitoring_service.dart';
+import 'package:runaway/core/helper/services/cache_service.dart';
+import 'package:runaway/core/helper/services/monitoring_service.dart';
 import 'package:runaway/features/credits/domain/models/user_credits.dart';
 import 'package:runaway/features/credits/domain/models/credit_plan.dart';
 import 'package:runaway/features/credits/domain/models/credit_transaction.dart';
@@ -116,111 +117,119 @@ class CreditsRepository {
     try {
       print('💰 Utilisation de $amount crédits pour: $reason');
       
-      // Appel de la fonction Supabase avec transaction atomique
-      final response = await _supabase.rpc('use_credits', params: {
-        'user_id': user.id,
-        'amount': amount,
-        'reason': reason,
-        'route_generation_id': routeGenerationId,
-        'metadata': metadata,
+      // ✅ ÉTAPE 1: Appel de la fonction corrigée use_user_credits
+      final success = await _supabase.rpc('use_user_credits', params: {
+        'p_user_id': user.id,
+        'p_amount': amount,
       });
 
-      final result = CreditUsageResult.fromJson(response);
-      
-      if (result.success) {
-        // Invalider le cache des crédits après utilisation
+      if (success != true) {
+        return CreditUsageResult.failure(
+          errorMessage: 'Échec de la consommation des crédits',
+        );
+      }
+
+      print('✅ Consommation des crédits réussie');
+
+      // ✅ ÉTAPE 2: Créer la transaction manuellement
+      String? transactionId;
+      try {
+        final transactionData = await _supabase
+            .from('credit_transactions')
+            .insert({
+              'user_id': user.id,
+              'amount': -amount, // Négatif pour une utilisation
+              'transaction_type': 'usage',
+              'description': reason,
+              'route_generation_id': routeGenerationId,
+              'metadata': metadata ?? {},
+            })
+            .select('id')
+            .single();
+        
+        transactionId = transactionData['id'] as String;
+        print('✅ Transaction créée: $transactionId');
+      } catch (e) {
+        print('⚠️ Erreur création transaction: $e');
+        // Continue quand même car les crédits ont été débités
+      }
+
+      // ✅ ÉTAPE 3: Récupérer les crédits mis à jour
+      try {
+        final updatedData = await _supabase
+            .from('user_credits')
+            .select()
+            .eq('user_id', user.id)
+            .single();
+
+        final updatedCredits = UserCredits.fromJson(updatedData);
+        
+        // Invalider le cache après utilisation
         await _cache.invalidateCreditsCache();
         
-        // Optionnel: Mettre à jour le cache avec les nouvelles données
-        if (result.newCredits != null) {
-          await _cache.set('cache_user_credits', result.newCredits!);
-        }
-
-        // 🆕 Tracking de l'utilisation des crédits
-        MonitoringService.instance.recordMetric(
-          'credits_used',
-          amount,
-          tags: {
-            'user_id': user.id,
-            'purpose': purpose,
-            'amount': amount.toString(),
-          },
-        );
-
-        // 🆕 Enregistrer la transaction
-        await _recordCreditTransaction(
-          userId: user.id,
-          amount: -amount,
-          transactionType: 'usage',
-          description: 'Utilisation pour $purpose',
-          metadata: {
-            'purpose': purpose,
-            'timestamp': DateTime.now().toIso8601String(),
-          },
-        );
+        // Mettre à jour le cache avec les nouvelles données
+        await _cache.set('cache_user_credits', updatedCredits);
         
-        print('✅ Crédits utilisés avec succès. Nouveau solde: ${result.newCredits?.availableCredits}');
-      } else {
-        print('❌ Échec utilisation crédits: ${result.error}');
-      }
-      
-      return result;
-      
-    } catch (e) {
-      print('❌ Erreur utilisation crédits: $e');
-      
-      if (e is PostgrestException) {
-        throw ServerException(
-          'Erreur lors de l\'utilisation des crédits',
-          e.code?.isNotEmpty == true ? int.tryParse(e.code!) ?? 500 : 500,
+        print('✅ Nouveau solde: ${updatedCredits.availableCredits} crédits');
+
+        return CreditUsageResult.success(
+          updatedCredits: updatedCredits,
+          transactionId: transactionId ?? 'unknown',
+        );
+
+      } catch (e) {
+        print('❌ Erreur récupération crédits mis à jour: $e');
+        
+        // En cas d'erreur, on retourne quand même un succès car les crédits ont été débités
+        // mais sans les données mises à jour
+        return CreditUsageResult.success(
+          updatedCredits: UserCredits(
+            id: '',
+            userId: user.id,
+            availableCredits: 0, // On ne connaît pas le nouveau solde
+            totalCreditsPurchased: 0,
+            totalCreditsUsed: 0,
+            createdAt: DateTime.now(),
+            updatedAt: DateTime.now(),
+          ),
+          transactionId: transactionId ?? 'unknown',
         );
       }
       
-      throw NetworkException('Impossible d\'utiliser les crédits');
-    }
-  }
-
-  // 🆕 Méthode pour enregistrer les transactions avec monitoring
-  Future<void> _recordCreditTransaction({
-    required String userId,
-    required int amount,
-    required String transactionType,
-    String? description,
-    Map<String, dynamic>? metadata,
-  }) async {
-    try {
-      await _supabase
-          .from('credit_transactions')
-          .insertWithMonitoring<void>(
-            {
-              'user_id': userId,
-              'amount': amount,
-              'transaction_type': transactionType,
-              'description': description,
-              'metadata': metadata,
-              'created_at': DateTime.now().toIso8601String(),
-            },
-            tableName: 'credit_transactions',
-            context: 'CreditsRepository.recordTransaction',
-            extraData: {
-              'user_id': userId,
-              'transaction_type': transactionType,
-              'amount': amount,
-            },
-          );
-
     } catch (e, stackTrace) {
+      print('❌ Erreur utilisation crédits: $e');
+
       MonitoringService.instance.captureError(
         e,
         stackTrace,
-        context: 'CreditsRepository.recordTransaction',
+        context: 'CreditsRepository.useCredits',
         extra: {
-          'user_id': userId,
+          'user_id': user.id,
           'amount': amount,
-          'transaction_type': transactionType,
+          'reason': reason,
         },
       );
-      // Ne pas relancer l'erreur pour éviter de bloquer l'opération principale
+      
+      if (e is PostgrestException) {
+        // Gérer les erreurs spécifiques de la base de données
+        if (e.message.contains('Insufficient credits')) {
+          return CreditUsageResult.failure(
+            errorMessage: 'Crédits insuffisants pour cette opération',
+          );
+        } else if (e.message.contains('User credits not found')) {
+          return CreditUsageResult.failure(
+            errorMessage: 'Compte de crédits non trouvé. Veuillez vous reconnecter.',
+          );
+        }
+        
+        return CreditUsageResult.failure(
+          errorMessage: 'Erreur lors de l\'utilisation des crédits',
+        );
+      }
+      
+      return CreditUsageResult.failure(
+        errorMessage: 'Erreur lors de l\'utilisation des crédits',
+      );
     }
   }
 
@@ -291,7 +300,7 @@ class CreditsRepository {
   }
 
   /// Récupère l'historique des transactions avec pagination et cache
-    Future<List<CreditTransaction>> getCreditTransactions({
+  Future<List<CreditTransaction>> getCreditTransactions({
     int limit = 20,
     int offset = 0,
     bool forceRefresh = false,
@@ -305,19 +314,49 @@ class CreditsRepository {
     
     // Vérifier le cache
     if (!forceRefresh) {
-      // ✅ FIX: Récupérer comme List<dynamic> puis convertir
-      final cachedTransactionsRaw = await _cache.get<List>(cacheKey);
-      if (cachedTransactionsRaw != null) {
-        try {
-          final cachedTransactions = cachedTransactionsRaw
-              .map((item) => CreditTransaction.fromJson(item as Map<String, dynamic>))
-              .toList();
-          print('📦 Transactions récupérées depuis le cache: ${cachedTransactions.length}');
-          return cachedTransactions;
-        } catch (e) {
-          print('❌ Erreur conversion cache transactions: $e');
-          // Continuer vers l'API si erreur de conversion
+      try {
+        // ✅ FIX: Gestion robuste du cache
+        final cachedRaw = await _cache.get<dynamic>(cacheKey);
+        if (cachedRaw != null) {
+          List<dynamic> cachedList;
+          
+          // Gérer différents formats de cache
+          if (cachedRaw is List) {
+            cachedList = cachedRaw;
+          } else if (cachedRaw is String) {
+            // Si c'est une string JSON, la parser
+            try {
+              final parsed = jsonDecode(cachedRaw);
+              cachedList = parsed is List ? parsed : [parsed];
+            } catch (e) {
+              print('❌ Cache corrompu (JSON invalide): $e');
+              await _cache.remove(cacheKey);
+              cachedList = [];
+            }
+          } else {
+            print('❌ Cache format inattendu: ${cachedRaw.runtimeType}');
+            await _cache.remove(cacheKey);
+            cachedList = [];
+          }
+
+          if (cachedList.isNotEmpty) {
+            try {
+              final cachedTransactions = cachedList
+                  .cast<Map<String, dynamic>>()
+                  .map((item) => CreditTransaction.fromJson(item))
+                  .toList();
+              print('📦 Transactions récupérées depuis le cache: ${cachedTransactions.length}');
+              return cachedTransactions;
+            } catch (e) {
+              print('❌ Erreur conversion cache transactions: $e');
+              // Supprimer le cache corrompu
+              await _cache.remove(cacheKey);
+            }
+          }
         }
+      } catch (e) {
+        print('❌ Erreur lecture cache transactions: $e');
+        // Continuer vers l'API
       }
     }
 
@@ -334,28 +373,48 @@ class CreditsRepository {
 
       final transactions = data.map((item) => CreditTransaction.fromJson(item)).toList();
       
-      // Cache avec expiration courte (5 minutes)
-      await _cache.set(cacheKey, transactions, 
-        customExpiration: const Duration(minutes: 5));
+      // ✅ FIX: Mise en cache sécurisée
+      try {
+        // Convertir en format sérialisable avant mise en cache
+        final serializableData = transactions.map((t) => t.toJson()).toList();
+        await _cache.set(cacheKey, serializableData, 
+          customExpiration: const Duration(minutes: 5));
+        print('💾 Cache mis à jour: $cacheKey (expire dans 5min)');
+      } catch (e) {
+        print('⚠️ Erreur mise en cache transactions: $e');
+        // Continuer même si le cache échoue
+      }
       
       print('✅ Transactions récupérées: ${transactions.length}');
       return transactions;
       
-    } catch (e) {
+    } catch (e, stackTrace) {
       print('❌ Erreur récupération transactions: $e');
       
-      // Tentative de récupération depuis le cache
-      final cachedTransactionsRaw = await _cache.get<List>(cacheKey);
-      if (cachedTransactionsRaw != null) {
-        try {
-          final cachedTransactions = cachedTransactionsRaw
-              .map((item) => CreditTransaction.fromJson(item as Map<String, dynamic>))
+      MonitoringService.instance.captureError(
+        e,
+        stackTrace,
+        context: 'CreditsRepository.getCreditTransactions',
+        extra: {
+          'user_id': user.id,
+          'limit': limit,
+          'offset': offset,
+        },
+      );
+      
+      // Dernière tentative avec le cache en cas d'erreur réseau
+      try {
+        final cachedRaw = await _cache.get<List>(cacheKey);
+        if (cachedRaw != null) {
+          final cachedTransactions = cachedRaw
+              .cast<Map<String, dynamic>>()
+              .map((item) => CreditTransaction.fromJson(item))
               .toList();
           print('📦 Transactions récupérées depuis le cache de secours');
           return cachedTransactions;
-        } catch (e) {
-          print('❌ Erreur conversion cache de secours: $e');
         }
+      } catch (cacheError) {
+        print('❌ Erreur cache de secours: $cacheError');
       }
       
       if (e is PostgrestException) {
@@ -384,16 +443,45 @@ class CreditsRepository {
     try {
       print('💰 Ajout de $amount crédits après achat IAP');
       
-      // Appel de la fonction Supabase avec transaction atomique
-      final response = await _supabase.rpc('add_credits', params: {
-        'user_id': user.id,
-        'amount': amount,
-        'transaction_id': transactionId,
-        'product_id': productId,
-        'metadata': metadata,
+      // ✅ ÉTAPE 1: Appel de la fonction corrigée add_user_credits
+      await _supabase.rpc('add_user_credits', params: {
+        'p_user_id': user.id,
+        'p_amount': amount,
       });
 
-      final newCredits = UserCredits.fromJson(response);
+      print('✅ Ajout des crédits réussi');
+
+      // ✅ ÉTAPE 2: Créer la transaction d'achat
+      try {
+        await _supabase
+            .from('credit_transactions')
+            .insert({
+              'user_id': user.id,
+              'amount': amount, // Positif pour un achat
+              'transaction_type': 'purchase',
+              'description': 'Achat de crédits via $productId',
+              'payment_intent_id': transactionId,
+              'metadata': {
+                'product_id': productId,
+                'transaction_id': transactionId,
+                ...?metadata,
+              },
+            });
+        
+        print('✅ Transaction d\'achat créée');
+      } catch (e) {
+        print('⚠️ Erreur création transaction d\'achat: $e');
+        // Continue quand même car les crédits ont été ajoutés
+      }
+
+      // ✅ ÉTAPE 3: Récupérer les crédits mis à jour
+      final updatedData = await _supabase
+          .from('user_credits')
+          .select()
+          .eq('user_id', user.id)
+          .single();
+
+      final newCredits = UserCredits.fromJson(updatedData);
       
       // Invalider tout le cache crédits après ajout
       await _cache.invalidateCreditsCache();
@@ -404,8 +492,20 @@ class CreditsRepository {
       print('✅ Crédits ajoutés avec succès. Nouveau solde: ${newCredits.availableCredits}');
       return newCredits;
       
-    } catch (e) {
+    } catch (e, stackTrace) {
       print('❌ Erreur ajout crédits: $e');
+
+      MonitoringService.instance.captureError(
+        e,
+        stackTrace,
+        context: 'CreditsRepository.addCredits',
+        extra: {
+          'user_id': user.id,
+          'amount': amount,
+          'transaction_id': transactionId,
+          'product_id': productId,
+        },
+      );
       
       if (e is PostgrestException) {
         throw ServerException(

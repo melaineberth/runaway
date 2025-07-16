@@ -4,7 +4,7 @@ import 'package:runaway/core/widgets/modal_sheet.dart';
 import 'package:runaway/core/widgets/squircle_container.dart';
 import 'package:runaway/features/auth/presentation/widgets/auth_text_field.dart';
 import 'package:uuid/uuid.dart';
-import '../../../../config/extensions.dart';
+import '../../../../core/helper/extensions/extensions.dart';
 import '../../domain/models/activity_stats.dart';
 import '../../../route_generator/domain/models/activity_type.dart';
 

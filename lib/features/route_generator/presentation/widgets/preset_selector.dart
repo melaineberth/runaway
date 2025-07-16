@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
-import 'package:runaway/config/colors.dart';
-import 'package:runaway/config/extensions.dart';
+import 'package:runaway/core/styles/colors.dart';
+import 'package:runaway/core/helper/extensions/extensions.dart';
 import '../../domain/models/route_parameters.dart';
 
 class PresetSelector extends StatelessWidget {

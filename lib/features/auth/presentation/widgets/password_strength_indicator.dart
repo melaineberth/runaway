@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:runaway/config/extensions.dart';
-import 'package:runaway/core/utils/password_validator.dart';
+import 'package:runaway/core/helper/extensions/extensions.dart';
+import 'package:runaway/features/auth/data/utils/password_validator.dart';
 
 enum PasswordStrength {
   weak,

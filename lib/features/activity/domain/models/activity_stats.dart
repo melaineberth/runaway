@@ -1,6 +1,6 @@
 import 'package:equatable/equatable.dart';
 import 'package:flutter/material.dart';
-import 'package:runaway/config/extensions.dart';
+import 'package:runaway/core/helper/extensions/extensions.dart';
 import '../../../route_generator/domain/models/activity_type.dart';
 
 /// Statistiques générales de l'utilisateur

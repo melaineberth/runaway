@@ -1,9 +1,9 @@
 import 'dart:async';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:runaway/core/extensions/monitoring_extensions.dart';
-import 'package:runaway/core/services/app_data_initialization_service.dart';
-import 'package:runaway/core/services/monitoring_service.dart';
+import 'package:runaway/core/helper/extensions/monitoring_extensions.dart';
+import 'package:runaway/core/helper/services/app_data_initialization_service.dart';
+import 'package:runaway/core/helper/services/monitoring_service.dart';
 import 'package:runaway/features/auth/data/repositories/auth_repository.dart';
 import 'package:runaway/features/auth/domain/models/profile.dart';
 import 'package:runaway/features/credits/presentation/blocs/credits_bloc.dart';

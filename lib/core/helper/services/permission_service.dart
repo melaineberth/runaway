@@ -3,8 +3,8 @@ import 'dart:async';
 import 'dart:io';
 import 'package:geolocator/geolocator.dart' as geo;
 import 'package:permission_handler/permission_handler.dart';
-import 'package:runaway/core/services/logging_service.dart';
-import 'package:runaway/core/services/monitoring_service.dart';
+import 'package:runaway/core/helper/services/logging_service.dart';
+import 'package:runaway/core/helper/services/monitoring_service.dart';
 
 /// Types de permissions gérées par l'application
 enum AppPermission {

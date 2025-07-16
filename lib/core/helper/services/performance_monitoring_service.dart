@@ -2,9 +2,9 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
+import 'package:runaway/core/helper/config/secure_config.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 
-import '../../config/secure_config.dart';
 import 'crash_reporting_service.dart';
 
 /// Service de monitoring des performances

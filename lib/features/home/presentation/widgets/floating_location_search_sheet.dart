@@ -6,12 +6,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_keyboard_visibility/flutter_keyboard_visibility.dart';
 import 'package:hugeicons/hugeicons.dart';
-import 'package:runaway/config/extensions.dart';
-import 'package:runaway/core/services/geocoding_service.dart';
+import 'package:runaway/core/helper/extensions/extensions.dart';
+import 'package:runaway/features/route_generator/data/services/geocoding_service.dart';
 import 'package:runaway/core/widgets/rounded_text_field.dart';
 import 'package:runaway/core/widgets/squircle_container.dart';
 import 'package:runaway/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:runaway/features/auth/presentation/bloc/auth_state.dart';
+
 /// 🍎 Courbes d'animation personnalisées inspirées d'Apple
 class AppleCurves {
   static const Curve easeOutBack = Cubic(0.34, 1.56, 0.64, 1.0);
@@ -616,7 +617,7 @@ class _FloatingLocationSearchSheetState extends State<FloatingLocationSearchShee
       child: Text(
         initials,
         style: TextStyle(
-          fontSize: 32,
+          fontSize: 22,
           fontWeight: FontWeight.bold,
           color: color,
         ),

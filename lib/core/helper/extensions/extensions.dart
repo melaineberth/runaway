@@ -3,8 +3,8 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:runaway/config/colors.dart';
-import 'package:runaway/core/services/session_manager.dart';
+import 'package:runaway/core/styles/colors.dart';
+import 'package:runaway/core/helper/services/session_manager.dart';
 import 'package:runaway/features/route_generator/domain/models/route_parameters.dart';
 import 'package:runaway/l10n/app_localizations.dart';
 

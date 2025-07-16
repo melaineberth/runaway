@@ -2,11 +2,10 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:logger/logger.dart';
+import 'package:runaway/core/helper/config/secure_config.dart';
+import 'package:runaway/core/helper/services/crash_reporting_service.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-
-import '../../config/secure_config.dart';
-import 'crash_reporting_service.dart';
 
 /// Énumération des niveaux de log
 enum LogLevel {
@@ -124,6 +123,94 @@ class LoggingService {
     }
   }
 
+  Map<String, dynamic>? _makeSerializable(Map<String, dynamic>? data) {
+    if (data == null) return null;
+    
+    final serialized = <String, dynamic>{};
+    
+    for (final entry in data.entries) {
+      final key = entry.key;
+      final value = entry.value;
+      
+      // Convertir les enums en String
+      if (value is Enum) {
+        serialized[key] = '${value.runtimeType}.${value.name}';
+      }
+      // Convertir les objets complexes avec toJson si disponible
+      else if (value != null && value.runtimeType.toString() != 'String' && 
+              value.runtimeType.toString() != 'int' && 
+              value.runtimeType.toString() != 'double' && 
+              value.runtimeType.toString() != 'bool' &&
+              value is! List && value is! Map) {
+        try {
+          // Essayer d'appeler toJson() si disponible
+          final dynamic toJsonMethod = value.toJson;
+          if (toJsonMethod is Function) {
+            serialized[key] = toJsonMethod();
+          } else {
+            serialized[key] = value.toString();
+          }
+        } catch (e) {
+          serialized[key] = value.toString();
+        }
+      }
+      // Gérer les listes
+      else if (value is List) {
+        serialized[key] = value.map((item) {
+          if (item is Enum) {
+            return '${item.runtimeType}.${item.name}';
+          } else if (item != null) {
+            try {
+              final dynamic toJsonMethod = item.toJson;
+              if (toJsonMethod is Function) {
+                return toJsonMethod();
+              }
+            } catch (e) {
+              // Ignorer les erreurs
+            }
+          }
+          return item?.toString() ?? 'null';
+        }).toList();
+      }
+      // Gérer les maps
+      else if (value is Map) {
+        serialized[key] = _makeSerializableMap(value as Map<String, dynamic>);
+      }
+      // Valeurs primitives
+      else {
+        serialized[key] = value;
+      }
+    }
+    
+    return serialized;
+  }
+
+  /// Convertit récursivement une Map en format sérialisable
+  Map<String, dynamic> _makeSerializableMap(Map<String, dynamic> map) {
+    final serialized = <String, dynamic>{};
+    
+    for (final entry in map.entries) {
+      final value = entry.value;
+      
+      if (value is Enum) {
+        serialized[entry.key] = '${value.runtimeType}.${value.name}';
+      } else if (value is Map) {
+        serialized[entry.key] = _makeSerializableMap(value as Map<String, dynamic>);
+      } else if (value is List) {
+        serialized[entry.key] = value.map((item) {
+          if (item is Enum) {
+            return '${item.runtimeType}.${item.name}';
+          }
+          return item?.toString() ?? 'null';
+        }).toList();
+      } else {
+        serialized[entry.key] = value;
+      }
+    }
+    
+    return serialized;
+  }
+
   /// Configure l'utilisateur courant
   void setUser(String? userId) {
     _currentUserId = userId;
@@ -197,12 +284,15 @@ class LoggingService {
     if (!_isInitialized || !_shouldLog(level)) return;
 
     try {
+      // ✅ FIX: Sérialiser les données avant de créer l'entrée de log
+      final serializedData = _makeSerializable(data);
+
       final logEntry = LogEntry(
         timestamp: DateTime.now(),
         level: level,
         message: message,
         context: context,
-        data: data,
+        data: serializedData,
         userId: _currentUserId,
         stackTrace: stackTrace,
       );
@@ -222,6 +312,22 @@ class LoggingService {
 
     } catch (e) {
       print('❌ Erreur lors du logging: $e');
+
+      // Log de base sans data en cas d'erreur de sérialisation
+      try {
+        final basicLogEntry = LogEntry(
+          timestamp: DateTime.now(),
+          level: level,
+          message: message,
+          context: context,
+          data: {'serialization_error': e.toString()},
+          userId: _currentUserId,
+          stackTrace: stackTrace,
+        );
+        _logToConsole(basicLogEntry, exception);
+      } catch (e2) {
+        print('❌ Erreur critique logging: $e2');
+      }
     }
   }
 
@@ -317,11 +423,33 @@ class LoggingService {
       final logsToSend = List<LogEntry>.from(_pendingLogs);
       _pendingLogs.clear();
 
-      final logData = logsToSend.map((log) => {
-        ...log.toJson(),
-        'app_version': '1.0.0', // À récupérer depuis PackageInfo
-        'platform': defaultTargetPlatform.name,
-        'environment': SecureConfig.sentryEnvironment,
+      final logData = logsToSend.map((log) {
+        try {
+          // ✅ FIX: Sérialisation supplémentaire pour Supabase
+          final baseData = log.toJson();
+          final additionalData = {
+            'app_version': '1.0.0',
+            'platform': defaultTargetPlatform.name,
+            'environment': SecureConfig.sentryEnvironment,
+          };
+          
+          // Fusionner et re-sérialiser
+          final mergedData = {...baseData, ...additionalData};
+          return _makeSerializable(mergedData) ?? mergedData;
+        } catch (e) {
+          print('❌ Erreur sérialisation log individual: $e');
+          // Retourner un log minimal en cas d'erreur
+          return {
+            'timestamp': log.timestamp.toIso8601String(),
+            'level': log.level.name,
+            'message': log.message,
+            'context': log.context,
+            'serialization_error': e.toString(),
+            'app_version': '1.0.0',
+            'platform': defaultTargetPlatform.name,
+            'environment': SecureConfig.sentryEnvironment,
+          };
+        }
       }).toList();
 
       await Supabase.instance.client

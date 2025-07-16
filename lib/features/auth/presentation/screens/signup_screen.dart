@@ -1,8 +1,8 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
-import 'package:runaway/config/extensions.dart';
-import 'package:runaway/core/di/bloc_provider_extension.dart';
+import 'package:runaway/core/helper/extensions/extensions.dart';
+import 'package:runaway/core/utils/injections/bloc_provider_extension.dart';
 import 'package:runaway/core/widgets/label_divider.dart';
 import 'package:runaway/core/widgets/squircle_btn.dart';
 import 'package:runaway/features/auth/presentation/bloc/auth_event.dart';

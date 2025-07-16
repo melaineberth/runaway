@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:hugeicons/hugeicons.dart';
-import 'package:runaway/config/colors.dart';
+import 'package:runaway/core/styles/colors.dart';
 import 'package:runaway/core/widgets/squircle_container.dart';
 import 'package:runaway/features/activity/data/repositories/activity_repository.dart';
-import '../../../../config/extensions.dart';
+import '../../../../core/helper/extensions/extensions.dart';
 import '../../domain/models/activity_stats.dart';
 
 class ProgressChartsSection extends StatefulWidget {

@@ -3,9 +3,8 @@ import 'dart:io';
 
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+import 'package:runaway/core/helper/config/secure_config.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
-
-import '../../config/secure_config.dart';
 
 /// Service principal de crash reporting utilisant Sentry
 class CrashReportingService {
