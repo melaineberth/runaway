@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:math' as math;
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
@@ -7,6 +6,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_keyboard_visibility/flutter_keyboard_visibility.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:runaway/core/helper/extensions/extensions.dart';
+import 'package:runaway/core/utils/constant/constants.dart';
 import 'package:runaway/features/route_generator/data/services/geocoding_service.dart';
 import 'package:runaway/core/widgets/rounded_text_field.dart';
 import 'package:runaway/core/widgets/squircle_container.dart';
@@ -117,6 +117,17 @@ class _FloatingLocationSearchSheetState extends State<FloatingLocationSearchShee
 
     _scrollController = ScrollController()
     ..addListener(() => _updateEdgeState(_scrollController.position));
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final shouldCollapse =
+          !_isKeyboardVisible &&
+          _suggestions.isEmpty &&
+          _searchController.text.isEmpty;
+
+      if (shouldCollapse) {
+        _scheduleConditionalCollapse();
+      }
+    });
   }
   
   @override
@@ -418,8 +429,7 @@ class _FloatingLocationSearchSheetState extends State<FloatingLocationSearchShee
     return AnimatedBuilder(
       animation: _sheetCtrl,
       builder: (context, child) {
-        final currentPosition =
-            _sheetCtrl.isAttached ? _sheetCtrl.size : _kMinCollapsedRatio;
+        final currentPosition = _sheetCtrl.isAttached ? _sheetCtrl.size : _kMinCollapsedRatio;
         final horizontalPadding = _calculateHorizontalPadding(currentPosition);
 
         return Padding(
@@ -429,11 +439,26 @@ class _FloatingLocationSearchSheetState extends State<FloatingLocationSearchShee
             horizontalPadding,
             horizontalPadding,
           ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(40),
-            child: Container(
-              decoration: BoxDecoration(color: context.adaptiveBackground),
-              child: _buildDraggableSheet(_currentCollapsedRatio),
+          child: Container(
+            decoration: BoxDecoration(
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.15),
+                  spreadRadius: 2,
+                  blurRadius: 30,
+                  offset: Offset(0,0,), // changes position of shadow
+                ),
+              ],
+              borderRadius: BorderRadius.circular(40),
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(40),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: context.adaptiveBackground,
+                ),
+                child: _buildDraggableSheet(_currentCollapsedRatio),
+              ),
             ),
           ),
         );
@@ -589,8 +614,7 @@ class _FloatingLocationSearchSheetState extends State<FloatingLocationSearchShee
 
   /// 👤 Construit l'avatar utilisateur authentifié
   Widget _buildAuthenticatedAvatar(dynamic user) {
-    final initialColor = math.Random().nextInt(Colors.primaries.length);
-    final color = Colors.primaries[initialColor];
+    final color = Color(int.parse(user.color));
 
     return Container(
       width: 60,
@@ -617,9 +641,9 @@ class _FloatingLocationSearchSheetState extends State<FloatingLocationSearchShee
       child: Text(
         initials,
         style: TextStyle(
-          fontSize: 22,
+          fontSize: 20,
           fontWeight: FontWeight.bold,
-          color: color,
+          color: darken(color),
         ),
       ),
     );

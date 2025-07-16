@@ -7,6 +7,7 @@ class Profile {
   final String? fullName;
   final DateTime? updatedAt;
   final String email;
+  final String color;
 
   Profile({
     required this.id,
@@ -15,6 +16,7 @@ class Profile {
     this.avatarUrl,
     this.fullName,
     this.updatedAt,
+    required this.color,
   });
 
   factory Profile.fromJson(Map<String, dynamic> json) => Profile(
@@ -26,6 +28,7 @@ class Profile {
     updatedAt: json['updated_at'] != null 
         ? DateTime.tryParse(json['updated_at'].toString())
         : null,
+    color: json['color'] as String,
   );
 
   Map<String, dynamic> toJson() => {
@@ -35,6 +38,7 @@ class Profile {
     'avatar_url': avatarUrl,
     'full_name': fullName,
     'updated_at': updatedAt?.toIso8601String(),
+    'color': color,
   };
 
   /// Méthode helper pour vérifier si le profil est complet
@@ -82,6 +86,7 @@ class Profile {
     String? avatarUrl,
     String? fullName,
     DateTime? updatedAt,
+    String? color,
   }) {
     return Profile(
       id: id ?? this.id,
@@ -90,6 +95,7 @@ class Profile {
       avatarUrl: avatarUrl ?? this.avatarUrl,
       fullName: fullName ?? this.fullName,
       updatedAt: updatedAt ?? this.updatedAt,
+      color: color ?? this.color,
     );
   }
 
@@ -119,11 +125,12 @@ class Profile {
       avatarUrl,
       fullName,
       updatedAt,
+      color
     );
   }
 
   @override
   String toString() {
-    return 'Profile(id: $id, username: $username, email: $email, fullName: $fullName, hasAvatar: $hasAvatar)';
+    return 'Profile(id: $id, username: $username, email: $email, fullName: $fullName, hasAvatar: $hasAvatar, color: $color)';
   }
 }

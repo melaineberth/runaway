@@ -1,5 +1,4 @@
 import 'dart:io';
-import 'dart:math' as math;
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
@@ -8,7 +7,9 @@ import 'package:go_router/go_router.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:runaway/core/helper/extensions/extensions.dart';
+import 'package:runaway/core/utils/constant/constants.dart';
 import 'package:runaway/core/utils/injections/bloc_provider_extension.dart';
+import 'package:runaway/core/widgets/icon_btn.dart';
 import 'package:runaway/core/widgets/modal_dialog.dart';
 import 'package:runaway/core/widgets/modal_sheet.dart';
 import 'package:runaway/core/widgets/squircle_btn.dart';
@@ -172,7 +173,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> with TickerProvid
   }
 
   Widget _buildAvatarSection() {
-    final initialColor = math.Random().nextInt(Colors.primaries.length);
+    final color = Color(int.parse(widget.profile.color));
     final avatarSize = 200.0;
 
     return Center(
@@ -196,41 +197,45 @@ class _EditProfileScreenState extends State<EditProfileScreen> with TickerProvid
                         ? CachedNetworkImage(
                             imageUrl: widget.profile.avatarUrl!,
                             fit: BoxFit.cover,
-                            // 🔧 FIX: Ajouter une clé unique pour forcer le rechargement
                             key: ValueKey(widget.profile.avatarUrl),
-                            placeholder: (context, url) => Container(
-                              color: Colors.primaries[initialColor].withValues(alpha: 0.2),
+                            placeholder: (context, url) {
+                              return Container(
+                              color: color,
                               child: Center(
                                 child: Text(
                                   widget.profile.initials,
                                   style: context.titleLarge?.copyWith(
-                                    color: Colors.primaries[initialColor],
+                                    color: darken(color),
                                     fontWeight: FontWeight.w600,
                                   ),
                                 ),
                               ),
-                            ),
-                            errorWidget: (context, url, error) => Container(
-                              color: Colors.primaries[initialColor].withValues(alpha: 0.2),
+                            );
+                            },
+                            errorWidget: (context, url, error) {
+                              return Container(
+                              color: color,
                               child: Center(
                                 child: Text(
                                   widget.profile.initials,
                                   style: context.titleLarge?.copyWith(
-                                    color: Colors.primaries[initialColor],
+                                    color: darken(color),
                                     fontWeight: FontWeight.w600,
                                   ),
                                 ),
                               ),
-                            ),
+                            );
+                            },
                           )
                         : Container(
-                            color: Colors.primaries[initialColor].withValues(alpha: 0.2),
+                            color: color,
                             child: Center(
                               child: Text(
                                 widget.profile.initials,
-                                style: context.titleLarge?.copyWith(
-                                  color: Colors.primaries[initialColor],
-                                  fontWeight: FontWeight.w600,
+                                style: TextStyle(
+                                  fontSize: 32,
+                                  fontWeight: FontWeight.bold,
+                                  color: darken(color),
                                 ),
                               ),
                             ),
@@ -332,36 +337,61 @@ class _EditProfileScreenState extends State<EditProfileScreen> with TickerProvid
 
   @override
   Widget build(BuildContext context) {
-    return ModalSheet(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Form(
-            key: _formKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [                      
-                // Section Avatar
-                _buildAvatarSection(),
-                
-                50.h,
-                
-                // Section Nom complet
-                _buildFullNameField(),
-                
-                20.h,
-                
-                // Section Username (désactivé)
-                _buildUsernameField(),
-                
-                40.h,
-
-                _buildCompleteButton(_isLoading),
-              ],
+    return Stack(
+      children: [
+        ModalSheet(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Form(
+                key: _formKey,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [                      
+                    // Section Avatar
+                    _buildAvatarSection(),
+                    
+                    50.h,
+                    
+                    // Section Nom complet
+                    _buildFullNameField(),
+                    
+                    20.h,
+                    
+                    // Section Username (désactivé)
+                    _buildUsernameField(),
+                    
+                    40.h,
+        
+                    _buildCompleteButton(_isLoading),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        Positioned(
+          right: 15,
+          top: 15,
+          child: AnimatedSwitcher(
+            duration: const Duration(milliseconds: 300),
+            transitionBuilder: (child, animation) => ScaleTransition(
+              scale: CurvedAnimation(
+                parent: animation,
+                curve: Curves.easeIn,
+                reverseCurve: Curves.easeOut,
+              ),
+              child: FadeTransition(opacity: animation, child: child),
+            ),
+            child: IconBtn(
+              backgroundColor: Colors.transparent,
+              icon: HugeIcons.solidRoundedCancelCircle,
+              iconColor: context.adaptiveDisabled.withValues(alpha: _isLoading ? 0.15 : 0.4),
+              onPressed: _isLoading ? null : () => Navigator.pop(context),
             ),
           ),
-        ],
-      ),
+        )
+      ],
     );
   }
 
@@ -380,8 +410,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> with TickerProvid
       child: SquircleBtn(
         isPrimary: true,
         isLoading: isLoading,
-        onTap: _hasChanges ? _saveProfile : () => context.pop(),
-        label: _hasChanges ? context.l10n.complete :  "Quitter",
+        isDisabled: !_hasChanges,
+        onTap: _hasChanges ? _saveProfile : null,
+        label: context.l10n.complete,
       ),
     );
   }

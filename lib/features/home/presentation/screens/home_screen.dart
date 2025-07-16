@@ -2442,15 +2442,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
                                             ),
                                             boxShadow: [
                                               BoxShadow(
-                                                color: Colors.black.withValues(
-                                                  alpha: 0.15,
-                                                ),
+                                                color: Colors.black.withValues(alpha: 0.15),
                                                 spreadRadius: 2,
                                                 blurRadius: 30,
-                                                offset: Offset(
-                                                  0,
-                                                  0,
-                                                ), // changes position of shadow
+                                                offset: Offset(0,0,), // changes position of shadow
                                               ),
                                             ],
                                           ),

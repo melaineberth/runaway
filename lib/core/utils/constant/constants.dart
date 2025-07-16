@@ -61,3 +61,9 @@ IconData getUrbanDensityIcon(String urbanDensityId) {
       return HugeIcons.solidRoundedLocation04;
   }
 }
+
+Color darken(Color color, [double amount = .3]) {
+  final hsl = HSLColor.fromColor(color);
+  final darkened = hsl.withLightness((hsl.lightness - amount).clamp(0.0, 1.0));
+  return darkened.toColor();
+}

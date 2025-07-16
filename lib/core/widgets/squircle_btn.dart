@@ -31,12 +31,14 @@ class SquircleBtn extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Bounce(
+      scale: isDisabled ? false : true,
+      tilt: isDisabled ? false : true,
       onTap: isDisabled ? null : onTap,
       child: SquircleContainer(
         height: 60,
         padding: padding,
         gradient: isGradient,
-        color: isLoading ? context.adaptivePrimary.withValues(alpha: 0.5) : isPrimary ? isDestructive ? Colors.red : context.adaptivePrimary : context.adaptiveDisabled.withValues(alpha: 0.08),
+        color: isDisabled ? context.adaptiveDisabled.withValues(alpha: 0.25) : isLoading ? context.adaptivePrimary.withValues(alpha: 0.5) : isPrimary ? isDestructive ? Colors.red : context.adaptivePrimary : context.adaptiveDisabled.withValues(alpha: 0.08),
         radius: 50.0,
         child: AnimatedSwitcher(
           duration: Duration(milliseconds: 300),

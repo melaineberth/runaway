@@ -1,8 +1,10 @@
 import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
+import 'dart:math' as math;
 
 import 'package:crypto/crypto.dart';
+import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:path/path.dart' as p;
 import 'package:runaway/core/errors/auth_exceptions.dart';
@@ -436,19 +438,28 @@ class AuthRepository {
         throw AuthException('Utilisateur non connecté ou email manquant');
       }
 
+      final initialColor = math.Random().nextInt(Colors.primaries.length);
+      final userColor = HSLColor.fromColor(Colors.primaries[initialColor])
+          .withLightness(0.8)
+          .toColor();
+
+      // Convertir en format Flutter-friendly (ex: 0xFF2196F3)
+      final colorHex = '0x${userColor.value.toRadixString(16).padLeft(8, '0').toUpperCase()}';
+
       // 4. Sauvegarder le profil complet
       final data = await _supabase
-          .from('profiles')
-          .upsert({
-            'id': userId,
-            'email': user!.email!, // Utiliser l'email de l'utilisateur connecté
-            'full_name': fullName,
-            'username': username,
-            'avatar_url': avatarUrl,
-            'updated_at': DateTime.now().toIso8601String(),
-          })
-          .select()
-          .maybeSingle();
+        .from('profiles')
+        .upsert({
+          'id': userId,
+          'email': user!.email!, // Utiliser l'email de l'utilisateur connecté
+          'full_name': fullName,
+          'username': username,
+          'avatar_url': avatarUrl,
+          'updated_at': DateTime.now().toIso8601String(),
+          'color': colorHex,
+        })
+        .select()
+        .maybeSingle();
 
       if (data == null) {
         throw ProfileException('Impossible de sauvegarder le profil');
@@ -875,37 +886,37 @@ class AuthRepository {
   }
 
   /* ───────── HELPER POUR GÉNÉRER USERNAME UNIQUE (réutilisé si nécessaire) ───────── */
-Future<String> _generateUniqueUsername(String baseName) async {
-  // Nettoyer le nom de base
-  String cleanBase = baseName
-      .toLowerCase()
-      .replaceAll(RegExp(r'[^a-z0-9]'), '')
-      .substring(0, min(baseName.length, 15));
-  
-  if (cleanBase.isEmpty) {
-    cleanBase = 'user';
-  }
-  
-  // Essayer le nom de base d'abord
-  if (await isUsernameAvailable(cleanBase)) {
-    return cleanBase;
-  }
-  
-  // Ajouter des nombres jusqu'à trouver un nom disponible
-  for (int i = 1; i <= 999; i++) {
-    final candidate = '$cleanBase$i';
-    if (await isUsernameAvailable(candidate)) {
-      return candidate;
+  Future<String> _generateUniqueUsername(String baseName) async {
+    // Nettoyer le nom de base
+    String cleanBase = baseName
+        .toLowerCase()
+        .replaceAll(RegExp(r'[^a-z0-9]'), '')
+        .substring(0, min(baseName.length, 15));
+    
+    if (cleanBase.isEmpty) {
+      cleanBase = 'user';
     }
+    
+    // Essayer le nom de base d'abord
+    if (await isUsernameAvailable(cleanBase)) {
+      return cleanBase;
+    }
+    
+    // Ajouter des nombres jusqu'à trouver un nom disponible
+    for (int i = 1; i <= 999; i++) {
+      final candidate = '$cleanBase$i';
+      if (await isUsernameAvailable(candidate)) {
+        return candidate;
+      }
+    }
+    
+    // Fallback avec timestamp
+    final timestamp = DateTime.now().millisecondsSinceEpoch.toString();
+    return '${cleanBase}_${timestamp.substring(timestamp.length - 6)}';
   }
-  
-  // Fallback avec timestamp
-  final timestamp = DateTime.now().millisecondsSinceEpoch.toString();
-  return '${cleanBase}_${timestamp.substring(timestamp.length - 6)}';
-}
 
-/* ───────── HELPER POUR SUGGÉRER UN USERNAME DEPUIS LES DONNÉES SOCIALES ───────── */
-Map<String, String?> getSocialUserInfo() {
+  /* ───────── HELPER POUR SUGGÉRER UN USERNAME DEPUIS LES DONNÉES SOCIALES ───────── */
+  Map<String, String?> getSocialUserInfo() {
     try {
       final user = _supabase.auth.currentUser;
       if (user == null) return {};

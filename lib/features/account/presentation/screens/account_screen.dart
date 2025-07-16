@@ -17,6 +17,7 @@ import 'package:runaway/core/blocs/notification/notification_bloc.dart';
 import 'package:runaway/core/blocs/notification/notification_event.dart';
 import 'package:runaway/core/blocs/notification/notification_state.dart';
 import 'package:runaway/core/blocs/theme_bloc/theme_bloc.dart';
+import 'package:runaway/core/utils/constant/constants.dart';
 import 'package:runaway/core/utils/injections/bloc_provider_extension.dart';
 import 'package:runaway/core/helper/extensions/monitoring_extensions.dart';
 import 'package:runaway/core/helper/services/monitoring_service.dart';
@@ -34,7 +35,6 @@ import 'package:runaway/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:runaway/features/auth/presentation/bloc/auth_event.dart';
 import 'package:runaway/features/auth/presentation/bloc/auth_state.dart';
 import 'package:top_snackbar_flutter/top_snack_bar.dart';
-import 'dart:math' as math;
 
 import 'package:url_launcher/url_launcher.dart';
 
@@ -274,7 +274,6 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
 
   Widget _buildAuthenticatedView(Authenticated authState) {
     final user = authState.profile;
-    final initialColor = math.Random().nextInt(Colors.primaries.length);
 
     return BlurryAppBar(
       title: context.l10n.account, 
@@ -289,7 +288,7 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
                 child: _buildHeaderAccount(
                   ctx: context,
                   user: user,
-                  color: Colors.primaries[initialColor],
+                  color: Color(int.parse(user.color)),
                 ),
               ),
             );
@@ -756,7 +755,7 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
             width: 150,
             height: 150,
             decoration: BoxDecoration(
-              color: HSLColor.fromColor(color).withLightness(0.8).toColor(),
+              color: color,
               shape: BoxShape.circle,
               boxShadow: [
                 BoxShadow(
@@ -812,7 +811,7 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
                         style: TextStyle(
                           fontSize: 32,
                           fontWeight: FontWeight.bold,
-                          color: color,
+                          color: darken(color),
                         ),
                       ),
                     ),
