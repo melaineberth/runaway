@@ -2,12 +2,11 @@
 
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:runaway/core/helper/config/secure_config.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ReverseGeocodingService {
   static final String _baseUrl = 'https://api.mapbox.com/geocoding/v5/mapbox.places';
-  static final String _accessToken = dotenv.get('MAPBOX_TOKEN');
   static const String _cachePrefix = 'reverse_geocoding_';
   static const Duration _cacheExpiration = Duration(hours: 24);
 
@@ -108,7 +107,7 @@ class ReverseGeocodingService {
     double latitude,
     double longitude,
   ) async {
-    final url = '$_baseUrl/$longitude,$latitude.json?access_token=$_accessToken&types=place,locality,neighborhood,address&language=fr&limit=1';
+    final url = '$_baseUrl/$longitude,$latitude.json?access_token=${SecureConfig.mapboxToken}&types=place,locality,neighborhood,address&language=fr&limit=1';
     
     final response = await http.get(Uri.parse(url)).timeout(
       Duration(seconds: 10),
