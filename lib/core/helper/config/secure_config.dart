@@ -1,8 +1,23 @@
+// lib/core/helper/config/secure_config.dart
+import 'dart:convert';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:runaway/core/helper/config/log_config.dart';
 
 class SecureConfig {
   static const bool kIsProduction = bool.fromEnvironment('PRODUCTION', defaultValue: false);
+  
+  // 🔒 Stockage sécurisé pour les tokens
+  static const FlutterSecureStorage _secureStorage = FlutterSecureStorage(
+    aOptions: AndroidOptions(
+      encryptedSharedPreferences: true,
+      sharedPreferencesName: 'trailix_secure_prefs',
+      preferencesKeyPrefix: 'trailix_',
+    ),
+    iOptions: IOSOptions(
+      accessibility: KeychainAccessibility.first_unlock_this_device
+    ),
+  );
   
   // Cache des tokens pour éviter les accès répétés
   static String? _cachedMapboxToken;
@@ -13,6 +28,223 @@ class SecureConfig {
   static String? _cachedSentryDsn;
   static String? _cachedSentryEnvironment;
   static String? _cachedSentryRelease;
+
+  // 🔒 État du stockage sécurisé
+  static bool _secureStorageAvailable = true;
+
+  // 🔒 Clés pour le stockage sécurisé
+  static const String _keyAccessToken = 'supabase_access_token';
+  static const String _keyRefreshToken = 'supabase_refresh_token';
+  static const String _keyTokenExpiry = 'token_expiry';
+  static const String _keyTokenRotationKey = 'token_rotation_key';
+
+  /// 🔒 Stockage sécurisé du token d'accès avec fallback
+  static Future<void> storeAccessToken(String token) async {
+    if (!_secureStorageAvailable) {
+      LogConfig.logInfo('🔒 Stockage sécurisé désactivé, token ignoré');
+      return;
+    }
+
+    try {
+      await _secureStorage.write(key: _keyAccessToken, value: token);
+      
+      // Stocker l'heure d'expiration (JWT valide 1h par défaut)
+      final expiry = DateTime.now().add(const Duration(hours: 1));
+      await _secureStorage.write(
+        key: _keyTokenExpiry, 
+        value: expiry.toIso8601String(),
+      );
+      
+      LogConfig.logInfo('🔒 Token d\'accès stocké de façon sécurisée');
+    } catch (e) {
+      LogConfig.logWarning('⚠️ Stockage sécurisé échoué, désactivation: $e');
+      _secureStorageAvailable = false;
+      // Ne pas faire échouer l'opération
+    }
+  }
+
+  /// 🔒 Récupération sécurisée du token d'accès avec fallback
+  static Future<String?> getStoredAccessToken() async {
+    if (!_secureStorageAvailable) {
+      return null;
+    }
+
+    try {
+      return await _secureStorage.read(key: _keyAccessToken);
+    } catch (e) {
+      LogConfig.logWarning('⚠️ Lecture token échouée: $e');
+      _secureStorageAvailable = false;
+      return null;
+    }
+  }
+
+  /// 🔒 Stockage sécurisé du refresh token avec fallback
+  static Future<void> storeRefreshToken(String token) async {
+    if (!_secureStorageAvailable) {
+      LogConfig.logInfo('🔒 Stockage sécurisé désactivé, refresh token ignoré');
+      return;
+    }
+
+    try {
+      await _secureStorage.write(key: _keyRefreshToken, value: token);
+      LogConfig.logInfo('🔒 Refresh token stocké de façon sécurisée');
+    } catch (e) {
+      LogConfig.logWarning('⚠️ Stockage refresh token échoué: $e');
+      _secureStorageAvailable = false;
+      // Ne pas faire échouer l'opération
+    }
+  }
+
+  /// 🔒 Récupération sécurisée du refresh token avec fallback
+  static Future<String?> getStoredRefreshToken() async {
+    if (!_secureStorageAvailable) {
+      return null;
+    }
+
+    try {
+      return await _secureStorage.read(key: _keyRefreshToken);
+    } catch (e) {
+      LogConfig.logWarning('⚠️ Lecture refresh token échouée: $e');
+      _secureStorageAvailable = false;
+      return null;
+    }
+  }
+
+  /// 🔒 Validation de l'expiration du token JWT avec fallback
+  static Future<bool> isTokenExpired() async {
+    if (!_secureStorageAvailable) {
+      return false; // Si pas de stockage, on considère comme non expiré
+    }
+
+    try {
+      final expiryString = await _secureStorage.read(key: _keyTokenExpiry);
+      if (expiryString == null) return false; // Pas d'info = pas expiré
+      
+      final expiry = DateTime.parse(expiryString);
+      final now = DateTime.now();
+      
+      // Considérer expiré si moins de 5 minutes avant expiration
+      final isExpiring = now.isAfter(expiry.subtract(const Duration(minutes: 5)));
+      
+      if (isExpiring) {
+        LogConfig.logInfo('⚠️ Token proche de l\'expiration');
+      }
+      
+      return isExpiring;
+    } catch (e) {
+      LogConfig.logWarning('⚠️ Erreur vérification expiration token: $e');
+      _secureStorageAvailable = false;
+      return false; // En cas d'erreur, considérer comme non expiré
+    }
+  }
+
+  /// 🔒 Validation du format JWT
+  static bool isValidJWT(String token) {
+    try {
+      // Un JWT valide a 3 parties séparées par des points
+      final parts = token.split('.');
+      if (parts.length != 3) return false;
+      
+      // Decoder le header pour validation basique
+      final header = json.decode(
+        utf8.decode(base64Url.decode(base64Url.normalize(parts[0]))),
+      );
+      
+      // Vérifier qu'il s'agit bien d'un JWT
+      return header['typ'] == 'JWT' || header['typ'] == 'jwt';
+    } catch (e) {
+      LogConfig.logWarning('⚠️ Token JWT invalide: $e');
+      return false;
+    }
+  }
+
+  /// 🔒 Extraction de l'expiration depuis le JWT
+  static DateTime? getJWTExpiration(String token) {
+    try {
+      final parts = token.split('.');
+      if (parts.length != 3) return null;
+      
+      final payload = json.decode(
+        utf8.decode(base64Url.decode(base64Url.normalize(parts[1]))),
+      );
+      
+      final exp = payload['exp'];
+      if (exp != null) {
+        return DateTime.fromMillisecondsSinceEpoch(exp * 1000);
+      }
+      
+      return null;
+    } catch (e) {
+      LogConfig.logWarning('⚠️ Erreur extraction expiration JWT: $e');
+      return null;
+    }
+  }
+
+  /// 🔒 Nettoyage de tous les tokens stockés avec fallback
+  static Future<void> clearStoredTokens() async {
+    if (!_secureStorageAvailable) {
+      LogConfig.logInfo('🔒 Stockage sécurisé désactivé, nettoyage ignoré');
+      return;
+    }
+
+    try {
+      await Future.wait([
+        _secureStorage.delete(key: _keyAccessToken),
+        _secureStorage.delete(key: _keyRefreshToken),
+        _secureStorage.delete(key: _keyTokenExpiry),
+        _secureStorage.delete(key: _keyTokenRotationKey),
+      ]);
+      LogConfig.logInfo('🧹 Tokens nettoyés du stockage sécurisé');
+    } catch (e) {
+      LogConfig.logWarning('⚠️ Erreur nettoyage tokens: $e');
+      _secureStorageAvailable = false;
+    }
+  }
+
+  /// 🔒 Génération et stockage d'une clé de rotation avec fallback
+  static Future<void> generateRotationKey() async {
+    if (!_secureStorageAvailable) {
+      LogConfig.logInfo('🔒 Stockage sécurisé désactivé, clé rotation ignorée');
+      return;
+    }
+
+    try {
+      final key = base64Encode(List.generate(32, (i) => 
+        DateTime.now().millisecondsSinceEpoch + i).map((e) => e % 256).toList());
+      
+      await _secureStorage.write(key: _keyTokenRotationKey, value: key);
+      LogConfig.logInfo('🔑 Clé de rotation générée');
+    } catch (e) {
+      LogConfig.logWarning('⚠️ Erreur génération clé rotation: $e');
+      _secureStorageAvailable = false;
+    }
+  }
+
+  /// 🔒 Validation de la sécurité du stockage
+  static Future<bool> isSecureStorageAvailable() async {
+    if (!_secureStorageAvailable) {
+      return false;
+    }
+
+    try {
+      // Test simple d'écriture/lecture
+      const testKey = 'test_security';
+      const testValue = 'test_value';
+      
+      await _secureStorage.write(key: testKey, value: testValue);
+      final result = await _secureStorage.read(key: testKey);
+      await _secureStorage.delete(key: testKey);
+      
+      final isAvailable = result == testValue;
+      _secureStorageAvailable = isAvailable;
+      
+      return isAvailable;
+    } catch (e) {
+      LogConfig.logWarning('⚠️ Stockage sécurisé non disponible: $e');
+      _secureStorageAvailable = false;
+      return false;
+    }
+  }
 
   /// Token Mapbox avec fallback production/développement
   static String get mapboxToken {
@@ -177,8 +409,9 @@ class SecureConfig {
       throw Exception('SENTRY_DSN non configuré pour l\'environnement ${kIsProduction ? 'PRODUCTION' : 'DEVELOPMENT'}');
     }
     
-    // Validation basique du DSN Sentry (format https://key@org.ingest.sentry.io/project)
-    if (!dsn.startsWith('https://') || !dsn.contains('sentry.io')) {
+    // Validation basique du DSN Sentry
+    final uri = Uri.tryParse(dsn);
+    if (uri == null || !uri.isAbsolute) {
       throw Exception('DSN Sentry invalide: $dsn');
     }
     
@@ -186,43 +419,22 @@ class SecureConfig {
     return dsn;
   }
 
-  /// Environnement Sentry
   static String get sentryEnvironment {
     if (_cachedSentryEnvironment != null) return _cachedSentryEnvironment!;
     
-    String? environment;
-    if (kIsProduction) {
-      environment = const String.fromEnvironment('SENTRY_ENVIRONMENT_PROD');
-      if (environment.isEmpty) {
-        environment = dotenv.env['SENTRY_ENVIRONMENT_PROD'] ?? 'production';
-      }
-    } else {
-      environment = const String.fromEnvironment('SENTRY_ENVIRONMENT_DEV');
-      if (environment.isEmpty) {
-        environment = dotenv.env['SENTRY_ENVIRONMENT_DEV'] ?? 'development';
-      }
-    }
+    final env = kIsProduction 
+        ? (dotenv.env['SENTRY_ENVIRONMENT_PROD'] ?? 'production')
+        : (dotenv.env['SENTRY_ENVIRONMENT_DEV'] ?? 'development');
     
-    _cachedSentryEnvironment = environment;
-    return environment;
+    _cachedSentryEnvironment = env;
+    return env;
   }
 
-  /// Version de release pour Sentry
   static String get sentryRelease {
     if (_cachedSentryRelease != null) return _cachedSentryRelease!;
     
-    String? release;
-    if (kIsProduction) {
-      release = const String.fromEnvironment('SENTRY_RELEASE_PROD');
-      if (release.isEmpty) {
-        release = dotenv.env['SENTRY_RELEASE_PROD'] ?? '1.0.0+1';
-      }
-    } else {
-      release = const String.fromEnvironment('SENTRY_RELEASE_DEV');
-      if (release.isEmpty) {
-        release = dotenv.env['SENTRY_RELEASE_DEV'] ?? '1.0.0+1-dev';
-      }
-    }
+    // Version par défaut si non spécifiée
+    final release = dotenv.env['SENTRY_RELEASE'] ?? 'trailix@1.0.0';
     
     _cachedSentryRelease = release;
     return release;
@@ -240,7 +452,7 @@ class SecureConfig {
     return dotenv.env['ENABLE_PERFORMANCE_MONITORING']?.toLowerCase() == 'true';
   }
 
-  /// Taux d'échantillonnage pour les erreurs (0.0 à 1.0)
+  /// Taux d'échantillonnage pour Sentry (0.0 à 1.0)
   static double get sentrySampleRate {
     return double.tryParse(dotenv.env['SENTRY_SAMPLE_RATE'] ?? '1.0') ?? 1.0;
   }
@@ -271,13 +483,22 @@ class SecureConfig {
     return int.tryParse(dotenv.env['LOG_RETENTION_DAYS'] ?? '30') ?? 30;
   }
 
-  /// Validation complète incluant monitoring
-  static void validateConfiguration() {
+  /// 🔒 Validation complète incluant sécurité avec fallback
+  static Future<void> validateConfiguration() async {
     try {
       LogConfig.logInfo('🔒 Validation configuration sécurisée...');
       LogConfig.logInfo('🔒 Mode: ${kIsProduction ? 'PRODUCTION' : 'DEVELOPMENT'}');
-            
-      // 🆕 Valider la configuration monitoring
+      
+      // Vérifier la disponibilité du stockage sécurisé
+      final isSecureStorageOk = await isSecureStorageAvailable();
+      if (!isSecureStorageOk) {
+        LogConfig.logWarning('⚠️ Stockage sécurisé non disponible, fonctionnement en mode dégradé');
+        _secureStorageAvailable = false;
+      } else {
+        LogConfig.logSuccess('🔒 Stockage sécurisé disponible');
+      }
+      
+      // Valider la configuration monitoring
       if (isCrashReportingEnabled || isPerformanceMonitoringEnabled) {
         LogConfig.logSuccess('Configuration Sentry validée');
       }
@@ -289,16 +510,19 @@ class SecureConfig {
     }
   }
 
-  /// Nettoie le cache (inclut monitoring)
-  static void clearCache() {
+  /// 🔒 Nettoie le cache (inclut monitoring et tokens) avec fallback
+  static Future<void> clearCache() async {
     // Cache existant
     _cachedMapboxToken = null;
     _cachedSupabaseUrl = null;
     _cachedSupabaseAnonKey = null;
     
-    // 🆕 Cache monitoring
+    // Cache monitoring
     _cachedSentryDsn = null;
     _cachedSentryEnvironment = null;
     _cachedSentryRelease = null;
+    
+    // 🔒 Nettoyer aussi les tokens stockés (avec fallback)
+    await clearStoredTokens();
   }
 }
