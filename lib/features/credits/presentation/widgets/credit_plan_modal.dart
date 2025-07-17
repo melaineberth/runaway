@@ -217,10 +217,6 @@ class _CreditPlanModalState extends State<CreditPlanModal> {
       listeners: [
         // 🆕 Écouter les événements de CreditsBloc pour les achats
         BlocListener<CreditsBloc, CreditsState>(
-          listenWhen: (previous, current) =>
-            current is CreditPurchaseSuccess ||
-            current is CreditsError,
-
           listener: (context, state) {
             if (state is CreditPurchaseSuccess) {
               // Fermer immédiatement la modal
@@ -239,14 +235,6 @@ class _CreditPlanModalState extends State<CreditPlanModal> {
         ),
       ],
       child: BlocBuilder<AppDataBloc, AppDataState>(
-        // ✅ Optimiser pour les données de crédits uniquement
-        buildWhen: (previous, current) =>
-          previous.isCreditDataLoaded != current.isCreditDataLoaded ||
-          previous.isLoading != current.isLoading ||
-          previous.lastError != current.lastError ||
-          previous.activePlans != current.activePlans ||
-          previous.availableCredits != current.availableCredits,
-          
         builder: (context, appDataState) {
           return _buildMainContent(appDataState);
         },

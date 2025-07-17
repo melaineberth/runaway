@@ -3,6 +3,8 @@
 import 'dart:convert';
 import 'package:runaway/core/helper/extensions/extensions.dart';
 import 'package:runaway/core/helper/services/monitoring_service.dart';
+import 'package:runaway/features/route_generator/data/services/route_cache.dart';
+import 'package:runaway/features/route_generator/data/services/route_persistence_service.dart';
 import 'package:runaway/features/route_generator/data/services/screenshot_service.dart';
 import 'package:runaway/features/route_generator/domain/models/activity_type.dart';
 import 'package:runaway/features/route_generator/domain/models/saved_route.dart';
@@ -17,15 +19,44 @@ import '../../domain/models/route_parameters.dart';
 class RoutesRepository {
   final SupabaseClient _supabase = Supabase.instance.client;
   final Uuid _uuid = const Uuid();
+  final RouteCache _routeCache = RouteCache.instance;
+  final RoutePersistenceService _persistenceService = RoutePersistenceService.instance;
+  
   static const String _localCacheKey = 'cached_user_routes';
   static const String _pendingSyncKey = 'pending_sync_routes';
+  static const String _lastSyncKey = 'last_routes_sync';
 
-  // 🆕 Helper pour catégoriser les distances
-  String _getDistanceRange(double distance) {
-    if (distance < 5) return '0-5km';
-    if (distance < 10) return '5-10km';
-    if (distance < 20) return '10-20km';
-    return '20km+';
+  // Durées de cache intelligentes
+  static const Duration _routesCacheDuration = Duration(minutes: 30);
+  static const Duration _syncInterval = Duration(minutes: 5);
+
+  /// Initialise le repository avec le cache optimisé et la persistance avancée
+  Future<void> initialize() async {
+    await _routeCache.initialize();
+    
+    // 🆕 Validation d'intégrité au démarrage
+    final integrityReport = await _persistenceService.validateDataIntegrity();
+    if (!integrityReport.isHealthy) {
+      print('⚠️ Problèmes d\'intégrité détectés: ${integrityReport.errors.length} erreurs');
+      
+      // Tentative de restauration automatique
+      final restoredRoutes = await _persistenceService.restoreFromLatestBackup();
+      if (restoredRoutes != null) {
+        await _updateLocalCache(restoredRoutes);
+        print('🔄 Données restaurées depuis la sauvegarde: ${restoredRoutes.length} routes');
+      }
+    }
+    
+    // Migration des données si nécessaire
+    await _persistenceService.migrateDataFormat();
+    
+    // Optimisation en arrière-plan
+    _persistenceService.performBackgroundOptimization();
+
+    // 🆕 Maintenance automatique en arrière-plan toutes les 24h
+    _schedulePeriodicMaintenance();
+    
+    await _performSmartSync();
   }
 
   /// 🆕 Sauvegarde un nouveau parcours avec image_url
@@ -39,18 +70,12 @@ class RoutesRepository {
   }) async {
     return await withValidSession(() async {
       final user = _supabase.auth.currentUser;
-      if (user == null) {
-        throw Exception('Utilisateur non connecté');
-      }
+      if (user == null) throw Exception('Utilisateur non connecté');
 
-      // Générer un ID unique pour le parcours
       final routeId = _uuid.v4();
-
-      // 🔧 S'assurer que la date est en temps local
       final now = DateTime.now().toLocal();
 
-      print('💾 Sauvegarde parcours: $name');
-      print('🖼️ Image URL: ${imageUrl ?? "Aucune"}');
+      print('💾 Sauvegarde parcours avec persistance avancée: $name');
 
       final route = SavedRoute(
         id: routeId,
@@ -60,172 +85,184 @@ class RoutesRepository {
         createdAt: now,
         actualDistance: actualDistance,
         actualDuration: estimatedDuration,
-        imageUrl: imageUrl, // Utiliser l'URL fournie (peut être null)
+        imageUrl: imageUrl,
       );
 
-      // 1. Sauvegarder localement immédiatement
+      // 1. Cache rapide immédiat
+      await _routeCache.cacheRoute(routeId, route);
+
+      // 2. Sauvegarde locale immédiate
       await _saveRouteLocally(route);
 
-      // 2. Essayer de synchroniser avec Supabase
-      try {
-        if (await _isConnected()) {
-          await _saveRouteToSupabase(route, user.id);
-          // Marquer comme synchronisé
-          await _markRouteSynced(route.id);
-          print('✅ Route synchronisée avec Supabase: ${route.id}');
-        } else {
-          // Marquer pour synchronisation ultérieure
-          await _markRouteForSync(route.id);
-          print('📱 Route marquée pour sync ultérieure: ${route.id}');
-        }
+      // 🆕 3. Créer une sauvegarde de sécurité après chaque 5e route
+      await _createSecurityBackupIfNeeded();
 
-        // 🆕 Métrique business - parcours sauvegardé
-        MonitoringService.instance.recordMetric(
-          'route_saved_repository',
-          1,
-          tags: {
-            'activity_type': parameters.activityType,
-            'distance_range': _getDistanceRange(parameters.distanceKm),
-            'coordinates_count': coordinates.length.toString(),
-            'has_terrain': (parameters.terrainType != null).toString(),
-          },
-        );
-      } catch (e, stackTrace) {
-        print('❌ Erreur sync Supabase, sauvegarde en local: $e');
+      // 4. Tentative de sync cloud (non bloquante)
+      _performAsyncCloudSync(route, user.id);
 
-        MonitoringService.instance.captureError(
-          e,
-          stackTrace,
-          context: 'RoutesRepository.saveRoute',
-          extra: {
-            'user_id': user.id,
-            'activity_type': parameters.activityType,
-            'distance_km': parameters.distanceKm,
-            'coordinates_count': coordinates.length,
-          },
-        );
+      // 5. Invalider les caches existants pour forcer le refresh
+      await _invalidateRoutesCache();
 
-        await _markRouteForSync(route.id);
-      }
-
+      print('✅ Parcours sauvé avec persistance avancée: $routeId');
       return route;
     });
   }
 
   /// Récupère tous les parcours de l'utilisateur
-  Future<List<SavedRoute>> getUserRoutes() async {
-    final user = _supabase.auth.currentUser;
-    if (user == null) {
-      return await _getLocalRoutes();
-    }
+  Future<List<SavedRoute>> getUserRoutes({bool forceRefresh = false}) async {
+    return await withValidSession(() async {
+      final user = _supabase.auth.currentUser;
+      if (user == null) throw Exception('Utilisateur non connecté');
 
-    try {
-      if (await _isConnected()) {
-        // Nettoyer les routes en attente avant la sync
-        await _cleanupInvalidPendingRoutes();
-        
-        // 1. Synchroniser les parcours en attente
-        await _syncPendingRoutes();
-        
-        // 2. Récupérer depuis Supabase
-        final routes = await _getRoutesFromSupabase(user.id);
-        
-        // 3. Mettre à jour le cache local
-        await _updateLocalCache(routes);
+      final stopwatch = Stopwatch()..start();
+      
+      try {
+        // Niveau 1: Cache rapide (si pas de forceRefresh)
+        if (!forceRefresh) {
+          final cachedRoutes = await _getRoutesFromFastCache();
+          if (cachedRoutes.isNotEmpty && !await _needsSync()) {
+            stopwatch.stop();
+            print('⚡ Routes depuis cache rapide: ${cachedRoutes.length} (${stopwatch.elapsedMilliseconds}ms)');
+            return cachedRoutes;
+          }
+        }
 
-        // 🆕 Métrique de chargement des parcours
-        MonitoringService.instance.recordMetric(
-          'user_routes_loaded',
-          routes.length,
-          tags: {
+        // Niveau 2: Vérifier la connectivité pour le cache cloud
+        if (await _isConnected()) {
+          // Synchroniser d'abord les routes en attente
+          await _syncPendingRoutes();
+          
+          // Récupérer depuis Supabase
+          final routes = await _getRoutesFromSupabase(user.id);
+          
+          // Mettre à jour tous les niveaux de cache
+          await _updateAllCacheLevels(routes);
+          await _updateLastSyncTime();
+
+          // 🆕 Créer une sauvegarde de sécurité après récupération réussie
+          if (routes.isNotEmpty) {
+            await _persistenceService.createSecurityBackup(routes);
+          }
+
+          stopwatch.stop();
+
+          // Métriques détaillées avec stats système
+          final systemStats = await getSystemStats();
+          MonitoringService.instance.recordMetric(
+            'user_routes_loaded',
+            stopwatch.elapsedMilliseconds,
+            tags: {
+              'source': 'supabase',
+              'routes_count': routes.length.toString(),
+              'user_id': user.id,
+              'cache_health': systemStats['integrity']['is_healthy'].toString(),
+            },
+          );
+          
+          print('☁️ Routes depuis Supabase: ${routes.length} (${stopwatch.elapsedMilliseconds}ms)');
+          return routes;
+
+        } else {
+          // Niveau 3: Cache local (mode hors ligne)
+          final localRoutes = await _getLocalRoutes();
+          stopwatch.stop();
+          
+          print('📱 Routes depuis cache local: ${localRoutes.length} (${stopwatch.elapsedMilliseconds}ms)');
+          return localRoutes;
+        }
+
+      } catch (e, stackTrace) {
+        stopwatch.stop();
+        
+        print('❌ Erreur récupération routes, tentative de restauration: $e');
+
+        // 🆕 Tentative de restauration automatique en cas d'erreur
+        final restoredRoutes = await _persistenceService.restoreFromLatestBackup();
+        if (restoredRoutes != null && restoredRoutes.isNotEmpty) {
+          print('🔄 Routes restaurées depuis backup: ${restoredRoutes.length}');
+          return restoredRoutes;
+        }
+        
+        MonitoringService.instance.captureError(
+          e,
+          stackTrace,
+          context: 'RoutesRepository.getUserRoutes',
+          extra: {
             'user_id': user.id,
-            'routes_count': routes.length.toString(),
+            'force_refresh': forceRefresh.toString(),
+            'elapsed_ms': stopwatch.elapsedMilliseconds.toString(),
           },
         );
-        
-        return routes;
-      } else {
-        // Mode hors ligne : retourner le cache local
+
+        // Fallback vers le cache local
         return await _getLocalRoutes();
       }
-    } catch (e, stackTrace) {
-      print('❌ Erreur récupération Supabase, utilisation cache local: $e');
-
-      MonitoringService.instance.captureError(
-        e,
-        stackTrace,
-        context: 'RoutesRepository.getUserRoutes',
-        extra: {
-          'user_id': user.id,
-        },
-      );
-
-      return await _getLocalRoutes();
-    }
+    });
   }
 
   /// Supprime un parcours
   Future<void> deleteRoute(String routeId) async {
     final user = _supabase.auth.currentUser;
     
-    // 1. Récupérer la route pour obtenir l'URL de l'image
-    final routes = await _getLocalRoutes();
-    final route = routes.firstWhere(
-      (r) => r.id == routeId,
-      orElse: () => throw Exception('Route introuvable'),
-    );
-
-    // 2. Supprimer l'image du storage si elle existe
-    if (route.hasImage) {
-      try {
-        await ScreenshotService.deleteScreenshot(route.imageUrl!);
-        print('✅ Screenshot supprimée du storage');
-      } catch (e) {
-        print('❌ Erreur suppression screenshot: $e');
-        // Continue quand même avec la suppression de la route
+    try {
+      // 1. Récupérer la route depuis le cache rapide d'abord
+      SavedRoute? route = await _routeCache.getRoute(routeId);
+      
+      // Fallback vers cache local si pas en cache rapide
+      if (route == null) {
+        final routes = await _getLocalRoutes();
+        route = routes.firstWhere(
+          (r) => r.id == routeId,
+          orElse: () => throw Exception('Route introuvable'),
+        );
       }
-    }
-    
-    // 3. Supprimer localement
-    await _deleteRouteLocally(routeId);
-    
-    // 4. Supprimer de la liste des routes en attente
-    await _removeFromPendingSync(routeId);
 
-    // 5. Supprimer de Supabase si connecté
-    if (user != null) {
-      try {
-        if (await _isConnected()) {
-          await _supabase
-              .from('user_routes')
-              .delete()
-              .eq('id', routeId)
-              .eq('user_id', user.id);
-          print('✅ Route supprimée de Supabase: $routeId');
+      // 2. Supprimer l'image du storage si elle existe
+      if (route.hasImage) {
+        try {
+          await ScreenshotService.deleteScreenshot(route.imageUrl!);
+          print('✅ Screenshot supprimée du storage');
+        } catch (e) {
+          print('❌ Erreur suppression screenshot: $e');
         }
-
-        // 🆕 Métrique de suppression
-        MonitoringService.instance.recordMetric(
-          'route_deleted',
-          1,
-          tags: {
-            'user_id': user.id,
-          },
-        );
-      } catch (e, stackTrace) {
-        MonitoringService.instance.captureError(
-          e,
-          stackTrace,
-          context: 'RoutesRepository.deleteRoute',
-          extra: {
-            'route_id': routeId,
-            'user_id': user.id,
-          },
-        );
-
-        print('❌ Erreur suppression Supabase: $e');
-        // La suppression locale a déjà été faite
       }
+      
+      // 3. Nettoyage de tous les caches
+      await _routeCache.removeRoute(routeId);
+      await _deleteRouteLocally(routeId);
+      await _removeFromPendingSync(routeId);
+
+      // 4. Suppression cloud (si connecté)
+      if (user != null && await _isConnected()) {
+        try {
+          await _supabase.from('user_routes').delete().eq('id', routeId);
+          print('☁️ Route supprimée de Supabase: $routeId');
+        } catch (e) {
+          print('❌ Erreur suppression Supabase: $e');
+          // Marquer pour suppression ultérieure
+          await _markForDeletion(routeId);
+        }
+      }
+
+      // 🆕 5. Créer une sauvegarde après suppression importante
+      final remainingRoutes = await _getLocalRoutes();
+      if (remainingRoutes.isNotEmpty) {
+        await _persistenceService.createSecurityBackup(remainingRoutes);
+      }
+
+      // 6. Invalider les caches
+      await _invalidateRoutesCache();
+
+      print('🗑️ Route supprimée avec nettoyage persistant complet: $routeId');
+
+    } catch (e, stackTrace) {
+      MonitoringService.instance.captureError(
+        e,
+        stackTrace,
+        context: 'RoutesRepository.deleteRoute',
+        extra: {'route_id': routeId},
+      );
+      rethrow;
     }
   }
 
@@ -332,60 +369,29 @@ class RoutesRepository {
 
   /// 🔧 Met à jour les statistiques d'utilisation d'un parcours - CORRIGÉ
   Future<void> updateRouteUsage(String routeId) async {
-    final user = _supabase.auth.currentUser;
-    if (user == null) return;
-
     try {
-      if (await _isConnected()) {
-        // Méthode 1: Utiliser RPC pour incrémenter atomiquement côté serveur
-        // Cette approche est plus efficace et évite les conditions de course
-        try {
-          await _supabase.rpc('increment_route_usage', params: {
-            'route_id': routeId,
-            'user_id': user.id,
-          });
-          print('✅ Statistiques mises à jour via RPC: $routeId');
-        } catch (rpcError) {
-          print('⚠️ RPC non disponible, utilisation de la méthode alternative');
-          
-          // Méthode 2: Récupérer puis mettre à jour (fallback)
-          final currentRoute = await _supabase
-              .from('user_routes')
-              .select('times_used')
-              .eq('id', routeId)
-              .eq('user_id', user.id)
-              .single();
-
-          final currentTimesUsed = (currentRoute['times_used'] as int?) ?? 0;
-          
-          await _supabase
-              .from('user_routes')
-              .update({
-                'times_used': currentTimesUsed + 1,
-                'last_used_at': DateTime.now().toIso8601String(),
-              })
-              .eq('id', routeId)
-              .eq('user_id', user.id);
-          
-          print('✅ Statistiques mises à jour: $routeId (${currentTimesUsed + 1}x)');
-        }
-
-        // Mettre à jour le cache local aussi
-        await _updateLocalRouteUsage(routeId);
-        
-      } else {
-        // Mode hors ligne : mettre à jour seulement le cache local
-        await _updateLocalRouteUsage(routeId);
-        print('📱 Statistiques mises à jour localement (hors ligne): $routeId');
+      // 1. Mettre à jour le cache rapide
+      final cachedRoute = await _routeCache.getRoute(routeId);
+      if (cachedRoute != null) {
+        final updatedRoute = cachedRoute.copyWith(
+          timesUsed: cachedRoute.timesUsed + 1,
+          lastUsedAt: DateTime.now(),
+        );
+        await _routeCache.cacheRoute(routeId, updatedRoute);
       }
+
+      // 2. Mettre à jour le cache local
+      await _updateLocalRouteUsage(routeId);
+
+      // 3. Marquer pour sync si connecté
+      if (await _isConnected()) {
+        await _markRouteForSync(routeId);
+      }
+
+      print('📊 Statistiques d\'usage mises à jour: $routeId');
+
     } catch (e) {
       print('❌ Erreur mise à jour usage: $e');
-      // Essayer au moins de mettre à jour localement
-      try {
-        await _updateLocalRouteUsage(routeId);
-      } catch (localError) {
-        print('❌ Erreur mise à jour locale: $localError');
-      }
     }
   }
 
@@ -419,9 +425,99 @@ class RoutesRepository {
 
     await _cleanupInvalidPendingRoutes();
     await _syncPendingRoutes();
+    
+    // 🆕 Compression des anciennes données après sync réussie
+    await _persistenceService.compressOldRoutes();
+
+    // 🆕 Logs des statistiques après sync
+    final stats = await getSystemStats();
+    print('📊 Stats post-sync: ${stats['cache']['total_routes']} routes, ${stats['cache']['size_formatted']}');
   }
 
-  // === MÉTHODES PRIVÉES ===
+  /// 🆕 Planifie la maintenance périodique (toutes les 24h)
+  void _schedulePeriodicMaintenance() {
+    // Maintenance en arrière-plan sans bloquer l'utilisateur
+    Future.delayed(Duration(hours: 24), () async {
+      try {
+        await performMaintenanceTasks();
+        // Replanifier pour dans 24h
+        _schedulePeriodicMaintenance();
+      } catch (e) {
+        print('❌ Erreur maintenance périodique: $e');
+        // Replanifier quand même pour dans 24h
+        _schedulePeriodicMaintenance();
+      }
+    });
+  }
+
+  /// 🆕 Méthode de maintenance complète
+  Future<void> performMaintenanceTasks() async {
+    print('🔧 Démarrage des tâches de maintenance...');
+    
+    try {
+      // 1. Validation d'intégrité
+      final report = await _persistenceService.validateDataIntegrity();
+      print('📊 Rapport d\'intégrité: ${report.toString()}');
+      
+      // 2. Compression des anciennes données
+      await _persistenceService.compressOldRoutes();
+      
+      // 3. Nettoyage des caches
+      await _routeCache.cleanupExpiredCache();
+      await _cleanupOldPendingSync();
+      
+      // 4. Sauvegarde de sécurité
+      final routes = await _getLocalRoutes();
+      if (routes.isNotEmpty) {
+        await _persistenceService.createSecurityBackup(routes);
+      }
+      
+      // 5. Optimisation en arrière-plan
+      await _persistenceService.performBackgroundOptimization();
+      
+      print('✅ Tâches de maintenance terminées');
+      
+    } catch (e) {
+      print('❌ Erreur maintenance: $e');
+    }
+  }
+
+  /// 🆕 Crée une sauvegarde de sécurité si nécessaire (toutes les 5 routes)
+  Future<void> _createSecurityBackupIfNeeded() async {
+    try {
+      final routes = await _getLocalRoutes();
+      
+      // Créer un backup tous les 5 parcours ou si plus de 10 routes
+      if (routes.length % 5 == 0 || routes.length >= 10) {
+        await _persistenceService.createSecurityBackup(routes);
+        print('🛡️ Sauvegarde de sécurité automatique créée');
+      }
+    } catch (e) {
+      print('❌ Erreur création backup automatique: $e');
+    }
+  }
+
+  /// 🆕 Obtient les statistiques complètes du système
+  Future<Map<String, dynamic>> getSystemStats() async {
+    final cacheStats = await _routeCache.getCacheStats();
+    final integrityReport = await _persistenceService.validateDataIntegrity();
+    
+    return {
+      'cache': {
+        'total_routes': cacheStats.totalRoutes,
+        'size_formatted': cacheStats.formattedSize,
+        'last_updated': cacheStats.lastUpdated.toIso8601String(),
+      },
+      'integrity': {
+        'is_healthy': integrityReport.isHealthy,
+        'has_warnings': integrityReport.hasWarnings,
+        'cache_routes': integrityReport.totalRoutesInCache,
+        'backup_count': integrityReport.backupCount,
+        'errors': integrityReport.errors,
+        'warnings': integrityReport.warnings,
+      },
+    };
+  }
 
   /// 🆕 Sauvegarde un parcours dans Supabase avec image_url
   Future<void> _saveRouteToSupabase(SavedRoute route, String userId) async {
@@ -590,15 +686,6 @@ class RoutesRepository {
     await prefs.setString(_localCacheKey, jsonEncode(routesJson));
     
     print('💾 Route sauvée localement: ${route.id} - Image: ${route.hasImage ? "✅" : "❌"}');
-  }
-
-  // Méthode de parsing manquante :
-  DifficultyLevel _parseDifficulty(String? id) {
-    if (id == null) return DifficultyLevel.moderate;
-    return DifficultyLevel.values.firstWhere(
-      (difficulty) => difficulty.id == id,
-      orElse: () => DifficultyLevel.moderate,
-    );
   }
 
   /// 🆕 Récupération locale avec support image_url
@@ -780,6 +867,146 @@ class RoutesRepository {
     }
   }
 
+  /// Cache rapide multiniveau
+  Future<List<SavedRoute>> _getRoutesFromFastCache() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final fastCacheJson = prefs.getString('fast_cache_routes');
+      
+      if (fastCacheJson == null) return [];
+      
+      final cacheData = jsonDecode(fastCacheJson) as Map<String, dynamic>;
+      final timestamp = DateTime.parse(cacheData['timestamp']);
+      
+      // Vérifier l'expiration du cache rapide (5 minutes)
+      if (DateTime.now().difference(timestamp) > Duration(minutes: 5)) {
+        await prefs.remove('fast_cache_routes');
+        return [];
+      }
+      
+      final routesList = cacheData['routes'] as List;
+      return routesList.map((json) => SavedRoute.fromJson(json)).toList();
+      
+    } catch (e) {
+      print('❌ Erreur cache rapide: $e');
+      return [];
+    }
+  }
+
+  /// Met à jour tous les niveaux de cache
+  Future<void> _updateAllCacheLevels(List<SavedRoute> routes) async {
+    // 1. Cache rapide
+    final prefs = await SharedPreferences.getInstance();
+    final fastCacheData = {
+      'routes': routes.map((r) => r.toJson()).toList(),
+      'timestamp': DateTime.now().toIso8601String(),
+    };
+    await prefs.setString('fast_cache_routes', jsonEncode(fastCacheData));
+
+    // 2. Cache local standard
+    await _updateLocalCache(routes);
+
+    // 3. Cache individuel pour chaque route
+    final routeMap = {for (var route in routes) route.id: route};
+    await _routeCache.cacheRoutes(routeMap);
+
+    print('🔄 Tous les niveaux de cache mis à jour: ${routes.length} routes');
+  }
+
+  /// Vérifica si une synchronisation est nécessaire
+  Future<bool> _needsSync() async {
+    final prefs = await SharedPreferences.getInstance();
+    final lastSyncStr = prefs.getString(_lastSyncKey);
+    
+    if (lastSyncStr == null) return true;
+    
+    final lastSync = DateTime.parse(lastSyncStr);
+    return DateTime.now().difference(lastSync) > _syncInterval;
+  }
+
+  /// Met à jour le timestamp de dernière sync
+  Future<void> _updateLastSyncTime() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_lastSyncKey, DateTime.now().toIso8601String());
+  }
+
+  /// Synchronisation cloud asynchrone (non bloquante)
+  void _performAsyncCloudSync(SavedRoute route, String userId) {
+    // Lancement en arrière-plan sans bloquer l'UI
+    Future.microtask(() async {
+      try {
+        if (await _isConnected()) {
+          await _saveRouteToSupabase(route, userId);
+          print('☁️ Sync cloud réussie: ${route.id}');
+        } else {
+          await _markRouteForSync(route.id);
+          print('📡 Route marquée pour sync ultérieure: ${route.id}');
+        }
+      } catch (e) {
+        print('❌ Erreur sync cloud asynchrone: $e');
+        await _markRouteForSync(route.id);
+      }
+    });
+  }
+
+  /// Synchronisation intelligente au démarrage
+  Future<void> _performSmartSync() async {
+    try {
+      if (!await _needsSync() || !await _isConnected()) return;
+      
+      print('🔄 Synchronisation intelligente en cours...');
+      
+      // Sync les routes en attente en arrière-plan
+      Future.microtask(() async {
+        try {
+          await syncPendingRoutes();
+          await _cleanupOldPendingSync();
+        } catch (e) {
+          print('❌ Erreur sync intelligente: $e');
+        }
+      });
+      
+    } catch (e) {
+      print('❌ Erreur sync intelligente: $e');
+    }
+  }
+
+  /// Invalide tous les caches
+  Future<void> _invalidateRoutesCache() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('fast_cache_routes');
+    await _routeCache.cleanupExpiredCache();
+  }
+
+  /// Marque une route pour suppression différée
+  Future<void> _markForDeletion(String routeId) async {
+    final prefs = await SharedPreferences.getInstance();
+    final deletionList = prefs.getStringList('pending_deletions') ?? [];
+    
+    if (!deletionList.contains(routeId)) {
+      deletionList.add(routeId);
+      await prefs.setStringList('pending_deletions', deletionList);
+    }
+  }
+
+  /// Nettoie les anciennes sync en attente
+  Future<void> _cleanupOldPendingSync() async {
+    final prefs = await SharedPreferences.getInstance();
+    final pendingRoutes = prefs.getStringList(_pendingSyncKey) ?? [];
+    
+    if (pendingRoutes.length > 20) {
+      // Garder seulement les 20 plus récentes
+      final cleanedRoutes = pendingRoutes.take(20).toList();
+      await prefs.setStringList(_pendingSyncKey, cleanedRoutes);
+      print('🧹 Nettoyage des anciennes routes en attente: ${pendingRoutes.length - 20} supprimées');
+    }
+  }
+
+  /// Obtient les statistiques de cache
+  Future<RouteCacheStats> getCacheStats() async {
+    return await _routeCache.getCacheStats();
+  }
+
   // Parsers pour les enums
   ActivityType _parseActivityType(String id) {
     return ActivityType.values.firstWhere(
@@ -799,6 +1026,14 @@ class RoutesRepository {
     return UrbanDensity.values.firstWhere(
       (density) => density.id == id,
       orElse: () => UrbanDensity.mixed,
+    );
+  }
+
+  DifficultyLevel _parseDifficulty(String? id) {
+    if (id == null) return DifficultyLevel.moderate;
+    return DifficultyLevel.values.firstWhere(
+      (difficulty) => difficulty.id == id,
+      orElse: () => DifficultyLevel.moderate,
     );
   }
 }

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:runaway/core/helper/extensions/extensions.dart';
-import 'package:runaway/core/widgets/squircle_btn.dart';
+import 'package:runaway/core/widgets/squircle_container.dart';
 
 class AuthTextField extends StatefulWidget {
   final TextEditingController? controller;
@@ -44,12 +44,15 @@ class _AuthTextFieldState extends State<AuthTextField> {
 
   @override
   Widget build(BuildContext context) {
-    return SquircleBtn(
-      isGradient: false,
+    return SquircleContainer(
+      height: 60,
+      radius: 50.0,
+      gradient: false,
       padding: EdgeInsets.symmetric(
         horizontal: 15.0,
         vertical: 5.0,
       ),
+      color: context.adaptiveDisabled.withValues(alpha: 0.08),
       child: Row(
         children: [
           Expanded(

@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:runaway/core/helper/config/secure_config.dart';
 
 enum ConnectionStatus { onlineWifi, onlineMobile, offline }
 
@@ -18,6 +19,11 @@ class ConnectivityService {
   Timer? _pollingTimer;
   StreamSubscription? _connectivitySubscription;
 
+  // Contrôle de verbosité
+  DateTime? _lastLogTime;
+  ConnectionStatus? _lastLoggedStatus;
+  static const _logCooldown = Duration(seconds: 30); // Réduire les logs répétitifs
+
   Stream<ConnectionStatus> get stream => _controller.stream;
   ConnectionStatus get current => _lastStatus;
   bool get isOffline => _lastStatus == ConnectionStatus.offline;
@@ -34,7 +40,9 @@ class ConnectivityService {
     _initCompleter = Completer<void>();
     
     try {
-      print('🔄 Initialisation ConnectivityService...');
+      if (!SecureConfig.kIsProduction) {
+        print('🔄 Initialisation ConnectivityService...');
+      }
       
       // 🚀 Vérification initiale rapide
       await _checkConnectivityNow();
@@ -45,7 +53,9 @@ class ConnectivityService {
       
       _isInitialized = true;
       _initCompleter!.complete();
-      print('✅ ConnectivityService initialisé: $_lastStatus');
+
+      // Log d'initialisation simplifié
+      _logWithCooldown('✅ ConnectivityService initialisé: $_lastStatus');
       
     } catch (e) {
       print('❌ Erreur ConnectivityService: $e - assumé offline');
@@ -60,7 +70,10 @@ class ConnectivityService {
     _connectivitySubscription?.cancel();
     _connectivitySubscription = _connectivity.onConnectivityChanged.listen(
       (result) {
-        print('📡 Changement connectivité natif détecté: $result');
+        // Log seulement si changement significatif
+        if (!SecureConfig.kIsProduction) {
+          _logWithCooldown('📡 Changement natif détecté: $result');
+        }
         _emit(result);
       },
       onError: (e) {
@@ -72,11 +85,14 @@ class ConnectivityService {
   /// 🆕 Polling périodique pour forcer la détection
   void _startPolling() {
     _pollingTimer?.cancel();
-    _pollingTimer = Timer.periodic(const Duration(seconds: 3), (_) async {
+    _pollingTimer = Timer.periodic(const Duration(seconds: 10), (_) async {
       try {
         await _checkConnectivityNow();
       } catch (e) {
-        print('⚠️ Erreur polling connectivité: $e');
+        // Ne pas logger chaque erreur de polling
+        if (!SecureConfig.kIsProduction) {
+          _logWithCooldown('⚠️ Erreur polling: $e');
+        }
       }
     });
   }
@@ -88,12 +104,18 @@ class ConnectivityService {
       final result = await _connectivity.checkConnectivity()
           .timeout(const Duration(seconds: 2));
       
-      print('📊 État système: $result');
+      // Log système seulement en debug et avec cooldown
+      if (!SecureConfig.kIsProduction) {
+        _logWithCooldown('📊 État système: $result', isDebug: true);
+      }
       
       // Étape 2: Test réseau réel si système dit "connecté"
       if (!result.every((r) => r == ConnectivityResult.none)) {
         final hasRealConnection = await _testRealConnection();
-        print('🌐 Test connexion réelle: $hasRealConnection');
+        
+        if (!SecureConfig.kIsProduction) {
+          _logWithCooldown('🌐 Test connexion: $hasRealConnection', isDebug: true);
+        }
         
         if (!hasRealConnection) {
           // Système dit connecté mais pas de vraie connexion
@@ -106,7 +128,11 @@ class ConnectivityService {
       _emit(result);
       
     } catch (e) {
-      print('❌ Erreur vérification connectivité: $e');
+      // Erreur silencieuse sauf en debug
+      if (!SecureConfig.kIsProduction) {
+        _logWithCooldown('❌ Erreur vérification: $e');
+      }
+
       _setStatus(ConnectionStatus.offline);
     }
   }
@@ -127,16 +153,19 @@ class ConnectivityService {
     final oldStatus = _lastStatus;
     _lastStatus = newStatus;
     
-    // TOUJOURS émettre pour forcer les rebuilds
+    // Émettre le changement
     _controller.add(newStatus);
     
     print('🔄 ConnectivityService: $oldStatus → $newStatus');
     
+    // Logger seulement les vrais changements d'état
     if (oldStatus != newStatus) {
       if (oldStatus == ConnectionStatus.offline && newStatus != ConnectionStatus.offline) {
-        print('🟢 RECONNEXION DÉTECTÉE: $oldStatus → $newStatus');
+        _logWithCooldown('🟢 RECONNEXION: $oldStatus → $newStatus', forceLog: true);
       } else if (oldStatus != ConnectionStatus.offline && newStatus == ConnectionStatus.offline) {
-        print('🔴 DÉCONNEXION DÉTECTÉE: $oldStatus → $newStatus');
+        _logWithCooldown('🔴 DÉCONNEXION: $oldStatus → $newStatus', forceLog: true);
+      } else {
+        _logWithCooldown('🔄 ConnectivityService: $oldStatus → $newStatus');
       }
     }
   }
@@ -160,13 +189,41 @@ class ConnectivityService {
 
   /// Force une vérification immédiate
   Future<void> forceCheck() async {
-    print('🔄 Vérification forcée demandée...');
+    if (!SecureConfig.kIsProduction) {
+      print('🔄 Vérification forcée...');
+    }
     await _checkConnectivityNow();
   }
 
-  /// Méthodes existantes conservées
+  // Logging avec cooldown pour éviter le spam
+  void _logWithCooldown(String message, {bool isDebug = false, bool forceLog = false}) {
+    final now = DateTime.now();
+    
+    // En production, ne logger que les changements forcés
+    if (SecureConfig.kIsProduction && !forceLog) {
+      return;
+    }
+    
+    // En debug, respecter le cooldown sauf pour les logs forcés
+    if (!forceLog && _lastLogTime != null) {
+      final timeSinceLastLog = now.difference(_lastLogTime!);
+      if (timeSinceLastLog < _logCooldown && _lastLoggedStatus == _lastStatus) {
+        return; // Ignorer le log répétitif
+      }
+    }
+    
+    // Logger le message
+    if (isDebug && SecureConfig.kIsProduction) {
+      // Pas de logs debug en production
+      return;
+    }
+    
+    print(message);
+    _lastLogTime = now;
+    _lastLoggedStatus = _lastStatus;
+  }
+
   ConnectionStatus getCurrentSync() => _lastStatus;
-  
   bool canMakeNetworkCalls() => _isInitialized && !isOffline;
 
   Future<void> waitForInitialization({Duration timeout = const Duration(seconds: 3)}) async {
@@ -175,7 +232,9 @@ class ConnectivityService {
     try {
       await _initCompleter?.future.timeout(timeout);
     } catch (e) {
-      print('⚠️ Timeout attente initialisation ConnectivityService');
+      if (!SecureConfig.kIsProduction) {
+        print('⚠️ Timeout initialisation ConnectivityService');
+      }
       if (!_isInitialized) {
         _lastStatus = ConnectionStatus.offline;
         _isInitialized = true;

@@ -96,12 +96,13 @@ class LoggingService {
       _logger = Logger(
         level: _getLoggerLevel(),
         printer: PrettyPrinter(
+          // Réduire les stack traces en production
           methodCount: SecureConfig.kIsProduction ? 0 : 2,
-          errorMethodCount: 5,
-          lineLength: 120,
-          colors: !SecureConfig.kIsProduction,
+          errorMethodCount: SecureConfig.kIsProduction ? 3 : 8,
+          lineLength: 80,
+          colors: true,
           printEmojis: !SecureConfig.kIsProduction,
-          printTime: true,
+          dateTimeFormat: DateTimeFormat.onlyTimeAndSinceStart,
         ),
         output: _LogOutput(),
       );
@@ -284,50 +285,33 @@ class LoggingService {
     if (!_isInitialized || !_shouldLog(level)) return;
 
     try {
-      // ✅ FIX: Sérialiser les données avant de créer l'entrée de log
-      final serializedData = _makeSerializable(data);
-
+      // Log simplifié sans stack trace détaillée
       final logEntry = LogEntry(
         timestamp: DateTime.now(),
         level: level,
         message: message,
         context: context,
-        data: serializedData,
+        data: _makeSerializable(data),
         userId: _currentUserId,
-        stackTrace: stackTrace,
+        stackTrace: level.index >= LogLevel.error.index ? stackTrace : null,
       );
 
-      // Log local via Logger
+      // Log local via Logger (déjà filtré par _LogOutput)
       _logToConsole(logEntry, exception);
 
-      // Envoyer vers Sentry si erreur/critique
+      // Sentry seulement pour erreurs critiques
       if (level == LogLevel.error || level == LogLevel.critical) {
         _logToSentry(logEntry, exception, stackTrace);
       }
 
-      // Ajouter au buffer pour Supabase si activé
-      if (SecureConfig.isSupabaseLoggingEnabled) {
+      // Supabase seulement pour warnings et plus
+      if (SecureConfig.isSupabaseLoggingEnabled && level.index >= LogLevel.warning.index) {
         _addToPendingLogs(logEntry);
       }
 
     } catch (e) {
-      print('❌ Erreur lors du logging: $e');
-
-      // Log de base sans data en cas d'erreur de sérialisation
-      try {
-        final basicLogEntry = LogEntry(
-          timestamp: DateTime.now(),
-          level: level,
-          message: message,
-          context: context,
-          data: {'serialization_error': e.toString()},
-          userId: _currentUserId,
-          stackTrace: stackTrace,
-        );
-        _logToConsole(basicLogEntry, exception);
-      } catch (e2) {
-        print('❌ Erreur critique logging: $e2');
-      }
+      // Erreur de log simplifiée
+      print('❌ Logging error: $e');
     }
   }
 
@@ -498,7 +482,8 @@ class LoggingService {
       case 'error':
         return LogLevel.error;
       default:
-        return SecureConfig.kIsProduction ? LogLevel.error : LogLevel.debug;
+        // Plus restrictif par défaut
+        return SecureConfig.kIsProduction ? LogLevel.error : LogLevel.warning;
     }
   }
 
@@ -563,18 +548,20 @@ class LoggingService {
 class _LogOutput extends LogOutput {
   @override
   void output(OutputEvent event) {
-    // En production, réduire la sortie console
+    // Seulement erreurs et warnings, plus de debug/info verbeux
     if (SecureConfig.kIsProduction) {
-      // Afficher seulement les erreurs en production
+      // Production: seulement erreurs
       if (event.level.index >= Level.error.index) {
         for (final line in event.lines) {
           print(line);
         }
       }
     } else {
-      // En développement, afficher tous les logs
-      for (final line in event.lines) {
-        print(line);
+      // Debug: warnings et erreurs seulement
+      if (event.level.index >= Level.warning.index) {
+        for (final line in event.lines) {
+          print(line);
+        }
       }
     }
   }

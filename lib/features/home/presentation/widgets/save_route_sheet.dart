@@ -6,7 +6,7 @@ import 'package:runaway/core/widgets/squircle_btn.dart';
 import 'package:runaway/features/auth/presentation/widgets/auth_text_field.dart';
 
 class SaveRouteSheet extends StatefulWidget {
-  final String initialValue;                // <-- seulement la valeur
+  final String initialValue;
   const SaveRouteSheet({required this.initialValue, super.key});
 
   @override
@@ -24,7 +24,7 @@ class _SaveRouteSheetState extends State<SaveRouteSheet> {
 
   @override
   void dispose() {
-    _ctl.dispose();                         // <-- libéré au bon moment
+    _ctl.dispose();
     super.dispose();
   }
 

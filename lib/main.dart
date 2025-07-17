@@ -7,6 +7,7 @@ import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:runaway/core/blocs/connectivity/connectivity_cubit.dart';
+import 'package:runaway/core/helper/config/log_config.dart';
 import 'package:runaway/core/helper/services/connectivity_service.dart';
 import 'package:runaway/core/helper/services/logging_service.dart';
 import 'package:runaway/core/router/router.dart';
@@ -41,6 +42,8 @@ void main() async {
     // 🆕 Utiliser SentryWidgetsFlutterBinding pour éviter les warnings Sentry
     SentryWidgetsFlutterBinding.ensureInitialized();
 
+    LogConfig.logInfo('🚀 Démarrage Trailix...');
+
     try {
       // ✅ PHASE 1 : Initialisation parallèle des services critiques
       await _initializeCriticalServices();
@@ -53,11 +56,13 @@ void main() async {
 
       // ✅ PHASE 3 : Finalisation
       await _finalizeInitialization();
+
+      LogConfig.logSuccess('🚀 Trailix initialisé avec succès');
       
       runApp(const Trailix());
       
     } catch (e, stackTrace) {
-      print('❌ Erreur lors de l\'initialisation: $e');
+      LogConfig.logError('Erreur lors de l\'initialisation: $e');
       
       // 🆕 Capturer l'erreur d'initialisation si le monitoring est disponible
       try {
@@ -69,7 +74,7 @@ void main() async {
           isCritical: true,
         );
       } catch (monitoringError) {
-        print('❌ Impossible de capturer l\'erreur d\'initialisation: $monitoringError');
+        LogConfig.logError('Impossible de capturer l\'erreur d\'initialisation: $monitoringError');
       }
       
       SessionManager.instance.stopSessionMonitoring();
@@ -77,8 +82,7 @@ void main() async {
     }
   }, (error, stackTrace) {
     // 🆕 Capture des erreurs non gérées au niveau de la zone
-    print('❌ Erreur non gérée capturée par runZonedGuarded: $error');
-    print('Stack trace: $stackTrace');
+    LogConfig.logError('Erreur non gérée capturée par runZonedGuarded: $error');
     
     // Essayer de capturer l'erreur si le monitoring est disponible
     try {
@@ -90,31 +94,35 @@ void main() async {
         isCritical: true,
       );
     } catch (monitoringError) {
-      print('❌ Impossible de capturer l\'erreur non gérée: $monitoringError');
+      LogConfig.logError('Impossible de capturer l\'erreur non gérée: $monitoringError');
     }
   });
 }
 
 /// Phase 1 : Services critiques en parallèle
 Future<void> _initializeCriticalServices() async {
-  print('🚀 Phase 1 : Initialisation services critiques...');
+  LogConfig.logInfo('🚀 Phase 1: Services critiques...');
   
-  await Future.wait([
-    // Configuration et environnement
-    _loadEnvironmentConfig(),
-    // Storage local pour HydratedBloc
-    _initializeHydratedStorage(),
-    // 🆕 PRIORITÉ ABSOLUE: ConnectivityService dès le début
-    _initializeConnectivityServiceEarly(),
-  ]);
-  
-  print('✅ Phase 1 terminée');
+  try {
+    await Future.wait([
+      // Configuration et environnement
+      _loadEnvironmentConfig(),
+      // Storage local pour HydratedBloc
+      _initializeHydratedStorage(),
+      // ConnectivityService dès le début
+      _initializeConnectivityServiceEarly(),
+    ]);
+    
+    LogConfig.logSuccess('✅ Services critiques OK');
+
+  } catch (e) {
+    LogConfig.logError('❌ Erreur services critiques: $e');
+    rethrow;
+  }
 }
 
-/// 🆕 Phase 1.5 : Initialisation du monitoring
-Future<void> _initializeMonitoring() async {
-  print('🔍 Phase 1.5 : Initialisation monitoring...');
-  
+/// Initialisation du monitoring
+Future<void> _initializeMonitoring() async {  
   try {
     // Initialiser le service principal de monitoring
     await MonitoringService.instance.initialize();
@@ -133,52 +141,80 @@ Future<void> _initializeMonitoring() async {
       },
     );
     
-    print('✅ Phase 1.5 terminée - Monitoring actif');
+    LogConfig.logDebug('Monitoring initialisé');
     
-  } catch (e, stackTrace) {
-    print('❌ Erreur initialisation monitoring (non bloquant): $e');
-    print('Stack trace: $stackTrace');
+  } catch (e) {
+    LogConfig.logWarning('Monitoring échoué: $e');
     
-    // Fallback vers l'observer simple si le monitoring échoue
-    Bloc.observer = AppBlocObserver();
-    print('⚠️ Fallback vers BlocObserver simple');
+    // Bloc observer simplifié seulement si verbeux activé
+    if (LogConfig.enableBlocLogs) {
+      Bloc.observer = AppBlocObserver();
+    }
   }
 }
 
 /// Phase 2 : Services secondaires en parallèle
 Future<void> _initializeSecondaryServices() async {
-  print('🚀 Phase 2 : Initialisation services secondaires...');
+  LogConfig.logInfo('🚀 Phase 2: Services secondaires...');
   
-  // ✅ D'abord Supabase, puis les services qui en dépendent
-  await _initializeSupabase();
-  
-  await Future.wait([
-    // Services externes (après Supabase)
-    _initializeIAP(),
-    _initializeSessionMonitoring(),
-    // Services de notification
-    _initializeNotificationServices(),
-  ]);
-  
-  print('✅ Phase 2 terminée');
+  try {    
+    // Services avec gestion d'erreur non-bloquante
+    await Future.wait([
+      // ✅ D'abord Supabase, puis les services qui en dépendent
+      _initializeSupabase().catchError((e) {
+        LogConfig.logWarning('⚠️ Supabase: $e');
+        return null;
+      }),
+      // Services externes (après Supabase)
+      _initializeIAP().catchError((e) {
+        LogConfig.logWarning('⚠️ Monitoring: $e');
+        return null;
+      }),
+      _initializeSessionMonitoring().catchError((e) {
+        LogConfig.logWarning('⚠️ Monitoring: $e');
+        return null;
+      }),
+      // Services de notification
+      _initializeNotificationServices().catchError((e) {
+        LogConfig.logWarning('⚠️ Monitoring: $e');
+        return null;
+      }),
+    ]);
+    
+    LogConfig.logSuccess('✅ Services secondaires OK');
+
+  } catch (e) {
+    LogConfig.logWarning('⚠️ Certains services secondaires ont échoué: $e');
+  }
 }
 
 /// Phase 3 : Finalisation et DI
 Future<void> _finalizeInitialization() async {
-  print('🚀 Phase 3 : Finalisation...');
+  LogConfig.logInfo('🚀 Phase 3: Finalisation...');
   
-  await Future.wait([
-    // Configuration Mapbox
-    _configureMapbox(),
-    // Initialisation des services app
-    AppInitializationService.initialize(),
-    // Injection de dépendances
-    ServiceLocator.init(),
-    // Services de conversion
-    _initializeConversionService(),
-  ]);
-  
-  print('✅ Phase 3 terminée');
+  try {
+    await Future.wait([
+      // Configuration Mapbox
+      _configureMapbox().catchError((e) {
+        LogConfig.logWarning('⚠️ Mapbox: $e');
+        return null;
+      }),
+      // Initialisation des services app
+      AppInitializationService.initialize(),
+      // Injection de dépendances
+      ServiceLocator.init(),
+      // Services de conversion
+      _initializeConversionService().catchError((e) {
+        LogConfig.logWarning('⚠️ Conversion: $e');
+        return null;
+      }),
+    ]);
+    
+    LogConfig.logSuccess('✅ Finalisation OK');
+    
+  } catch (e) {
+    LogConfig.logWarning('⚠️ Erreurs non-critiques en finalisation: $e');
+  }
 }
 
 // ===== SERVICES INDIVIDUELS =====
@@ -192,11 +228,11 @@ Future<void> _loadEnvironmentConfig() async {
   try {
     await dotenv.load(fileName: ".env");
     SecureConfig.validateConfiguration();
-    print('✅ Configuration environnement chargée');
+    LogConfig.logDebug('Config initialisé');
     
     MonitoringService.instance.finishOperation(operationId, success: true);
   } catch (e) {
-    print('❌ Erreur chargement environnement: $e');
+    LogConfig.logError('Config échoué: $e');
     MonitoringService.instance.finishOperation(
       operationId, 
       success: false, 
@@ -217,11 +253,11 @@ Future<void> _initializeHydratedStorage() async {
     HydratedBloc.storage = await HydratedStorage.build(
       storageDirectory: HydratedStorageDirectory(directory.path),
     );
-    print('✅ HydratedBloc storage initialisé');
+    LogConfig.logDebug('HydratedBloc initialisé');
     
     MonitoringService.instance.finishOperation(operationId, success: true);
   } catch (e) {
-    print('❌ Erreur HydratedStorage: $e');
+    LogConfig.logError('Erreur HydratedStorage: $e');
     MonitoringService.instance.finishOperation(
       operationId, 
       success: false, 
@@ -245,15 +281,16 @@ Future<void> _initializeSupabase() async {
     await Supabase.initialize(
       url: SecureConfig.supabaseUrl,
       anonKey: SecureConfig.supabaseAnonKey,
+      debug: false,
     );
-    print('✅ Supabase initialisé');
+    LogConfig.logDebug('Supabase initialisé');
     
     // 🆕 Maintenant vérifier les tables de monitoring
     await MonitoringService.instance.checkSupabaseTablesLater();
     
     MonitoringService.instance.finishOperation(operationId, success: true);
   } catch (e) {
-    print('❌ Erreur Supabase: $e');
+    LogConfig.logError('Erreur Supabase: $e');
     MonitoringService.instance.finishOperation(
       operationId, 
       success: false, 
@@ -263,35 +300,33 @@ Future<void> _initializeSupabase() async {
   }
 }
 
-// 🆕 Nouvelle fonction pour initialiser ConnectivityService très tôt
 Future<void> _initializeConnectivityServiceEarly() async {
   final opId = MonitoringService.instance.trackOperation(
       'init_connectivity_early',
       description: 'Initialisation prioritaire du service de connectivité');
   try {
     await ConnectivityService.instance.initialize();
-    print('✅ ConnectivityService initialisé en PHASE 1');
+    LogConfig.logDebug('ConnectivityService initialisé');
     MonitoringService.instance.finishOperation(opId, success: true);
   } catch (e) {
-    print('⚠️ Erreur ConnectivityService (non bloquant): $e');
+    LogConfig.logError('ConnectivityService échoué: $e');
     MonitoringService.instance.finishOperation(
         opId, success: false, errorMessage: e.toString());
     // Ne pas rethrow - on continue même si la connectivité échoue
   }
 }
 
-/// ✅ Session monitoring maintenant après Supabase
 Future<void> _initializeSessionMonitoring() async {
   try {
     SessionManager.instance.startSessionMonitoring();
-    print('✅ Session monitoring démarré');
+    LogConfig.logDebug('Session monitoring démarré');
     
     LoggingService.instance.info(
       'SessionManager',
       'Session monitoring démarré avec succès',
     );
   } catch (e) {
-    print('⚠️ Erreur session monitoring (non bloquant): $e');
+    LogConfig.logWarning('Session monitoring échoué: $e');
     
     LoggingService.instance.warning(
       'SessionManager',
@@ -304,14 +339,14 @@ Future<void> _initializeSessionMonitoring() async {
 Future<void> _initializeIAP() async {
   try {
     await IAPService.initialize();
-    print('✅ IAP initialisé');
+    LogConfig.logDebug('IAP initialisé');
     
     LoggingService.instance.info(
       'IAPService',
       'Service d\'achat intégré initialisé',
     );
   } catch (e) {
-    print('⚠️ Erreur IAP (non bloquant): $e');
+    LogConfig.logWarning('IAP échoué: $e');
     
     LoggingService.instance.warning(
       'IAPService',
@@ -324,14 +359,14 @@ Future<void> _initializeIAP() async {
 Future<void> _initializeNotificationServices() async {
   try {
     await NotificationService.instance.initialize();
-    print('✅ Notifications initialisées');
+    LogConfig.logDebug('Notifications initialisées');
     
     LoggingService.instance.info(
       'NotificationService',
       'Service de notifications initialisé',
     );
   } catch (e) {
-    print('⚠️ Erreur notifications (non bloquant): $e');
+    LogConfig.logWarning('Notifications échouées: $e');
     
     LoggingService.instance.warning(
       'NotificationService',
@@ -344,14 +379,14 @@ Future<void> _initializeNotificationServices() async {
 Future<void> _configureMapbox() async {
   try {
     MapboxOptions.setAccessToken(SecureConfig.mapboxToken);
-    print('✅ Mapbox configuré');
+    LogConfig.logDebug('Mapbox configuré');
     
     LoggingService.instance.info(
       'MapboxService',
       'Token Mapbox configuré avec succès',
     );
   } catch (e) {
-    print('⚠️ Erreur Mapbox (non bloquant): $e');
+    LogConfig.logWarning('Mapbox échoué: $e');
     
     LoggingService.instance.warning(
       'MapboxService',
@@ -364,14 +399,14 @@ Future<void> _configureMapbox() async {
 Future<void> _initializeConversionService() async {
   try {
     await ConversionService.instance.initializeSession();
-    print('✅ Service de conversion initialisé');
+    LogConfig.logDebug('ConversionService initialisé');
     
     LoggingService.instance.info(
       'ConversionService',
       'Service de conversion initialisé',
     );
   } catch (e) {
-    print('⚠️ Erreur service conversion (non bloquant): $e');
+    LogConfig.logWarning('ConversionService échoué: $e');
     
     LoggingService.instance.warning(
       'ConversionService',
