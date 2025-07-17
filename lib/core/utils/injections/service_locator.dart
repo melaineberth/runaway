@@ -50,10 +50,14 @@ class ServiceLocator {
     });
 
     // --- Connectivité ----------------------
+    // Utiliser l'instance déjà initialisée
     sl.registerLazySingleton<ConnectivityService>(() => ConnectivityService.instance);
 
-    // Initialisation synchrone avant que les Cubits n’en dépendent.
-    await sl<ConnectivityService>().initialize();
+    // Ne pas réinitialiser si déjà fait
+    if (!ConnectivityService.instance.isInitialized) {
+      print('⚠️ ConnectivityService pas encore initialisé - initialisation de secours');
+      await ConnectivityService.instance.initialize();
+    }
 
     sl.registerLazySingleton<ConnectivityCubit>(() => ConnectivityCubit(sl<ConnectivityService>()));
 

@@ -82,8 +82,7 @@ class _FloatingLocationSearchSheetState extends State<FloatingLocationSearchShee
   double _clampOpacity(double value) => value.clamp(0.0, 1.0);
   
   /// 🎯 Vérifie si la modal doit être dans un état "expanded"
-  bool get _shouldBeExpanded => 
-      _suggestions.isNotEmpty || _isKeyboardVisible || _searchController.text.isNotEmpty;
+  bool get _shouldBeExpanded => _suggestions.isNotEmpty || _isKeyboardVisible || _searchController.text.isNotEmpty;
   
   /// 📐 Calcule le ratio collapsed basé sur l'état actuel
   double _calculateCollapsedRatio(BuildContext context) {

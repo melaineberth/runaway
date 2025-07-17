@@ -1,3 +1,4 @@
+import 'package:runaway/core/helper/services/connectivity_service.dart';
 import 'package:runaway/core/helper/services/guest_limitation_service.dart';
 import 'package:runaway/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:runaway/features/auth/presentation/bloc/auth_state.dart';
@@ -5,6 +6,7 @@ import 'package:runaway/features/route_generator/presentation/blocs/route_genera
 import 'package:supabase_flutter/supabase_flutter.dart' as su;
 
 /// Extensions pour RouteGenerationBloc qui gèrent les limitations des guests
+/// 🆕 Optimisées pour les cas offline
 extension RouteGenerationBlocGuestExtensions on RouteGenerationBloc {
 
   bool _isReallyAuthenticated(AuthState authState) {
@@ -23,7 +25,7 @@ extension RouteGenerationBlocGuestExtensions on RouteGenerationBloc {
     }
   }
   
-  /// Vérifie si l'utilisateur peut générer une route (authenticated + guest)
+  /// 🆕 Vérifie si l'utilisateur peut générer une route avec gestion offline optimisée
   Future<GenerationCapability> checkGenerationCapability(AuthBloc authBloc) async {
     try {
       final authState = authBloc.state;
@@ -31,43 +33,105 @@ extension RouteGenerationBlocGuestExtensions on RouteGenerationBloc {
       print('🔍 === VÉRIFICATION CAPACITÉ GÉNÉRATION ===');
       print('🔍 AuthState: ${authState.runtimeType}');
       
-      // 🆕 VÉRIFICATION DOUBLE : État BLoC + Session Supabase
+      // 🆕 ÉTAPE 1: Vérification rapide de la connectivité
+      final connectivityService = ConnectivityService.instance;
+      
+      // Attendre l'initialisation avec timeout court
+      await connectivityService.waitForInitialization(
+        timeout: const Duration(seconds: 1)
+      );
+      
+      final isOffline = connectivityService.isOffline;
+      print('🌐 État connectivité: ${isOffline ? 'OFFLINE' : 'ONLINE'}');
+      
+      // 🆕 ÉTAPE 2: Vérification authentification (rapide, locale)
       final isReallyAuth = _isReallyAuthenticated(authState);
       print('🔍 Vraiment authentifié: $isReallyAuth');
       
-      // Utilisateur authentifié ET session valide - utiliser le système de crédits existant
-      if (isReallyAuth) {
-        print('💳 Mode: Utilisateur authentifié avec crédits');
-        
-        try {
-          final canGenerate = await canGenerateRoute();
-          final availableCredits = await getAvailableCredits();
-          
-          print('💳 Résultat: canGenerate=$canGenerate, credits=$availableCredits');
-          
-          return GenerationCapability.authenticated(
-            canGenerate: canGenerate,
-            availableCredits: availableCredits,
-          );
-        } catch (e) {
-          print('❌ Erreur récupération crédits pour utilisateur auth: $e');
-          // Fallback: traiter comme guest si l'API des crédits échoue
-          print('🔄 Fallback vers mode guest...');
-          return _handleGuestMode();
-        }
+      // 🆕 ÉTAPE 3: Mode offline - fallback immédiat vers guest
+      if (isOffline) {
+        print('📱 Mode OFFLINE détecté - fallback guest immédiat');
+        return _handleGuestModeOffline();
       }
       
-      // Utilisateur non authentifié OU session expirée - utiliser le système guest
+      // 🆕 ÉTAPE 4: Mode online - vérifications normales avec timeouts courts
+      if (isReallyAuth) {
+        print('💳 Mode: Utilisateur authentifié avec crédits');
+        return await _handleAuthenticatedModeOnline();
+      }
+      
+      // Utilisateur non authentifié - mode guest
       print('👤 Mode: Utilisateur guest ou session expirée');
       return _handleGuestMode();
       
     } catch (e) {
       print('❌ Erreur globale vérification capacité génération: $e');
-      return GenerationCapability.unavailable('Erreur de vérification');
+      // En cas d'erreur, fallback vers guest mode
+      return _handleGuestModeOffline();
     }
   }
 
-Future<GenerationCapability> _handleGuestMode() async {
+  /// 🆕 Gestion rapide du mode guest offline (sans appels réseau)
+  Future<GenerationCapability> _handleGuestModeOffline() async {
+    try {
+      final guestService = GuestLimitationService.instance;
+      
+      // Ces appels sont locaux (SharedPreferences) donc rapides même offline
+      final canGenerate = await guestService.canGuestGenerate();
+      final remaining = await guestService.getRemainingGuestGenerations();
+      
+      print('👤 Guest OFFLINE: canGenerate=$canGenerate, remaining=$remaining');
+      
+      return GenerationCapability.guest(
+        canGenerate: canGenerate,
+        remainingGenerations: remaining,
+      );
+    } catch (e) {
+      print('❌ Erreur mode guest offline: $e');
+      // Fallback conservateur
+      return GenerationCapability.guest(
+        canGenerate: true,
+        remainingGenerations: 5, // Valeur par défaut raisonnable
+      );
+    }
+  }
+
+  /// 🆕 Gestion du mode authentifié online avec timeouts courts
+  Future<GenerationCapability> _handleAuthenticatedModeOnline() async {
+    try {
+      // Appels avec timeouts courts pour éviter les blocages
+      final Future<bool> canGenerateFuture = canGenerateRoute()
+          .timeout(const Duration(seconds: 3));
+      
+      final Future<int> creditsFuture = getAvailableCredits()
+          .timeout(const Duration(seconds: 3));
+      
+      // Exécuter en parallèle avec timeout global
+      final results = await Future.wait([
+        canGenerateFuture,
+        creditsFuture,
+      ]).timeout(const Duration(seconds: 5));
+      
+      final canGenerate = results[0] as bool;
+      final availableCredits = results[1] as int;
+      
+      print('💳 Résultat: canGenerate=$canGenerate, credits=$availableCredits');
+      
+      return GenerationCapability.authenticated(
+        canGenerate: canGenerate,
+        availableCredits: availableCredits,
+      );
+      
+    } catch (e) {
+      print('❌ Erreur récupération crédits (timeout ou erreur réseau): $e');
+      // Fallback vers mode guest si l'API des crédits échoue
+      print('🔄 Fallback vers mode guest...');
+      return _handleGuestMode();
+    }
+  }
+
+  /// Gestion normale du mode guest (garde le comportement existant)
+  Future<GenerationCapability> _handleGuestMode() async {
     try {
       final guestService = GuestLimitationService.instance;
       final canGenerate = await guestService.canGuestGenerate();

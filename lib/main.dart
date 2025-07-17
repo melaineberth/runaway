@@ -23,6 +23,7 @@ import 'package:runaway/core/helper/services/monitoring_service.dart';
 import 'package:runaway/core/helper/services/notification_service.dart';
 import 'package:runaway/core/helper/services/route_data_sync_wrapper.dart';
 import 'package:runaway/core/helper/services/session_manager.dart';
+import 'package:runaway/core/widgets/offline_indicator.dart';
 import 'package:runaway/features/auth/presentation/widgets/auth_data_listener.dart';
 import 'package:runaway/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:runaway/features/credits/data/services/iap_service.dart';
@@ -103,6 +104,8 @@ Future<void> _initializeCriticalServices() async {
     _loadEnvironmentConfig(),
     // Storage local pour HydratedBloc
     _initializeHydratedStorage(),
+    // 🆕 PRIORITÉ ABSOLUE: ConnectivityService dès le début
+    _initializeConnectivityServiceEarly(),
   ]);
   
   print('✅ Phase 1 terminée');
@@ -155,7 +158,6 @@ Future<void> _initializeSecondaryServices() async {
     _initializeSessionMonitoring(),
     // Services de notification
     _initializeNotificationServices(),
-    _initializeConnectivityService(),
   ]);
   
   print('✅ Phase 2 terminée');
@@ -261,6 +263,23 @@ Future<void> _initializeSupabase() async {
   }
 }
 
+// 🆕 Nouvelle fonction pour initialiser ConnectivityService très tôt
+Future<void> _initializeConnectivityServiceEarly() async {
+  final opId = MonitoringService.instance.trackOperation(
+      'init_connectivity_early',
+      description: 'Initialisation prioritaire du service de connectivité');
+  try {
+    await ConnectivityService.instance.initialize();
+    print('✅ ConnectivityService initialisé en PHASE 1');
+    MonitoringService.instance.finishOperation(opId, success: true);
+  } catch (e) {
+    print('⚠️ Erreur ConnectivityService (non bloquant): $e');
+    MonitoringService.instance.finishOperation(
+        opId, success: false, errorMessage: e.toString());
+    // Ne pas rethrow - on continue même si la connectivité échoue
+  }
+}
+
 /// ✅ Session monitoring maintenant après Supabase
 Future<void> _initializeSessionMonitoring() async {
   try {
@@ -362,20 +381,6 @@ Future<void> _initializeConversionService() async {
   }
 }
 
-Future<void> _initializeConnectivityService() async {
-  final opId = MonitoringService.instance.trackOperation(
-      'init_connectivity',
-      description: 'Initialisation du service de connectivité');
-  try {
-    await ConnectivityService.instance.initialize();
-    MonitoringService.instance.finishOperation(opId, success: true);
-  } catch (e) {
-    MonitoringService.instance.finishOperation(
-        opId, success: false, errorMessage: e.toString());
-    rethrow;
-  }
-}
-
 class Trailix extends StatefulWidget {
   const Trailix({super.key});
 
@@ -446,7 +451,7 @@ class _TrailixState extends State<Trailix> {
                       return MediaQuery(
                         data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(1.0)),
                         child: child ?? Container(),
-                      );
+                      ).withOfflineIndicator();
                     },
                   );
                 }

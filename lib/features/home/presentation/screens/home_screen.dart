@@ -24,6 +24,7 @@ import 'package:runaway/core/widgets/modal_dialog.dart';
 import 'package:runaway/features/auth/presentation/bloc/auth_state.dart';
 import 'package:runaway/features/home/presentation/widgets/floating_route_info_panel.dart';
 import 'package:runaway/features/home/presentation/widgets/guest_generation_indicator.dart';
+import 'package:runaway/features/home/presentation/widgets/offline_generation_capability.dart';
 import 'package:runaway/features/home/presentation/widgets/save_route_sheet.dart';
 import 'package:runaway/features/route_generator/domain/models/route_parameters.dart';
 import 'package:runaway/features/route_generator/domain/models/saved_route.dart';
@@ -2276,13 +2277,28 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
                 Scaffold(
                   extendBody: true,
                   resizeToAvoidBottomInset: false,
-                  body: FutureBuilder<GenerationCapability>(
-                    future: context.routeGenerationBloc.checkGenerationCapability(
-                      context.authBloc,
+                  body: OfflineGenerationCapability(
+                    timeout: const Duration(seconds: 2), // Timeout court pour éviter les blocages
+                    loadingWidget: Container(
+                      color: Theme.of(context).scaffoldBackgroundColor,
+                      child: const Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            CircularProgressIndicator(),
+                            SizedBox(height: 16),
+                            Text(
+                              'Initialisation...',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
-                    builder: (context, snapshot) {
-                      // final capability = snapshot.data;
-      
+                    builder: (capability) {      
                       return Stack(
                         alignment: Alignment.bottomCenter,
                         children: [
