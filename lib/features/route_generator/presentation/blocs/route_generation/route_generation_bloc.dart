@@ -2,10 +2,13 @@ import 'dart:math' as math;
 import 'package:hydrated_bloc/hydrated_bloc.dart';
 import 'package:runaway/core/blocs/app_data/app_data_bloc.dart';
 import 'package:runaway/core/blocs/app_data/app_data_event.dart';
+import 'package:runaway/core/errors/api_exceptions.dart';
 import 'package:runaway/core/helper/extensions/monitoring_extensions.dart';
+import 'package:runaway/core/helper/services/connectivity_service.dart';
 import 'package:runaway/core/helper/services/monitoring_service.dart';
 import 'package:runaway/features/route_generator/data/services/screenshot_service.dart';
 import 'package:runaway/features/credits/data/services/credit_verification_service.dart';
+import 'package:runaway/features/route_generator/domain/models/graphhopper_route_result.dart';
 import 'package:runaway/features/route_generator/domain/models/saved_route.dart';
 import '../../../data/repositories/routes_repository.dart';
 import '../../../data/services/graphhopper_api_service.dart';
@@ -18,6 +21,10 @@ class RouteGenerationBloc extends HydratedBloc<RouteGenerationEvent, RouteGenera
   final RoutesRepository _routesRepository;
   final CreditVerificationService _creditService; // 🆕 Service dédié aux crédits
   final AppDataBloc? _appDataBloc;
+
+  // Constantes pour le retry
+  static const int _maxRetries = 3;
+  static const Duration _baseDelay = Duration(seconds: 2);
 
   RouteGenerationBloc({
     RoutesRepository? routesRepository,
@@ -129,6 +136,34 @@ class RouteGenerationBloc extends HydratedBloc<RouteGenerationEvent, RouteGenera
         stateId: '$generationId-start',
       ));
 
+      // ===== 🆕 VÉRIFICATION DE CONNECTIVITÉ AVANT TOUT =====
+      
+      print('🌐 === VÉRIFICATION CONNECTIVITÉ ===');
+      
+      // Attendre l'initialisation du service avec timeout court
+      await ConnectivityService.instance.waitForInitialization(
+        timeout: const Duration(seconds: 2)
+      );
+      
+      // Vérifier si on est hors ligne
+      if (ConnectivityService.instance.isOffline) {
+        print('❌ Mode hors-ligne détecté');
+        emit(state.copyWith(
+          isGeneratingRoute: false,
+          errorMessage: 'Génération hors-ligne indisponible. Vérifiez votre connexion internet.',
+          stateId: '$generationId-offline',
+        ));
+        
+        MonitoringService.instance.finishOperation(
+          operationId,
+          success: false,
+          errorMessage: 'Offline mode detected',
+        );
+        return;
+      }
+      
+      print('✅ Connectivité confirmée');
+
       // ===== VÉRIFICATION DES CRÉDITS (SEULEMENT SI NÉCESSAIRE) =====
       
       if (!event.bypassCreditCheck) {
@@ -146,12 +181,17 @@ class RouteGenerationBloc extends HydratedBloc<RouteGenerationEvent, RouteGenera
               'Crédits insuffisants pour générer un parcours. Vous avez ${creditCheck.availableCredits} crédits, mais il en faut ${creditCheck.requiredCredits}.',
             stateId: '$generationId-credit-error',
           ));
+
+          MonitoringService.instance.finishOperation(
+            operationId,
+            success: false,
+            errorMessage: 'Insufficient credits',
+          );
+
           return;
         }
 
-        print('✅ Crédits suffisants, lancement de la génération');
-      } else {
-        print('🆕 === MODE GUEST - BYPASS VÉRIFICATION CRÉDITS ===');
+        print('✅ Crédits validés: ${creditCheck.availableCredits}/${creditCheck.requiredCredits}');
       }
       
       // ===== GÉNÉRATION DU PARCOURS =====
@@ -166,10 +206,51 @@ class RouteGenerationBloc extends HydratedBloc<RouteGenerationEvent, RouteGenera
           'terrain': event.parameters.terrainType,
         },
       );
+
+      // ===== 🆕 GÉNÉRATION AVEC RETRY AUTOMATIQUE =====
       
-      print('🛣️ Génération du parcours via API...');
-      final result = await GraphHopperApiService.generateRoute(parameters: event.parameters);
-      print('✅ Génération réussie: ${result.coordinates.length} points, ${result.distanceKm}km');
+      print('🛣️ === GÉNÉRATION DE ROUTE AVEC RETRY ===');
+      
+      late GraphHopperRouteResult result;
+      
+      try {
+        // Retry automatique avec backoff exponentiel
+        result = await _retryWithBackoff(() => 
+          GraphHopperApiService.generateRoute(parameters: event.parameters)
+        );
+        
+        print('✅ Route générée avec succès: ${result.coordinates.length} points, ${result.distanceKm}km');
+        
+      } on NetworkException catch (e) {
+        print('❌ Erreur réseau lors de la génération: ${e.message}');
+        emit(state.copyWith(
+          isGeneratingRoute: false,
+          errorMessage: 'Problème de connexion. ${e.message}',
+          stateId: '$generationId-network-error',
+        ));
+        
+        MonitoringService.instance.finishOperation(
+          operationId,
+          success: false,
+          errorMessage: 'Network error: ${e.message}',
+        );
+        return;
+        
+      } on RouteGenerationException catch (e) {
+        print('❌ Erreur de génération: ${e.message}');
+        emit(state.copyWith(
+          isGeneratingRoute: false,
+          errorMessage: 'Erreur de génération: ${e.message}',
+          stateId: '$generationId-generation-error',
+        ));
+        
+        MonitoringService.instance.finishOperation(
+          operationId,
+          success: false,
+          errorMessage: 'Generation error: ${e.message}',
+        );
+        return;
+      }
 
       // ===== CONSOMMATION DES CRÉDITS (SEULEMENT POUR UTILISATEURS AUTHENTIFIÉS) =====
       
@@ -188,11 +269,19 @@ class RouteGenerationBloc extends HydratedBloc<RouteGenerationEvent, RouteGenera
         );
 
         if (!consumptionResult.success) {
+          print('❌ Échec consommation crédits: ${consumptionResult.errorMessage}');
           emit(state.copyWith(
             isGeneratingRoute: false,
             errorMessage: consumptionResult.errorMessage ?? 'Erreur lors de l\'utilisation des crédits',
             stateId: '$generationId-consumption-error',
           ));
+
+          MonitoringService.instance.finishOperation(
+            operationId,
+            success: false,
+            errorMessage: 'Credit consumption failed',
+          );
+
           return;
         }
 
@@ -213,14 +302,6 @@ class RouteGenerationBloc extends HydratedBloc<RouteGenerationEvent, RouteGenera
         errorMessage: null,
         stateId: '$generationId-success',
       ));
-
-      if (!event.bypassCreditCheck) {
-        print('✅ === FIN GÉNÉRATION UI FIRST (SUCCESS: $generationId) ===');
-        print('💳 $REQUIRED_CREDITS crédit(s) utilisé(s)');
-      } else {
-        print('✅ === FIN GÉNÉRATION GUEST (SUCCESS: $generationId) ===');
-        print('🆓 Génération gratuite utilisée');
-      }
 
       MonitoringService.instance.finishOperation(
         operationId,
@@ -596,6 +677,72 @@ class RouteGenerationBloc extends HydratedBloc<RouteGenerationEvent, RouteGenera
     
     print('✅ === FIN RESET COMPLET ÉTAT (RESET: $resetId-reset) ===');
   }
+
+  // ===== MÉTHODE UTILITAIRE POUR LE RETRY =====
+  
+  /// Retry automatique avec backoff exponentiel
+  Future<T> _retryWithBackoff<T>(
+    Future<T> Function() operation, {
+    int maxRetries = _maxRetries,
+    Duration baseDelay = _baseDelay,
+  }) async {
+    int attempt = 0;
+    
+    while (attempt <= maxRetries) {
+      try {
+        return await operation();
+      } catch (e) {
+        attempt++;
+        
+        // Si c'est le dernier essai ou si c'est une erreur non-récupérable, on relance
+        if (attempt > maxRetries || _isNonRecoverableError(e)) {
+          print('❌ Abandon après $attempt tentative(s): $e');
+          rethrow;
+        }
+        
+        // Calculer le délai avec backoff exponentiel
+        final delay = Duration(
+          milliseconds: (baseDelay.inMilliseconds * (1 << (attempt - 1))).clamp(
+            baseDelay.inMilliseconds, 
+            30000, // Max 30 secondes
+          ),
+        );
+        
+        print('⏳ Tentative $attempt/$maxRetries échouée: $e');
+        print('🔄 Retry dans ${delay.inSeconds}s...');
+        
+        await Future.delayed(delay);
+      }
+    }
+    
+    throw Exception('Toutes les tentatives ont échoué');
+  }
+  
+  /// Détermine si une erreur est récupérable avec un retry
+  bool _isNonRecoverableError(dynamic error) {
+    if (error is NetworkException) {
+      // Erreurs réseau récupérables : timeout, connexion
+      return error.code == 'NO_INTERNET'; // Pas récupérable immédiatement
+    }
+    
+    if (error is RouteGenerationException) {
+      // Erreurs de validation sont généralement non-récupérables
+      return true;
+    }
+    
+    if (error is ValidationException) {
+      // Erreurs de validation définitivement non-récupérables
+      return true;
+    }
+    
+    // Erreurs serveur 5xx sont récupérables, 4xx ne le sont pas
+    if (error is ServerException) {
+      return error.statusCode < 500;
+    }
+    
+    return false; // Par défaut, on considère que c'est récupérable
+  }
+
 
   Map<String, dynamic> _createDummyPoi(double lat, double lon) {
     return {

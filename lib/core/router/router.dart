@@ -14,8 +14,6 @@ import 'package:runaway/features/auth/presentation/screens/email_confirmation_sc
 import 'package:runaway/features/auth/presentation/screens/onboarding_screen.dart';
 import 'package:runaway/features/credits/presentation/screens/credit_plans_screen.dart';
 import 'package:runaway/features/historic/presentation/screens/historic_screen.dart';
-import 'package:runaway/features/navigation/blocs/navigation_bloc.dart';
-import 'package:runaway/features/navigation/presentation/screens/live_navigation_screen.dart';
 import 'package:top_snackbar_flutter/top_snack_bar.dart';
 import '../../features/home/presentation/screens/home_screen.dart';
 
@@ -97,31 +95,6 @@ final GoRouter router = GoRouter(
       },
     ),
 
-    GoRoute(
-      path: '/live-navigation',
-      name: 'live-navigation',
-      pageBuilder: (context, state) {
-        final args = state.extra as LiveNavigationArgs?;
-        
-        if (args == null) {
-          return NoTransitionPage(
-            key: state.pageKey,
-            child: const HomeScreen(),
-          );
-        }
-        
-        // 🔧 SOLUTION : AuthWrapper + BlocProvider
-        return NoTransitionPage(
-          key: state.pageKey,
-          child: AuthWrapper(  // ← Garde l'accès aux BLoCs d'auth
-            child: BlocProvider(
-              create: (context) => NavigationBloc(),
-              child: LiveNavigationScreen(args: args),
-            ),
-          ),
-        );
-      },
-    ),
     GoRoute(
       path: '/edit-profile',
       builder: (context, state) {

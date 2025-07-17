@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -8,7 +10,6 @@ import 'package:runaway/core/blocs/app_data/app_data_state.dart';
 import 'package:runaway/core/utils/injections/bloc_provider_extension.dart';
 import 'package:runaway/core/helper/extensions/monitoring_extensions.dart';
 import 'package:runaway/core/helper/services/monitoring_service.dart';
-import 'package:runaway/core/widgets/blurry_page.dart';
 import 'package:runaway/core/widgets/squircle_container.dart';
 import 'package:runaway/core/widgets/top_snackbar.dart';
 import 'package:runaway/features/credits/domain/models/credit_transaction.dart';
@@ -67,9 +68,9 @@ class _CreditPlansScreenState extends State<CreditPlansScreen> {
         'has_credits': context.hasCredits,
       },
       child: Scaffold(
-        backgroundColor: context.adaptiveBackground,
+        extendBodyBehindAppBar: true,
         appBar: AppBar(
-          backgroundColor: context.adaptiveBackground,
+          forceMaterialTransparency: true,
           title: Text(
             context.l10n.manageCredits,
             style: context.bodySmall?.copyWith(
@@ -90,6 +91,19 @@ class _CreditPlansScreenState extends State<CreditPlansScreen> {
               icon: Icon(HugeIcons.strokeRoundedAddCircle),
             ),
           ],
+          flexibleSpace: FlexibleSpaceBar(
+            background: BackdropFilter(
+              filter: ImageFilter.blur(
+                sigmaX: 50,
+                sigmaY: 50,
+              ),
+              child: Container(
+                color: context.adaptiveBackground.withValues(
+                  alpha: 0.8,
+                ),
+              ),
+            ),
+          ),
         ),
         body: MultiBlocListener(
           listeners: [
@@ -138,37 +152,36 @@ class _CreditPlansScreenState extends State<CreditPlansScreen> {
 
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: 20.0),
-      child: Column(
+      child: ListView(
         children: [
           20.h,
           _buildCreditsHeader(userCredits),
           30.h,
-          BlurryPage(
-            children: [
-              if (transactions.isEmpty)
-                _buildEmptyState()
-              else ...[
-                Text(
-                  "Historique des transactions",
-                  style: context.bodyMedium?.copyWith(
-                    fontSize: 18,
-                    color: context.adaptiveTextSecondary,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                15.h,
-                ...transactions.asMap().entries.map((entry) {
-                  final i = entry.key;
-                  final value = entry.value;
-                  return Padding(
-                    padding: EdgeInsets.only(bottom: i == transactions.length - 1 ? 0.0 : 12.0),
-                    child: _buildTransactionItem(value),
-                  );
-                }),
-                150.h,
-              ],
-            ],
-          ),
+          if (transactions.isEmpty)
+            _buildEmptyState()
+          else ...[
+            Text(
+              "Historique des transactions",
+              style: context.bodyMedium?.copyWith(
+                fontSize: 18,
+                color: context.adaptiveTextSecondary,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+
+            15.h,
+
+            ...transactions.asMap().entries.map((entry) {
+              final i = entry.key;
+              final value = entry.value;
+              return Padding(
+                padding: EdgeInsets.only(bottom: i == transactions.length - 1 ? 0.0 : 12.0),
+                child: _buildTransactionItem(value),
+              );
+            }),
+
+            80.h,
+          ],
         ],
       ),
     );

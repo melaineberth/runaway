@@ -1,3 +1,4 @@
+import 'package:runaway/core/errors/api_exceptions.dart';
 import 'package:runaway/core/helper/services/connectivity_service.dart';
 import 'package:runaway/core/helper/services/guest_limitation_service.dart';
 import 'package:runaway/features/auth/presentation/bloc/auth_bloc.dart';
@@ -8,6 +9,39 @@ import 'package:supabase_flutter/supabase_flutter.dart' as su;
 /// Extensions pour RouteGenerationBloc qui gèrent les limitations des guests
 /// 🆕 Optimisées pour les cas offline
 extension RouteGenerationBlocGuestExtensions on RouteGenerationBloc {
+
+  /// Vérifie rapidement si on peut faire des appels réseau
+  Future<bool> canMakeNetworkCall() async {
+    try {
+      await ConnectivityService.instance.waitForInitialization(
+        timeout: const Duration(seconds: 1)
+      );
+      return !ConnectivityService.instance.isOffline;
+    } catch (e) {
+      print('⚠️ Erreur vérification connectivité: $e');
+      return false; // En cas de doute, on assume offline
+    }
+  }
+
+  /// Affiche un message d'erreur adapté au contexte réseau
+  String getNetworkAwareErrorMessage(dynamic error) {
+    if (ConnectivityService.instance.isOffline) {
+      return 'Vous êtes hors ligne. Vérifiez votre connexion internet et réessayez.';
+    }
+    
+    if (error is NetworkException) {
+      switch (error.code) {
+        case 'TIMEOUT':
+          return 'Délai d\'attente dépassé. Votre connexion semble lente, veuillez réessayer.';
+        case 'NO_INTERNET':
+          return 'Pas de connexion internet. Vérifiez votre réseau.';
+        default:
+          return 'Problème de connexion: ${error.message}';
+      }
+    }
+    
+    return 'Erreur inattendue: $error';
+  }
 
   bool _isReallyAuthenticated(AuthState authState) {
     // Vérifier d'abord l'état du BLoC

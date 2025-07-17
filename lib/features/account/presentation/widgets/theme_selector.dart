@@ -14,6 +14,11 @@ class ThemeSelector extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BlocBuilder<ThemeBloc, ThemeState>(
+      // ✅ Ne rebuild que si le mode ou le status loading change
+      buildWhen: (previous, current) =>
+        previous.themeMode != current.themeMode ||
+        previous.isLoading != current.isLoading,
+
       builder: (context, state) {
         if (state.isLoading) {
           return const SizedBox(
@@ -55,8 +60,10 @@ class ThemeSelector extends StatelessWidget {
                     return MultiBlocListener(
                       listeners: [
                         BlocListener<ThemeBloc, ThemeState>(
+                          // ✅ Écouter seulement quand le theme change (et pas en loading)
                           listenWhen: (previous, current) => 
                               previous.themeMode != current.themeMode && !current.isLoading,
+
                           listener: (context, state) {
                             SchedulerBinding.instance.addPostFrameCallback((_) {
                               if (context.mounted && Navigator.of(context).canPop()) {

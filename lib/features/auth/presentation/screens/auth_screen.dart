@@ -56,6 +56,14 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
     return MonitoredScreen(
       screenName: 'auth',
       child: BlocListener<AuthBloc, AuthState>(
+        // ✅ Optimiser l'écoute des états d'auth
+        listenWhen: (previous, current) =>
+          current is Authenticated ||
+          current is ProfileIncomplete ||
+          current is EmailConfirmationRequired ||
+          current is PasswordResetSent ||
+          current is AuthError,
+          
         listener: (context, authState) {
           if (authState is Authenticated) {
             Navigator.of(context).popUntil((route) => route.isFirst);

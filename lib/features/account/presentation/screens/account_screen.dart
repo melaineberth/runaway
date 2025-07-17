@@ -153,6 +153,10 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
     return MonitoredScreen(
       screenName: 'account_screen',
       child: BlocListener<AuthBloc, AuthState>(
+        // ✅ Écouter seulement les changements d'authentification
+        listenWhen: (previous, current) => 
+          previous.runtimeType != current.runtimeType,
+
         listener: (context, authState) {
           // Redirection automatique après déconnexion/suppression
           if (authState is Unauthenticated) {
@@ -167,6 +171,10 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
           }
         },
         child: BlocBuilder<AuthBloc, AuthState>(
+          // ✅ Ne rebuild que si l'état d'auth change vraiment
+          buildWhen: (previous, current) => 
+            previous.runtimeType != current.runtimeType,
+
           builder: (_, authState) {          
             // Si l'utilisateur est connecté, afficher le contenu
             if (authState is Authenticated) {

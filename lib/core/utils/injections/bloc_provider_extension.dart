@@ -11,7 +11,6 @@ import 'package:runaway/features/credits/domain/models/credit_plan.dart';
 import 'package:runaway/features/credits/domain/models/credit_transaction.dart';
 import 'package:runaway/features/credits/presentation/blocs/credits_bloc.dart';
 import 'package:runaway/features/home/presentation/blocs/route_parameters_bloc.dart';
-import 'package:runaway/features/navigation/blocs/navigation_bloc.dart';
 import 'package:runaway/features/route_generator/presentation/blocs/route_generation/route_generation_bloc.dart';
 import 'service_locator.dart';
 
@@ -29,7 +28,6 @@ extension BlocAccess on BuildContext {
   CreditVerificationService get creditService => sl<CreditVerificationService>(); // 🆕
   
   // ===== BLOCS AVEC INSTANCES MULTIPLES =====
-  NavigationBloc get navigationBloc => read<NavigationBloc>();
   RouteParametersBloc get routeParametersBloc => read<RouteParametersBloc>();
   RouteGenerationBloc get routeGenerationBloc => read<RouteGenerationBloc>();
 

@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 import 'package:runaway/core/errors/api_exceptions.dart';
 import 'package:runaway/core/errors/error_handler.dart';
 import 'package:runaway/core/helper/config/environment_config.dart';
+import 'package:runaway/core/helper/services/connectivity_service.dart';
 import 'package:runaway/features/route_generator/domain/models/activity_type.dart';
 import 'package:runaway/features/route_generator/domain/models/graphhopper_route_result.dart';
 import 'package:runaway/features/route_generator/domain/models/terrain_type.dart';
@@ -11,6 +12,11 @@ import 'package:runaway/features/route_generator/domain/models/urban_density.dar
 import '../../domain/models/route_parameters.dart';
 
 class GraphHopperApiService {
+
+  // ===== 🆕 CONSTANTES POUR TIMEOUT ADAPTATIF =====
+  static const Duration _defaultTimeout = Duration(seconds: 30);
+  static const Duration _slowConnectionTimeout = Duration(seconds: 45);
+
   /// Génère un parcours via l'API GraphHopper
   static Future<GraphHopperRouteResult> generateRoute({
   required RouteParameters parameters,
@@ -41,19 +47,25 @@ class GraphHopperApiService {
 
     print('📤 Envoi requête: ${jsonEncode(requestBody)}');
 
+    // 🆕 Timeout adaptatif basé sur la connectivité
+    final timeout = _getAdaptiveTimeout();
+    print('⏱️ Timeout configuré: ${timeout.inSeconds}s');
+
     final response = await http.post(
       Uri.parse('${EnvironmentConfig.apiBaseUrl}/routes/generate'),
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
+        // 🆕 Header pour indiquer qu'on supporte les retry
+        'X-Retry-Capable': 'true',
       },
       body: jsonEncode(requestBody),
-    ).timeout(EnvironmentConfig.apiTimeout);
+    ).timeout(timeout); // Timeout adaptatif
 
     print('📥 Réponse reçue: status=${response.statusCode}, body_length=${response.body.length}');
 
     if (response.statusCode == 200) {
-      // FIX: Validation et parsing sécurisé
+      // Validation et parsing sécurisé
       late Map<String, dynamic> data;
       try {
         data = jsonDecode(response.body) as Map<String, dynamic>;
@@ -61,7 +73,7 @@ class GraphHopperApiService {
         throw RouteGenerationException('Réponse serveur invalide: impossible de parser le JSON');
       }
 
-      // FIX: Vérification du succès
+      // Vérification du succès
       if (data['success'] == true) {
         print('✅ Parsing des données de route...');
         return GraphHopperRouteResult.fromApiResponse(data);
@@ -70,7 +82,7 @@ class GraphHopperApiService {
         throw RouteGenerationException('Génération échouée: $errorMsg');
       }
     } else {
-      // FIX: Gestion des erreurs HTTP
+      // Gestion des erreurs HTTP
       print('❌ Erreur HTTP ${response.statusCode}: ${response.body}');
       throw ErrorHandler.handleHttpError(response);
     }
@@ -82,7 +94,11 @@ class GraphHopperApiService {
     throw RouteGenerationException('Réponse serveur mal formatée');
   } on TimeoutException catch (e) {
     print('❌ Timeout: $e');
-    throw NetworkException('Délai d\'attente dépassé', code: 'TIMEOUT');
+    // 🆕 Message plus spécifique pour les timeouts
+    throw NetworkException(
+      'Délai d\'attente dépassé (${_getAdaptiveTimeout().inSeconds}s). Votre connexion semble lente.',
+      code: 'TIMEOUT'
+    );
   } catch (e) {
     print('❌ Erreur inattendue: $e');
     throw ErrorHandler.handleNetworkError(e);
@@ -181,6 +197,25 @@ class GraphHopperApiService {
     }
   }
 
+  // ===== 🆕 MÉTHODES UTILITAIRES POUR TIMEOUT ADAPTATIF =====
+
+  /// Détermine le timeout adaptatif basé sur la connectivité
+  static Duration _getAdaptiveTimeout() {
+    try {
+      final connectivity = ConnectivityService.instance;
+      
+      // Si on est sur mobile, on donne plus de temps
+      if (connectivity.current == ConnectionStatus.onlineMobile) {
+        return _slowConnectionTimeout;
+      }
+      
+      return _defaultTimeout;
+    } catch (e) {
+      // En cas d'erreur, utiliser le timeout par défaut
+      return _defaultTimeout;
+    }
+  }
+
   /// Mapping ActivityType vers string API
   static String _mapActivityType(ActivityType type) {
     switch (type) {
@@ -215,5 +250,22 @@ class GraphHopperApiService {
       case UrbanDensity.mixed:
         return 'mixed';
       }
+  }
+
+  // ===== 🆕 MÉTHODE POUR TESTER LA CONNECTIVITÉ API =====
+  
+  /// Test rapide de connectivité vers l'API
+  static Future<bool> testApiConnectivity() async {
+    try {
+      final response = await http.get(
+        Uri.parse('${EnvironmentConfig.apiBaseUrl}/health'),
+        headers: {'Accept': 'application/json'},
+      ).timeout(const Duration(seconds: 5));
+      
+      return response.statusCode == 200;
+    } catch (e) {
+      print('❌ Test connectivité API échoué: $e');
+      return false;
+    }
   }
 }

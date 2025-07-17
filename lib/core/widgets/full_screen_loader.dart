@@ -14,6 +14,7 @@ class FullScreenLoader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
+      color: Colors.transparent,
       child: Container(
         color: Colors.black.withValues(alpha: 0.95),
         height: double.infinity,

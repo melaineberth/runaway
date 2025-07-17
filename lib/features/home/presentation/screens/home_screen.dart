@@ -2152,46 +2152,45 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
     }
   }
 
-  void _toggleLoader(BuildContext ctx, bool show, String msg) {
+  void _toggleLoader(BuildContext context, bool show, String msg) {
     if (show) {
-      _loading.show(ctx, msg);
+      _loading.show(context, msg);
     } else {
       _loading.hide();
     }
   }
 
   void _onRouteGenerationStateChanged(
-    BuildContext ctx,
-    RouteGenerationState s,
+    BuildContext context,
+    RouteGenerationState state,
   ) {
     // gestion du loader plein-écran
-    final msg =
-        s.isGeneratingRoute
-            ? 'Génération du parcours…'
-            : null; // ici pas de sauvegarde (gérée par AppDataBloc)
+    final msg = state.isGeneratingRoute
+      ? 'Génération du parcours…'
+      : null; // ici pas de sauvegarde (gérée par AppDataBloc)
 
-    _toggleLoader(ctx, msg != null, msg ?? '');
+    _toggleLoader(context, msg != null, msg ?? '');
 
     // succès de génération : on stocke & on affiche
-    if (s.hasGeneratedRoute && s.isNewlyGenerated && !s.isGeneratingRoute) {
+    if (state.hasGeneratedRoute && state.isNewlyGenerated && !state.isGeneratingRoute) {
       setState(() {
-        generatedRouteCoordinates = s.generatedRoute;
-        routeMetadata = s.routeMetadata;
+        generatedRouteCoordinates = state.generatedRoute;
+        routeMetadata = state.routeMetadata;
       });
-      if (s.generatedRoute case final coords?) _displayRouteOnMap(coords);
+      if (state.generatedRoute case final coords?) _displayRouteOnMap(coords);
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) _showRouteInfoModal();
       });
     }
 
     // 🆕 AJOUT : parcours chargé depuis l'historique
-    if (s.hasGeneratedRoute && s.isLoadedFromHistory && !s.isGeneratingRoute) {
+    if (state.hasGeneratedRoute && state.isLoadedFromHistory && !state.isGeneratingRoute) {
       setState(() {
-        generatedRouteCoordinates = s.generatedRoute;
-        routeMetadata = s.routeMetadata;
+        generatedRouteCoordinates = state.generatedRoute;
+        routeMetadata = state.routeMetadata;
       });
 
-      if (s.generatedRoute case final coords?) {
+      if (state.generatedRoute case final coords?) {
         _displayRouteOnMap(coords);
 
         // 🆕 Afficher le RouteInfoCard pour les parcours de l'historique
@@ -2205,8 +2204,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
     }
 
     // erreur éventuelle
-    if (s.errorMessage != null && !s.isGeneratingRoute) {
-      _showRouteGenerationError(s.errorMessage!);
+    if (state.errorMessage != null && !state.isGeneratingRoute) {
+      _showRouteGenerationError(state.errorMessage!);
     }
   }
 
@@ -2259,289 +2258,295 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
         listeners: [
           // 1️⃣  Génération de parcours
           BlocListener<RouteGenerationBloc, RouteGenerationState>(
+            listenWhen: (previous, current) => 
+              previous.generatedRoute != current.generatedRoute ||
+              previous.isGeneratingRoute != current.isGeneratingRoute ||
+              previous.savedRoutes.length != current.savedRoutes.length,
             listener: _onRouteGenerationStateChanged,
           ),
       
           // 2️⃣  Sauvegarde de parcours
           BlocListener<AppDataBloc, AppDataState>(
             listenWhen: (p, c) => p.isSavingRoute != c.isSavingRoute,
-            listener:
-                (ctx, s) =>
-                    _toggleLoader(ctx, s.isSavingRoute, 'Sauvegarde en cours…'),
+            listener: (ctx, s) => _toggleLoader(ctx, s.isSavingRoute, 'Sauvegarde en cours…'),
           ),
         ],
         child: BlocBuilder<RouteGenerationBloc, RouteGenerationState>(
           builder: (context, routeState) {
-            return Stack(
-              children: [
-                Scaffold(
-                  extendBody: true,
-                  resizeToAvoidBottomInset: false,
-                  body: OfflineGenerationCapability(
-                    timeout: const Duration(seconds: 2), // Timeout court pour éviter les blocages
-                    loadingWidget: Container(
-                      color: Theme.of(context).scaffoldBackgroundColor,
-                      child: const Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            CircularProgressIndicator(),
-                            SizedBox(height: 16),
-                            Text(
-                              'Initialisation...',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ],
-                        ),
+            return _buildMainContent(context, routeState);
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMainContent(BuildContext context, RouteGenerationState routeState) {
+    return Stack(
+      children: [
+        Scaffold(
+          extendBody: true,
+          resizeToAvoidBottomInset: false,
+          body: OfflineGenerationCapability(
+            timeout: const Duration(seconds: 2), // Timeout court pour éviter les blocages
+            loadingWidget: Container(
+              color: Theme.of(context).scaffoldBackgroundColor,
+              child: const Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    CircularProgressIndicator(),
+                    SizedBox(height: 16),
+                    Text(
+                      'Initialisation...',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
                       ),
                     ),
-                    builder: (capability) {      
-                      return Stack(
-                        alignment: Alignment.bottomCenter,
-                        children: [
-                          // Carte
-                          SizedBox(
-                            width: MediaQuery.of(context).size.width,
-                            height: MediaQuery.of(context).size.height,
-                            child: LocationAwareMapWidget(
-                              key: ValueKey("locationAwareMapWidget"),
-                              styleUri: _mapStateService.getCurrentStyleUri(),
-                              onMapCreated: _onMapCreated,
-                              mapKey: ValueKey("mapWidget"),
-                              restoreFromCache: _mapStateService.isMapInitialized,
-                            ),
-                          ),
-      
-                          // 🆕 MARQUEUR LOTTIE ANIMÉ
-                          if (_showLottieMarker &&
-                              _lottieMarkerLat != null &&
-                              _lottieMarkerLng != null)
-                            _buildLottieMarker(),
-      
-                          // Interface normale
-                          if (!isNavigationMode && !_isInNavigationMode)
-                            Align(
-                              alignment: Alignment.topCenter,
-                              child: SizedBox(
-                                width: MediaQuery.of(context).size.width,
-                                height: MediaQuery.of(context).size.height * 0.94,
-                                child: SafeArea(
-                                  child: Padding(
-                                    padding: const EdgeInsets.all(20.0),
-                                    child: Column(
+                  ],
+                ),
+              ),
+            ),
+            builder: (capability) {      
+              return Stack(
+                alignment: Alignment.bottomCenter,
+                children: [
+                  // Carte
+                  SizedBox(
+                    width: MediaQuery.of(context).size.width,
+                    height: MediaQuery.of(context).size.height,
+                    child: LocationAwareMapWidget(
+                      key: ValueKey("locationAwareMapWidget"),
+                      styleUri: _mapStateService.getCurrentStyleUri(),
+                      onMapCreated: _onMapCreated,
+                      mapKey: ValueKey("mapWidget"),
+                      restoreFromCache: _mapStateService.isMapInitialized,
+                    ),
+                  ),
+
+                  // 🆕 MARQUEUR LOTTIE ANIMÉ
+                  if (_showLottieMarker &&
+                      _lottieMarkerLat != null &&
+                      _lottieMarkerLng != null)
+                    _buildLottieMarker(),
+
+                  // Interface normale
+                  if (!isNavigationMode && !_isInNavigationMode)
+                    Align(
+                      alignment: Alignment.topCenter,
+                      child: SizedBox(
+                        width: MediaQuery.of(context).size.width,
+                        height: MediaQuery.of(context).size.height * 0.94,
+                        child: SafeArea(
+                          child: Padding(
+                            padding: const EdgeInsets.all(20.0),
+                            child: Column(
+                              mainAxisAlignment:
+                                  MainAxisAlignment.spaceBetween,
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              children: [
+                                // Right menu
+                                Row(
+                                  spacing: 8.0,
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.end,
+                                  children: [
+                                    Container(
+                                      padding: EdgeInsets.symmetric(
+                                        horizontal: 5.0,
+                                        vertical: 5.0,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: context.adaptiveBackground,
+                                        borderRadius:
+                                            BorderRadius.circular(100),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: Colors.black
+                                                .withValues(alpha: 0.15),
+                                            spreadRadius: 2,
+                                            blurRadius: 30,
+                                            offset: Offset(
+                                              0,
+                                              0,
+                                            ), // changes position of shadow
+                                          ),
+                                        ],
+                                      ),
+                                      child: IconButton(
+                                        icon: Icon(
+                                          HugeIcons.solidRoundedFavourite,
+                                          size: 25.0,
+                                        ),
+                                        onPressed:
+                                            () => navigateTo('/historic'),
+                                      ),
+                                    ),
+
+                                    // Left menu
+                                    Row(
                                       mainAxisAlignment:
                                           MainAxisAlignment.spaceBetween,
-                                      crossAxisAlignment: CrossAxisAlignment.end,
                                       children: [
-                                        // Right menu
-                                        Row(
-                                          spacing: 8.0,
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.end,
-                                          children: [
-                                            Container(
-                                              padding: EdgeInsets.symmetric(
-                                                horizontal: 5.0,
-                                                vertical: 5.0,
-                                              ),
-                                              decoration: BoxDecoration(
-                                                color: context.adaptiveBackground,
-                                                borderRadius:
-                                                    BorderRadius.circular(100),
-                                                boxShadow: [
-                                                  BoxShadow(
-                                                    color: Colors.black
-                                                        .withValues(alpha: 0.15),
-                                                    spreadRadius: 2,
-                                                    blurRadius: 30,
-                                                    offset: Offset(
-                                                      0,
-                                                      0,
-                                                    ), // changes position of shadow
-                                                  ),
-                                                ],
-                                              ),
-                                              child: IconButton(
-                                                icon: Icon(
-                                                  HugeIcons.solidRoundedFavourite,
-                                                  size: 25.0,
-                                                ),
-                                                onPressed:
-                                                    () => navigateTo('/historic'),
-                                              ),
-                                            ),
-      
-                                            // Left menu
-                                            Row(
-                                              mainAxisAlignment:
-                                                  MainAxisAlignment.spaceBetween,
-                                              children: [
-                                                Container(
-                                                  padding: EdgeInsets.symmetric(
-                                                    horizontal: 5.0,
-                                                    vertical: 5.0,
-                                                  ),
-                                                  decoration: BoxDecoration(
-                                                    color:
-                                                        context
-                                                            .adaptiveBackground,
-                                                    borderRadius:
-                                                        BorderRadius.circular(
-                                                          100,
-                                                        ),
-                                                    boxShadow: [
-                                                      BoxShadow(
-                                                        color: Colors.black
-                                                            .withValues(
-                                                              alpha: 0.15,
-                                                            ),
-                                                        spreadRadius: 2,
-                                                        blurRadius: 30,
-                                                        offset: Offset(
-                                                          0,
-                                                          0,
-                                                        ), // changes position of shadow
-                                                      ),
-                                                    ],
-                                                  ),
-                                                  child: Row(
-                                                    spacing: 5.0,
-                                                    children: [
-                                                      // User tracking
-                                                      IconButton(
-                                                        icon: Icon(
-                                                          HugeIcons
-                                                              .solidRoundedMapsGlobal01,
-                                                          color:
-                                                              _trackingMode ==
-                                                                      TrackingMode
-                                                                          .userTracking
-                                                                  ? AppColors
-                                                                      .primary
-                                                                  : context
-                                                                      .adaptiveTextSecondary,
-                                                          size: 28.0,
-                                                        ),
-                                                        onPressed:
-                                                            _activateUserTracking,
-                                                      ),
-                                                      // Map style
-                                                      IconButton(
-                                                        icon: Icon(
-                                                          HugeIcons
-                                                              .solidRoundedLayerMask01,
-                                                          size: 28.0,
-                                                        ),
-                                                        onPressed:
-                                                            _openMapStyleSelector,
-                                                      ),
-                                                    ],
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                          ],
-                                        ),
-      
                                         Container(
                                           padding: EdgeInsets.symmetric(
-                                            horizontal: 6.0,
-                                            vertical: 6.0,
+                                            horizontal: 5.0,
+                                            vertical: 5.0,
                                           ),
                                           decoration: BoxDecoration(
-                                            color: context.adaptiveBackground,
-                                            borderRadius: BorderRadius.circular(
-                                              100,
-                                            ),
+                                            color:
+                                                context
+                                                    .adaptiveBackground,
+                                            borderRadius:
+                                                BorderRadius.circular(
+                                                  100,
+                                                ),
                                             boxShadow: [
                                               BoxShadow(
-                                                color: Colors.black.withValues(alpha: 0.15),
+                                                color: Colors.black
+                                                    .withValues(
+                                                      alpha: 0.15,
+                                                    ),
                                                 spreadRadius: 2,
                                                 blurRadius: 30,
-                                                offset: Offset(0,0,), // changes position of shadow
+                                                offset: Offset(
+                                                  0,
+                                                  0,
+                                                ), // changes position of shadow
                                               ),
                                             ],
                                           ),
-                                          child: IconButton(
-                                            icon: Icon(
-                                              HugeIcons.solidRoundedAiMagic,
-                                              size: 30.0,
-                                            ),
-                                            onPressed: openGenerator,
+                                          child: Row(
+                                            spacing: 5.0,
+                                            children: [
+                                              // User tracking
+                                              IconButton(
+                                                icon: Icon(
+                                                  HugeIcons
+                                                      .solidRoundedMapsGlobal01,
+                                                  color:
+                                                      _trackingMode ==
+                                                              TrackingMode
+                                                                  .userTracking
+                                                          ? AppColors
+                                                              .primary
+                                                          : context
+                                                              .adaptiveTextSecondary,
+                                                  size: 28.0,
+                                                ),
+                                                onPressed:
+                                                    _activateUserTracking,
+                                              ),
+                                              // Map style
+                                              IconButton(
+                                                icon: Icon(
+                                                  HugeIcons
+                                                      .solidRoundedLayerMask01,
+                                                  size: 28.0,
+                                                ),
+                                                onPressed:
+                                                    _openMapStyleSelector,
+                                              ),
+                                            ],
                                           ),
                                         ),
                                       ],
                                     ),
+                                  ],
+                                ),
+
+                                Container(
+                                  padding: EdgeInsets.symmetric(
+                                    horizontal: 6.0,
+                                    vertical: 6.0,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: context.adaptiveBackground,
+                                    borderRadius: BorderRadius.circular(
+                                      100,
+                                    ),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black.withValues(alpha: 0.15),
+                                        spreadRadius: 2,
+                                        blurRadius: 30,
+                                        offset: Offset(0,0,), // changes position of shadow
+                                      ),
+                                    ],
+                                  ),
+                                  child: IconButton(
+                                    icon: Icon(
+                                      HugeIcons.solidRoundedAiMagic,
+                                      size: 30.0,
+                                    ),
+                                    onPressed: openGenerator,
                                   ),
                                 ),
-                              ),
-                            ),
-      
-                          FloatingLocationSearchSheet(
-                            onLocationSelected: _onLocationSelected,
-                            userLongitude: _userLongitude,
-                            userLatitude: _userLatitude,
-                            onProfile: () => navigateTo('/account'),
-                          ),
-                        ],
-                      );
-                    },
-                  ),
-                ),
-      
-                // 🆕 Overlay spécifique pour la génération
-                if (routeState.isGeneratingRoute)
-                  Container(
-                    color: Colors.black.withValues(alpha: 0.5),
-                    child: Center(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          CircularProgressIndicator(color: Colors.blue),
-                          SizedBox(height: 16),
-                          Text(
-                            'Génération du parcours...',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 16,
-                              fontWeight: FontWeight.w500,
+                              ],
                             ),
                           ),
-                        ],
+                        ),
                       ),
                     ),
+
+                  FloatingLocationSearchSheet(
+                    onLocationSelected: _onLocationSelected,
+                    userLongitude: _userLongitude,
+                    userLatitude: _userLatitude,
+                    onProfile: () => navigateTo('/account'),
                   ),
-      
-                // 🆕 Overlay spécifique pour la sauvegarde
-                if (routeState.isSavingRoute)
-                  Container(
-                    color: Colors.black.withValues(alpha: 0.5),
-                    child: Center(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          CircularProgressIndicator(color: Colors.green),
-                          SizedBox(height: 16),
-                          Text(
-                            'Sauvegarde en cours...',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 16,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-              ],
-            );
-          },
+                ],
+              );
+            },
+          ),
         ),
-      ),
+
+        // 🆕 Overlay spécifique pour la génération
+        if (routeState.isGeneratingRoute)
+          Container(
+            color: Colors.black.withValues(alpha: 0.5),
+            child: Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  CircularProgressIndicator(color: Colors.blue),
+                  SizedBox(height: 16),
+                  Text(
+                    'Génération du parcours...',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+        // 🆕 Overlay spécifique pour la sauvegarde
+        if (routeState.isSavingRoute)
+          Container(
+            color: Colors.black.withValues(alpha: 0.5),
+            child: Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  CircularProgressIndicator(color: Colors.green),
+                  SizedBox(height: 16),
+                  Text(
+                    'Sauvegarde en cours...',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+      ],
     );
   }
 

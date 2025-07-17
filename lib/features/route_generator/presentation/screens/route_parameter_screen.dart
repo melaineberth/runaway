@@ -180,6 +180,16 @@ class _RouteParameterScreenState extends State<RouteParameterScreen> with Ticker
         padding: 0.0,
         height: MediaQuery.of(context).size.height * 0.8,
         child: BlocConsumer<RouteParametersBloc, RouteParametersState>(
+          // ✅ Optimiser les rebuilds pour la validation
+          buildWhen: (previous, current) =>
+            previous.parameters != current.parameters ||
+            previous.validationResult != current.validationResult ||
+            previous.errorMessage != current.errorMessage,
+            
+          // ✅ Écouter seulement les changements de validation
+          listenWhen: (previous, current) =>
+            previous.validationResult != current.validationResult,
+            
           listener: _handleParametersChanged,
           builder: (context, state) {
             return Stack(

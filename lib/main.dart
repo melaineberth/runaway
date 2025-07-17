@@ -434,8 +434,12 @@ class _TrailixState extends State<Trailix> {
       child: AuthDataListener(
         child: RouteDataSyncWrapper(
           child: BlocBuilder<LocaleBloc, LocaleState>(
+            // ✅ Éviter les rebuilds inutiles pour locale
+            buildWhen: (previous, current) => previous.locale != current.locale,
             builder: (context, localeState) {
               return BlocBuilder<ThemeBloc, ThemeState>(
+                // ✅ Éviter les rebuilds inutiles pour theme
+                buildWhen: (previous, current) => previous.themeMode != current.themeMode,
                 builder: (context, themeState) {
                   return MaterialApp.router(
                     title: 'Trailix',
