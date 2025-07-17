@@ -18,6 +18,7 @@ import 'package:runaway/features/credits/presentation/blocs/credits_event.dart';
 import 'package:runaway/features/credits/presentation/blocs/credits_state.dart';
 import 'package:runaway/features/credits/presentation/widgets/credit_plan_card.dart';
 import 'package:top_snackbar_flutter/top_snack_bar.dart';
+import 'package:runaway/core/helper/config/log_config.dart';
 
 /// Écran d'achat de crédits
 class CreditPlanModal extends StatefulWidget {
@@ -37,7 +38,7 @@ class _CreditPlanModalState extends State<CreditPlanModal> {
     // 🆕 Déclencher le pré-chargement si les données ne sont pas disponibles
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!context.isCreditDataLoaded) {
-        print('💳 Pré-chargement des plans depuis CreditPlanModal');
+        LogConfig.logInfo('💳 Pré-chargement des plans depuis CreditPlanModal');
         context.preloadCreditData();
       }
     });
@@ -72,7 +73,7 @@ class _CreditPlanModalState extends State<CreditPlanModal> {
         orElse: () => throw Exception('Plan non trouvé dans AppDataBloc'),
       );
       
-      print('✅ Plan trouvé: ${selectedPlan.name} (${selectedPlan.credits} crédits)');
+      LogConfig.logInfo('Plan trouvé: ${selectedPlan.name} (${selectedPlan.credits} crédits)');
 
       // Effectuer l'achat - chaque achat doit être un NOUVEAU achat (consommable)
       final purchaseResult = await IAPService.makePurchase(selectedPlan);
@@ -82,7 +83,7 @@ class _CreditPlanModalState extends State<CreditPlanModal> {
         // ✅ Nouveau achat réussi
         final transactionId = purchaseResult.transactionId;
         if (transactionId != null && mounted) {
-          print('✅ Nouveau achat réussi avec transaction: $transactionId');
+          LogConfig.logInfo('Nouveau achat réussi avec transaction: $transactionId');
           
           // Confirmer l'achat via CreditsBloc
           context.creditsBloc.add(
@@ -111,12 +112,12 @@ class _CreditPlanModalState extends State<CreditPlanModal> {
         }
       } else if (purchaseResult.isCanceled) {
         // 🚫 Achat annulé par l'utilisateur
-        print('🚫 Achat annulé par l\'utilisateur');
+        LogConfig.logInfo('🚫 Achat annulé par l\'utilisateur');
         _showErrorSnackBar('Achat annulé');
       } else {
         // ❌ Erreur lors de l'achat
         final errorMessage = purchaseResult.errorMessage ?? 'Erreur inconnue';
-        print('❌ Erreur achat: $errorMessage');
+        LogConfig.logError('❌ Erreur achat: $errorMessage');
         
         // Gestion spéciale pour les problèmes de restauration/finalisation
         if (errorMessage.contains('restauré au lieu de nouveau')) {
@@ -127,7 +128,7 @@ class _CreditPlanModalState extends State<CreditPlanModal> {
       }
       
     } catch (e, stackTrace) {
-      print('❌ Erreur processus achat: $e');
+      LogConfig.logError('❌ Erreur processus achat: $e');
       
       String errorMessage = 'Erreur lors du paiement';
       if (e is PaymentException) {
@@ -266,7 +267,7 @@ class _CreditPlanModalState extends State<CreditPlanModal> {
     // État initial - déclencher le chargement
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted && !appDataState.isLoading) {
-        print('🔄 Données non disponibles, déclenchement du chargement');
+        LogConfig.logInfo('🔄 Données non disponibles, déclenchement du chargement');
         context.preloadCreditData();
       }
     });
@@ -359,11 +360,24 @@ class _CreditPlanModalState extends State<CreditPlanModal> {
 
           SquircleBtn(
             isPrimary: true,
-            onTap: selectedPlanId != null ? () => _handlePurchase : null,
+            onTap: selectedPlanId != null ? () {
+              // Récupérer le plan sélectionné depuis appDataState
+              final selectedPlan = appDataState.activePlans.firstWhere(
+                (plan) => plan.id == selectedPlanId,
+                orElse: () => throw Exception('Plan non trouvé'),
+              );
+              
+              // Appeler _handlePurchase avec les bons paramètres
+              _handlePurchase(
+                selectedPlan.id,      // String planId
+                selectedPlan.credits, // int credits
+                selectedPlan.price,   // double price
+              );
+            } : null,
             label: selectedPlanId != null 
               ? context.l10n.buySelectedPlan
               : context.l10n.selectPlan,
-          ),     
+          ),
 
           // 🆕 Bouton de rafraîchissement si pas de plans
           if (plans.isEmpty) ...[
@@ -371,7 +385,7 @@ class _CreditPlanModalState extends State<CreditPlanModal> {
             SquircleBtn(
               isPrimary: false,
               onTap: () {
-                print('🔄 Rafraîchissement des plans demandé');
+                LogConfig.logInfo('🔄 Rafraîchissement des plans demandé');
                 context.refreshCreditData();
               },
               label: 'Actualiser',

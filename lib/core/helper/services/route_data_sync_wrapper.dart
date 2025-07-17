@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:runaway/core/helper/config/log_config.dart';
 import 'package:runaway/core/utils/injections/bloc_provider_extension.dart';
 import 'package:runaway/core/helper/services/route_data_sync_service.dart';
 
@@ -42,10 +43,10 @@ class _RouteDataSyncWrapperState extends State<RouteDataSyncWrapper> {
       );
 
       _isSyncInitialized = true;
-      print('✅ Synchronisation automatique des données initialisée');
+      LogConfig.logSuccess('Synchronisation automatique des données initialisée');
       
     } catch (e) {
-      print('❌ Erreur initialisation synchronisation: $e');
+      LogConfig.logError('❌ Erreur initialisation synchronisation: $e');
       // Réessayer lors du prochain build
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted && !_isSyncInitialized) {

@@ -4,7 +4,7 @@ import 'package:runaway/core/blocs/app_bloc_observer.dart';
 import 'package:runaway/core/helper/config/secure_config.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-
+import 'package:runaway/core/helper/config/log_config.dart';
 import 'crash_reporting_service.dart';
 import 'logging_service.dart';
 import 'performance_monitoring_service.dart';
@@ -24,12 +24,12 @@ class MonitoringService {
   /// Initialise tous les services de monitoring
   Future<void> initialize() async {
     if (_isInitialized) {
-      print('⚠️ MonitoringService déjà initialisé');
+      LogConfig.logInfo('MonitoringService déjà initialisé');
       return;
     }
 
     try {
-      print('🔍 Initialisation complète du monitoring...');
+      LogConfig.logInfo('🔍 Initialisation complète du monitoring...');
 
       // 1. Initialiser les services de base en parallèle
       await Future.wait([
@@ -46,7 +46,7 @@ class MonitoringService {
 
       // 4. Log de succès
       _isInitialized = true;
-      print('✅ MonitoringService initialisé avec succès');
+      LogConfig.logInfo('MonitoringService initialisé avec succès');
       
       LoggingService.instance.info(
         'MonitoringService',
@@ -60,10 +60,10 @@ class MonitoringService {
       );
 
       // 5. Créer la table de logs si nécessaire
-      print('ℹ️ Vérification tables Supabase reportée après initialisation Supabase');
+      LogConfig.logInfo('ℹ️ Vérification tables Supabase reportée après initialisation Supabase');
 
     } catch (e, stackTrace) {
-      print('❌ Erreur initialisation MonitoringService: $e');
+      LogConfig.logError('❌ Erreur initialisation MonitoringService: $e');
       print('Stack trace: $stackTrace');
       
       // Ne pas faire échouer l'app si le monitoring échoue
@@ -75,7 +75,7 @@ class MonitoringService {
           level: SentryLevel.error,
         );
       } catch (sentryError) {
-        print('❌ Impossible d\'envoyer l\'erreur vers Sentry: $sentryError');
+        LogConfig.logError('❌ Impossible d\'envoyer l\'erreur vers Sentry: $sentryError');
       }
     }
   }
@@ -87,7 +87,7 @@ class MonitoringService {
     try {
       await _ensureSupabaseTablesExist();
     } catch (e) {
-      print('❌ Erreur vérification tables Supabase: $e');
+      LogConfig.logError('❌ Erreur vérification tables Supabase: $e');
     }
   }
 
@@ -122,7 +122,7 @@ class MonitoringService {
         },
       );
     } catch (e) {
-      print('❌ Erreur configuration utilisateur monitoring: $e');
+      LogConfig.logError('❌ Erreur configuration utilisateur monitoring: $e');
     }
   }
 
@@ -139,7 +139,7 @@ class MonitoringService {
         'Utilisateur supprimé de tous les services de monitoring',
       );
     } catch (e) {
-      print('❌ Erreur suppression utilisateur monitoring: $e');
+      LogConfig.logError('❌ Erreur suppression utilisateur monitoring: $e');
     }
   }
 
@@ -182,7 +182,7 @@ class MonitoringService {
         level: isCritical ? SentryLevel.fatal : SentryLevel.error,
       );
     } catch (e) {
-      print('❌ Erreur capture erreur: $e');
+      LogConfig.logError('❌ Erreur capture erreur: $e');
     }
   }
 
@@ -213,7 +213,7 @@ class MonitoringService {
 
       return operationId;
     } catch (e) {
-      print('❌ Erreur track opération: $e');
+      LogConfig.logError('❌ Erreur track opération: $e');
       return '';
     }
   }
@@ -245,7 +245,7 @@ class MonitoringService {
         },
       );
     } catch (e) {
-      print('❌ Erreur fin opération: $e');
+      LogConfig.logError('❌ Erreur fin opération: $e');
     }
   }
 
@@ -333,7 +333,7 @@ class MonitoringService {
         },
       );
     } catch (e) {
-      print('❌ Erreur enregistrement métrique: $e');
+      LogConfig.logError('❌ Erreur enregistrement métrique: $e');
     }
   }
 
@@ -343,9 +343,9 @@ class MonitoringService {
 
     try {
       await LoggingService.instance.forceFlush();
-      print('📤 Flush des logs terminé');
+      LogConfig.logInfo('📤 Flush des logs terminé');
     } catch (e) {
-      print('❌ Erreur flush logs: $e');
+      LogConfig.logError('❌ Erreur flush logs: $e');
     }
   }
 
@@ -384,7 +384,7 @@ class MonitoringService {
         },
       };
     } catch (e) {
-      print('❌ Erreur génération rapport santé: $e');
+      LogConfig.logError('❌ Erreur génération rapport santé: $e');
       return {
         'status': 'error',
         'error': e.toString(),
@@ -406,9 +406,9 @@ class MonitoringService {
         _performHealthCheck();
       });
 
-      print('🔄 Tâches de maintenance démarrées');
+      LogConfig.logInfo('🔄 Tâches de maintenance démarrées');
     } catch (e) {
-      print('❌ Erreur démarrage tâches maintenance: $e');
+      LogConfig.logError('❌ Erreur démarrage tâches maintenance: $e');
     }
   }
 
@@ -420,10 +420,10 @@ class MonitoringService {
       _blocObserver.cleanupStaleOperations();
 
       if (!SecureConfig.kIsProduction) {
-        print('🧹 Nettoyage périodique effectué');
+        LogConfig.logInfo('🧹 Nettoyage périodique effectué');
       }
     } catch (e) {
-      print('❌ Erreur nettoyage périodique: $e');
+      LogConfig.logError('❌ Erreur nettoyage périodique: $e');
     }
   }
 
@@ -445,7 +445,7 @@ class MonitoringService {
         print('💊 Health check effectué: ${report['status']}');
       }
     } catch (e) {
-      print('❌ Erreur health check: $e');
+      LogConfig.logError('❌ Erreur health check: $e');
     }
   }
 
@@ -460,10 +460,10 @@ class MonitoringService {
           .select('id')
           .limit(1);
       
-      print('✅ Table app_logs existe');
+      LogConfig.logInfo('Table app_logs existe');
     } catch (e) {
-      print('⚠️ Table app_logs n\'existe pas ou erreur d\'accès: $e');
-      print('📝 Veuillez créer la table app_logs dans Supabase (voir documentation)');
+      LogConfig.logInfo('Table app_logs n\'existe pas ou erreur d\'accès: $e');
+      LogConfig.logInfo('📝 Veuillez créer la table app_logs dans Supabase (voir documentation)');
     }
   }
 
@@ -480,7 +480,7 @@ class MonitoringService {
     if (!_isInitialized) return;
 
     try {
-      print('🔍 Fermeture du système de monitoring...');
+      LogConfig.logInfo('🔍 Fermeture du système de monitoring...');
 
       // Arrêter les timers
       _cleanupTimer?.cancel();
@@ -498,9 +498,9 @@ class MonitoringService {
       PerformanceMonitoringService.instance.dispose();
 
       _isInitialized = false;
-      print('✅ MonitoringService fermé');
+      LogConfig.logInfo('MonitoringService fermé');
     } catch (e) {
-      print('❌ Erreur fermeture MonitoringService: $e');
+      LogConfig.logError('❌ Erreur fermeture MonitoringService: $e');
     }
   }
 }

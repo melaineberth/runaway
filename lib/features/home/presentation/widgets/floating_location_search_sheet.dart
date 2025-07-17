@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_keyboard_visibility/flutter_keyboard_visibility.dart';
 import 'package:hugeicons/hugeicons.dart';
+import 'package:runaway/core/helper/config/log_config.dart';
 import 'package:runaway/core/helper/extensions/extensions.dart';
 import 'package:runaway/core/utils/constant/constants.dart';
 import 'package:runaway/features/route_generator/data/services/geocoding_service.dart';
@@ -199,7 +200,7 @@ class _FloatingLocationSearchSheetState extends State<FloatingLocationSearchShee
         await _collapseForKeyboard(collapsedRatio);
       }
     } catch (e) {
-      debugPrint('❌ Erreur lors de l\'animation de la modal: $e');
+      LogConfig.logError('❌ Erreur lors de l\'animation de la modal: $e');
     } finally {
       if (mounted && !_isDisposed) {
         _isAnimatingSheet = false;
@@ -248,7 +249,7 @@ class _FloatingLocationSearchSheetState extends State<FloatingLocationSearchShee
         curve: AppleCurves.springyEaseOut,
       );
     } catch (e) {
-      debugPrint('❌ Erreur lors de l\'expansion: $e');
+      LogConfig.logError('❌ Erreur lors de l\'expansion: $e');
     } finally {
       if (mounted && !_isDisposed) {
         _isAnimatingSheet = false;
@@ -269,7 +270,7 @@ class _FloatingLocationSearchSheetState extends State<FloatingLocationSearchShee
         curve: AppleCurves.easeInOutQuart,
       );
     } catch (e) {
-      debugPrint('❌ Erreur lors de la réduction: $e');
+      LogConfig.logError('❌ Erreur lors de la réduction: $e');
     } finally {
       if (mounted && !_isDisposed) {
         _isAnimatingSheet = false;
@@ -332,7 +333,7 @@ class _FloatingLocationSearchSheetState extends State<FloatingLocationSearchShee
     if (_isDisposed || !mounted) return;
     
     try {
-      print('🔍 Début de recherche pour: "$value"');
+      LogConfig.logInfo('🔍 Début de recherche pour: "$value"');
       
       final results = await GeocodingService.searchAddress(
         value,
@@ -343,11 +344,11 @@ class _FloatingLocationSearchSheetState extends State<FloatingLocationSearchShee
 
       if (_isDisposed || !mounted) return;
 
-      print('🔍 Résultats reçus dans FloatingLocationSearchSheet: ${results.length}');
+      LogConfig.logInfo('🔍 Résultats reçus dans FloatingLocationSearchSheet: ${results.length}');
       
       // 🐛 DEBUG: Afficher tous les résultats
       for (int i = 0; i < results.length; i++) {
-        print('🔍 Résultat $i: ${results[i].placeName}');
+        LogConfig.logInfo('🔍 Résultat $i: ${results[i].placeName}');
       }
 
       setState(() {
@@ -355,11 +356,11 @@ class _FloatingLocationSearchSheetState extends State<FloatingLocationSearchShee
         _isLoading = false;
       });
 
-      print('🔍 _suggestions mis à jour avec ${_suggestions.length} éléments');
+      LogConfig.logInfo('🔍 _suggestions mis à jour avec ${_suggestions.length} éléments');
 
       _adjustSheetForNewSuggestions(results);
     } catch (e) {
-      debugPrint('❌ Erreur lors de la recherche: $e');
+      LogConfig.logError('❌ Erreur lors de la recherche: $e');
       if (mounted && !_isDisposed) {
         setState(() {
           _suggestions = [];

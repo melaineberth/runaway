@@ -3,6 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:runaway/core/helper/services/cache_service.dart';
 import 'package:runaway/core/helper/services/monitoring_service.dart';
 import 'package:runaway/features/route_generator/domain/models/saved_route.dart';
+import 'package:runaway/core/helper/config/log_config.dart';
 
 /// Service de cache optimisé pour les parcours
 class RouteCache {
@@ -34,7 +35,7 @@ class RouteCache {
       final routeData = jsonEncode(routeJson);
       
       if (routeData.length > maxRouteDataSize) {
-        print('⚠️ Route trop volumineuse pour le cache: ${routeData.length} bytes');
+        LogConfig.logInfo('Route trop volumineuse pour le cache: ${routeData.length} bytes');
         return;
       }
 
@@ -68,7 +69,7 @@ class RouteCache {
         },
       );
 
-      print('✅ Route mise en cache: $key (${routeData.length} bytes, ${stopwatch.elapsedMilliseconds}ms)');
+      LogConfig.logInfo('Route mise en cache: $key (${routeData.length} bytes, ${stopwatch.elapsedMilliseconds}ms)');
 
     } catch (e, stackTrace) {
       MonitoringService.instance.captureError(
@@ -77,7 +78,7 @@ class RouteCache {
         context: 'RouteCache.cacheRoute',
         extra: {'route_key': key, 'route_id': route.id},
       );
-      print('❌ Erreur cache route: $e');
+      LogConfig.logError('❌ Erreur cache route: $e');
     }
   }
 
@@ -122,7 +123,7 @@ class RouteCache {
         },
       );
 
-      print('✅ Route récupérée du cache: $key (${stopwatch.elapsedMilliseconds}ms)');
+      LogConfig.logInfo('Route récupérée du cache: $key (${stopwatch.elapsedMilliseconds}ms)');
       
       return route;
 
@@ -136,7 +137,7 @@ class RouteCache {
       
       // En cas d'erreur, supprimer l'entrée corrompue
       await _cacheService.remove('route_$key');
-      print('❌ Erreur récupération cache route $key: $e');
+      LogConfig.logError('❌ Erreur récupération cache route $key: $e');
       return null;
     }
   }
@@ -148,7 +149,7 @@ class RouteCache {
     );
     
     await Future.wait(futures);
-    print('✅ ${routes.length} routes mises en cache');
+    LogConfig.logInfo('${routes.length} routes mises en cache');
   }
 
   /// Récupère plusieurs parcours depuis le cache
@@ -170,7 +171,7 @@ class RouteCache {
   Future<void> removeRoute(String key) async {
     await _cacheService.remove('route_$key');
     await _updateCacheStatsOnRemoval(key);
-    print('🗑️ Route supprimée du cache: $key');
+    LogConfig.logInfo('🗑️ Route supprimée du cache: $key');
   }
 
   /// Nettoie le cache expiré
@@ -178,9 +179,9 @@ class RouteCache {
     try {
       await _cacheService.smartCleanup();
       await _cleanupOldCache();
-      print('🧹 Nettoyage du cache terminé');
+      LogConfig.logInfo('🧹 Nettoyage du cache terminé');
     } catch (e) {
-      print('❌ Erreur nettoyage cache: $e');
+      LogConfig.logError('❌ Erreur nettoyage cache: $e');
     }
   }
 
@@ -188,7 +189,7 @@ class RouteCache {
   Future<void> clearAllRoutes() async {
     await _cacheService.invalidate(pattern: 'route_');
     await _clearCacheStats();
-    print('🧹 Cache des parcours vidé');
+    LogConfig.logInfo('🧹 Cache des parcours vidé');
   }
 
   /// Vérifie si une route est en cache et valide
@@ -210,7 +211,7 @@ class RouteCache {
       final stats = jsonDecode(statsJson) as Map<String, dynamic>;
       return RouteCacheStats.fromJson(stats);
     } catch (e) {
-      print('❌ Erreur lecture stats cache: $e');
+      LogConfig.logError('❌ Erreur lecture stats cache: $e');
       return RouteCacheStats.empty();
     }
   }
@@ -255,7 +256,7 @@ class RouteCache {
       for (int i = 0; i < toRemove; i++) {
         await prefs.remove(keys[i]);
       }
-      print('🧹 ${toRemove} anciennes entrées supprimées du cache');
+      LogConfig.logInfo('🧹 ${toRemove} anciennes entrées supprimées du cache');
     }
   }
 

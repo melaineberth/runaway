@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
 import 'package:runaway/features/credits/data/services/iap_validation_service.dart';
 import 'package:runaway/features/credits/domain/models/credit_plan.dart';
+import 'package:runaway/core/helper/config/log_config.dart';
 
 class PaymentException implements Exception {
   final String message;
@@ -47,7 +48,7 @@ class IAPService {
 
     _isAvailable = await _iap.isAvailable();
     if (!_isAvailable) {
-      debugPrint('🚫 In-App Purchases non disponibles');
+      LogConfig.logInfo('🚫 In-App Purchases non disponibles');
       return;
     }
 
@@ -59,12 +60,12 @@ class IAPService {
       _onPurchaseUpdated,
       onDone: () => _subscription = null,
       onError: (error, stackTrace) {
-        debugPrint('❌ Erreur flux achats: $error');
+        LogConfig.logError('❌ Erreur flux achats: $error');
         _completeAllPendingWithError(PaymentException('Erreur système IAP'));
       },
     );
 
-    debugPrint('✅ IAP Service stream configuré');
+    LogConfig.logInfo('IAP Service stream configuré');
   }
 
   static Future<void> preloadProducts(List<CreditPlan> plans) async {
@@ -74,7 +75,7 @@ class IAPService {
     }
 
     final productIds = plans.map((p) => p.iapId).toSet();
-    debugPrint('🔍 Chargement des produits: $productIds');
+    LogConfig.logInfo('🔍 Chargement des produits: $productIds');
 
     final response = await _iap.queryProductDetails(productIds);
 
@@ -92,10 +93,10 @@ class IAPService {
 
     final missingProducts = productIds.where((id) => !_products.containsKey(id)).toList();
     if (missingProducts.isNotEmpty) {
-      debugPrint('⚠️ Produits manquants: $missingProducts');
+      LogConfig.logInfo('Produits manquants: $missingProducts');
     }
 
-    debugPrint('✅ ${_products.length} produits chargés');
+    LogConfig.logInfo('${_products.length} produits chargés');
   }
 
   static Future<PurchaseResult> makePurchase(CreditPlan plan) async {
@@ -131,7 +132,7 @@ class IAPService {
         throw const PaymentException('Impossible de lancer le processus d\'achat');
       }
 
-      debugPrint('✅ Processus d\'achat lancé pour ${plan.iapId}');
+      LogConfig.logInfo('Processus d\'achat lancé pour ${plan.iapId}');
 
       return await completer.future.timeout(
         const Duration(minutes: 2),
@@ -161,7 +162,7 @@ class IAPService {
     }
     
     if (keysToRemove.isNotEmpty) {
-      debugPrint('🧹 Nettoyé ${keysToRemove.length} pending purchases pour $productId');
+      LogConfig.logInfo('🧹 Nettoyé ${keysToRemove.length} pending purchases pour $productId');
     }
   }
 
@@ -172,15 +173,15 @@ class IAPService {
   }
 
   static Future<void> _processPurchase(PurchaseDetails details) async {
-    debugPrint('📦 Traitement achat: ${details.productID} - Status: ${details.status}');
+    LogConfig.logInfo('📦 Traitement achat: ${details.productID} - Status: ${details.status}');
 
     switch (details.status) {
       case PurchaseStatus.pending:
-        debugPrint('⏳ Achat en attente: ${details.productID}');
+        LogConfig.logInfo('⏳ Achat en attente: ${details.productID}');
         break;
 
       case PurchaseStatus.error:
-        debugPrint('❌ Erreur achat: ${details.error?.message}');
+        LogConfig.logError('❌ Erreur achat: ${details.error?.message}');
         _completePurchaseWithError(
           details.productID,
           PaymentException(
@@ -191,7 +192,7 @@ class IAPService {
         break;
 
       case PurchaseStatus.canceled:
-        debugPrint('🚫 Achat annulé: ${details.productID}');
+        LogConfig.logInfo('🚫 Achat annulé: ${details.productID}');
         _completePurchaseWithResult(
           details.productID,
           PurchaseResult.canceled(),
@@ -211,7 +212,7 @@ class IAPService {
   // CORRIGÉE - Traiter les "restored" comme des achats si on les attend
   static Future<void> _handleRestoredPurchase(PurchaseDetails details) async {
     try {
-      debugPrint('🔄 Gestion achat restauré: ${details.productID}');
+      LogConfig.logInfo('🔄 Gestion achat restauré: ${details.productID}');
       
       final hasPendingPurchase = _pendingPurchases.keys
           .any((key) => key.startsWith(details.productID));
@@ -227,12 +228,12 @@ class IAPService {
         
         if (details.pendingCompletePurchase) {
           await _iap.completePurchase(details);
-          debugPrint('✅ Achat restauré complété côté store');
+          LogConfig.logInfo('Achat restauré complété côté store');
         }
       }
 
     } catch (e) {
-      debugPrint('❌ Erreur gestion achat restauré: $e');
+      LogConfig.logError('❌ Erreur gestion achat restauré: $e');
       if (details.pendingCompletePurchase) {
         await _iap.completePurchase(details);
       }
@@ -241,7 +242,7 @@ class IAPService {
 
   static Future<void> _handleSuccessfulPurchase(PurchaseDetails details) async {
     try {
-      debugPrint('💳 Validation nouvel achat: ${details.productID}');
+      LogConfig.logInfo('💳 Validation nouvel achat: ${details.productID}');
 
       final verificationData = _extractVerificationData(details);
       final transactionId = details.purchaseID ?? 
@@ -255,11 +256,11 @@ class IAPService {
 
       // CORRECTION : Si déjà traité, considérer comme succès mais sans nouveaux crédits
       if (validationResult.alreadyProcessed) {
-        debugPrint('⚠️ Transaction déjà traitée - Succès sans nouveaux crédits');
+        LogConfig.logInfo('Transaction déjà traitée - Succès sans nouveaux crédits');
         
         if (details.pendingCompletePurchase) {
           await _iap.completePurchase(details);
-          debugPrint('✅ Achat complété côté store (déjà traité)');
+          LogConfig.logInfo('Achat complété côté store (déjà traité)');
         }
 
         _completePurchaseWithResult(
@@ -272,11 +273,11 @@ class IAPService {
         return; // IMPORTANT : Arrêter ici, ne pas appeler _handleRestoredPurchase
       }
 
-      debugPrint('✅ Validation serveur OK: ${validationResult.creditsAdded} crédits');
+      LogConfig.logInfo('Validation serveur OK: ${validationResult.creditsAdded} crédits');
 
       if (details.pendingCompletePurchase) {
         await _iap.completePurchase(details);
-        debugPrint('✅ Achat complété côté store');
+        LogConfig.logInfo('Achat complété côté store');
       }
 
       _completePurchaseWithResult(
@@ -288,7 +289,7 @@ class IAPService {
       );
 
     } catch (e) {
-      debugPrint('❌ Erreur validation: $e');
+      LogConfig.logError('❌ Erreur validation: $e');
       
       if (details.pendingCompletePurchase) {
         await _iap.completePurchase(details);
@@ -319,9 +320,9 @@ class IAPService {
     await _ensureInitialized();
     if (!_isAvailable) return;
 
-    debugPrint('🧹 Nettoyage simple des pending purchases...');
+    LogConfig.logInfo('🧹 Nettoyage simple des pending purchases...');
     _pendingPurchases.clear();
-    debugPrint('✅ Nettoyage simple terminé');
+    LogConfig.logInfo('Nettoyage simple terminé');
   }
 
   static Future<void> restorePurchasesExplicitly() async {
@@ -330,10 +331,10 @@ class IAPService {
       throw const PaymentException('Les achats in-app ne sont pas disponibles');
     }
 
-    debugPrint('🔄 Restoration explicite des achats');
+    LogConfig.logInfo('🔄 Restoration explicite des achats');
     _pendingPurchases.clear();
     await _iap.restorePurchases();
-    debugPrint('✅ Restoration explicite terminée');
+    LogConfig.logInfo('Restoration explicite terminée');
   }
 
   static void _completePurchaseWithResult(String productId, PurchaseResult result) {
@@ -381,7 +382,7 @@ class IAPService {
       throw const PaymentException('Les achats in-app ne sont pas disponibles');
     }
 
-    debugPrint('🔄 Restoration des achats');
+    LogConfig.logInfo('🔄 Restoration des achats');
     await _iap.restorePurchases();
   }
 }

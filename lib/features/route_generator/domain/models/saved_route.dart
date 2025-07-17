@@ -1,9 +1,8 @@
-// lib/features/route_generator/domain/models/saved_route.dart
-
 import 'dart:math' as math;
 import 'package:equatable/equatable.dart';
 import 'route_parameters.dart';
 import 'activity_type.dart';
+import 'package:runaway/core/helper/config/log_config.dart';
 
 /// Modèle pour un parcours sauvegardé
 class SavedRoute extends Equatable {
@@ -91,7 +90,7 @@ class SavedRoute extends Equatable {
         createdAt = DateTime.parse(createdAtString).toLocal(); // 🔧 Forcer temps local
         print('🕒 Date parsée depuis JSON: $createdAtString -> $createdAt');
       } catch (e) {
-        print('❌ Erreur parsing created_at: $e');
+        LogConfig.logError('❌ Erreur parsing created_at: $e');
         createdAt = DateTime.now().toLocal(); // Fallback sécurisé
       }
       
@@ -100,7 +99,7 @@ class SavedRoute extends Equatable {
           final lastUsedAtString = json['last_used_at'] as String;
           lastUsedAt = DateTime.parse(lastUsedAtString).toLocal(); // 🔧 Forcer temps local
         } catch (e) {
-          print('❌ Erreur parsing last_used_at: $e');
+          LogConfig.logError('❌ Erreur parsing last_used_at: $e');
           lastUsedAt = null;
         }
       }
@@ -119,7 +118,7 @@ class SavedRoute extends Equatable {
         imageUrl: json['image_url'] as String?,
       );
     } catch (e) {
-      print('❌ Erreur parsing SavedRoute complète: $e');
+      LogConfig.logError('❌ Erreur parsing SavedRoute complète: $e');
       print('📄 JSON problématique: $json');
       throw FormatException('Erreur parsing SavedRoute: $e');
     }
@@ -184,7 +183,7 @@ class SavedRoute extends Equatable {
             
       // 🔧 Gestion robuste des différences négatives
       if (difference.isNegative) {
-        print('⚠️ Différence négative: ${difference.inMinutes}min - Probablement un problème de timezone');
+        LogConfig.logInfo('Différence négative: ${difference.inMinutes}min - Probablement un problème de timezone');
         // Si c'est une petite différence négative, considérer comme "à l'instant"  
         if (difference.inMinutes.abs() < 60) {
           return 'à l\'instant';
@@ -205,7 +204,7 @@ class SavedRoute extends Equatable {
         return 'à l\'instant';
       }
     } catch (e) {
-      print('❌ Erreur calcul timeAgo: $e');
+      LogConfig.logError('❌ Erreur calcul timeAgo: $e');
       return 'récent';
     }
   }

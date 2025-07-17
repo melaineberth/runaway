@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:runaway/core/helper/config/log_config.dart';
 import 'package:runaway/core/helper/extensions/extensions.dart';
 import 'package:runaway/core/blocs/app_data/app_data_bloc.dart';
 import 'package:runaway/core/blocs/app_data/app_data_event.dart';
@@ -137,7 +138,7 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
 
   /// Charge les parcours sauvegardés
   void _loadSavedRoutes() {
-    print('🔄 Chargement manuel des parcours via AppDataBloc');
+    LogConfig.logInfo('🔄 Chargement manuel des parcours via AppDataBloc');
     context.appDataBloc.add(const HistoricDataRefreshRequested());
   }
 
@@ -146,9 +147,9 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
     try {
       final confirmed = await _showDeleteConfirmationDialog(route.name);
       if (confirmed != true) return;
-      
-      print('🗑️ Suppression via AppDataBloc: ${route.name}');
-            
+
+      LogConfig.logSuccess('🗑️ Suppression via AppDataBloc: ${route.name}');
+                  
       // Afficher un message de confirmation
       if (mounted) {
         context.appDataBloc.add(SavedRouteDeletedFromAppData(route.id));
@@ -156,13 +157,13 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
         showTopSnackBar(
           Overlay.of(context),
           TopSnackBar(
-            title: 'Parcours "${route.name}" supprimé',
+            title: 'Parcours supprimé avec succès',
           ),
         );
       }
       
     } catch (e) {
-      print('❌ Erreur suppression: $e');
+      LogConfig.logError('❌ Erreur suppression: $e');
       
       if (mounted) {
         showTopSnackBar(
@@ -190,10 +191,10 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
       // Feedback haptique
       HapticFeedback.lightImpact();
       
-      print('✅ Navigation vers HomeScreen avec parcours: ${route.name}');
+      LogConfig.logInfo('Navigation vers HomeScreen avec parcours: ${route.name}');
 
     } catch (e) {
-      print('❌ Erreur affichage parcours: $e');
+      LogConfig.logError('❌ Erreur affichage parcours: $e');
       if (mounted) {
         showTopSnackBar(
           Overlay.of(context),
@@ -208,7 +209,7 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
 
   Future<void> _renameRoute(SavedRoute route, String newName) async {
     try {
-      print('✏️ Renommage via HistoricScreen: ${route.id} -> $newName');
+      LogConfig.logInfo('✏️ Renommage via HistoricScreen: ${route.id} -> $newName');
       
       // Validation côté écran également
       if (newName.trim().isEmpty) {
@@ -224,7 +225,7 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
       // Feedback haptique de succès
       HapticFeedback.lightImpact();
       
-      print('✅ Événement de renommage envoyé avec succès');
+      LogConfig.logInfo('Événement de renommage envoyé avec succès');
 
       if (mounted) {
       showTopSnackBar(
@@ -236,7 +237,7 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
     }
 
     } catch (e) {
-      print('❌ Erreur renommage: $e');
+      LogConfig.logError('❌ Erreur renommage: $e');
       
       // Feedback haptique d'erreur
       HapticFeedback.mediumImpact();
@@ -273,7 +274,6 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
             HapticFeedback.mediumImpact();
             
             Navigator.of(context).pop(true);
-            print('🗑️ Suppression confirmée via AppDataBloc');
           },
         );
       },

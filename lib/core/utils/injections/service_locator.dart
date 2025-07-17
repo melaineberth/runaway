@@ -9,7 +9,6 @@ import 'package:runaway/core/blocs/theme_bloc/theme_bloc.dart';
 import 'package:runaway/core/helper/services/app_data_initialization_service.dart';
 import 'package:runaway/core/helper/services/connectivity_service.dart';
 import 'package:runaway/core/helper/services/guest_limitation_service.dart';
-import 'package:runaway/features/activity/data/repositories/activity_repository.dart';
 import 'package:runaway/features/auth/data/repositories/auth_repository.dart';
 import 'package:runaway/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:runaway/features/auth/presentation/bloc/auth_event.dart';
@@ -21,13 +20,13 @@ import 'package:runaway/features/home/data/services/map_state_service.dart';
 import 'package:runaway/features/home/presentation/blocs/route_parameters_bloc.dart';
 import 'package:runaway/features/route_generator/data/repositories/routes_repository.dart';
 import 'package:runaway/features/route_generator/presentation/blocs/route_generation/route_generation_bloc.dart';
+import 'package:runaway/core/helper/config/log_config.dart';
 
 final GetIt sl = GetIt.instance;
 
 class ServiceLocator {
   static Future<void> init() async {
     // ===== REPOSITORIES =====
-    sl.registerLazySingleton<ActivityRepository>(() => ActivityRepository());
     sl.registerLazySingleton<RoutesRepository>(() => RoutesRepository());
     sl.registerLazySingleton<AuthRepository>(() => AuthRepository());
     sl.registerLazySingleton<MapStateService>(() => MapStateService());
@@ -41,7 +40,7 @@ class ServiceLocator {
 
     // 🆕 CreditVerificationService - Service dédié aux crédits
     sl.registerLazySingleton<CreditVerificationService>(() {
-      print('🔧 Création du CreditVerificationService...');
+      LogConfig.logInfo('🔧 Création du CreditVerificationService...');
       return CreditVerificationService(
         creditsRepository: sl<CreditsRepository>(),
         creditsBloc: sl<CreditsBloc>(),
@@ -55,7 +54,7 @@ class ServiceLocator {
 
     // Ne pas réinitialiser si déjà fait
     if (!ConnectivityService.instance.isInitialized) {
-      print('⚠️ ConnectivityService pas encore initialisé - initialisation de secours');
+      LogConfig.logInfo('ConnectivityService pas encore initialisé - initialisation de secours');
       await ConnectivityService.instance.initialize();
     }
 
@@ -72,9 +71,8 @@ class ServiceLocator {
 
     // AppDataBloc (avec CreditsRepository)
     sl.registerLazySingleton<AppDataBloc>(() {
-      print('🔧 Création du AppDataBloc avec support crédits...');
+      LogConfig.logInfo('🔧 Création du AppDataBloc avec support crédits...');
       final appDataBloc = AppDataBloc(
-        activityRepository: sl<ActivityRepository>(),
         routesRepository: sl<RoutesRepository>(),
         mapStateService: sl<MapStateService>(), 
         creditsRepository: sl<CreditsRepository>(), // 🆕 Ajout
@@ -82,25 +80,25 @@ class ServiceLocator {
       
       // Initialiser le service IMMÉDIATEMENT après création du BLoC
       AppDataInitializationService.initialize(appDataBloc);
-      print('✅ AppDataInitializationService initialisé avec support crédits');
+      LogConfig.logInfo('AppDataInitializationService initialisé avec support crédits');
       
       return appDataBloc;
     });
 
     // 🆕 CreditsBloc (avec référence à AppDataBloc)
     sl.registerLazySingleton<CreditsBloc>(() {
-      print('🔧 Création du CreditsBloc intégré...');
+      LogConfig.logInfo('🔧 Création du CreditsBloc intégré...');
       final creditsBloc = CreditsBloc(
         creditsRepository: sl<CreditsRepository>(),
         appDataBloc: sl<AppDataBloc>(), // 🆕 Injection du AppDataBloc
       );
-      print('✅ CreditsBloc créé avec intégration AppDataBloc');
+      LogConfig.logInfo('CreditsBloc créé avec intégration AppDataBloc');
       return creditsBloc;
     });
 
     // 🆕 AuthBloc utilise l'instance SINGLETON de CreditsBloc
     sl.registerLazySingleton<AuthBloc>(() {
-      print('🔧 Création du AuthBloc...');
+      LogConfig.logInfo('🔧 Création du AuthBloc...');
       final authBloc = AuthBloc(
         authRepository: sl<AuthRepository>(),
         creditsBloc: sl<CreditsBloc>(), // 🔑 Utiliser l'instance singleton
@@ -112,17 +110,17 @@ class ServiceLocator {
     });
 
     sl.registerLazySingleton<LocaleBloc>(() {
-      print('🔧 Création du LocaleBloc...');
+      LogConfig.logInfo('🔧 Création du LocaleBloc...');
       final localeBloc = LocaleBloc();
-      print('✅ LocaleBloc créé');
+      LogConfig.logInfo('LocaleBloc créé');
       localeBloc.add(const LocaleInitialized());
       return localeBloc;
     });
 
     sl.registerLazySingleton<ThemeBloc>(() {
-      print('🔧 Création du ThemeBloc...');
+      LogConfig.logInfo('🔧 Création du ThemeBloc...');
       final themeBloc = ThemeBloc();
-      print('✅ ThemeBloc créé');
+      LogConfig.logInfo('ThemeBloc créé');
       themeBloc.add(const ThemeInitialized());
       return themeBloc;
     });
@@ -137,13 +135,13 @@ class ServiceLocator {
 
     // 🆕 RouteGenerationBloc utilise l'instance SINGLETON de CreditsBloc
     sl.registerFactory<RouteGenerationBloc>(() {
-      print('🔧 Création RouteGenerationBloc refactorisé...');
+      LogConfig.logInfo('🔧 Création RouteGenerationBloc refactorisé...');
       final bloc = RouteGenerationBloc(
         routesRepository: sl<RoutesRepository>(),
         creditService: sl<CreditVerificationService>(), // 🆕 Service dédié
         appDataBloc: sl<AppDataBloc>(),
       );
-      print('✅ RouteGenerationBloc refactorisé créé');
+      LogConfig.logInfo('RouteGenerationBloc refactorisé créé');
       return bloc;
     });
   }
@@ -153,9 +151,9 @@ class ServiceLocator {
     try {
       final appDataBloc = sl<AppDataBloc>();
       appDataBloc.add(const AppDataPreloadRequested());
-      print('🚀 Pré-chargement des données déclenché');
+      LogConfig.logInfo('🚀 Pré-chargement des données déclenché');
     } catch (e) {
-      print('❌ Erreur initialisation données: $e');
+      LogConfig.logError('❌ Erreur initialisation données: $e');
     }
   }
 
@@ -164,9 +162,9 @@ class ServiceLocator {
     try {
       final appDataBloc = sl<AppDataBloc>();
       appDataBloc.add(const CreditDataPreloadRequested());
-      print('💳 Pré-chargement des crédits déclenché');
+      LogConfig.logInfo('💳 Pré-chargement des crédits déclenché');
     } catch (e) {
-      print('❌ Erreur initialisation crédits: $e');
+      LogConfig.logError('❌ Erreur initialisation crédits: $e');
     }
   }
 
@@ -179,9 +177,9 @@ class ServiceLocator {
       appDataBloc.add(const AppDataClearRequested());
       creditsBloc.add(const CreditsReset());
       
-      print('🗑️ Données utilisateur nettoyées');
+      LogConfig.logInfo('🗑️ Données utilisateur nettoyées');
     } catch (e) {
-      print('❌ Erreur nettoyage données: $e');
+      LogConfig.logError('❌ Erreur nettoyage données: $e');
     }
   }
 
@@ -190,9 +188,9 @@ class ServiceLocator {
     try {
       final appDataBloc = sl<AppDataBloc>();
       appDataBloc.add(const AppDataRefreshRequested());
-      print('🔄 Rafraîchissement complet déclenché');
+      LogConfig.logInfo('🔄 Rafraîchissement complet déclenché');
     } catch (e) {
-      print('❌ Erreur rafraîchissement: $e');
+      LogConfig.logError('❌ Erreur rafraîchissement: $e');
     }
   }
 
@@ -202,9 +200,9 @@ class ServiceLocator {
 
   /// Méthode de nettoyage pour les tests
   static Future<void> reset() async {
-    print('🧹 Reset du Service Locator...');
+    LogConfig.logInfo('🧹 Reset du Service Locator...');
     await sl.reset();
-    print('✅ Service Locator reseté');
+    LogConfig.logInfo('Service Locator reseté');
   }
 }
 
@@ -218,7 +216,6 @@ extension ServiceAccess on Object {
   CreditsRepository get creditsRepository => sl<CreditsRepository>();
   RoutesRepository get routesRepository => sl<RoutesRepository>();
   AuthRepository get authRepository => sl<AuthRepository>();
-  ActivityRepository get activityRepository => sl<ActivityRepository>();
   
   // Blocs singleton
   AppDataBloc get appDataBloc => sl<AppDataBloc>();

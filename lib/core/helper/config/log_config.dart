@@ -54,27 +54,27 @@ class LogConfig {
   // 🔧 HELPERS pour les logs conditionnels
   static void logDebug(String message) {
     if (enableDebugLogs) {
-      print('🐛 $message');
+      LogConfig.logInfo('🐛 $message');
     }
   }
   
   static void logInfo(String message) {
     if (isVerboseLoggingEnabled) {
-      print('ℹ️ $message');
+      LogConfig.logInfo('ℹ️ $message');
     }
   }
   
   static void logWarning(String message) {
-    print('⚠️ $message');
+    LogConfig.logInfo('$message');
   }
   
   static void logError(String message) {
-    print('❌ $message');
+    LogConfig.logError('❌ $message');
   }
   
   static void logSuccess(String message) {
     if (isVerboseLoggingEnabled) {
-      print('✅ $message');
+      LogConfig.logInfo('$message');
     }
   }
   

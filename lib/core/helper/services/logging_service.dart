@@ -6,6 +6,7 @@ import 'package:runaway/core/helper/config/secure_config.dart';
 import 'package:runaway/core/helper/services/crash_reporting_service.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:runaway/core/helper/config/log_config.dart';
 
 /// Énumération des niveaux de log
 enum LogLevel {
@@ -82,12 +83,12 @@ class LoggingService {
   /// Initialise le service de logging
   Future<void> initialize() async {
     if (_isInitialized) {
-      print('⚠️ LoggingService déjà initialisé');
+      LogConfig.logInfo('LoggingService déjà initialisé');
       return;
     }
 
     try {
-      print('📝 Initialisation Logging Service...');
+      LogConfig.logInfo('📝 Initialisation Logging Service...');
 
       // Configuration du niveau minimum selon l'environnement
       _minimumLevel = _getMinimumLogLevel();
@@ -113,13 +114,13 @@ class LoggingService {
       }
 
       _isInitialized = true;
-      print('✅ Logging Service initialisé');
+      LogConfig.logInfo('Logging Service initialisé');
       
       // Log de test
       info('LoggingService', 'Service de logging initialisé avec succès');
       
     } catch (e, stackTrace) {
-      print('❌ Erreur initialisation Logging Service: $e');
+      LogConfig.logError('❌ Erreur initialisation Logging Service: $e');
       print('Stack trace: $stackTrace');
     }
   }
@@ -311,7 +312,7 @@ class LoggingService {
 
     } catch (e) {
       // Erreur de log simplifiée
-      print('❌ Logging error: $e');
+      LogConfig.logError('❌ Logging error: $e');
     }
   }
 
@@ -374,7 +375,7 @@ class LoggingService {
         level: _mapToSentryLevel(entry.level),
       );
     } catch (e) {
-      print('❌ Erreur envoi log vers Sentry: $e');
+      LogConfig.logError('❌ Erreur envoi log vers Sentry: $e');
     }
   }
 
@@ -388,7 +389,7 @@ class LoggingService {
         _flushToSupabase();
       }
     } catch (e) {
-      print('❌ Erreur ajout log au buffer: $e');
+      LogConfig.logError('❌ Erreur ajout log au buffer: $e');
     }
   }
 
@@ -421,7 +422,7 @@ class LoggingService {
           final mergedData = {...baseData, ...additionalData};
           return _makeSerializable(mergedData) ?? mergedData;
         } catch (e) {
-          print('❌ Erreur sérialisation log individual: $e');
+          LogConfig.logError('❌ Erreur sérialisation log individual: $e');
           // Retourner un log minimal en cas d'erreur
           return {
             'timestamp': log.timestamp.toIso8601String(),
@@ -441,10 +442,10 @@ class LoggingService {
         .insert(logData);
 
       if (!SecureConfig.kIsProduction) {
-        print('📤 ${logsToSend.length} log(s) envoyé(s) vers Supabase');
+        LogConfig.logInfo('📤 ${logsToSend.length} log(s) envoyé(s) vers Supabase');
       }
     } catch (e) {
-      print('❌ Erreur envoi logs vers Supabase: $e');
+      LogConfig.logError('❌ Erreur envoi logs vers Supabase: $e');
       // Remettre les logs dans le buffer si l'envoi échoue
       // (mais limiter pour éviter la consommation mémoire)
       if (_pendingLogs.length < 50) {
@@ -537,9 +538,9 @@ class LoggingService {
       _pendingLogs.clear();
       _isInitialized = false;
       
-      print('✅ LoggingService fermé');
+      LogConfig.logInfo('LoggingService fermé');
     } catch (e) {
-      print('❌ Erreur fermeture LoggingService: $e');
+      LogConfig.logError('❌ Erreur fermeture LoggingService: $e');
     }
   }
 }

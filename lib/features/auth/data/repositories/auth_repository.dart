@@ -13,6 +13,7 @@ import 'package:runaway/core/helper/services/monitoring_service.dart';
 import 'package:runaway/features/auth/domain/models/profile.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' hide AuthException;
+import 'package:runaway/core/helper/config/log_config.dart';
 
 class AuthRepository {
   final SupabaseClient _supabase = Supabase.instance.client;
@@ -48,7 +49,7 @@ class AuthRepository {
       );
       
       if (resp.user != null) {
-        print('✅ Inscription réussie pour: ${resp.user!.email}');
+        LogConfig.logInfo('Inscription réussie pour: ${resp.user!.email}');
 
         MonitoringService.instance.finishApiRequest(
           operationId,
@@ -67,11 +68,11 @@ class AuthRepository {
 
         return resp.user;
       } else {
-        print('❌ Inscription échouée: aucun utilisateur retourné');
+        LogConfig.logError('❌ Inscription échouée: aucun utilisateur retourné');
         throw SignUpException('Impossible de créer le compte');
       }
     } catch (e, stackTrace) {
-      print('❌ Erreur inscription: $e');
+      LogConfig.logError('❌ Erreur inscription: $e');
 
       MonitoringService.instance.finishApiRequest(
         operationId,
@@ -125,19 +126,19 @@ class AuthRepository {
         throw 'No ID Token found.';
       }
       
-      print('✅ Utilisateur Google obtenu: ${googleUser.email}');
+      LogConfig.logInfo('Utilisateur Google obtenu: ${googleUser.email}');
 
       // 2. Stocker temporairement les informations Google
       _tempGoogleFullName = googleUser.displayName;
       if (_tempGoogleFullName != null) {
-        print('📝 Nom Google stocké temporairement: $_tempGoogleFullName');
+        LogConfig.logInfo('📝 Nom Google stocké temporairement: $_tempGoogleFullName');
       }
             
       if (googleAuth.accessToken == null || googleAuth.idToken == null) {
         throw AuthException('Tokens Google manquants');
       }
       
-      print('✅ Tokens Google obtenus');
+      LogConfig.logInfo('Tokens Google obtenus');
       
       // 3. Connexion avec Supabase
       final AuthResponse response = await _supabase.auth.signInWithIdToken(
@@ -150,7 +151,7 @@ class AuthRepository {
         throw AuthException('Échec de la connexion avec Supabase');
       }
       
-      print('✅ Connexion Supabase réussie: ${response.user!.email}');
+      LogConfig.logInfo('Connexion Supabase réussie: ${response.user!.email}');
       
       // 4. Vérifier si un profil existe déjà (nouveau comportement)
       final existingProfile = await getProfile(response.user!.id, skipCleanup: true);
@@ -163,7 +164,7 @@ class AuthRepository {
       );
 
       if (existingProfile != null && existingProfile.isComplete) {
-        print('✅ Profil Google existant trouvé: ${existingProfile.username}');
+        LogConfig.logInfo('Profil Google existant trouvé: ${existingProfile.username}');
 
         // 🆕 Métrique business - utilisateur existant
         MonitoringService.instance.recordMetric(
@@ -191,11 +192,11 @@ class AuthRepository {
       );
       
       // 5. Pour les nouveaux utilisateurs, retourner null pour forcer l'onboarding
-      print('📝 Nouveau compte Google - sera dirigé vers l\'onboarding');
+      LogConfig.logInfo('📝 Nouveau compte Google - sera dirigé vers l\'onboarding');
       return null;
       
     } catch (e, stackTrace) {
-      print('❌ Erreur Google Sign-In: $e');
+      LogConfig.logError('❌ Erreur Google Sign-In: $e');
 
       // 🆕 Monitoring d'erreur
       MonitoringService.instance.finishApiRequest(
@@ -261,20 +262,20 @@ class AuthRepository {
         nonce: nonce,
       );
       
-      print('✅ Credentials Apple obtenus');
+      LogConfig.logInfo('Credentials Apple obtenus');
 
       // 4. Stocker temporairement les informations de nom Apple
       if (credential.givenName != null || credential.familyName != null) {
         final fullName = '${credential.givenName ?? ''} ${credential.familyName ?? ''}'.trim();
         if (fullName.isNotEmpty) {
           _tempAppleFullName = fullName;
-          print('📝 Nom Apple stocké temporairement: $fullName');
+          LogConfig.logInfo('📝 Nom Apple stocké temporairement: $fullName');
         } else {
           _tempAppleFullName = null;
         }
       } else {
         _tempAppleFullName = null;
-        print('⚠️ Aucun nom fourni par Apple');
+        LogConfig.logInfo('Aucun nom fourni par Apple');
       }
       
       // 5. Connexion avec Supabase
@@ -288,7 +289,7 @@ class AuthRepository {
         throw AuthException('Échec de la connexion avec Supabase');
       }
       
-      print('✅ Connexion Supabase réussie: ${response.user!.email}');
+      LogConfig.logInfo('Connexion Supabase réussie: ${response.user!.email}');
       
       // 6. Vérifier si un profil existe déjà
       final existingProfile = await getProfile(response.user!.id, skipCleanup: true);
@@ -301,7 +302,7 @@ class AuthRepository {
       );
 
       if (existingProfile != null && existingProfile.isComplete) {
-        print('✅ Profil Apple existant trouvé: ${existingProfile.username}');
+        LogConfig.logInfo('Profil Apple existant trouvé: ${existingProfile.username}');
 
         // 🆕 Métrique business - utilisateur existant
         MonitoringService.instance.recordMetric(
@@ -330,11 +331,11 @@ class AuthRepository {
       );
       
       // 7. Pour les nouveaux utilisateurs, retourner null pour forcer l'onboarding
-      print('📝 Nouveau compte Apple - sera dirigé vers l\'onboarding');
+      LogConfig.logInfo('📝 Nouveau compte Apple - sera dirigé vers l\'onboarding');
       return null;
       
     } catch (e, stackTrace) {
-      print('❌ Erreur Apple Sign-In: $e');
+      LogConfig.logError('❌ Erreur Apple Sign-In: $e');
 
       // 🆕 Monitoring d'erreur
       MonitoringService.instance.finishApiRequest(
@@ -397,7 +398,7 @@ class AuthRepository {
     );
 
     try {
-      print('👤 Complétion du profil pour: $userId');
+      LogConfig.logInfo('👤 Complétion du profil pour: $userId');
 
       // 1. Vérifier si le nom d'utilisateur est disponible
       if (!await isUsernameAvailable(username)) {
@@ -425,9 +426,9 @@ class AuthRepository {
           );
           
           avatarUrl = _supabase.storage.from('profile').getPublicUrl(filePath);
-          print('✅ Avatar uploadé: $avatarUrl');
+          LogConfig.logInfo('Avatar uploadé: $avatarUrl');
         } catch (e) {
-          print('⚠️ Erreur upload avatar (continuez sans avatar): $e');
+          LogConfig.logInfo('Erreur upload avatar (continuez sans avatar): $e');
           avatarUrl = null;
         }
       }
@@ -466,7 +467,7 @@ class AuthRepository {
       }
 
       final profile = Profile.fromJson(data);
-      print('✅ Profil complété: ${profile.username}');
+      LogConfig.logInfo('Profil complété: ${profile.username}');
 
       // 🆕 Monitoring de succès
       MonitoringService.instance.finishOperation(
@@ -494,13 +495,13 @@ class AuthRepository {
       if (avatar != null && avatarUrl == null) {
         // On peut retourner le profil mais signaler que l'avatar a échoué
         // L'UI pourra afficher un avertissement
-        print('⚠️ Profil créé mais avatar non uploadé');
+        LogConfig.logInfo('Profil créé mais avatar non uploadé');
       }
 
       return profile;
       
     } catch (e, stackTrace) {
-      print('❌ Erreur complétion profil: $e');
+      LogConfig.logError('❌ Erreur complétion profil: $e');
 
       // 🆕 Monitoring d'erreur
       MonitoringService.instance.finishOperation(
@@ -550,18 +551,18 @@ class AuthRepository {
       
       final user = resp.user;
       if (user == null) {
-        print('❌ Connexion échouée: aucun utilisateur retourné');
+        LogConfig.logError('❌ Connexion échouée: aucun utilisateur retourné');
         throw LoginException('Connexion échouée');
       }
       
-      print('✅ Connexion réussie: ${user.email}');
+      LogConfig.logInfo('Connexion réussie: ${user.email}');
       
       // Récupérer le profil
       final profile = await getProfile(user.id);
       if (profile == null) {
-        print('⚠️ Connexion réussie mais profil incomplet');
+        LogConfig.logInfo('Connexion réussie mais profil incomplet');
       } else {
-        print('✅ Profil récupéré: ${profile.username}');
+        LogConfig.logInfo('Profil récupéré: ${profile.username}');
       }
 
       MonitoringService.instance.finishApiRequest(
@@ -582,7 +583,7 @@ class AuthRepository {
       
       return profile;
     } catch (e, stackTrace) {
-      print('❌ Erreur connexion: $e');
+      LogConfig.logError('❌ Erreur connexion: $e');
 
       MonitoringService.instance.finishApiRequest(
         operationId,
@@ -607,7 +608,7 @@ class AuthRepository {
   // ---------- lecture profile ----------
   Future<Profile?> getProfile(String id, {bool skipCleanup = false}) async {
     try {
-      print('👤 Récupération profil: $id');
+      LogConfig.logInfo('👤 Récupération profil: $id');
       
       final data = await _supabase
           .from('profiles')
@@ -616,12 +617,12 @@ class AuthRepository {
           .maybeSingle();
       
       if (data == null) {
-        print('⚠️ Aucun profil trouvé pour: $id');
+        LogConfig.logInfo('Aucun profil trouvé pour: $id');
         
         // FIX: Ne nettoyer que si explicitement demandé
         // Cela permet aux nouveaux utilisateurs d'avoir une chance de compléter leur profil
         if (!skipCleanup) {
-          print('ℹ️ Profil non trouvé mais pas de nettoyage automatique');
+          LogConfig.logInfo('ℹ️ Profil non trouvé mais pas de nettoyage automatique');
         }
         return null;
       }
@@ -629,10 +630,10 @@ class AuthRepository {
       // FIX: L'email est maintenant directement dans les données de la DB
       final profile = Profile.fromJson(data);
       
-      print('✅ Profil récupéré: ${profile.username}');
+      LogConfig.logInfo('Profil récupéré: ${profile.username}');
       return profile;
     } catch (e) {
-      print('❌ Erreur récupération profil: $e');
+      LogConfig.logError('❌ Erreur récupération profil: $e');
       throw AuthExceptionHandler.handleSupabaseError(e);
     }
   }
@@ -642,9 +643,9 @@ class AuthRepository {
     try {
       print('👋 Déconnexion...');
       await _supabase.auth.signOut();
-      print('✅ Déconnexion réussie');
+      LogConfig.logInfo('Déconnexion réussie');
     } catch (e) {
-      print('❌ Erreur déconnexion: $e');
+      LogConfig.logError('❌ Erreur déconnexion: $e');
       throw AuthExceptionHandler.handleSupabaseError(e);
     }
   }
@@ -660,7 +661,7 @@ class AuthRepository {
       
       return result == null; // Disponible si aucun résultat
     } catch (e) {
-      print('❌ Erreur vérification username: $e');
+      LogConfig.logError('❌ Erreur vérification username: $e');
       // En cas d'erreur, considérer comme non disponible par sécurité
       return false;
     }
@@ -675,7 +676,7 @@ class AuthRepository {
     File? avatar,
   }) async {
     try {
-      print('📝 Mise à jour profil: $userId');
+      LogConfig.logInfo('📝 Mise à jour profil: $userId');
       
       final Map<String, dynamic> updates = {
         'updated_at': DateTime.now().toIso8601String(),
@@ -711,7 +712,7 @@ class AuthRepository {
           updates['avatar_url'] = '$baseUrl?v=$timestamp';
           
         } catch (e) {
-          print('⚠️ Erreur upload nouvel avatar: $e');
+          LogConfig.logInfo('Erreur upload nouvel avatar: $e');
           // Continuer sans mettre à jour l'avatar
         }
       }
@@ -730,7 +731,7 @@ class AuthRepository {
       // FIX: L'email est maintenant directement dans les données retournées
       final profile = Profile.fromJson(data);
       
-      print('✅ Profil mis à jour: ${profile.username}');
+      LogConfig.logInfo('Profil mis à jour: ${profile.username}');
 
       // 🆕 Métrique de mise à jour profil
       MonitoringService.instance.recordMetric(
@@ -746,7 +747,7 @@ class AuthRepository {
 
       return profile;
     } catch (e, stackTrace) {
-      print('❌ Erreur mise à jour profil: $e');
+      LogConfig.logError('❌ Erreur mise à jour profil: $e');
       if (e is AuthException) {
         MonitoringService.instance.captureError(
           e,
@@ -786,7 +787,7 @@ class AuthRepository {
              fullName != null && 
              fullName.isNotEmpty;
     } catch (e) {
-      print('❌ Erreur vérification profil: $e');
+      LogConfig.logError('❌ Erreur vérification profil: $e');
       return false;
     }
   }
@@ -797,7 +798,7 @@ class AuthRepository {
       final user = currentUser;
       if (user == null) return;
       
-      print('🧹 Nettoyage compte corrompu: ${user.email}');
+      LogConfig.logInfo('🧹 Nettoyage compte corrompu: ${user.email}');
       
       // Supprimer le profil partiel s'il existe
       await _supabase
@@ -808,14 +809,14 @@ class AuthRepository {
       // Déconnecter l'utilisateur
       await logOut();
       
-      print('✅ Compte corrompu nettoyé');
+      LogConfig.logInfo('Compte corrompu nettoyé');
     } catch (e) {
-      print('❌ Erreur nettoyage compte: $e');
+      LogConfig.logError('❌ Erreur nettoyage compte: $e');
       // Forcer la déconnexion même en cas d'erreur
       try {
         await logOut();
       } catch (logoutError) {
-        print('❌ Erreur déconnexion forcée: $logoutError');
+        LogConfig.logError('❌ Erreur déconnexion forcée: $logoutError');
       }
     }
   }
@@ -843,7 +844,7 @@ class AuthRepository {
       
       return false; // Compte récent sans profil = normal
     } catch (e) {
-      print('❌ Erreur vérification corruption: $e');
+      LogConfig.logError('❌ Erreur vérification corruption: $e');
       return false;
     }
   }
@@ -856,7 +857,7 @@ class AuthRepository {
         throw SessionException('Aucun utilisateur connecté');
       }
       
-      print('🗑️ Suppression compte: ${user.id}');
+      LogConfig.logInfo('🗑️ Suppression compte: ${user.id}');
       
       // Supprimer d'abord le profil
       await _supabase
@@ -871,16 +872,16 @@ class AuthRepository {
             .remove(['profile/${user.id}']);
       } catch (e) {
         // Ignorer les erreurs de suppression de fichier
-        print('⚠️ Erreur suppression avatar: $e');
+        LogConfig.logInfo('Erreur suppression avatar: $e');
       }
       
       // Note: La suppression de l'utilisateur auth doit être faite côté serveur
       // Pour l'instant, on se contente de supprimer le profil et déconnecter
       await logOut();
       
-      print('✅ Compte supprimé');
+      LogConfig.logInfo('Compte supprimé');
     } catch (e) {
-      print('❌ Erreur suppression compte: $e');
+      LogConfig.logError('❌ Erreur suppression compte: $e');
       throw AuthExceptionHandler.handleSupabaseError(e);
     }
   }
@@ -926,10 +927,10 @@ class AuthRepository {
       // 1. D'abord, vérifier les données temporaires Apple/Google
       if (_tempAppleFullName != null && _tempAppleFullName!.isNotEmpty) {
         suggestedFullName = _tempAppleFullName;
-        print('📝 Récupération nom Apple temporaire: $suggestedFullName');
+        LogConfig.logInfo('📝 Récupération nom Apple temporaire: $suggestedFullName');
       } else if (_tempGoogleFullName != null && _tempGoogleFullName!.isNotEmpty) {
         suggestedFullName = _tempGoogleFullName;
-        print('📝 Récupération nom Google temporaire: $suggestedFullName');
+        LogConfig.logInfo('📝 Récupération nom Google temporaire: $suggestedFullName');
       }
       // 2. Sinon, essayer les métadonnées
       else {
@@ -955,7 +956,7 @@ class AuthRepository {
             final firstName = _capitalizeFirst(parts[0]);
             final lastName = _capitalizeFirst(parts[1]);
             suggestedFullName = '$firstName $lastName';
-            print('📝 Nom formaté depuis email: $suggestedFullName');
+            LogConfig.logInfo('📝 Nom formaté depuis email: $suggestedFullName');
           } else {
             // Un seul mot avec point à la fin
             suggestedFullName = _capitalizeFirst(emailPart.replaceAll('.', ''));
@@ -965,7 +966,7 @@ class AuthRepository {
           suggestedFullName = _capitalizeFirst(emailPart);
         }
         
-        print('📝 Fallback nom depuis email: $suggestedFullName');
+        LogConfig.logInfo('📝 Fallback nom depuis email: $suggestedFullName');
       }
       
       return {
@@ -973,7 +974,7 @@ class AuthRepository {
         'email': user.email,
       };
     } catch (e) {
-      print('⚠️ Erreur récupération infos sociales: $e');
+      LogConfig.logInfo('Erreur récupération infos sociales: $e');
       return {};
     }
   }
@@ -995,10 +996,10 @@ class AuthRepository {
       // 1. D'abord, vérifier les données temporaires Apple/Google
       if (_tempAppleFullName != null && _tempAppleFullName!.isNotEmpty) {
         baseName = _tempAppleFullName!;
-        print('📝 Utilisation nom Apple temporaire: $baseName');
+        LogConfig.logInfo('📝 Utilisation nom Apple temporaire: $baseName');
       } else if (_tempGoogleFullName != null && _tempGoogleFullName!.isNotEmpty) {
         baseName = _tempGoogleFullName!;
-        print('📝 Utilisation nom Google temporaire: $baseName');
+        LogConfig.logInfo('📝 Utilisation nom Google temporaire: $baseName');
       }
       // 2. Sinon, essayer les métadonnées utilisateur
       else {
@@ -1016,7 +1017,7 @@ class AuthRepository {
       if (baseName == 'user' && user.email != null) {
         final emailPart = user.email!.split('@').first;
         baseName = emailPart;
-        print('📝 Utilisation email comme base: $baseName');
+        LogConfig.logInfo('📝 Utilisation email comme base: $baseName');
       }
       
       // 4. Générer username unique et nettoyer les données temporaires après usage
@@ -1028,7 +1029,7 @@ class AuthRepository {
       
       return result;
     } catch (e) {
-      print('⚠️ Erreur suggestion username: $e');
+      LogConfig.logInfo('Erreur suggestion username: $e');
       // Nettoyer en cas d'erreur
       _tempAppleFullName = null;
       _tempGoogleFullName = null;
@@ -1053,7 +1054,7 @@ class AuthRepository {
             final lastNamePart = lastName.length > 5 ? lastName.substring(0, 5) : lastName;
             final suggestedUsername = '$firstName$lastNamePart';
             
-            print('📝 Username intelligent généré: $suggestedUsername ($firstName + $lastNamePart)');
+            LogConfig.logInfo('📝 Username intelligent généré: $suggestedUsername ($firstName + $lastNamePart)');
             
             // Nettoyer et vérifier la disponibilité
             String cleanUsername = suggestedUsername
@@ -1084,7 +1085,7 @@ class AuthRepository {
       return await _generateUniqueUsername(baseName);
       
     } catch (e) {
-      print('⚠️ Erreur génération username depuis email: $e');
+      LogConfig.logInfo('Erreur génération username depuis email: $e');
       return await _generateUniqueUsername(baseName);
     }
   }
@@ -1099,9 +1100,9 @@ class AuthRepository {
         redirectTo: '${SecureConfig.supabaseUrl}/auth/v1/verify?type=recovery',
       );
       
-      print('✅ Email de réinitialisation envoyé');
+      LogConfig.logInfo('Email de réinitialisation envoyé');
     } catch (e) {
-      print('❌ Erreur réinitialisation mot de passe: $e');
+      LogConfig.logError('❌ Erreur réinitialisation mot de passe: $e');
       throw AuthExceptionHandler.handleSupabaseError(e);
     }
   }
@@ -1116,10 +1117,10 @@ class AuthRepository {
         email: email.trim(),
       );
       
-      print('✅ Email de confirmation renvoyé avec succès');
+      LogConfig.logInfo('Email de confirmation renvoyé avec succès');
       print('📧 Response: ${response.toString()}');
     } catch (e) {
-      print('❌ Erreur renvoi email de confirmation: $e');
+      LogConfig.logError('❌ Erreur renvoi email de confirmation: $e');
       throw AuthExceptionHandler.handleSupabaseError(e);
     }
   }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:runaway/core/blocs/app_data/app_data_event.dart';
+import 'package:runaway/core/helper/config/log_config.dart';
 import 'package:runaway/core/utils/injections/bloc_provider_extension.dart';
 import 'package:runaway/core/widgets/conversion_listener.dart';
 import 'package:runaway/core/widgets/top_snackbar.dart';
@@ -204,7 +205,7 @@ class AuthWrapper extends StatelessWidget {
     return BlocListener<AuthBloc, AuthState>(
       listener: (context, authState) {
         // 🔧 CORRECTION: Ajouter des logs pour debug et éviter les actions redondantes
-        print('🔄 AuthWrapper: Changement d\'état - ${authState.runtimeType}');
+        LogConfig.logInfo('🔄 AuthWrapper: Changement d\'état - ${authState.runtimeType}');
         
         // Listener pour les changements d'état d'authentification
         if (authState is Unauthenticated) {
@@ -214,7 +215,7 @@ class AuthWrapper extends StatelessWidget {
             // Déclencher le nettoyage du cache via AppDataBloc
             context.appDataBloc.add(const AppDataClearRequested());
           } catch (e) {
-            print('❌ Erreur lors du nettoyage du cache: $e');
+            LogConfig.logError('❌ Erreur lors du nettoyage du cache: $e');
           }
           
           // Redirection vers l'accueil si on est sur une page protégée
@@ -229,7 +230,7 @@ class AuthWrapper extends StatelessWidget {
         
         if (authState is Authenticated) {
           // L'utilisateur vient de se connecter
-          print('✅ User authenticated: ${authState.profile.email}');
+          LogConfig.logInfo('User authenticated: ${authState.profile.email}');
           
           // 🔧 CORRECTION: Délai pour s'assurer que la navigation est stable
           Future.delayed(const Duration(milliseconds: 500), () {
@@ -237,7 +238,7 @@ class AuthWrapper extends StatelessWidget {
               try {
                 context.appDataBloc.add(const AppDataPreloadRequested());
               } catch (e) {
-                print('❌ Erreur lors du pré-chargement: $e');
+                LogConfig.logError('❌ Erreur lors du pré-chargement: $e');
               }
             }
           });
@@ -245,7 +246,7 @@ class AuthWrapper extends StatelessWidget {
         
         if (authState is AuthError) {
           // Erreur d'authentification, afficher un message
-          print('❌ Erreur d\'authentification: ${authState.message}');
+          LogConfig.logError('❌ Erreur d\'authentification: ${authState.message}');
           
           // 🔧 CORRECTION: Délai pour éviter les conflits avec la navigation
           Future.delayed(const Duration(milliseconds: 200), () {
@@ -263,7 +264,7 @@ class AuthWrapper extends StatelessWidget {
         
         // 🔧 CORRECTION: Gérer l'état de chargement
         if (authState is AuthLoading) {
-          print('⏳ Authentification en cours...');
+          LogConfig.logInfo('⏳ Authentification en cours...');
         }
       },
       child: child,

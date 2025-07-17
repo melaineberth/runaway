@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:runaway/core/helper/config/log_config.dart';
 import 'package:runaway/core/helper/config/secure_config.dart';
 
 class GeocodingService {
@@ -25,8 +26,8 @@ class GeocodingService {
         url += '&proximity=$longitude,$latitude';
       }
       
-      print('🔍 URL de recherche: $url');
-      print('🔍 Limite demandée: $limit');
+      LogConfig.logInfo('🔍 URL de recherche: $url');
+      LogConfig.logInfo('🔍 Limite demandée: $limit');
       
       final response = await http.get(Uri.parse(url));
       
@@ -34,11 +35,11 @@ class GeocodingService {
         final data = json.decode(response.body);
         final features = data['features'] as List;
         
-        print('🔍 Nombre de résultats reçus de Mapbox: ${features.length}');
-        print('🔍 Query: "$query"');
+        LogConfig.logInfo('🔍 Nombre de résultats reçus de Mapbox: ${features.length}');
+        LogConfig.logInfo('🔍 Query: "$query"');
         
         // 🐛 DEBUG: Afficher la réponse complète pour analyse
-        print('🔍 Réponse complète: ${json.encode(data)}');
+        LogConfig.logInfo('🔍 Réponse complète: ${json.encode(data)}');
         
         final suggestions = features.map((feature) => AddressSuggestion(
           id: feature['id'],
@@ -47,17 +48,17 @@ class GeocodingService {
           relevance: feature['relevance'].toDouble(),
         )).toList();
         
-        print('🔍 Nombre final de suggestions: ${suggestions.length}');
+        LogConfig.logInfo('🔍 Nombre final de suggestions: ${suggestions.length}');
         
         return suggestions;
       } else {
-        print('❌ Erreur HTTP: ${response.statusCode}');
-        print('❌ Response body: ${response.body}');
+        LogConfig.logError('❌ Erreur HTTP: ${response.statusCode}');
+        LogConfig.logError('❌ Response body: ${response.body}');
       }
       
       return [];
     } catch (e) {
-      print('❌ Erreur lors de la recherche d\'adresse: $e');
+      LogConfig.logError('❌ Erreur lors de la recherche d\'adresse: $e');
       return [];
     }
   }

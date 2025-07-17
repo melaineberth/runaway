@@ -1,6 +1,5 @@
 import 'package:equatable/equatable.dart';
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart';
-import 'package:runaway/features/activity/domain/models/activity_stats.dart';
 import 'package:runaway/features/route_generator/domain/models/route_parameters.dart';
 
 abstract class AppDataEvent extends Equatable {
@@ -30,48 +29,6 @@ class AppDataClearRequested extends AppDataEvent {
 /// 🆕 Synchronisation forcée avec bypass du cache
 class ForceDataSyncRequested extends AppDataEvent {
   const ForceDataSyncRequested();
-}
-
-// ===== ÉVÉNEMENTS ACTIVITÉ =====
-
-/// Demande le rafraîchissement des données d'activité uniquement
-class ActivityDataRefreshRequested extends AppDataEvent {
-  const ActivityDataRefreshRequested();
-}
-
-/// Ajout d'un objectif personnel
-class PersonalGoalAddedToAppData extends AppDataEvent {
-  final PersonalGoal goal;
-
-  const PersonalGoalAddedToAppData(this.goal);
-
-  @override
-  List<Object?> get props => [goal];
-}
-
-/// Mise à jour d'un objectif personnel
-class PersonalGoalUpdatedInAppData extends AppDataEvent {
-  final PersonalGoal goal;
-
-  const PersonalGoalUpdatedInAppData(this.goal);
-
-  @override
-  List<Object?> get props => [goal];
-}
-
-/// Suppression d'un objectif personnel
-class PersonalGoalDeletedFromAppData extends AppDataEvent {
-  final String goalId;
-
-  const PersonalGoalDeletedFromAppData(this.goalId);
-
-  @override
-  List<Object?> get props => [goalId];
-}
-
-/// Réinitialisation de tous les objectifs
-class PersonalGoalsResetInAppData extends AppDataEvent {
-  const PersonalGoalsResetInAppData();
 }
 
 // ===== ÉVÉNEMENTS HISTORIQUE =====

@@ -1,8 +1,8 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:runaway/core/helper/config/log_config.dart';
 import 'package:runaway/core/helper/extensions/monitoring_extensions.dart';
 import 'package:runaway/core/helper/services/monitoring_service.dart';
 import 'package:runaway/features/route_generator/data/services/screenshot_service.dart';
-import 'package:runaway/features/activity/data/repositories/activity_repository.dart';
 import 'package:runaway/features/credits/data/repositories/credits_repository.dart';
 import 'package:runaway/features/credits/data/services/iap_service.dart';
 import 'package:runaway/features/credits/domain/models/credit_plan.dart';
@@ -10,14 +10,12 @@ import 'package:runaway/features/credits/domain/models/credit_transaction.dart';
 import 'package:runaway/features/credits/domain/models/user_credits.dart';
 import 'package:runaway/features/home/data/services/map_state_service.dart';
 import 'package:runaway/features/route_generator/data/repositories/routes_repository.dart';
-import 'package:runaway/features/activity/domain/models/activity_stats.dart';
 import 'package:runaway/features/route_generator/domain/models/saved_route.dart';
 import 'app_data_event.dart';
 import 'app_data_state.dart';
 
 /// BLoC principal pour orchestrer le pré-chargement et la gestion des données de l'application
 class AppDataBloc extends Bloc<AppDataEvent, AppDataState> {
-  final ActivityRepository _activityRepository;
   final RoutesRepository _routesRepository;
   final MapStateService _mapStateService; // 🆕 Injection du service
   final CreditsRepository _creditsRepository; // 🆕 Ajout du repository crédits
@@ -43,30 +41,21 @@ class AppDataBloc extends Bloc<AppDataEvent, AppDataState> {
   DateTime? _lastFullSync;
 
   AppDataBloc({
-    required ActivityRepository activityRepository,
     required RoutesRepository routesRepository,
     required MapStateService mapStateService,
     required CreditsRepository creditsRepository, // 🆕 Paramètre requis
-  })  : _activityRepository = activityRepository,
-        _routesRepository = routesRepository,
+  })  : _routesRepository = routesRepository,
         _mapStateService = mapStateService,
         _creditsRepository = creditsRepository, // 🆕
         super(const AppDataState()) {
     on<AppDataPreloadRequested>(_onPreloadRequested);
     on<AppDataRefreshRequested>(_onRefreshRequested);
     on<AppDataClearRequested>(_onClearRequested);
-    on<ActivityDataRefreshRequested>(_onActivityDataRefresh);
     on<HistoricDataRefreshRequested>(_onHistoricDataRefresh);
     on<RouteAddedDataSync>(_onRouteAddedSync);
     on<RouteDeletedDataSync>(_onRouteDeletedSync);
     on<ForceDataSyncRequested>(_onForceDataSync);
     on<SavedRouteRenamedInAppData>(_onRouteRenamed);
-
-    // Handlers d'objectifs
-    on<PersonalGoalAddedToAppData>(_onGoalAdded);
-    on<PersonalGoalUpdatedInAppData>(_onGoalUpdated);
-    on<PersonalGoalDeletedFromAppData>(_onGoalDeleted);
-    on<PersonalGoalsResetInAppData>(_onGoalsReset);
 
     // Handlers pour les parcours
     on<SavedRouteAddedToAppData>(_onRouteAdded);
@@ -88,12 +77,12 @@ class AppDataBloc extends Bloc<AppDataEvent, AppDataState> {
     Emitter<AppDataState> emit,
   ) async {
     if (_isCreditSyncInProgress) {
-      print('⚠️ Sync crédits déjà en cours, abandon');
+      LogConfig.logInfo('⚠️ Sync crédits déjà en cours, abandon');
       return;
     }
 
     _isCreditSyncInProgress = true;
-    print('🚀 Pré-chargement des données de crédits...');
+    LogConfig.logInfo('🚀 Pré-chargement des données de crédits...');
 
     try {
       // Charger toutes les données de crédits en parallèle
@@ -117,10 +106,10 @@ class AppDataBloc extends Bloc<AppDataEvent, AppDataState> {
         lastError: null,
       ));
 
-      print('✅ Données de crédits pré-chargées: ${userCredits.availableCredits} crédits, ${creditPlans.length} plans, ${transactions.length} transactions');
+      LogConfig.logInfo('Données de crédits pré-chargées: ${userCredits.availableCredits} crédits, ${creditPlans.length} plans, ${transactions.length} transactions');
 
     } catch (e) {
-      print('❌ Erreur pré-chargement crédits: $e');
+      LogConfig.logError('❌ Erreur pré-chargement crédits: $e');
       emit(state.copyWith(
         lastError: 'Erreur lors du chargement des crédits: $e',
       ));
@@ -142,15 +131,15 @@ class AppDataBloc extends Bloc<AppDataEvent, AppDataState> {
     CreditUsageCompletedInAppData event,
     Emitter<AppDataState> emit,
   ) async {
-    print('💳 Synchronisation après utilisation de ${event.amount} crédits');
+    LogConfig.logInfo('Synchronisation après utilisation de ${event.amount} crédits');
     
     try {
       // Rafraîchir les données sans loading pour une UX fluide
       await _refreshCreditData(emit, showLoading: false);
       
-      print('✅ Synchronisation post-utilisation réussie');
+      LogConfig.logInfo('Synchronisation post-utilisation réussie');
     } catch (e) {
-      print('❌ Erreur synchronisation post-utilisation: $e');
+      LogConfig.logError('❌ Erreur synchronisation post-utilisation: $e');
       // Ne pas émettre d'erreur pour ne pas perturber l'UX
     }
   }
@@ -160,15 +149,15 @@ class AppDataBloc extends Bloc<AppDataEvent, AppDataState> {
     CreditPurchaseCompletedInAppData event,
     Emitter<AppDataState> emit,
   ) async {
-    print('💰 Synchronisation après achat de ${event.creditsAdded} crédits');
+    LogConfig.logInfo('Synchronisation après achat de ${event.creditsAdded} crédits');
     
     try {
       // Rafraîchir les données sans loading
       await _refreshCreditData(emit, showLoading: false);
       
-      print('✅ Synchronisation post-achat réussie');
+      LogConfig.logInfo('Synchronisation post-achat réussie');
     } catch (e) {
-      print('❌ Erreur synchronisation post-achat: $e');
+      LogConfig.logError('❌ Erreur synchronisation post-achat: $e');
     }
   }
 
@@ -186,9 +175,9 @@ class AppDataBloc extends Bloc<AppDataEvent, AppDataState> {
     emit(state.copyWith(userCredits: updatedCredits));
     
     if (event.isOptimistic) {
-      print('⚡ Mise à jour optimiste du solde: ${event.newBalance} crédits');
+      LogConfig.logInfo('Mise à jour optimiste du solde: ${event.newBalance} crédits');
     } else {
-      print('✅ Confirmation du solde: ${event.newBalance} crédits');
+      LogConfig.logInfo('Confirmation du solde: ${event.newBalance} crédits');
     }
   }
 
@@ -197,7 +186,7 @@ class AppDataBloc extends Bloc<AppDataEvent, AppDataState> {
     CreditDataClearRequested event,
     Emitter<AppDataState> emit,
   ) async {
-    print('🗑️ Nettoyage des données de crédits');
+    LogConfig.logInfo('🗑️ Nettoyage des données de crédits');
     
     emit(state.copyWith(
       userCredits: null,
@@ -217,7 +206,7 @@ class AppDataBloc extends Bloc<AppDataEvent, AppDataState> {
     // Vérifier le timing pour éviter les appels trop fréquents
     if (_lastCreditSync != null && 
         DateTime.now().difference(_lastCreditSync!) < _minSyncInterval) {
-      print('⏱️ Sync crédits trop récente, abandon');
+      LogConfig.logInfo('⏱️ Sync crédits trop récente, abandon');
       return;
     }
 
@@ -255,7 +244,7 @@ class AppDataBloc extends Bloc<AppDataEvent, AppDataState> {
   /// Charge les données de crédits depuis le repository
   Future<CreditDataResult?> _loadCreditData() async {
     try {
-      print('💳 Chargement des données de crédits...');
+      LogConfig.logInfo('Chargement des données de crédits...');
       
       final futures = await Future.wait([
         _creditsRepository.getUserCredits(),
@@ -270,9 +259,9 @@ class AppDataBloc extends Bloc<AppDataEvent, AppDataState> {
       // 🆕 Pré-charger les produits IAP pour les achats
       try {
         await IAPService.preloadProducts(creditPlans);
-        print('✅ Produits IAP pré-chargés pour ${creditPlans.length} plans');
+        LogConfig.logInfo('Produits IAP pré-chargés pour ${creditPlans.length} plans');
       } catch (e) {
-        print('⚠️ Erreur pré-chargement IAP: $e');
+        LogConfig.logInfo('Erreur pré-chargement IAP: $e');
         // Ne pas faire échouer le chargement pour autant
       }
 
@@ -282,7 +271,7 @@ class AppDataBloc extends Bloc<AppDataEvent, AppDataState> {
         transactions: transactions,
       );
     } catch (e) {
-      print('❌ Erreur chargement données crédits: $e');
+      LogConfig.logError('❌ Erreur chargement données crédits: $e');
       return null;
     }
   }
@@ -291,7 +280,7 @@ class AppDataBloc extends Bloc<AppDataEvent, AppDataState> {
     SavedRouteAddedToAppData event,
     Emitter<AppDataState> emit,
   ) async {
-    print('🚗 Sauvegarde de parcours via AppDataBloc: ${event.name}');
+    LogConfig.logInfo('Sauvegarde de parcours via AppDataBloc: ${event.name}');
 
     // 0️⃣ → signale le début
     emit(state.copyWith(isSavingRoute: true));
@@ -300,7 +289,7 @@ class AppDataBloc extends Bloc<AppDataEvent, AppDataState> {
       // 1. 📸 Capturer le screenshot de la carte
       String? screenshotUrl;
       try {
-        print('📸 Capture du screenshot...');
+        LogConfig.logInfo('Capture du screenshot...');
         screenshotUrl = await ScreenshotService.captureAndUploadMapSnapshot(
           liveMap: event.map,
           routeCoords: event.coordinates,
@@ -310,12 +299,12 @@ class AppDataBloc extends Bloc<AppDataEvent, AppDataState> {
         );
 
         if (screenshotUrl != null) {
-          print('✅ Screenshot capturé avec succès: $screenshotUrl');
+          LogConfig.logInfo('Screenshot capturé avec succès: $screenshotUrl');
         } else {
-          print('⚠️ Screenshot non capturé, sauvegarde sans image');
+          LogConfig.logInfo('Screenshot non capturé, sauvegarde sans image');
         }
       } catch (screenshotError) {
-        print('❌ Erreur capture screenshot: $screenshotError');
+        LogConfig.logError('❌ Erreur capture screenshot: $screenshotError');
         screenshotUrl = null;
       }
 
@@ -335,9 +324,9 @@ class AppDataBloc extends Bloc<AppDataEvent, AppDataState> {
       // 3️⃣ → fin OK
       emit(state.copyWith(isSavingRoute: false));
       
-      print('✅ Parcours sauvegardé avec succès: ${savedRoute.name}');
+      LogConfig.logInfo('Parcours sauvegardé avec succès: ${savedRoute.name}');
     } catch (e) {
-      print('❌ Erreur lors de la sauvegarde du parcours: $e');
+      LogConfig.logError('❌ Erreur lors de la sauvegarde du parcours: $e');
       emit(state.copyWith(
         lastError: 'Erreur lors de la sauvegarde du parcours: $e',
       ));
@@ -348,7 +337,7 @@ class AppDataBloc extends Bloc<AppDataEvent, AppDataState> {
     SavedRouteDeletedFromAppData event,
     Emitter<AppDataState> emit,
   ) async {
-    print('🗑️ Suppression de parcours via AppDataBloc: ${event.routeId}');
+    LogConfig.logInfo('🗑️ Suppression de parcours via AppDataBloc: ${event.routeId}');
     
     try {
       // Supprimer le parcours
@@ -357,9 +346,9 @@ class AppDataBloc extends Bloc<AppDataEvent, AppDataState> {
       // Recharger les données d'historique
       await _refreshHistoricData(emit, showLoading: false);
       
-      print('✅ Parcours supprimé avec succès');
+      LogConfig.logInfo('Parcours supprimé avec succès');
     } catch (e) {
-      print('❌ Erreur lors de la suppression du parcours: $e');
+      LogConfig.logError('❌ Erreur lors de la suppression du parcours: $e');
       emit(state.copyWith(
         lastError: 'Erreur lors de la suppression du parcours: $e',
       ));
@@ -370,7 +359,7 @@ class AppDataBloc extends Bloc<AppDataEvent, AppDataState> {
     SavedRouteUsageUpdatedInAppData event,
     Emitter<AppDataState> emit,
   ) async {
-    print('📊 Mise à jour statistiques d\'utilisation: ${event.routeId}');
+    LogConfig.logInfo('📊 Mise à jour statistiques d\'utilisation: ${event.routeId}');
     
     try {
       // Mettre à jour les statistiques d'utilisation
@@ -379,9 +368,9 @@ class AppDataBloc extends Bloc<AppDataEvent, AppDataState> {
       // Recharger les données d'historique (sans loading)
       await _refreshHistoricData(emit, showLoading: false);
       
-      print('✅ Statistiques d\'utilisation mises à jour');
+      LogConfig.logInfo('Statistiques d\'utilisation mises à jour');
     } catch (e) {
-      print('❌ Erreur lors de la mise à jour des statistiques: $e');
+      LogConfig.logError('❌ Erreur lors de la mise à jour des statistiques: $e');
       emit(state.copyWith(
         lastError: 'Erreur lors de la mise à jour des statistiques: $e',
       ));
@@ -392,7 +381,7 @@ class AppDataBloc extends Bloc<AppDataEvent, AppDataState> {
     SavedRouteRenamedInAppData event,
     Emitter<AppDataState> emit,
   ) async {
-    print('✏️ Renommage de parcours via AppDataBloc: ${event.routeId} -> ${event.newName}');
+    LogConfig.logInfo('✏️ Renommage de parcours via AppDataBloc: ${event.routeId} -> ${event.newName}');
     
     try {
       // Renommer le parcours via le repository
@@ -401,9 +390,9 @@ class AppDataBloc extends Bloc<AppDataEvent, AppDataState> {
       // Recharger les données d'historique pour mettre à jour l'interface
       await _refreshHistoricData(emit, showLoading: false);
       
-      print('✅ Parcours renommé avec succès');
+      LogConfig.logInfo('Parcours renommé avec succès');
     } catch (e) {
-      print('❌ Erreur lors du renommage du parcours: $e');
+      LogConfig.logError('❌ Erreur lors du renommage du parcours: $e');
       emit(state.copyWith(
         lastError: 'Erreur lors du renommage du parcours: $e',
       ));
@@ -425,9 +414,6 @@ class AppDataBloc extends Bloc<AppDataEvent, AppDataState> {
           isLoading: false,
           lastError: null,
         ));
-        
-        // Aussi rafraîchir les stats d'activité car elles dépendent des parcours
-        await _refreshActivityData(emit, showLoading: false);
       }
     } catch (e) {
       emit(state.copyWith(
@@ -450,7 +436,7 @@ class AppDataBloc extends Bloc<AppDataEvent, AppDataState> {
     );
 
     if (_isFullSyncInProgress) {
-      print('⚠️ Sync complète déjà en cours, abandon');
+      LogConfig.logInfo('Sync complète déjà en cours, abandon');
       return;
     }
 
@@ -458,25 +444,23 @@ class AppDataBloc extends Bloc<AppDataEvent, AppDataState> {
     
     // Vérifie si le cache est encore valide pour éviter un rechargement
     if (_isCacheValid() && _hasCompleteData()) {
-      print('📦 Cache valide, pas de rechargement nécessaire');
+      LogConfig.logInfo('📦 Cache valide, pas de rechargement nécessaire');
       _isFullSyncInProgress = false;
       return;
     }
 
-    print('🚀 Pré-chargement complet des données...');
+    LogConfig.logInfo('🚀 Pré-chargement complet des données...');
     emit(state.copyWith(isLoading: true));
 
     try {
       // Charger les données en parallèle
       final futures = await Future.wait([
-        _loadActivityData(),
         _loadHistoricData(),
         _loadCreditData(), // 🆕 Ajout des crédits
       ]);
       
-      final activityData = futures[0] as ActivityDataResult?;
-      final historicData = futures[1] as List<SavedRoute>?;
-      final creditData = futures[2] as CreditDataResult?; // 🆕
+      final historicData = futures[0] as List<SavedRoute>?;
+      final creditData = futures[1] as CreditDataResult?; // 🆕
 
       // Mettre à jour le cache
       final now = DateTime.now();
@@ -487,13 +471,6 @@ class AppDataBloc extends Bloc<AppDataEvent, AppDataState> {
       _lastFullSync = now;
 
       emit(state.copyWith(
-        // Activité
-        activityStats: activityData?.generalStats,
-        activityTypeStats: activityData?.typeStats ?? [],
-        periodStats: activityData?.periodStats ?? [],
-        personalGoals: activityData?.goals ?? [],
-        personalRecords: activityData?.records ?? [],
-        
         // Historique
         savedRoutes: historicData ?? [],
         
@@ -511,10 +488,9 @@ class AppDataBloc extends Bloc<AppDataEvent, AppDataState> {
         lastCacheUpdate: _lastCacheUpdate,
       ));
 
-      print('✅ Pré-chargement complet terminé');
-      print('📊 Activité: ${activityData != null ? "✅" : "❌"}');
-      print('📚 Historique: ${historicData?.length ?? 0} parcours');
-      print('💳 Crédits: ${creditData?.userCredits.availableCredits ?? 0} disponibles');
+      LogConfig.logInfo('Pré-chargement complet terminé');
+      LogConfig.logInfo('📚 Historique: ${historicData?.length ?? 0} parcours');
+      LogConfig.logInfo('Crédits: ${creditData?.userCredits.availableCredits ?? 0} disponibles');
 
       MonitoringService.instance.finishOperation(operationId, success: true);
 
@@ -524,7 +500,6 @@ class AppDataBloc extends Bloc<AppDataEvent, AppDataState> {
         1,
         tags: {
           'routes_count': state.savedRoutes.length.toString(),
-          'activities_count': state.activityTypeStats.length.toString(),
         },
       );
       
@@ -554,14 +529,13 @@ class AppDataBloc extends Bloc<AppDataEvent, AppDataState> {
     if (_isFullSyncInProgress) return;
 
     _isFullSyncInProgress = true;
-    print('🔄 Rafraîchissement complet...');
+    LogConfig.logInfo('🔄 Rafraîchissement complet...');
 
     emit(state.copyWith(isLoading: true));
 
     try {
       // Rafraîchir toutes les données
       await Future.wait([
-        _refreshActivityData(emit, showLoading: false),
         _refreshHistoricData(emit, showLoading: false),
         _refreshCreditData(emit, showLoading: false), // 🆕
       ]);
@@ -574,59 +548,16 @@ class AppDataBloc extends Bloc<AppDataEvent, AppDataState> {
         lastUpdate: DateTime.now(),
       ));
 
-      print('✅ Rafraîchissement complet terminé');
+      LogConfig.logInfo('Rafraîchissement complet terminé');
 
     } catch (e) {
-      print('❌ Erreur rafraîchissement: $e');
+      LogConfig.logError('❌ Erreur rafraîchissement: $e');
       emit(state.copyWith(
         isLoading: false,
         lastError: 'Erreur lors du rafraîchissement: $e',
       ));
     } finally {
       _isFullSyncInProgress = false;
-    }
-  }
-
-  /// 🆕 Rafraîchissement optimisé des données d'activité
-  Future<void> _onActivityDataRefresh(
-    ActivityDataRefreshRequested event,
-    Emitter<AppDataState> emit,
-  ) async {
-    // 🛡️ Protection contre les appels multiples
-    if (_isActivitySyncInProgress) {
-      print('⚠️ Sync activité déjà en cours, ignorée');
-      return;
-    }
-    
-    if (_lastActivitySync != null && 
-        DateTime.now().difference(_lastActivitySync!) < _minSyncInterval) {
-      print('⚠️ Sync activité trop récente, ignorée');
-      return;
-    }
-
-    _isActivitySyncInProgress = true;
-    _lastActivitySync = DateTime.now();
-    
-    try {
-      print('📊 Rafraîchissement données activité...');
-      
-      final activityData = await _loadActivityData();
-      if (activityData != null) {
-        _lastActivityUpdate = DateTime.now();
-        emit(state.copyWith(
-          activityStats: activityData.generalStats,
-          activityTypeStats: activityData.typeStats,
-          periodStats: activityData.periodStats,
-          personalGoals: activityData.goals,
-          personalRecords: activityData.records,
-          lastCacheUpdate: _lastActivityUpdate,
-        ));
-        print('✅ Données activité mises à jour');
-      }
-    } catch (e) {
-      print('❌ Erreur rafraîchissement activité: $e');
-    } finally {
-      _isActivitySyncInProgress = false;
     }
   }
 
@@ -637,13 +568,13 @@ class AppDataBloc extends Bloc<AppDataEvent, AppDataState> {
   ) async {
     // 🛡️ Protection contre les appels multiples
     if (_isHistoricSyncInProgress) {
-      print('⚠️ Sync historique déjà en cours, ignorée');
+      LogConfig.logInfo('Sync historique déjà en cours, ignorée');
       return;
     }
     
     if (_lastHistoricSync != null && 
         DateTime.now().difference(_lastHistoricSync!) < _minSyncInterval) {
-      print('⚠️ Sync historique trop récente, ignorée');
+      LogConfig.logInfo('Sync historique trop récente, ignorée');
       return;
     }
 
@@ -651,7 +582,7 @@ class AppDataBloc extends Bloc<AppDataEvent, AppDataState> {
     _lastHistoricSync = DateTime.now();
     
     try {
-      print('📚 Rafraîchissement historique...');
+      LogConfig.logInfo('📚 Rafraîchissement historique...');
       
       final historicData = await _loadHistoricData();
       if (historicData != null) {
@@ -660,10 +591,10 @@ class AppDataBloc extends Bloc<AppDataEvent, AppDataState> {
           savedRoutes: historicData,
           lastCacheUpdate: _lastHistoricUpdate,
         ));
-        print('✅ Historique mis à jour (${historicData.length} routes)');
+        LogConfig.logInfo('Historique mis à jour (${historicData.length} routes)');
       }
     } catch (e) {
-      print('❌ Erreur rafraîchissement historique: $e');
+      LogConfig.logError('❌ Erreur rafraîchissement historique: $e');
     } finally {
       _isHistoricSyncInProgress = false;
     }
@@ -677,9 +608,8 @@ class AppDataBloc extends Bloc<AppDataEvent, AppDataState> {
     print('➕ Sync optimisée - Route ajoutée: ${event.routeName}');
     
     if (!_isActivitySyncInProgress) {
-      await _onActivityDataRefresh(const ActivityDataRefreshRequested(), emit);
     } else {
-      print('⚠️ Sync activité déjà en cours pour ajout route');
+      LogConfig.logInfo('Sync activité déjà en cours pour ajout route');
     }
   }
 
@@ -692,7 +622,7 @@ class AppDataBloc extends Bloc<AppDataEvent, AppDataState> {
 
     // Éviter de lancer une deuxième sync si l’une est déjà en cours
     if (_isHistoricSyncInProgress || _isActivitySyncInProgress) {
-      print('⚠️ Sync déjà en cours pour suppression de route');
+      LogConfig.logInfo('Sync déjà en cours pour suppression de route');
       return;
     }
 
@@ -700,11 +630,10 @@ class AppDataBloc extends Bloc<AppDataEvent, AppDataState> {
       // On attend la fin des deux tâches AVANT de sortir du handler
       await Future.wait<void>([
         _performSafeHistoricSync(emit),
-        _performSafeActivitySync(emit),
       ]);
     } catch (e, st) {
       // On capture l’erreur proprement ; on peut aussi émettre un état d’erreur ici
-      print('❌ Erreur sync suppression : $e\n$st');
+      LogConfig.logError('❌ Erreur sync suppression : $e\n$st');
       // emit(ErrorState(message: e.toString()));
     }
   }
@@ -714,7 +643,7 @@ class AppDataBloc extends Bloc<AppDataEvent, AppDataState> {
     ForceDataSyncRequested event,
     Emitter<AppDataState> emit,
   ) async {
-    print('🔄 Synchronisation forcée des données');
+    LogConfig.logInfo('🔄 Synchronisation forcée des données');
     
     // Nettoyer tous les verrous et timestamps
     _isActivitySyncInProgress = false;
@@ -743,34 +672,10 @@ class AppDataBloc extends Bloc<AppDataEvent, AppDataState> {
           savedRoutes: historicData,
           lastCacheUpdate: _lastHistoricUpdate,
         ));
-        print('✅ Sync historique sécurisée terminée');
+        LogConfig.logInfo('Sync historique sécurisée terminée');
       }
     } finally {
       _isHistoricSyncInProgress = false;
-    }
-  }
-
-  /// 🛡️ Sync sécurisée des activités
-  Future<void> _performSafeActivitySync(Emitter<AppDataState> emit) async {
-    if (_isActivitySyncInProgress) return;
-    
-    _isActivitySyncInProgress = true;
-    try {
-      final activityData = await _loadActivityData();
-      if (activityData != null) {
-        _lastActivityUpdate = DateTime.now();
-        emit(state.copyWith(
-          activityStats: activityData.generalStats,
-          activityTypeStats: activityData.typeStats,
-          periodStats: activityData.periodStats,
-          personalGoals: activityData.goals,
-          personalRecords: activityData.records,
-          lastCacheUpdate: _lastActivityUpdate,
-        ));
-        print('✅ Sync activité sécurisée terminée');
-      }
-    } finally {
-      _isActivitySyncInProgress = false;
     }
   }
 
@@ -779,7 +684,7 @@ class AppDataBloc extends Bloc<AppDataEvent, AppDataState> {
     AppDataClearRequested event,
     Emitter<AppDataState> emit,
   ) async {
-    print('🗑️ Nettoyage du cache des données');
+    LogConfig.logInfo('🗑️ Nettoyage du cache des données');
     
     // Nettoyer tous les timestamps et verrous
     _lastCacheUpdate = null;
@@ -797,160 +702,14 @@ class AppDataBloc extends Bloc<AppDataEvent, AppDataState> {
     emit(const AppDataState());
   }
 
-  /// Charge les données d'activité (inchangé)
-  Future<ActivityDataResult?> _loadActivityData() async {
-    try {
-      print('📊 Chargement des données d\'activité...');
-      
-      // Charger tous les parcours pour calculer les stats
-      final routes = await _routesRepository.getUserRoutes();
-      
-      // Calculer les statistiques en parallèle
-      final statsFutures = await Future.wait([
-        _activityRepository.getActivityStats(routes),
-        _activityRepository.getActivityTypeStats(routes),
-        _activityRepository.getPeriodStats(routes, PeriodType.monthly),
-        _activityRepository.getPersonalGoals(),
-        _activityRepository.getPersonalRecords(),
-      ]);
-
-      return ActivityDataResult(
-        generalStats: statsFutures[0] as ActivityStats,
-        typeStats: statsFutures[1] as List<ActivityTypeStats>,
-        periodStats: statsFutures[2] as List<PeriodStats>,
-        goals: statsFutures[3] as List<PersonalGoal>,
-        records: statsFutures[4] as List<PersonalRecord>,
-      );
-      
-    } catch (e) {
-      print('❌ Erreur chargement données activité: $e');
-      return null;
-    }
-  }
-
   /// Charge les données d'historique (inchangé)
   Future<List<SavedRoute>?> _loadHistoricData() async {
     try {
-      print('📚 Chargement de l\'historique...');
+      LogConfig.logInfo('📚 Chargement de l\'historique...');
       return await _routesRepository.getUserRoutes();
     } catch (e) {
-      print('❌ Erreur chargement historique: $e');
+      LogConfig.logError('❌ Erreur chargement historique: $e');
       return null;
-    }
-  }
-
-  Future<void> _onGoalAdded(
-    PersonalGoalAddedToAppData event,
-    Emitter<AppDataState> emit,
-  ) async {
-    print('🎯 Ajout d\'objectif via AppDataBloc: ${event.goal.title}');
-    
-    try {      
-      // Recharger les données d'activité pour mettre à jour l'interface
-      await _refreshActivityData(emit, showLoading: false);
-      
-      print('✅ Objectif ajouté avec succès');
-    } catch (e) {
-      print('❌ Erreur lors de l\'ajout de l\'objectif: $e');
-      emit(state.copyWith(
-        lastError: 'Erreur lors de l\'ajout de l\'objectif: $e',
-      ));
-    }
-  }
-
-  Future<void> _onGoalUpdated(
-    PersonalGoalUpdatedInAppData event,
-    Emitter<AppDataState> emit,
-  ) async {
-    print('🎯 Mise à jour d\'objectif via AppDataBloc: ${event.goal.title}');
-    
-    try {      
-      // Recharger les données d'activité
-      await _refreshActivityData(emit, showLoading: false);
-      
-      print('✅ Objectif mis à jour avec succès');
-    } catch (e) {
-      print('❌ Erreur lors de la mise à jour de l\'objectif: $e');
-      emit(state.copyWith(
-        lastError: 'Erreur lors de la mise à jour de l\'objectif: $e',
-      ));
-    }
-  }
-
-  Future<void> _onGoalDeleted(
-    PersonalGoalDeletedFromAppData event,
-    Emitter<AppDataState> emit,
-  ) async {
-    print('🎯 Suppression d\'objectif via AppDataBloc: ${event.goalId}');
-    
-    try {
-      // Supprimer l'objectif
-      await _activityRepository.deletePersonalGoal(event.goalId);
-      
-      // Recharger les données d'activité
-      await _refreshActivityData(emit, showLoading: false);
-      
-      print('✅ Objectif supprimé avec succès');
-    } catch (e) {
-      print('❌ Erreur lors de la suppression de l\'objectif: $e');
-      emit(state.copyWith(
-        lastError: 'Erreur lors de la suppression de l\'objectif: $e',
-      ));
-    }
-  }
-
-  Future<void> _onGoalsReset(
-    PersonalGoalsResetInAppData event,
-    Emitter<AppDataState> emit,
-  ) async {
-    print('🎯 Réinitialisation de tous les objectifs via AppDataBloc');
-    
-    try {
-      // Récupérer tous les objectifs existants
-      final existingGoals = await _activityRepository.getPersonalGoals();
-      
-      // Supprimer chaque objectif
-      for (final goal in existingGoals) {
-        await _activityRepository.deletePersonalGoal(goal.id);
-      }
-      
-      // Recharger les données d'activité
-      await _refreshActivityData(emit, showLoading: false);
-      
-      print('✅ Tous les objectifs réinitialisés avec succès');
-    } catch (e) {
-      print('❌ Erreur lors de la réinitialisation des objectifs: $e');
-      emit(state.copyWith(
-        lastError: 'Erreur lors de la réinitialisation des objectifs: $e',
-      ));
-    }
-  }
-
-  Future<void> _refreshActivityData(Emitter<AppDataState> emit, {bool showLoading = true}) async {
-    if (showLoading) {
-      emit(state.copyWith(isLoading: true));
-    }
-
-    try {
-      final activityData = await _loadActivityData();
-      
-      if (activityData != null) {
-        _lastActivityUpdate = DateTime.now();
-        emit(state.copyWith(
-          activityStats: activityData.generalStats,
-          activityTypeStats: activityData.typeStats,
-          periodStats: activityData.periodStats,
-          personalGoals: activityData.goals,
-          personalRecords: activityData.records,
-          isLoading: false,
-          lastError: null,
-        ));
-      }
-    } catch (e) {
-      emit(state.copyWith(
-        isLoading: false,
-        lastError: 'Erreur lors du rafraîchissement: $e',
-      ));
     }
   }
 
@@ -963,7 +722,6 @@ class AppDataBloc extends Bloc<AppDataEvent, AppDataState> {
   /// Vérifie si l'état contient des données complètes
   bool _hasCompleteData() {
     return state.hasHistoricData && 
-           state.activityStats != null && 
            state.isCreditDataLoaded; // 🆕
   }
 
@@ -981,23 +739,6 @@ class CreditDataResult {
     required this.userCredits,
     required this.creditPlans,
     required this.transactions,
-  });
-}
-
-/// Classe helper pour les résultats d'activité (inchangée)
-class ActivityDataResult {
-  final ActivityStats generalStats;
-  final List<ActivityTypeStats> typeStats;
-  final List<PeriodStats> periodStats;
-  final List<PersonalGoal> goals;
-  final List<PersonalRecord> records;
-
-  ActivityDataResult({
-    required this.generalStats,
-    required this.typeStats,
-    required this.periodStats,
-    required this.goals,
-    required this.records,
   });
 }
 

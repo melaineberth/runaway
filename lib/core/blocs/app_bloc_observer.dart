@@ -1,4 +1,5 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:runaway/core/helper/config/log_config.dart';
 import 'package:runaway/core/helper/config/secure_config.dart';
 import 'package:runaway/core/helper/services/crash_reporting_service.dart';
 import 'package:runaway/core/helper/services/logging_service.dart';
@@ -53,7 +54,7 @@ class AppBlocObserver extends BlocObserver {
       );
       
       if (!SecureConfig.kIsProduction) {
-        print('🔧 Bloc créé: $blocName');
+        LogConfig.logInfo('🔧 Bloc créé: $blocName');
       }
     }
   }
@@ -96,7 +97,7 @@ class AppBlocObserver extends BlocObserver {
       );
 
       if (!SecureConfig.kIsProduction) {
-        print('📥 $blocName Event: $eventName');
+        LogConfig.logInfo('📥 $blocName Event: $eventName');
       }
     }
   }
@@ -105,32 +106,63 @@ class AppBlocObserver extends BlocObserver {
   void onChange(BlocBase bloc, Change change) {
     super.onChange(bloc, change);
     
-    final blocName = bloc.runtimeType.toString();
-    final nextState = change.nextState.runtimeType.toString();
-    
-    // 🔧 CHANGEMENT: Logger seulement les changements d'état critiques
-    if (_isErrorState(nextState) || (_isImportantBloc(blocName) && !SecureConfig.kIsProduction)) {
-      LoggingService.instance.warning(
-        'BlocState',
-        '$blocName -> $nextState',
-        data: {
-          'bloc_type': blocName,
-          'new_state': nextState,
-          'is_error': _isErrorState(nextState),
-        },
-      );
-    }
+    try {
+      final blocName = bloc.runtimeType.toString();
+      final currentState = change.currentState.runtimeType.toString();
+      final nextState = change.nextState.runtimeType.toString();
+      
+      // 🔧 FIX: Exclure explicitement AppDataBloc des logs de changement d'état
+      if (blocName == 'AppDataBloc') {
+        // Pour AppDataBloc, logger seulement les vrais états d'erreur
+        if (_isRealErrorState(nextState)) {
+          LoggingService.instance.error(
+            'BlocError',
+            'AppDataBloc erreur critique: $nextState',
+            data: {
+              'bloc_type': blocName,
+              'error_state': nextState,
+            },
+          );
+        }
+        return; // Skip le reste du logging pour AppDataBloc
+      }
+      
+      // Pour les autres blocs, continuer la logique normale
+      final isImportantState = _isImportantState(nextState);
+      
+      // Log seulement les changements vraiment importants
+      if (isImportantState && _isImportantBloc(blocName)) {
+        LoggingService.instance.info(
+          'BlocState',
+          '$blocName: $currentState -> $nextState',
+          data: {
+            'bloc_type': blocName,
+            'current_state': currentState,
+            'next_state': nextState,
+          },
+        );
+      }
 
-    // Détecter et logger les états d'erreur
-    if (_isErrorState(nextState)) {
-      LoggingService.instance.error(
-        'BlocError',
-        '$blocName est entré dans un état d\'erreur: $nextState',
-        data: {
-          'bloc_type': blocName,
-          'error_state': nextState,
-        },
-      );
+      // Détecter les vrais états d'erreur pour les autres blocs
+      if (_isRealErrorState(nextState)) {
+        LoggingService.instance.error(
+          'BlocError',
+          '$blocName état d\'erreur: $nextState',
+          data: {
+            'bloc_type': blocName,
+            'error_state': nextState,
+            'previous_state': currentState,
+          },
+        );
+      }
+
+      // Debug print seulement en développement
+      if (!SecureConfig.kIsProduction && _isImportantBloc(blocName)) {
+        LogConfig.logInfo('🔄 $blocName: $currentState -> $nextState');
+      }
+      
+    } catch (e) {
+      LogConfig.logError('❌ Erreur onChange BlocObserver: $e');
     }
   }
 
@@ -205,7 +237,7 @@ class AppBlocObserver extends BlocObserver {
     );
 
     _finishBlocOperations(blocName, false, error.toString());
-    print('❌ $blocName Error: $error');
+    LogConfig.logError('❌ $blocName Error: $error');
   }
 
   @override
@@ -224,6 +256,23 @@ class AppBlocObserver extends BlocObserver {
     }
 
     _finishBlocOperations(blocName, true, 'Bloc fermé');
+  }
+
+  bool _isRealErrorState(String stateName) {
+    // Seulement les états qui contiennent explicitement "Error" ou "Failure"
+    return stateName.contains('Error') || 
+          stateName.contains('Failure') || 
+          stateName.contains('NetworkFailure') ||
+          stateName.contains('AuthenticationFailure') ||
+          stateName.contains('GenerationFailure');
+  }
+
+  bool _isImportantState(String stateName) {
+    return stateName.contains('Authenticated') ||
+          stateName.contains('Unauthenticated') ||
+          stateName.contains('Loading') ||
+          stateName.contains('Success') ||
+          _isRealErrorState(stateName);
   }
 
   bool _isImportantBloc(String blocName) {
@@ -290,10 +339,10 @@ class AppBlocObserver extends BlocObserver {
       }
       
       if (staleKeys.isNotEmpty && !SecureConfig.kIsProduction) {
-        print('🧹 ${staleKeys.length} opération(s) bloc périmée(s) nettoyée(s)');
+        LogConfig.logInfo('🧹 ${staleKeys.length} opération(s) bloc périmée(s) nettoyée(s)');
       }
     } catch (e) {
-      print('❌ Erreur nettoyage opérations périmées: $e');
+      LogConfig.logError('❌ Erreur nettoyage opérations périmées: $e');
     }
   }
 

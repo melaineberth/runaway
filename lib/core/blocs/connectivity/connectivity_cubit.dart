@@ -1,6 +1,7 @@
 // lib/core/blocs/connectivity/connectivity_cubit.dart
 import 'dart:async';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:runaway/core/helper/config/log_config.dart';
 import 'package:runaway/core/helper/config/secure_config.dart';
 import '../../helper/services/connectivity_service.dart';
 
@@ -31,7 +32,7 @@ class ConnectivityCubit extends Cubit<ConnectionStatus> {
         _lastEmitTime = DateTime.now();
         
         if (!SecureConfig.kIsProduction) {
-          print('✅ ConnectivityCubit émis: $status');
+          LogConfig.logInfo('ConnectivityCubit émis: $status');
         }
       }
     });
@@ -42,7 +43,7 @@ class ConnectivityCubit extends Cubit<ConnectionStatus> {
     // Émettre l'état initial
     final currentStatus = _service.current;
     if (!SecureConfig.kIsProduction) {
-      print('🔄 ConnectivityCubit état initial: $currentStatus');
+      LogConfig.logInfo('🔄 ConnectivityCubit état initial: $currentStatus');
     }
     emit(currentStatus);
     _lastEmittedState = currentStatus;
@@ -76,7 +77,7 @@ class ConnectivityCubit extends Cubit<ConnectionStatus> {
         
         // Log force emit seulement en debug et si vraiment nécessaire
         if (!SecureConfig.kIsProduction) {
-          print('🔄 ConnectivityCubit force emit: $currentStatus');
+          LogConfig.logInfo('🔄 ConnectivityCubit force emit: $currentStatus');
         }
       }
     });
@@ -96,13 +97,13 @@ class ConnectivityCubit extends Cubit<ConnectionStatus> {
         _lastEmitTime = DateTime.now();
         
         if (!SecureConfig.kIsProduction) {
-          print('🔄 ConnectivityCubit après force check: $newStatus');
+          LogConfig.logInfo('🔄 ConnectivityCubit après force check: $newStatus');
         }
       }
     } catch (e) {
       // Log d'erreur seulement en debug
       if (!SecureConfig.kIsProduction) {
-        print('❌ Erreur force check: $e');
+        LogConfig.logError('❌ Erreur force check: $e');
       }
     }
   }

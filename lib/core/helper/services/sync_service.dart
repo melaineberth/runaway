@@ -1,8 +1,8 @@
 import 'dart:async';
+import 'package:runaway/core/helper/config/log_config.dart';
 import 'package:runaway/core/helper/services/cache_service.dart';
 import 'package:runaway/features/credits/data/repositories/credits_repository.dart';
 import 'package:runaway/features/route_generator/data/repositories/routes_repository.dart';
-import 'package:runaway/features/activity/data/repositories/activity_repository.dart';
 
 /// Service de synchronisation optimisé avec protection anti-race conditions
 class SyncService {
@@ -34,13 +34,13 @@ class SyncService {
     
     // Vérifier l'intervalle minimal
     if (!force && !_canSync(syncKey)) {
-      print('⏳ Synchronisation crédits ignorée (trop fréquente)');
+      LogConfig.logInfo('⏳ Synchronisation crédits ignorée (trop fréquente)');
       return;
     }
     
     // Mutex pour éviter les synchronisations simultanées
     if (_syncMutex.containsKey(syncKey)) {
-      print('⏳ Synchronisation crédits déjà en cours, attente...');
+      LogConfig.logInfo('⏳ Synchronisation crédits déjà en cours, attente...');
       await _syncMutex[syncKey]!.future;
       return;
     }
@@ -49,7 +49,7 @@ class SyncService {
     _syncMutex[syncKey] = completer;
     
     try {
-      print('🔄 Début synchronisation crédits...');
+      LogConfig.logInfo('🔄 Début synchronisation crédits...');
       
       // Synchronisation avec timeout
       await _syncCreditsInternal(creditsRepository).timeout(
@@ -61,10 +61,10 @@ class SyncService {
       );
       
       _updateSyncStats(syncKey);
-      print('✅ Synchronisation crédits terminée');
+      LogConfig.logSuccess('Synchronisation crédits terminée');
       
     } catch (e) {
-      print('❌ Erreur synchronisation crédits: $e');
+      LogConfig.logError('❌ Erreur synchronisation crédits: $e');
       rethrow;
     } finally {
       _syncMutex.remove(syncKey);
@@ -80,12 +80,12 @@ class SyncService {
     const syncKey = 'routes_sync';
     
     if (!force && !_canSync(syncKey)) {
-      print('⏳ Synchronisation routes ignorée (trop fréquente)');
+      LogConfig.logInfo('⏳ Synchronisation routes ignorée (trop fréquente)');
       return;
     }
     
     if (_syncMutex.containsKey(syncKey)) {
-      print('⏳ Synchronisation routes déjà en cours, attente...');
+      LogConfig.logInfo('⏳ Synchronisation routes déjà en cours, attente...');
       await _syncMutex[syncKey]!.future;
       return;
     }
@@ -94,7 +94,7 @@ class SyncService {
     _syncMutex[syncKey] = completer;
     
     try {
-      print('🔄 Début synchronisation routes...');
+      LogConfig.logInfo('🔄 Début synchronisation routes...');
       
       await _syncRoutesInternal(routesRepository).timeout(
         const Duration(seconds: 45),
@@ -105,54 +105,10 @@ class SyncService {
       );
       
       _updateSyncStats(syncKey);
-      print('✅ Synchronisation routes terminée');
+      LogConfig.logInfo('Synchronisation routes terminée');
       
     } catch (e) {
-      print('❌ Erreur synchronisation routes: $e');
-      rethrow;
-    } finally {
-      _syncMutex.remove(syncKey);
-      completer.complete();
-    }
-  }
-
-  /// Synchronise les activités avec protection anti-race condition
-  Future<void> syncActivity({
-    required ActivityRepository activityRepository,
-    bool force = false,
-  }) async {
-    const syncKey = 'activity_sync';
-    
-    if (!force && !_canSync(syncKey)) {
-      print('⏳ Synchronisation activité ignorée (trop fréquente)');
-      return;
-    }
-    
-    if (_syncMutex.containsKey(syncKey)) {
-      print('⏳ Synchronisation activité déjà en cours, attente...');
-      await _syncMutex[syncKey]!.future;
-      return;
-    }
-    
-    final completer = Completer<void>();
-    _syncMutex[syncKey] = completer;
-    
-    try {
-      print('🔄 Début synchronisation activité...');
-      
-      await _syncActivityInternal(activityRepository).timeout(
-        const Duration(seconds: 30),
-        onTimeout: () {
-          print('⏰ Timeout synchronisation activité');
-          throw TimeoutException('Synchronisation activité timeout');
-        },
-      );
-      
-      _updateSyncStats(syncKey);
-      print('✅ Synchronisation activité terminée');
-      
-    } catch (e) {
-      print('❌ Erreur synchronisation activité: $e');
+      LogConfig.logError('❌ Erreur synchronisation routes: $e');
       rethrow;
     } finally {
       _syncMutex.remove(syncKey);
@@ -164,18 +120,17 @@ class SyncService {
   Future<void> syncAll({
     required CreditsRepository creditsRepository,
     required RoutesRepository routesRepository,
-    required ActivityRepository activityRepository,
     bool force = false,
   }) async {
     const syncKey = 'full_sync';
     
     if (!force && !_canSync(syncKey)) {
-      print('⏳ Synchronisation globale ignorée (trop fréquente)');
+      LogConfig.logInfo('⏳ Synchronisation globale ignorée (trop fréquente)');
       return;
     }
     
     if (_syncMutex.containsKey(syncKey)) {
-      print('⏳ Synchronisation globale déjà en cours, attente...');
+      LogConfig.logInfo('⏳ Synchronisation globale déjà en cours, attente...');
       await _syncMutex[syncKey]!.future;
       return;
     }
@@ -184,13 +139,12 @@ class SyncService {
     _syncMutex[syncKey] = completer;
     
     try {
-      print('🔄 Début synchronisation globale...');
+      LogConfig.logInfo('🔄 Début synchronisation globale...');
       
       // Synchronisation intelligente par priorité
       await _syncAllInternal(
         creditsRepository: creditsRepository,
         routesRepository: routesRepository,
-        activityRepository: activityRepository,
       ).timeout(
         const Duration(minutes: 2),
         onTimeout: () {
@@ -200,10 +154,10 @@ class SyncService {
       );
       
       _updateSyncStats(syncKey);
-      print('✅ Synchronisation globale terminée');
+      LogConfig.logInfo('Synchronisation globale terminée');
       
     } catch (e) {
-      print('❌ Erreur synchronisation globale: $e');
+      LogConfig.logError('❌ Erreur synchronisation globale: $e');
       rethrow;
     } finally {
       _syncMutex.remove(syncKey);
@@ -222,7 +176,7 @@ class SyncService {
     _debounceTimers[syncType]?.cancel();
     _debounceTimers[syncType] = Timer(delay, () {
       syncFunction().catchError((e) {
-        print('❌ Erreur synchronisation debouncée $syncType: $e');
+        LogConfig.logError('❌ Erreur synchronisation debouncée $syncType: $e');
       });
     });
   }
@@ -267,7 +221,7 @@ class SyncService {
       await _cache.invalidate(pattern: 'credit_plan');
       
     } catch (e) {
-      print('❌ Erreur synchronisation interne crédits: $e');
+      LogConfig.logError('❌ Erreur synchronisation interne crédits: $e');
       rethrow;
     }
   }
@@ -284,24 +238,7 @@ class SyncService {
       await _cache.invalidate(pattern: 'route_sync');
       
     } catch (e) {
-      print('❌ Erreur synchronisation interne routes: $e');
-      rethrow;
-    }
-  }
-
-  Future<void> _syncActivityInternal(ActivityRepository activityRepository) async {
-    try {
-      // ✅ Pour les stats d'activité, on peut passer une liste vide 
-      // ou récupérer depuis le cache si disponible
-      final stats = await activityRepository.getActivityStats([]);
-      await _cache.set('cache_activity_stats', stats);
-      await _cache.invalidateActivityCache();
-      
-      // Invalider les données liées aux activités
-      await _cache.invalidate(pattern: 'activity_session');
-      
-    } catch (e) {
-      print('❌ Erreur synchronisation interne activité: $e');
+      LogConfig.logError('❌ Erreur synchronisation interne routes: $e');
       rethrow;
     }
   }
@@ -309,7 +246,6 @@ class SyncService {
   Future<void> _syncAllInternal({
     required CreditsRepository creditsRepository,
     required RoutesRepository routesRepository,
-    required ActivityRepository activityRepository,
   }) async {
     
     // Phase 1: Synchronisation des données critiques en parallèle
@@ -317,10 +253,7 @@ class SyncService {
       _syncCreditsInternal(creditsRepository),
       _syncRoutesInternal(routesRepository),
     ]);
-    
-    // Phase 2: Synchronisation des activités (dépend des routes)
-    await _syncActivityInternal(activityRepository);
-    
+        
     // Phase 3: Nettoyage intelligent du cache
     await _cache.smartCleanup();
   }
@@ -340,7 +273,7 @@ class SyncService {
   /// Dispose le service
   void dispose() {
     cancelAllSyncs();
-    print('🧹 SyncService disposé');
+    LogConfig.logInfo('🧹 SyncService disposé');
   }
 }
 

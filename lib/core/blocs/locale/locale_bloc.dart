@@ -1,5 +1,6 @@
 import 'dart:ui';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:runaway/core/helper/config/log_config.dart';
 import 'package:runaway/core/helper/services/locale_service.dart';
 
 part 'locale_event.dart';
@@ -29,9 +30,9 @@ class LocaleBloc extends Bloc<LocaleEvent, LocaleState> {
         isLoading: false,
       ));
       
-      print('✅ Locale initialisée: ${savedLocale.languageCode}');
+      LogConfig.logSuccess('Locale initialisée: ${savedLocale.languageCode}');
     } catch (e) {
-      print('❌ Erreur initialisation locale: $e');
+      LogConfig.logError('❌ Erreur initialisation locale: $e');
       emit(state.copyWith(
         locale: const Locale('en'),
         isLoading: false,
@@ -54,9 +55,9 @@ class LocaleBloc extends Bloc<LocaleEvent, LocaleState> {
         isLoading: false,
       ));
       
-      print('✅ Langue changée vers: ${event.locale.languageCode}');
+      LogConfig.logInfo('Langue changée vers: ${event.locale.languageCode}');
     } catch (e) {
-      print('❌ Erreur changement langue: $e');
+      LogConfig.logError('❌ Erreur changement langue: $e');
       emit(state.copyWith(
         isLoading: false,
         error: e.toString(),

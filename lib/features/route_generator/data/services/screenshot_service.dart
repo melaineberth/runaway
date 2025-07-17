@@ -7,6 +7,7 @@ import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart';
 import 'package:runaway/core/styles/colors.dart';
 import 'package:runaway/features/home/data/services/map_state_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:runaway/core/helper/config/log_config.dart';
 
 class ScreenshotService {
   static final SupabaseClient _supabase = Supabase.instance.client;
@@ -21,25 +22,25 @@ class ScreenshotService {
     MapStateService? mapStateService, // 🆕 Paramètre optionnel pour récupérer le style
   }) async {
     try {
-      print('🚀 Début capture screenshot pour route: $routeId');
+      LogConfig.logInfo('🚀 Début capture screenshot pour route: $routeId');
 
       // 1. Vérifier que les coordonnées sont valides
       if (routeCoords.isEmpty) {
-        print('❌ Aucune coordonnée de parcours fournie');
+        LogConfig.logError('❌ Aucune coordonnée de parcours fournie');
         return null;
       }
 
       // 2. Obtenir l'utilisateur connecté pour l'ID
       final user = _supabase.auth.currentUser;
       if (user == null) {
-        print('❌ Utilisateur non connecté');
+        LogConfig.logError('❌ Utilisateur non connecté');
         return null;
       }
       final realUserId = user.id;
 
       // 3. Récupérer l'état actuel de la caméra
       final cameraState = await liveMap.getCameraState();
-      print('📍 Position caméra: ${cameraState.center.coordinates.lat}, ${cameraState.center.coordinates.lng}');
+      LogConfig.logInfo('📍 Position caméra: ${cameraState.center.coordinates.lat}, ${cameraState.center.coordinates.lng}');
       
       // Dimensions optimisées pour les cartes (ratio 16:9)
       const double targetWidth = 800;
@@ -57,17 +58,17 @@ class ScreenshotService {
         String styleUri;
         if (mapStateService != null) {
           styleUri = mapStateService.getCurrentStyleUri();
-          print('🎨 Utilisation du style actuel: $styleUri');
+          LogConfig.logInfo('🎨 Utilisation du style actuel: $styleUri');
         } else {
           // 🆕 Fallback : récupérer le style directement depuis la map live
           try {
             final currentStyleUri = await liveMap.style.getStyleURI();
             styleUri = currentStyleUri;
-            print('🎨 Style récupéré depuis la map live: $styleUri');
+            LogConfig.logInfo('🎨 Style récupéré depuis la map live: $styleUri');
           } catch (e) {
             // 🆕 Dernier fallback : style par défaut
             styleUri = 'mapbox://styles/mapbox/outdoors-v12';
-            print('⚠️ Utilisation du style par défaut: $styleUri');
+            LogConfig.logInfo('Utilisation du style par défaut: $styleUri');
           }
         }
 
@@ -99,7 +100,7 @@ class ScreenshotService {
         final rawImageBytes = await snapshotter.start();
         
         if (rawImageBytes == null || rawImageBytes.isEmpty) {
-          print('❌ Image capturée vide');
+          LogConfig.logError('❌ Image capturée vide');
           return null;
         }
 
@@ -107,7 +108,7 @@ class ScreenshotService {
         final processedImageBytes = await _removeMapboxLogo(rawImageBytes);
         final imageBytes = processedImageBytes ?? rawImageBytes;
 
-        print('✅ Image capturée: ${imageBytes.length} bytes');
+        LogConfig.logInfo('Image capturée: ${imageBytes.length} bytes');
 
         // 11. Upload vers Supabase Storage
         final imageUrl = await _uploadScreenshotToStorage(
@@ -116,7 +117,7 @@ class ScreenshotService {
           userId: realUserId,
         );
 
-        print('✅ Screenshot uploadé avec succès: $imageUrl');
+        LogConfig.logInfo('Screenshot uploadé avec succès: $imageUrl');
         return imageUrl;
 
       } finally {
@@ -125,7 +126,7 @@ class ScreenshotService {
       }
 
     } catch (e, stackTrace) {
-      print('❌ Erreur capture screenshot: $e');
+      LogConfig.logError('❌ Erreur capture screenshot: $e');
       print('📜 Stack trace: $stackTrace');
       return null;
     }
@@ -149,7 +150,7 @@ class ScreenshotService {
 
       // 🔧 FIX: Utiliser jsonEncode au lieu de .toString()
       final geoJsonString = jsonEncode(geoJsonMap);
-      print('📍 GeoJSON créé: ${geoJsonString.substring(0, 100)}...');
+      LogConfig.logInfo('📍 GeoJSON créé: ${geoJsonString.substring(0, 100)}...');
 
       // Ajouter la source GeoJSON
       await snapshotter.style.addSource(
@@ -177,10 +178,10 @@ class ScreenshotService {
         await _addStartEndMarkers(snapshotter, routeCoords);
       }
 
-      print('✅ Parcours ajouté au snapshot');
+      LogConfig.logInfo('Parcours ajouté au snapshot');
 
     } catch (e) {
-      print('❌ Erreur ajout parcours: $e');
+      LogConfig.logError('❌ Erreur ajout parcours: $e');
       rethrow;
     }
   }
@@ -254,10 +255,10 @@ class ScreenshotService {
         ),
       );
 
-      print('✅ Marqueurs début/fin ajoutés');
+      LogConfig.logInfo('Marqueurs début/fin ajoutés');
 
     } catch (e) {
-      print('❌ Erreur ajout marqueurs: $e');
+      LogConfig.logError('❌ Erreur ajout marqueurs: $e');
       // Ne pas faire échouer toute la capture pour les marqueurs
     }
   }
@@ -316,7 +317,7 @@ class ScreenshotService {
       final fileName = 'route_${routeId}_$timestamp.png';
       final filePath = '$userId/$fileName';
 
-      print('📤 Upload vers Storage: $filePath (${imageBytes.length} bytes)');
+      LogConfig.logInfo('📤 Upload vers Storage: $filePath (${imageBytes.length} bytes)');
 
       // Upload vers le bucket
       await _supabase.storage
@@ -336,11 +337,11 @@ class ScreenshotService {
           .from(_bucketName)
           .getPublicUrl(filePath);
 
-      print('✅ Screenshot uploadé avec succès: $publicUrl');
+      LogConfig.logInfo('Screenshot uploadé avec succès: $publicUrl');
       return publicUrl;
 
     } catch (e) {
-      print('❌ Erreur upload screenshot: $e');
+      LogConfig.logError('❌ Erreur upload screenshot: $e');
       return null;
     }
   }
@@ -355,7 +356,7 @@ class ScreenshotService {
       // Le chemin dans le storage est après 'object/public/route-screenshots/'
       final bucketIndex = pathSegments.indexOf(_bucketName);
       if (bucketIndex == -1 || bucketIndex >= pathSegments.length - 1) {
-        print('❌ Impossible d\'extraire le chemin du fichier depuis l\'URL');
+        LogConfig.logError('❌ Impossible d\'extraire le chemin du fichier depuis l\'URL');
         return false;
       }
 
@@ -365,11 +366,11 @@ class ScreenshotService {
           .from(_bucketName)
           .remove([filePath]);
       
-      print('✅ Screenshot supprimée: $filePath');
+      LogConfig.logInfo('Screenshot supprimée: $filePath');
       return true;
 
     } catch (e) {
-      print('❌ Erreur suppression screenshot: $e');
+      LogConfig.logError('❌ Erreur suppression screenshot: $e');
       return false;
     }
   }
@@ -406,7 +407,7 @@ class ScreenshotService {
       final newHeight = originalHeight - cropBottomPixels;
       
       if (newHeight <= 0) {
-        print('⚠️ Image trop petite pour recadrage');
+        LogConfig.logInfo('Image trop petite pour recadrage');
         return null;
       }
       
@@ -435,11 +436,11 @@ class ScreenshotService {
       originalImage.dispose();
       croppedImage.dispose();
       
-      print('✅ Logo Mapbox retiré par recadrage ($originalHeight -> ${newHeight}px)');
+      LogConfig.logInfo('Logo Mapbox retiré par recadrage ($originalHeight -> ${newHeight}px)');
       return croppedBytes;
       
     } catch (e) {
-      print('❌ Erreur recadrage image: $e');
+      LogConfig.logError('❌ Erreur recadrage image: $e');
       return null;
     }
   }

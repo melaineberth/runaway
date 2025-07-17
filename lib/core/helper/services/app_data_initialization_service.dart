@@ -1,5 +1,6 @@
 import 'package:runaway/core/blocs/app_data/app_data_bloc.dart';
 import 'package:runaway/core/blocs/app_data/app_data_event.dart';
+import 'package:runaway/core/helper/config/log_config.dart';
 
 /// Service pour gérer l'initialisation et la synchronisation des données
 /// 🆕 Maintenant avec support complet des crédits
@@ -11,7 +12,7 @@ class AppDataInitializationService {
   static void initialize(AppDataBloc appDataBloc) {
     _appDataBloc = appDataBloc;
     _isInitialized = true;
-    print('✅ AppDataInitializationService initialisé avec support crédits');
+    LogConfig.logInfo('AppDataInitializationService initialisé avec support crédits');
   }
 
   // ===== MÉTHODES GÉNÉRALES =====
@@ -19,42 +20,33 @@ class AppDataInitializationService {
   /// Déclenche le pré-chargement complet (activité + historique + crédits)
   static void startDataPreloading() {
     if (!_isInitialized || _appDataBloc == null) {
-      print('⚠️ AppDataInitializationService non initialisé');
+      LogConfig.logInfo('AppDataInitializationService non initialisé');
       return;
     }
 
-    print('🚀 Démarrage du pré-chargement complet (y compris crédits)');
+    LogConfig.logInfo('🚀 Démarrage du pré-chargement complet (y compris crédits)');
     _appDataBloc!.add(const AppDataPreloadRequested());
   }
 
   /// Rafraîchit toutes les données
   static void refreshAllData() {
     if (!_isInitialized || _appDataBloc == null) return;
-    print('🔄 Rafraîchissement complet demandé');
+    LogConfig.logInfo('🔄 Rafraîchissement complet demandé');
     _appDataBloc!.add(const AppDataRefreshRequested());
   }
 
   /// Nettoie le cache lors de la déconnexion
   static void clearDataCache() {
     if (!_isInitialized || _appDataBloc == null) return;
-    print('🗑️ Nettoyage complet du cache');
+    LogConfig.logInfo('🗑️ Nettoyage complet du cache');
     _appDataBloc!.add(const AppDataClearRequested());
   }
 
   /// Synchronisation forcée avec bypass du cache
   static void forceDataSync() {
     if (!_isInitialized || _appDataBloc == null) return;
-    print('⚡ Synchronisation forcée demandée');
+    LogConfig.logInfo('Synchronisation forcée demandée');
     _appDataBloc!.add(const ForceDataSyncRequested());
-  }
-
-  // ===== MÉTHODES ACTIVITÉ =====
-
-  /// Rafraîchit uniquement les données d'activité
-  static void refreshActivityData() {
-    if (!_isInitialized || _appDataBloc == null) return;
-    print('📊 Rafraîchissement données activité');
-    _appDataBloc!.add(const ActivityDataRefreshRequested());
   }
 
   // ===== MÉTHODES HISTORIQUE =====
@@ -62,7 +54,7 @@ class AppDataInitializationService {
   /// Rafraîchit uniquement les données d'historique
   static void refreshHistoricData() {
     if (!_isInitialized || _appDataBloc == null) return;
-    print('📚 Rafraîchissement données historique');
+    LogConfig.logInfo('📚 Rafraîchissement données historique');
     _appDataBloc!.add(const HistoricDataRefreshRequested());
   }
 
@@ -71,18 +63,18 @@ class AppDataInitializationService {
   /// Déclenche le pré-chargement des données de crédits uniquement
   static void preloadCreditData() {
     if (!_isInitialized || _appDataBloc == null) {
-      print('⚠️ AppDataInitializationService non initialisé pour crédits');
+      LogConfig.logInfo('AppDataInitializationService non initialisé pour crédits');
       return;
     }
 
-    print('💳 Pré-chargement spécifique des crédits');
+    LogConfig.logInfo('💳 Pré-chargement spécifique des crédits');
     _appDataBloc!.add(const CreditDataPreloadRequested());
   }
 
   /// Rafraîchit uniquement les données de crédits
   static void refreshCreditData() {
     if (!_isInitialized || _appDataBloc == null) return;
-    print('💰 Rafraîchissement données crédits');
+    LogConfig.logInfo('💰 Rafraîchissement données crédits');
     _appDataBloc!.add(const CreditDataRefreshRequested());
   }
 
@@ -95,7 +87,7 @@ class AppDataInitializationService {
   }) {
     if (!_isInitialized || _appDataBloc == null) return;
     
-    print('🔄 Synchronisation post-utilisation: $amount crédits');
+    LogConfig.logInfo('🔄 Synchronisation post-utilisation: $amount crédits');
     _appDataBloc!.add(CreditUsageCompletedInAppData(
       amount: amount,
       reason: reason,
@@ -112,7 +104,7 @@ class AppDataInitializationService {
   }) {
     if (!_isInitialized || _appDataBloc == null) return;
     
-    print('🔄 Synchronisation post-achat: $creditsAdded crédits ajoutés');
+    LogConfig.logInfo('🔄 Synchronisation post-achat: $creditsAdded crédits ajoutés');
     _appDataBloc!.add(CreditPurchaseCompletedInAppData(
       planId: planId,
       paymentIntentId: paymentIntentId,
@@ -124,7 +116,7 @@ class AppDataInitializationService {
   static void updateCreditBalanceOptimistic(int newBalance) {
     if (!_isInitialized || _appDataBloc == null) return;
     
-    print('⚡ Mise à jour optimiste: $newBalance crédits');
+    LogConfig.logInfo('Mise à jour optimiste: $newBalance crédits');
     _appDataBloc!.add(CreditBalanceUpdatedInAppData(
       newBalance: newBalance,
       isOptimistic: true,
@@ -135,7 +127,7 @@ class AppDataInitializationService {
   static void confirmCreditBalance(int confirmedBalance) {
     if (!_isInitialized || _appDataBloc == null) return;
     
-    print('✅ Confirmation solde: $confirmedBalance crédits');
+    LogConfig.logInfo('Confirmation solde: $confirmedBalance crédits');
     _appDataBloc!.add(CreditBalanceUpdatedInAppData(
       newBalance: confirmedBalance,
       isOptimistic: false,
@@ -145,7 +137,7 @@ class AppDataInitializationService {
   /// Nettoie uniquement les données de crédits
   static void clearCreditData() {
     if (!_isInitialized || _appDataBloc == null) return;
-    print('🗑️ Nettoyage données crédits');
+    LogConfig.logInfo('🗑️ Nettoyage données crédits');
     _appDataBloc!.add(const CreditDataClearRequested());
   }
 
@@ -192,7 +184,7 @@ class AppDataInitializationService {
   /// Initialisation complète au démarrage de l'app
   static void initializeOnAppStart() {
     if (!_isInitialized) {
-      print('⚠️ Service non initialisé, impossible de démarrer');
+      LogConfig.logInfo('Service non initialisé, impossible de démarrer');
       return;
     }
 
@@ -205,8 +197,7 @@ class AppDataInitializationService {
     Future.delayed(const Duration(seconds: 2), () {
       if (_appDataBloc != null) {
         final state = _appDataBloc!.state;
-        print('📊 État après initialisation:');
-        print('   - Activité: ${state.hasActivityData ? "✅" : "❌"}');
+        LogConfig.logInfo('📊 État après initialisation:');
         print('   - Historique: ${state.hasHistoricData ? "✅" : "❌"} (${state.savedRoutes.length} parcours)');
         print('   - Crédits: ${state.hasCreditData ? "✅" : "❌"} (${state.availableCredits} disponibles)');
         print('   - Données complètes: ${state.isDataLoaded ? "✅" : "❌"}');
@@ -216,7 +207,7 @@ class AppDataInitializationService {
 
   /// Méthode appelée lors de la connexion utilisateur
   static void onUserAuthenticated() {
-    print('👤 Utilisateur connecté - démarrage pré-chargement');
+    LogConfig.logInfo('👤 Utilisateur connecté - démarrage pré-chargement');
     startDataPreloading();
   }
 

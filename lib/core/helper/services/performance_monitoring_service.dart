@@ -4,7 +4,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:runaway/core/helper/config/secure_config.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
-
+import 'package:runaway/core/helper/config/log_config.dart';
 import 'crash_reporting_service.dart';
 
 /// Service de monitoring des performances
@@ -21,17 +21,17 @@ class PerformanceMonitoringService {
   /// Initialise le service de performance monitoring
   Future<void> initialize() async {
     if (_isInitialized) {
-      print('⚠️ PerformanceMonitoringService déjà initialisé');
+      LogConfig.logInfo('PerformanceMonitoringService déjà initialisé');
       return;
     }
 
     if (!SecureConfig.isPerformanceMonitoringEnabled) {
-      print('ℹ️ Performance monitoring désactivé via configuration');
+      LogConfig.logInfo('ℹ️ Performance monitoring désactivé via configuration');
       return;
     }
 
     try {
-      print('📊 Initialisation Performance Monitoring...');
+      LogConfig.logInfo('📊 Initialisation Performance Monitoring...');
 
       // Le monitoring est configuré via Sentry dans CrashReportingService
       _isInitialized = true;
@@ -39,9 +39,9 @@ class PerformanceMonitoringService {
       // Démarrer le monitoring des métriques système
       _startSystemMetricsMonitoring();
       
-      print('✅ Performance Monitoring initialisé');
+      LogConfig.logInfo('Performance Monitoring initialisé');
     } catch (e) {
-      print('❌ Erreur initialisation Performance Monitoring: $e');
+      LogConfig.logError('❌ Erreur initialisation Performance Monitoring: $e');
     }
   }
 
@@ -84,12 +84,12 @@ class PerformanceMonitoringService {
       );
 
       if (!SecureConfig.kIsProduction) {
-        print('⏱️ Opération démarrée: $operationName (ID: $operationId)');
+        LogConfig.logInfo('⏱️ Opération démarrée: $operationName (ID: $operationId)');
       }
 
       return operationId;
     } catch (e) {
-      print('❌ Erreur démarrage opération: $e');
+      LogConfig.logError('❌ Erreur démarrage opération: $e');
       return '';
     }
   }
@@ -147,7 +147,7 @@ class PerformanceMonitoringService {
         );
 
         if (!SecureConfig.kIsProduction) {
-          print('⏱️ Opération terminée: $operationId - ${duration.inMilliseconds}ms (${success ? 'succès' : 'échec'})');
+          LogConfig.logInfo('⏱️ Opération terminée: $operationId - ${duration.inMilliseconds}ms (${success ? 'succès' : 'échec'})');
         }
 
         // Alerter si l'opération est lente
@@ -164,7 +164,7 @@ class PerformanceMonitoringService {
         }
       }
     } catch (e) {
-      print('❌ Erreur fin opération: $e');
+      LogConfig.logError('❌ Erreur fin opération: $e');
     }
   }
 
@@ -294,10 +294,10 @@ class PerformanceMonitoringService {
 
       // Log local si développement
       if (!SecureConfig.kIsProduction) {
-        print('📊 Métrique: $metricName = $value${unit ?? ''}');
+        LogConfig.logInfo('📊 Métrique: $metricName = $value${unit ?? ''}');
       }
     } catch (e) {
-      print('❌ Erreur enregistrement métrique: $e');
+      LogConfig.logError('❌ Erreur enregistrement métrique: $e');
     }
   }
 
@@ -311,9 +311,9 @@ class PerformanceMonitoringService {
         _collectSystemMetrics();
       });
 
-      print('🔄 Monitoring métriques système démarré');
+      LogConfig.logInfo('🔄 Monitoring métriques système démarré');
     } catch (e) {
-      print('❌ Erreur démarrage monitoring système: $e');
+      LogConfig.logError('❌ Erreur démarrage monitoring système: $e');
     }
   }
 
@@ -342,7 +342,7 @@ class PerformanceMonitoringService {
       }
 
     } catch (e) {
-      print('❌ Erreur collecte métriques système: $e');
+      LogConfig.logError('❌ Erreur collecte métriques système: $e');
     }
   }
 
@@ -395,7 +395,7 @@ class PerformanceMonitoringService {
         .toList();
 
       for (final operationId in staleOperations) {
-        print('⚠️ Nettoyage opération périmée: $operationId');
+        LogConfig.logInfo('Nettoyage opération périmée: $operationId');
         finishOperation(
           operationId,
           success: false,
@@ -404,10 +404,10 @@ class PerformanceMonitoringService {
       }
 
       if (staleOperations.isNotEmpty) {
-        print('🧹 ${staleOperations.length} opération(s) périmée(s) nettoyée(s)');
+        LogConfig.logInfo('🧹 ${staleOperations.length} opération(s) périmée(s) nettoyée(s)');
       }
     } catch (e) {
-      print('❌ Erreur nettoyage opérations: $e');
+      LogConfig.logError('❌ Erreur nettoyage opérations: $e');
     }
   }
 
@@ -425,9 +425,9 @@ class PerformanceMonitoringService {
       _operationStartTimes.clear();
       _isInitialized = false;
       
-      print('✅ PerformanceMonitoringService fermé');
+      LogConfig.logInfo('PerformanceMonitoringService fermé');
     } catch (e) {
-      print('❌ Erreur fermeture PerformanceMonitoringService: $e');
+      LogConfig.logError('❌ Erreur fermeture PerformanceMonitoringService: $e');
     }
   }
 }

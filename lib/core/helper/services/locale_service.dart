@@ -1,4 +1,5 @@
 import 'dart:ui';
+import 'package:runaway/core/helper/config/log_config.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class LocaleService {
@@ -33,7 +34,7 @@ class LocaleService {
       final systemLocale = PlatformDispatcher.instance.locale;
       return isSupported(systemLocale) ? systemLocale : const Locale('en');
     } catch (e) {
-      print('❌ Erreur lecture locale: $e');
+      LogConfig.logError('❌ Erreur lecture locale: $e');
       return const Locale('en');
     }
   }
@@ -47,9 +48,9 @@ class LocaleService {
       
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(_localeKey, locale.languageCode);
-      print('✅ Locale sauvegardée: ${locale.languageCode}');
+      LogConfig.logSuccess('Locale sauvegardée: ${locale.languageCode}');
     } catch (e) {
-      print('❌ Erreur sauvegarde locale: $e');
+      LogConfig.logError('❌ Erreur sauvegarde locale: $e');
       rethrow;
     }
   }

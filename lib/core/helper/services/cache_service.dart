@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'package:runaway/core/helper/config/log_config.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Service de cache optimisé avec sérialisation JSON simplifiée
@@ -57,9 +58,9 @@ class CacheService {
         _notifyListeners(key, CacheEvent.updated(key, value));
       }
       
-      print('💾 Cache mis à jour: $key (expire dans ${expiration.inMinutes}min)');
+      LogConfig.logInfo('💾 Cache mis à jour: $key (expire dans ${expiration.inMinutes}min)');
     } catch (e) {
-      print('❌ Erreur mise en cache $key: $e');
+      LogConfig.logError('❌ Erreur mise en cache $key: $e');
       // Continuer silencieusement en cas d'erreur de cache
     }
   }
@@ -87,7 +88,7 @@ class CacheService {
       final elapsed = DateTime.now().difference(timestamp);
       if (renewIfClose && elapsed > expiration * 0.8) {
         _scheduleExpiration(key, expiration);
-        print('🔄 Cache renouvelé: $key');
+        LogConfig.logInfo('🔄 Cache renouvelé: $key');
       }
       
       final rawValue = entryData['value'];
@@ -112,7 +113,7 @@ class CacheService {
       return rawValue as T?;
       
     } catch (e) {
-      print('❌ Erreur lecture cache $key: $e');
+      LogConfig.logError('❌ Erreur lecture cache $key: $e');
       await remove(key);
       return null;
     }
@@ -130,7 +131,7 @@ class CacheService {
       _notifyListeners(key, CacheEvent.removed(key));
     }
     
-    print('🗑️ Cache supprimé: $key');
+    LogConfig.logInfo('🗑️ Cache supprimé: $key');
   }
 
   /// Invalide le cache selon des critères
@@ -183,7 +184,7 @@ class CacheService {
       await remove(key);
     }
     
-    print('🧹 Cache invalidé: ${keysToRemove.length} entrées supprimées');
+    LogConfig.logInfo('🧹 Cache invalidé: ${keysToRemove.length} entrées supprimées');
   }
 
   /// Vide complètement le cache
@@ -196,7 +197,7 @@ class CacheService {
       await remove(key, notifyListeners: false);
     }
     
-    print('🗑️ Cache complètement vidé');
+    LogConfig.logInfo('🗑️ Cache complètement vidé');
   }
 
   /// Écoute les changements du cache
@@ -208,12 +209,12 @@ class CacheService {
   /// Stratégies d'invalidation automatique
   Future<void> invalidateCreditsCache() async {
     await invalidate(pattern: 'credit');
-    print('💳 Cache crédits invalidé');
+    LogConfig.logInfo('💳 Cache crédits invalidé');
   }
 
   Future<void> invalidateRoutesCache() async {
     await invalidate(pattern: 'route');
-    print('🛤️ Cache routes invalidé');
+    LogConfig.logInfo('🛤️ Cache routes invalidé');
   }
 
   Future<void> invalidateActivityCache() async {
@@ -253,7 +254,7 @@ class CacheService {
       final toRemove = sortedEntries.take(20).map((e) => e.key).toList();
       await invalidate(keys: toRemove);
       
-      print('🧹 Nettoyage intelligent: ${toRemove.length} anciennes entrées supprimées');
+      LogConfig.logInfo('🧹 Nettoyage intelligent: ${toRemove.length} anciennes entrées supprimées');
     }
   }
 

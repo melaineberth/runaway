@@ -5,6 +5,7 @@ import 'package:device_info_plus/device_info_plus.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:runaway/core/helper/config/secure_config.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
+import 'package:runaway/core/helper/config/log_config.dart';
 
 /// Service principal de crash reporting utilisant Sentry
 class CrashReportingService {
@@ -20,14 +21,14 @@ class CrashReportingService {
   /// Initialise Sentry avec la configuration sécurisée
   Future<void> initialize() async {
     if (_isInitialized) {
-      print('⚠️ CrashReportingService déjà initialisé');
+      LogConfig.logInfo('CrashReportingService déjà initialisé');
       return;
     }
 
     try {
       // Vérifier si le crash reporting est activé
       if (!SecureConfig.isCrashReportingEnabled) {
-        print('ℹ️ Crash reporting désactivé via configuration');
+        LogConfig.logInfo('ℹ️ Crash reporting désactivé via configuration');
         return;
       }
 
@@ -72,7 +73,7 @@ class CrashReportingService {
       await _configureDeviceContext();
 
       _isInitialized = true;
-      print('✅ Sentry initialisé avec succès');
+      LogConfig.logInfo('Sentry initialisé avec succès');
       
       // Log de test si développement
       if (!SecureConfig.kIsProduction) {
@@ -80,7 +81,7 @@ class CrashReportingService {
       }
 
     } catch (e, stackTrace) {
-      print('❌ Erreur initialisation Sentry: $e');
+      LogConfig.logError('❌ Erreur initialisation Sentry: $e');
       print('Stack trace: $stackTrace');
       // Ne pas faire échouer l'app si Sentry n'arrive pas à s'initialiser
     }
@@ -114,9 +115,9 @@ class CrashReportingService {
       });
 
       addBreadcrumb('User', 'Utilisateur configuré: $username');
-      print('👤 Utilisateur Sentry configuré: $userId');
+      LogConfig.logInfo('👤 Utilisateur Sentry configuré: $userId');
     } catch (e) {
-      print('❌ Erreur configuration utilisateur Sentry: $e');
+      LogConfig.logError('❌ Erreur configuration utilisateur Sentry: $e');
     }
   }
 
@@ -133,9 +134,9 @@ class CrashReportingService {
       });
 
       addBreadcrumb('User', 'Utilisateur déconnecté');
-      print('👤 Utilisateur Sentry supprimé');
+      LogConfig.logInfo('👤 Utilisateur Sentry supprimé');
     } catch (e) {
-      print('❌ Erreur suppression utilisateur Sentry: $e');
+      LogConfig.logError('❌ Erreur suppression utilisateur Sentry: $e');
     }
   }
 
@@ -148,7 +149,7 @@ class CrashReportingService {
     SentryLevel level = SentryLevel.error,
   }) async {
     if (!_isInitialized) {
-      print('⚠️ CrashReportingService non initialisé, exception ignorée: $exception');
+      LogConfig.logInfo('CrashReportingService non initialisé, exception ignorée: $exception');
       return;
     }
 
@@ -177,7 +178,7 @@ class CrashReportingService {
         if (context != null) print('   Contexte: $context');
       }
     } catch (e) {
-      print('❌ Erreur capture exception Sentry: $e');
+      LogConfig.logError('❌ Erreur capture exception Sentry: $e');
     }
   }
 
@@ -207,7 +208,7 @@ class CrashReportingService {
         },
       );
     } catch (e) {
-      print('❌ Erreur capture message Sentry: $e');
+      LogConfig.logError('❌ Erreur capture message Sentry: $e');
     }
   }
 
@@ -229,7 +230,7 @@ class CrashReportingService {
         timestamp: DateTime.now(),
       ));
     } catch (e) {
-      print('❌ Erreur ajout breadcrumb: $e');
+      LogConfig.logError('❌ Erreur ajout breadcrumb: $e');
     }
   }
 
@@ -259,7 +260,7 @@ class CrashReportingService {
       // Vous pouvez aussi retourner `span as SentryTransaction?`
       return span;
     } catch (e) {
-      print('❌ Erreur démarrage transaction: $e');
+      LogConfig.logError('❌ Erreur démarrage transaction: $e');
       return null;
     }
   }
@@ -290,7 +291,7 @@ class CrashReportingService {
         }
       });
     } catch (e) {
-      print('❌ Erreur configuration contexte appareil: $e');
+      LogConfig.logError('❌ Erreur configuration contexte appareil: $e');
     }
   }
 
@@ -302,7 +303,7 @@ class CrashReportingService {
       scope.setTag('android_version', androidInfo.version.release);
       scope.setTag('android_sdk', androidInfo.version.sdkInt.toString());
     } catch (e) {
-      print('❌ Erreur contexte Android: $e');
+      LogConfig.logError('❌ Erreur contexte Android: $e');
     }
   }
 
@@ -314,7 +315,7 @@ class CrashReportingService {
       scope.setTag('ios_version', iosInfo.systemVersion);
       scope.setTag('is_physical_device', iosInfo.isPhysicalDevice.toString());
     } catch (e) {
-      print('❌ Erreur contexte iOS: $e');
+      LogConfig.logError('❌ Erreur contexte iOS: $e');
     }
   }
 
@@ -367,9 +368,9 @@ class CrashReportingService {
     try {
       await Sentry.close();
       _isInitialized = false;
-      print('✅ CrashReportingService fermé');
+      LogConfig.logInfo('CrashReportingService fermé');
     } catch (e) {
-      print('❌ Erreur fermeture Sentry: $e');
+      LogConfig.logError('❌ Erreur fermeture Sentry: $e');
     }
   }
 }

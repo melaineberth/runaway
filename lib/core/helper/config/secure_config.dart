@@ -1,4 +1,5 @@
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:runaway/core/helper/config/log_config.dart';
 
 class SecureConfig {
   static const bool kIsProduction = bool.fromEnvironment('PRODUCTION', defaultValue: false);
@@ -273,17 +274,17 @@ class SecureConfig {
   /// Validation complète incluant monitoring
   static void validateConfiguration() {
     try {
-      print('🔒 Validation configuration sécurisée...');
-      print('🔒 Mode: ${kIsProduction ? 'PRODUCTION' : 'DEVELOPMENT'}');
+      LogConfig.logInfo('🔒 Validation configuration sécurisée...');
+      LogConfig.logInfo('🔒 Mode: ${kIsProduction ? 'PRODUCTION' : 'DEVELOPMENT'}');
             
       // 🆕 Valider la configuration monitoring
       if (isCrashReportingEnabled || isPerformanceMonitoringEnabled) {
-        print('✅ Configuration Sentry validée');
+        LogConfig.logSuccess('Configuration Sentry validée');
       }
       
-      print('✅ Configuration complète validée');
+      LogConfig.logSuccess('Configuration complète validée');
     } catch (e) {
-      print('❌ Erreur configuration: $e');
+      LogConfig.logError('❌ Erreur configuration: $e');
       rethrow;
     }
   }

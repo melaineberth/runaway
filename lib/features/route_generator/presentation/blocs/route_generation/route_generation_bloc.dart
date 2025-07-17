@@ -3,6 +3,7 @@ import 'package:hydrated_bloc/hydrated_bloc.dart';
 import 'package:runaway/core/blocs/app_data/app_data_bloc.dart';
 import 'package:runaway/core/blocs/app_data/app_data_event.dart';
 import 'package:runaway/core/errors/api_exceptions.dart';
+import 'package:runaway/core/helper/config/log_config.dart';
 import 'package:runaway/core/helper/extensions/monitoring_extensions.dart';
 import 'package:runaway/core/helper/services/connectivity_service.dart';
 import 'package:runaway/core/helper/services/monitoring_service.dart';
@@ -127,7 +128,7 @@ class RouteGenerationBloc extends HydratedBloc<RouteGenerationEvent, RouteGenera
     );
     
     try {
-      print('🚀 === DÉBUT GÉNÉRATION UI FIRST (ID: $generationId) ===');
+      LogConfig.logInfo('🚀 === DÉBUT GÉNÉRATION UI FIRST (ID: $generationId) ===');
       print('🏁 Bypass credit check: ${event.bypassCreditCheck}');
 
       emit(state.copyWith(
@@ -138,7 +139,7 @@ class RouteGenerationBloc extends HydratedBloc<RouteGenerationEvent, RouteGenera
 
       // ===== 🆕 VÉRIFICATION DE CONNECTIVITÉ AVANT TOUT =====
       
-      print('🌐 === VÉRIFICATION CONNECTIVITÉ ===');
+      LogConfig.logInfo('🌐 === VÉRIFICATION CONNECTIVITÉ ===');
       
       // Attendre l'initialisation du service avec timeout court
       await ConnectivityService.instance.waitForInitialization(
@@ -147,7 +148,7 @@ class RouteGenerationBloc extends HydratedBloc<RouteGenerationEvent, RouteGenera
       
       // Vérifier si on est hors ligne
       if (ConnectivityService.instance.isOffline) {
-        print('❌ Mode hors-ligne détecté');
+        LogConfig.logError('❌ Mode hors-ligne détecté');
         emit(state.copyWith(
           isGeneratingRoute: false,
           errorMessage: 'Génération hors-ligne indisponible. Vérifiez votre connexion internet.',
@@ -162,12 +163,12 @@ class RouteGenerationBloc extends HydratedBloc<RouteGenerationEvent, RouteGenera
         return;
       }
       
-      print('✅ Connectivité confirmée');
+      LogConfig.logInfo('Connectivité confirmée');
 
       // ===== VÉRIFICATION DES CRÉDITS (SEULEMENT SI NÉCESSAIRE) =====
       
       if (!event.bypassCreditCheck) {
-        print('💳 === VÉRIFICATION CRÉDITS POUR UTILISATEUR AUTHENTIFIÉ ===');
+        LogConfig.logInfo('💳 === VÉRIFICATION CRÉDITS POUR UTILISATEUR AUTHENTIFIÉ ===');
         
         // Utiliser le service dédié pour la vérification
         final creditCheck = await _creditService.verifyCreditsForGeneration(
@@ -191,7 +192,7 @@ class RouteGenerationBloc extends HydratedBloc<RouteGenerationEvent, RouteGenera
           return;
         }
 
-        print('✅ Crédits validés: ${creditCheck.availableCredits}/${creditCheck.requiredCredits}');
+        LogConfig.logInfo('Crédits validés: ${creditCheck.availableCredits}/${creditCheck.requiredCredits}');
       }
       
       // ===== GÉNÉRATION DU PARCOURS =====
@@ -209,7 +210,7 @@ class RouteGenerationBloc extends HydratedBloc<RouteGenerationEvent, RouteGenera
 
       // ===== 🆕 GÉNÉRATION AVEC RETRY AUTOMATIQUE =====
       
-      print('🛣️ === GÉNÉRATION DE ROUTE AVEC RETRY ===');
+      LogConfig.logInfo('🛣️ === GÉNÉRATION DE ROUTE AVEC RETRY ===');
       
       late GraphHopperRouteResult result;
       
@@ -219,10 +220,10 @@ class RouteGenerationBloc extends HydratedBloc<RouteGenerationEvent, RouteGenera
           GraphHopperApiService.generateRoute(parameters: event.parameters)
         );
         
-        print('✅ Route générée avec succès: ${result.coordinates.length} points, ${result.distanceKm}km');
+        LogConfig.logInfo('Route générée avec succès: ${result.coordinates.length} points, ${result.distanceKm}km');
         
       } on NetworkException catch (e) {
-        print('❌ Erreur réseau lors de la génération: ${e.message}');
+        LogConfig.logError('❌ Erreur réseau lors de la génération: ${e.message}');
         emit(state.copyWith(
           isGeneratingRoute: false,
           errorMessage: 'Problème de connexion. ${e.message}',
@@ -237,7 +238,7 @@ class RouteGenerationBloc extends HydratedBloc<RouteGenerationEvent, RouteGenera
         return;
         
       } on RouteGenerationException catch (e) {
-        print('❌ Erreur de génération: ${e.message}');
+        LogConfig.logError('❌ Erreur de génération: ${e.message}');
         emit(state.copyWith(
           isGeneratingRoute: false,
           errorMessage: 'Erreur de génération: ${e.message}',
@@ -255,7 +256,7 @@ class RouteGenerationBloc extends HydratedBloc<RouteGenerationEvent, RouteGenera
       // ===== CONSOMMATION DES CRÉDITS (SEULEMENT POUR UTILISATEURS AUTHENTIFIÉS) =====
       
       if (!event.bypassCreditCheck) {
-        print('💳 Consommation de $REQUIRED_CREDITS crédit(s)...');
+        LogConfig.logInfo('💳 Consommation de $REQUIRED_CREDITS crédit(s)...');
 
         final consumptionResult = await _creditService.consumeCreditsForGeneration(
           amount: REQUIRED_CREDITS,
@@ -269,7 +270,7 @@ class RouteGenerationBloc extends HydratedBloc<RouteGenerationEvent, RouteGenera
         );
 
         if (!consumptionResult.success) {
-          print('❌ Échec consommation crédits: ${consumptionResult.errorMessage}');
+          LogConfig.logError('❌ Échec consommation crédits: ${consumptionResult.errorMessage}');
           emit(state.copyWith(
             isGeneratingRoute: false,
             errorMessage: consumptionResult.errorMessage ?? 'Erreur lors de l\'utilisation des crédits',
@@ -285,7 +286,7 @@ class RouteGenerationBloc extends HydratedBloc<RouteGenerationEvent, RouteGenera
           return;
         }
 
-        print('✅ Consommation réussie. Nouveau solde: ${consumptionResult.newBalance}');
+        LogConfig.logInfo('Consommation réussie. Nouveau solde: ${consumptionResult.newBalance}');
 
       } else {
         print('🆕 === GÉNÉRATION GUEST - PAS D\'UTILISATION DE CRÉDITS ===');
@@ -385,7 +386,7 @@ class RouteGenerationBloc extends HydratedBloc<RouteGenerationEvent, RouteGenera
     ));
 
     try {
-      print('🚀 Début sauvegarde avec screenshot pour: ${event.name}');
+      LogConfig.logInfo('🚀 Début sauvegarde avec screenshot pour: ${event.name}');
 
       // 1. 📸 Capturer le screenshot de la carte
       String? screenshotUrl;
@@ -399,12 +400,12 @@ class RouteGenerationBloc extends HydratedBloc<RouteGenerationEvent, RouteGenera
         );
 
         if (screenshotUrl != null) {
-          print('✅ Screenshot capturé avec succès: $screenshotUrl');
+          LogConfig.logInfo('Screenshot capturé avec succès: $screenshotUrl');
         } else {
-          print('⚠️ Screenshot non capturé, sauvegarde sans image');
+          LogConfig.logInfo('Screenshot non capturé, sauvegarde sans image');
         }
       } catch (screenshotError) {
-        print('❌ Erreur capture screenshot: $screenshotError');
+        LogConfig.logError('❌ Erreur capture screenshot: $screenshotError');
         screenshotUrl = null;
       }
 
@@ -439,11 +440,11 @@ class RouteGenerationBloc extends HydratedBloc<RouteGenerationEvent, RouteGenera
         errorMessage: null,
       ));
 
-      print('✅ Parcours sauvegardé avec succès: ${savedRoute.name} (${savedRoute.formattedDistance})');
+      LogConfig.logInfo('Parcours sauvegardé avec succès: ${savedRoute.name} (${savedRoute.formattedDistance})');
       print('🖼️ Image: ${savedRoute.hasImage ? "✅ Capturée" : "❌ Aucune"}');
 
     } catch (e) {
-      print('❌ Erreur sauvegarde complète: $e');
+      LogConfig.logError('❌ Erreur sauvegarde complète: $e');
       emit(state.copyWith(
         isSavingRoute: false,
         errorMessage: 'Erreur lors de la sauvegarde: ${e.toString()}',
@@ -463,10 +464,10 @@ class RouteGenerationBloc extends HydratedBloc<RouteGenerationEvent, RouteGenera
       List<SavedRoute> routes;
       if (_appDataBloc != null && _appDataBloc.state.hasHistoricData) {
         routes = _appDataBloc.state.savedRoutes;
-        print('📦 Parcours chargés depuis AppDataBloc (${routes.length})');
+        LogConfig.logInfo('📦 Parcours chargés depuis AppDataBloc (${routes.length})');
       } else {
         routes = await _routesRepository.getUserRoutes();
-        print('🌐 Parcours chargés depuis API (${routes.length})');
+        LogConfig.logInfo('🌐 Parcours chargés depuis API (${routes.length})');
       }
 
       emit(state.copyWith(
@@ -475,7 +476,7 @@ class RouteGenerationBloc extends HydratedBloc<RouteGenerationEvent, RouteGenera
         errorMessage: null,
       ));
 
-      print('✅ ${routes.length} parcours chargés');
+      LogConfig.logInfo('${routes.length} parcours chargés');
 
     } catch (e) {
       emit(state.copyWith(
@@ -504,7 +505,7 @@ class RouteGenerationBloc extends HydratedBloc<RouteGenerationEvent, RouteGenera
         savedRoutes: updatedRoutes,
       ));
 
-      print('✅ Parcours supprimé: ${event.routeId}');
+      LogConfig.logInfo('Parcours supprimé: ${event.routeId}');
 
     } catch (e) {
       emit(state.copyWith(
@@ -519,7 +520,7 @@ class RouteGenerationBloc extends HydratedBloc<RouteGenerationEvent, RouteGenera
     Emitter<RouteGenerationState> emit,
   ) async {
     try {
-      print('🔄 Chargement du parcours sauvegardé: ${event.routeId}');
+      LogConfig.logInfo('🔄 Chargement du parcours sauvegardé: ${event.routeId}');
       
       // 🆕 Prioriser AppDataBloc si disponible
       SavedRoute? route;
@@ -528,14 +529,14 @@ class RouteGenerationBloc extends HydratedBloc<RouteGenerationEvent, RouteGenera
           (r) => r.id == event.routeId,
           orElse: () => throw Exception('Parcours non trouvé'),
         );
-        print('📦 Parcours chargé depuis AppDataBloc');
+        LogConfig.logInfo('📦 Parcours chargé depuis AppDataBloc');
       } else {
         final routes = await _routesRepository.getUserRoutes();
         route = routes.firstWhere(
           (r) => r.id == event.routeId,
           orElse: () => throw Exception('Parcours non trouvé'),
         );
-        print('🌐 Parcours chargé depuis API');
+        LogConfig.logInfo('🌐 Parcours chargé depuis API');
       }
 
       // Calculer les métadonnées
@@ -557,10 +558,10 @@ class RouteGenerationBloc extends HydratedBloc<RouteGenerationEvent, RouteGenera
         stateId: 'loaded-${event.routeId}',
       ));
 
-      print('✅ Parcours chargé avec succès: ${route.name}');
+      LogConfig.logInfo('Parcours chargé avec succès: ${route.name}');
 
     } catch (e) {
-      print('❌ Erreur chargement parcours: $e');
+      LogConfig.logError('❌ Erreur chargement parcours: $e');
       emit(state.copyWith(
         errorMessage: 'Erreur lors du chargement du parcours: $e',
         stateId: 'error-${event.routeId}',
@@ -593,7 +594,7 @@ class RouteGenerationBloc extends HydratedBloc<RouteGenerationEvent, RouteGenera
       emit(state.copyWith(savedRoutes: updatedRoutes));
 
     } catch (e) {
-      print('❌ Erreur mise à jour statistiques: $e');
+      LogConfig.logError('❌ Erreur mise à jour statistiques: $e');
     }
   }
 
@@ -618,7 +619,7 @@ class RouteGenerationBloc extends HydratedBloc<RouteGenerationEvent, RouteGenera
         savedRoutes: routes,
       ));
 
-      print('✅ Synchronisation terminée');
+      LogConfig.logInfo('Synchronisation terminée');
 
     } catch (e) {
       emit(state.copyWith(
@@ -634,7 +635,7 @@ class RouteGenerationBloc extends HydratedBloc<RouteGenerationEvent, RouteGenera
     Emitter<RouteGenerationState> emit,
   ) {
     final clearId = DateTime.now().millisecondsSinceEpoch.toString();
-    print('🧹 === DÉBUT NETTOYAGE COMPLET (ID: $clearId) ===');
+    LogConfig.logInfo('🧹 === DÉBUT NETTOYAGE COMPLET (ID: $clearId) ===');
     
     emit(state.copyWith(
       pois: [],
@@ -648,7 +649,7 @@ class RouteGenerationBloc extends HydratedBloc<RouteGenerationEvent, RouteGenera
       stateId: '$clearId-cleared',
     ));
 
-    print('✅ === FIN NETTOYAGE COMPLET (CLEARED: $clearId-cleared) ===');
+    LogConfig.logInfo('=== FIN NETTOYAGE COMPLET (CLEARED: $clearId-cleared) ===');
   }
 
   /// 🆕 Reset complet de l'état pour une nouvelle génération propre
@@ -657,7 +658,7 @@ class RouteGenerationBloc extends HydratedBloc<RouteGenerationEvent, RouteGenera
     Emitter<RouteGenerationState> emit,
   ) async {
     final resetId = DateTime.now().millisecondsSinceEpoch.toString();
-    print('🔄 === DÉBUT RESET COMPLET ÉTAT (ID: $resetId) ===');
+    LogConfig.logInfo('🔄 === DÉBUT RESET COMPLET ÉTAT (ID: $resetId) ===');
     
     emit(RouteGenerationState(
       pois: const [],
@@ -675,7 +676,7 @@ class RouteGenerationBloc extends HydratedBloc<RouteGenerationEvent, RouteGenera
       stateId: '$resetId-reset',
     ));
     
-    print('✅ === FIN RESET COMPLET ÉTAT (RESET: $resetId-reset) ===');
+    LogConfig.logInfo('=== FIN RESET COMPLET ÉTAT (RESET: $resetId-reset) ===');
   }
 
   // ===== MÉTHODE UTILITAIRE POUR LE RETRY =====
@@ -696,7 +697,7 @@ class RouteGenerationBloc extends HydratedBloc<RouteGenerationEvent, RouteGenera
         
         // Si c'est le dernier essai ou si c'est une erreur non-récupérable, on relance
         if (attempt > maxRetries || _isNonRecoverableError(e)) {
-          print('❌ Abandon après $attempt tentative(s): $e');
+          LogConfig.logError('❌ Abandon après $attempt tentative(s): $e');
           rethrow;
         }
         
@@ -708,8 +709,8 @@ class RouteGenerationBloc extends HydratedBloc<RouteGenerationEvent, RouteGenera
           ),
         );
         
-        print('⏳ Tentative $attempt/$maxRetries échouée: $e');
-        print('🔄 Retry dans ${delay.inSeconds}s...');
+        LogConfig.logInfo('⏳ Tentative $attempt/$maxRetries échouée: $e');
+        LogConfig.logInfo('🔄 Retry dans ${delay.inSeconds}s...');
         
         await Future.delayed(delay);
       }

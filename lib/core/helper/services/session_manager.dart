@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:runaway/core/helper/config/log_config.dart';
 
 enum SessionStatus {
   authenticated,
@@ -64,7 +65,7 @@ class SessionManager {
     _authSubscription = Supabase.instance.client.auth.onAuthStateChange.listen(
       _handleAuthStateChange,
       onError: (error) {
-        debugPrint('❌ Erreur stream auth: $error');
+        LogConfig.logError('❌ Erreur stream auth: $error');
         _emitEvent(SessionStatus.error, 'Erreur stream auth: $error');
       },
     );
@@ -72,7 +73,7 @@ class SessionManager {
     // Vérification initiale
     _checkSessionHealth();
 
-    debugPrint('✅ Monitoring des sessions démarré');
+    LogConfig.logInfo('Monitoring des sessions démarré');
   }
 
   /// Arrête le monitoring
@@ -101,7 +102,7 @@ class SessionManager {
     }
 
     _refreshTimer = Timer(refreshDelay, () {
-      debugPrint('🔄 Refresh préventif programmé');
+      LogConfig.logInfo('🔄 Refresh préventif programmé');
       _attemptRefresh();
     });
 
@@ -110,8 +111,7 @@ class SessionManager {
 
   /// Tente un refresh du token
   Future<void> _attemptRefresh() async {
-    if (_currentStatus == SessionStatus.refreshing)
-      return; // Éviter les refresh multiples
+    if (_currentStatus == SessionStatus.refreshing) return; // Éviter les refresh multiples
 
     try {
       _updateStatus(SessionStatus.refreshing, 'Refresh en cours');
@@ -119,10 +119,10 @@ class SessionManager {
       await Supabase.instance.client.auth.refreshSession();
       _lastRefresh = DateTime.now();
 
-      debugPrint('✅ Session refreshed avec succès');
+      LogConfig.logInfo('Session refreshed avec succès');
       _updateStatus(SessionStatus.authenticated, 'Session refreshed');
     } catch (e) {
-      debugPrint('❌ Échec refresh session: $e');
+      LogConfig.logError('❌ Échec refresh session: $e');
       _updateStatus(SessionStatus.expired, 'Impossible de refresher: $e');
       _forceLogout('Échec du refresh de session');
     }
@@ -130,7 +130,7 @@ class SessionManager {
 
   /// Gère les changements d'état d'authentification
   void _handleAuthStateChange(AuthState authState) {
-    debugPrint('🔄 Changement état auth: ${authState.event}');
+    LogConfig.logInfo('🔄 Changement état auth: ${authState.event}');
 
     switch (authState.event) {
       case AuthChangeEvent.signedIn:
@@ -150,7 +150,7 @@ class SessionManager {
 
       case AuthChangeEvent.userUpdated:
         // Pas de changement de statut nécessaire pour la mise à jour du profil
-        debugPrint('👤 Profil utilisateur mis à jour');
+        LogConfig.logInfo('👤 Profil utilisateur mis à jour');
         break;
 
       // 🆕 AJOUT : Gestion de l'événement initialSession
@@ -163,10 +163,10 @@ class SessionManager {
             'Session initiale restaurée',
           );
           _lastRefresh = DateTime.now();
-          debugPrint('✅ Session initiale valide restaurée pour: ${user.email}');
+          LogConfig.logSuccess('Session initiale valide restaurée pour: ${user.email}');
         } else {
           _updateStatus(SessionStatus.expired, 'Session initiale expirée');
-          debugPrint('⚠️ Session initiale expirée ou invalide');
+          LogConfig.logInfo('Session initiale expirée ou invalide');
         }
         break;
 
@@ -203,7 +203,7 @@ class SessionManager {
       debugPrint('🚪 Déconnexion forcée: $reason');
       await Supabase.instance.client.auth.signOut();
     } catch (e) {
-      debugPrint('❌ Erreur déconnexion forcée: $e');
+      LogConfig.logError('❌ Erreur déconnexion forcée: $e');
     }
   }
 
@@ -248,7 +248,7 @@ class SessionManager {
 
       return now.isBefore(expiresAt.subtract(marginBeforeExpiry));
     } catch (e) {
-      debugPrint('❌ Erreur vérification santé session: $e');
+      LogConfig.logError('❌ Erreur vérification santé session: $e');
       return false;
     }
   }

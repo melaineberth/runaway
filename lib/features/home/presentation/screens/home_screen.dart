@@ -45,6 +45,7 @@ import 'package:runaway/features/home/presentation/widgets/map_style_selector.da
 import 'package:runaway/features/route_generator/data/services/route_export_service.dart';
 import 'package:runaway/features/route_generator/presentation/blocs/route_generation/route_generation_bloc.dart';
 import 'package:runaway/features/route_generator/presentation/blocs/route_generation/route_generation_event.dart';
+import 'package:runaway/core/helper/config/log_config.dart';
 import 'package:runaway/features/route_generator/presentation/blocs/route_generation/route_generation_state.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' as su;
 import 'package:top_snackbar_flutter/top_snack_bar.dart';
@@ -160,11 +161,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
     super.didChangeAppLifecycleState(state);
     switch (state) {
       case AppLifecycleState.paused:
-        print('📱 App en arrière-plan');
+        LogConfig.logInfo('📱 App en arrière-plan');
         _saveStateToService(); // 💾 Sauvegarder lors de la mise en arrière-plan
         break;
       case AppLifecycleState.resumed:
-        print('📱 App au premier plan');
+        LogConfig.logInfo('📱 App au premier plan');
         if (_isInNavigationMode) {
           setState(() {
             _isInNavigationMode = false;
@@ -187,9 +188,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
         _currentMapStyleId = _mapStateService.selectedMapStyleId;
       });
 
-      print('🎨 Style de carte initialisé: $_currentMapStyleId');
+      LogConfig.logInfo('🎨 Style de carte initialisé: $_currentMapStyleId');
     } catch (e) {
-      print('❌ Erreur initialisation style: $e');
+      LogConfig.logError('❌ Erreur initialisation style: $e');
       // En cas d'erreur, utiliser le style par défaut
       setState(() {
         _currentMapStyleId = MapboxStyleConstants.getDefaultStyleId();
@@ -221,7 +222,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
 
   /// 🔄 Restaurer l'état depuis le service
   void _restoreStateFromService() {
-    print('🔄 Restauration de l\'état depuis le service...');
+    LogConfig.logInfo('🔄 Restauration de l\'état depuis le service...');
 
     // Restaurer les positions
     _userLatitude = _mapStateService.lastUserLatitude;
@@ -262,16 +263,16 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
         _selectedLongitude = position.longitude;
       }
 
-      print('✅ Géolocalisation pré-chargée en arrière-plan');
+      LogConfig.logInfo('Géolocalisation pré-chargée en arrière-plan');
     } catch (e) {
-      print('⚠️ Erreur pré-chargement géolocalisation: $e');
+      LogConfig.logInfo('Erreur pré-chargement géolocalisation: $e');
       // Continuer sans géolocalisation
     }
   }
 
   /// 💾 Sauvegarder l'état dans le service
   void _saveStateToService() {
-    print('💾 Sauvegarde de l\'état dans le service...');
+    LogConfig.logInfo('💾 Sauvegarde de l\'état dans le service...');
 
     // Sauvegarder les positions
     if (_userLatitude != null && _userLongitude != null) {
@@ -310,7 +311,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
       _mapStateService.saveCameraState(mapboxMap!);
     }
 
-    print('✅ État sauvegardé dans le service');
+    LogConfig.logInfo('État sauvegardé dans le service');
   }
 
   // Configuration de l'écoute de génération
@@ -327,7 +328,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
     try {
       // La carte est déjà prête car on vient de _onMapCreated
       if (mapboxMap == null) {
-        print('❌ Erreur: mapboxMap est null');
+        LogConfig.logError('❌ Erreur: mapboxMap est null');
         return;
       }
 
@@ -343,13 +344,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
       ).listen(
         _onLocationUpdate,
         onError: (e) {
-          print('❌ Erreur stream position: $e');
+          LogConfig.logError('❌ Erreur stream position: $e');
         },
       );
 
-      print('✅ Stream de position démarré');
+      LogConfig.logInfo('Stream de position démarré');
     } catch (e) {
-      print('❌ Erreur démarrage tracking: $e');
+      LogConfig.logError('❌ Erreur démarrage tracking: $e');
     }
   }
 
@@ -514,7 +515,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
 
     // 🔧 Éviter les appels multiples
     if (_isSaveDialogOpen) {
-      print('⚠️ Dialogue de sauvegarde déjà ouvert');
+      LogConfig.logInfo('Dialogue de sauvegarde déjà ouvert');
       return;
     }
 
@@ -541,7 +542,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
         return;
       }
     } catch (e) {
-      print('❌ Erreur vérification auth: $e');
+      LogConfig.logError('❌ Erreur vérification auth: $e');
       showTopSnackBar(
         overlay,
         TopSnackBar(isError: true, title: 'Erreur de connexion'),
@@ -615,7 +616,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
       ),
     );
 
-    print('🚀 Sauvegarde via AppDataBloc démarrée: $routeName');
+    LogConfig.logInfo('🚀 Sauvegarde via AppDataBloc démarrée: $routeName');
 
     // Afficher feedback immédiat
     showTopSnackBar(overlay, TopSnackBar(title: 'Parcours sauvegardé'));
@@ -638,7 +639,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
 
   // Fonction onClear pour supprimer le parcours et revenir à l'état précédent
   Future<void> _clearGeneratedRoute() async {
-    print('🧹 === DÉBUT NETTOYAGE COMPLET DU PARCOURS ===');
+    LogConfig.logInfo('🧹 === DÉBUT NETTOYAGE COMPLET DU PARCOURS ===');
 
     // Sauvegarder les positions avant nettoyage
     final double? lastSelectedLat = _selectedLatitude;
@@ -650,16 +651,16 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
         await routeLineManager!.deleteAll();
         await mapboxMap!.annotations.removeAnnotationManager(routeLineManager!);
         routeLineManager = null;
-        print('✅ Route supprimée de la carte');
+        LogConfig.logInfo('Route supprimée de la carte');
       } catch (e) {
-        print('❌ Erreur lors de la suppression de la route: $e');
+        LogConfig.logError('❌ Erreur lors de la suppression de la route: $e');
       }
     }
 
     // 2. Réinitialiser l'état du bloc
     if (mounted) {
       context.routeGenerationBloc.add(const RouteStateReset());
-      print('✅ État du bloc RouteGeneration reseté');
+      LogConfig.logInfo('État du bloc RouteGeneration reseté');
     }
 
     // 3. Réinitialiser les variables locales du parcours
@@ -675,7 +676,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
       lastSelectedLng,
     );
 
-    print('🔍 Analyse situation:');
+    LogConfig.logInfo('🔍 Analyse situation:');
     print('   Position user: $_userLatitude, $_userLongitude');
     print('   Position selected: $lastSelectedLat, $lastSelectedLng');
     print(
@@ -697,7 +698,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
     _mapStateService.saveTrackingMode(_trackingMode);
     _mapStateService.saveGeneratedRoute(null, null, false);
 
-    print('✅ === FIN NETTOYAGE COMPLET DU PARCOURS ===');
+    LogConfig.logInfo('=== FIN NETTOYAGE COMPLET DU PARCOURS ===');
   }
 
   /// 🆕 Détermine intelligemment si on doit restaurer vers UserTracking
@@ -767,7 +768,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
         ),
         mp.MapAnimationOptions(duration: 1200),
       );
-      print('📍 FlyTo position utilisateur: $_userLatitude, $_userLongitude');
+      LogConfig.logInfo('📍 FlyTo position utilisateur: $_userLatitude, $_userLongitude');
     }
 
     // 4. Sauvegarder l'état
@@ -777,7 +778,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
     );
     _mapStateService.saveMarkerState(false, null, null);
 
-    print('✅ Mode UserTracking restauré');
+    LogConfig.logInfo('Mode UserTracking restauré');
   }
 
   /// 📍 Restaure vers le mode Manual (conserve markers, focus marker)
@@ -785,10 +786,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
     double? lastSelectedLat,
     double? lastSelectedLng,
   ) async {
-    print('📍 === RESTAURATION MODE MANUAL ===');
+    LogConfig.logInfo('📍 === RESTAURATION MODE MANUAL ===');
 
     if (lastSelectedLat == null || lastSelectedLng == null) {
-      print('❌ Pas de position à restaurer, fallback UserTracking');
+      LogConfig.logError('❌ Pas de position à restaurer, fallback UserTracking');
       await _restoreToUserTrackingMode();
       return;
     }
@@ -820,14 +821,14 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
         ),
         mp.MapAnimationOptions(duration: 1200),
       );
-      print('📍 FlyTo marker: $lastSelectedLat, $lastSelectedLng');
+      LogConfig.logInfo('📍 FlyTo marker: $lastSelectedLat, $lastSelectedLng');
     }
 
     // 4. Sauvegarder l'état avec marker
     _mapStateService.saveSelectedPosition(lastSelectedLat, lastSelectedLng);
     _mapStateService.saveMarkerState(true, lastSelectedLat, lastSelectedLng);
 
-    print('✅ Mode Manual restauré avec marker');
+    LogConfig.logInfo('Mode Manual restauré avec marker');
   }
 
   /// 🆕 S'assure qu'un marker est présent à la position donnée
@@ -835,7 +836,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
     double longitude,
     double latitude,
   ) async {
-    print('🔍 Vérification marker à: $latitude, $longitude');
+    LogConfig.logInfo('🔍 Vérification marker à: $latitude, $longitude');
 
     // Si on a déjà un marker Lottie à cette position, c'est bon
     if (_showLottieMarker &&
@@ -843,7 +844,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
         _lottieMarkerLng != null &&
         (_lottieMarkerLat! - latitude).abs() < 0.0001 &&
         (_lottieMarkerLng! - longitude).abs() < 0.0001) {
-      print('✅ Marker Lottie déjà présent à la bonne position');
+      LogConfig.logInfo('Marker Lottie déjà présent à la bonne position');
       return;
     }
 
@@ -855,10 +856,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
     }
 
     if (!hasNearbyMarker && !_showLottieMarker) {
-      print('📍 Création marker manquant');
+      LogConfig.logInfo('📍 Création marker manquant');
       await _placeMarkerWithLottie(longitude, latitude);
     } else {
-      print('✅ Marker présent (classique ou Lottie)');
+      LogConfig.logInfo('Marker présent (classique ou Lottie)');
     }
   }
 
@@ -878,9 +879,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
       // ÉTAPE 3 : Animation finale pour montrer toute la route
       await _animateToFullRoute(coordinates);
 
-      print('✅ Animation d\'affichage terminée');
+      LogConfig.logInfo('Animation d\'affichage terminée');
     } catch (e) {
-      print('❌ Erreur lors de l\'affichage animé de la route: $e');
+      LogConfig.logError('❌ Erreur lors de l\'affichage animé de la route: $e');
       // Fallback : affichage direct
       await _displayRouteDirectly(coordinates);
     }
@@ -903,10 +904,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
 
   // Création du tracé
   Future<void> _drawRoute(List<List<double>> coordinates) async {
-    print('🎨 _drawRouteSimple: ${coordinates.length} coordonnées');
+    LogConfig.logInfo('🎨 _drawRouteSimple: ${coordinates.length} coordonnées');
 
     if (coordinates.isEmpty) {
-      print('❌ Aucune coordonnée à afficher');
+      LogConfig.logError('❌ Aucune coordonnée à afficher');
       return;
     }
 
@@ -925,9 +926,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
       );
 
       await routeLineManager!.create(routeLine);
-      print('✅ Route simple créée (rouge, 8px, opacité 1.0)');
+      LogConfig.logInfo('Route simple créée (rouge, 8px, opacité 1.0)');
     } catch (e) {
-      print('❌ Erreur _drawRouteSimple: $e');
+      LogConfig.logError('❌ Erreur _drawRouteSimple: $e');
     }
   }
 
@@ -1051,7 +1052,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
       // Utiliser flyTo au lieu de setCamera
       await mapboxMap!.flyTo(camera, mp.MapAnimationOptions(duration: 1500));
     } catch (e) {
-      print('❌ Erreur lors de l\'ajustement smooth de la vue: $e');
+      LogConfig.logError('❌ Erreur lors de l\'ajustement smooth de la vue: $e');
     }
   }
 
@@ -1107,7 +1108,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
         _lottieMarkerLat = lat;
       });
 
-      print('✅ Lottie affiché à: ($lat, $lon)');
+      LogConfig.logInfo('Lottie affiché à: ($lat, $lon)');
 
       // Démarrer l'animation
       _lottieController
@@ -1144,9 +1145,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
       // 💾 Sauvegarder l'état du marqueur
       _mapStateService.saveMarkerState(true, lat, lon);
 
-      print('✅ Marqueur personnalisé ajouté et Lottie masqué');
+      LogConfig.logInfo('Marqueur personnalisé ajouté et Lottie masqué');
     } catch (e) {
-      print('❌ Erreur ajout marqueur personnalisé: $e');
+      LogConfig.logError('❌ Erreur ajout marqueur personnalisé: $e');
 
       // Fallback: utiliser l'icône par défaut de Mapbox
       try {
@@ -1159,15 +1160,15 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
           ),
         );
         locationMarkers.add(marker);
-        print('✅ Marqueur par défaut ajouté en fallback');
+        LogConfig.logInfo('Marqueur par défaut ajouté en fallback');
       } catch (fallbackError) {
-        print('❌ Erreur fallback marqueur: $fallbackError');
+        LogConfig.logError('❌ Erreur fallback marqueur: $fallbackError');
       }
     }
   }
 
   Future<void> _clearLocationMarkers() async {
-    print('🧹 Nettoyage des marqueurs...');
+    LogConfig.logInfo('🧹 Nettoyage des marqueurs...');
 
     // 1️⃣ Masquer le marqueur Lottie
     if (_showLottieMarker) {
@@ -1176,7 +1177,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
         _lottieMarkerLat = null;
         _lottieMarkerLng = null;
       });
-      print('✅ Lottie marqueur masqué');
+      LogConfig.logInfo('Lottie marqueur masqué');
     }
 
     // 2️⃣ Supprimer les PointAnnotations
@@ -1184,26 +1185,26 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
       if (markerPointManager != null) {
         await markerPointManager!.deleteAll();
         locationMarkers.clear();
-        print('✅ PointAnnotations supprimés');
+        LogConfig.logInfo('PointAnnotations supprimés');
       }
     } catch (e) {
-      print('❌ Erreur suppression PointAnnotations: $e');
+      LogConfig.logError('❌ Erreur suppression PointAnnotations: $e');
     }
 
     // 3️⃣ Supprimer les cercles (si utilisés)
     try {
       if (circleAnnotationManager != null) {
         await circleAnnotationManager!.deleteAll();
-        print('✅ CircleAnnotations supprimés');
+        LogConfig.logInfo('CircleAnnotations supprimés');
       }
     } catch (e) {
-      print('❌ Erreur suppression CircleAnnotations: $e');
+      LogConfig.logError('❌ Erreur suppression CircleAnnotations: $e');
     }
 
     // 💾 Sauvegarder l'absence de marqueurs
     _mapStateService.saveMarkerState(false, null, null);
 
-    print('✅ Nettoyage des marqueurs terminé');
+    LogConfig.logInfo('Nettoyage des marqueurs terminé');
   }
 
   Future<Offset?> _getScreenPosition(double lat, double lng) async {
@@ -1214,7 +1215,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
       final screenCoordinate = await mapboxMap!.pixelForCoordinate(point);
       return Offset(screenCoordinate.x, screenCoordinate.y);
     } catch (e) {
-      print('❌ Erreur conversion coordonnées: $e');
+      LogConfig.logError('❌ Erreur conversion coordonnées: $e');
       return null;
     }
   }
@@ -1279,7 +1280,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
     double longitude,
     double latitude,
   ) async {
-    print('⚠️ Fallback: Position manuelle à la position utilisateur');
+    LogConfig.logInfo('Fallback: Position manuelle à la position utilisateur');
 
     setState(() {
       _trackingMode = TrackingMode.manual;
@@ -1324,8 +1325,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
     double latitude,
     String placeName,
   ) async {
-    print('🔍 === POSITION SÉLECTIONNÉE VIA RECHERCHE ===');
-    print('🔍 Lieu: $placeName ($latitude, $longitude)');
+    LogConfig.logInfo('🔍 === POSITION SÉLECTIONNÉE VIA RECHERCHE ===');
+    LogConfig.logInfo('🔍 Lieu: $placeName ($latitude, $longitude)');
 
     _trackUserAction('location_selected', data: {
       'latitude': latitude,
@@ -1335,7 +1336,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
 
     // Nettoyer parcours existant
     if (generatedRouteCoordinates != null) {
-      print('🧹 Nettoyage du parcours existant avant nouvelle recherche');
+      LogConfig.logInfo('🧹 Nettoyage du parcours existant avant nouvelle recherche');
 
       if (routeLineManager != null && mapboxMap != null) {
         try {
@@ -1345,7 +1346,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
           );
           routeLineManager = null;
         } catch (e) {
-          print('❌ Erreur suppression route: $e');
+          LogConfig.logError('❌ Erreur suppression route: $e');
         }
       }
 
@@ -1396,7 +1397,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
       );
     }
 
-    print('✅ Position via recherche définie: $placeName');
+    LogConfig.logInfo('Position via recherche définie: $placeName');
   }
 
   // === GESTION DE LA CARTE ===
@@ -1419,7 +1420,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
       _mapStateService.markMapAsInitialized();
     } else {
       // === RETOUR SUR LA PAGE ===
-      print('🔄 Retour sur la page - restauration de l\'état');
+      LogConfig.logInfo('🔄 Retour sur la page - restauration de l\'état');
       await _restoreMapState();
     }
   }
@@ -1441,7 +1442,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
     });
     _mapStateService.saveTrackingMode(_trackingMode);
 
-    print('✅ Configuration initiale terminée');
+    LogConfig.logInfo('Configuration initiale terminée');
   }
 
   /// 🆕 Synchroniser notre position depuis le service de géolocalisation
@@ -1471,13 +1472,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
         );
       }
     } catch (e) {
-      print('⚠️ Erreur synchronisation position: $e');
+      LogConfig.logInfo('Erreur synchronisation position: $e');
     }
   }
 
   /// 🔄 Restauration de l'état (retour)
   Future<void> _restoreMapState() async {
-    print('🔄 Restauration de l\'état de la carte');
+    LogConfig.logInfo('🔄 Restauration de l\'état de la carte');
 
     // Restaurer l'état depuis le service
     _restoreStateFromService();
@@ -1497,7 +1498,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
     // Redémarrer le tracking de position
     await _startLocationTrackingWhenMapReady();
 
-    print('✅ État de la carte restauré');
+    LogConfig.logInfo('État de la carte restauré');
   }
 
   /// 🎯 Centrer sur la position utilisateur
@@ -1526,7 +1527,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
         print('📷 Centrage instantané sur position utilisateur');
       }
     } catch (e) {
-      print('❌ Erreur centrage position utilisateur: $e');
+      LogConfig.logError('❌ Erreur centrage position utilisateur: $e');
     }
   }
 
@@ -1562,7 +1563,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
 
       print('⚙️ Paramètres Mapbox configurés');
     } catch (e) {
-      print('❌ Erreur configuration Mapbox: $e');
+      LogConfig.logError('❌ Erreur configuration Mapbox: $e');
     }
   }
 
@@ -1612,9 +1613,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
       // Ajouter l'interaction à la carte (sans cibler de layer spécifique)
       mapboxMap!.addInteraction(longTapInteraction!);
 
-      print('✅ LongTapInteraction configurée sur la carte');
+      LogConfig.logInfo('LongTapInteraction configurée sur la carte');
     } catch (e) {
-      print('❌ Erreur lors de la configuration LongTapInteraction: $e');
+      LogConfig.logError('❌ Erreur lors de la configuration LongTapInteraction: $e');
     }
   }
 
@@ -1628,13 +1629,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
     double latitude,
   ) async {
     if (mapboxMap == null) {
-      print('❌ Carte non initialisée pour sélection manuelle');
+      LogConfig.logError('❌ Carte non initialisée pour sélection manuelle');
       return;
     }
 
     try {
-      print('📍 === POSITIONNEMENT MANUEL VIA LONGTAP ===');
-      print('📍 Position: ($latitude, $longitude)');
+      LogConfig.logInfo('📍 === POSITIONNEMENT MANUEL VIA LONGTAP ===');
+      LogConfig.logInfo('📍 Position: ($latitude, $longitude)');
 
       // Nettoyer parcours existant
       if (generatedRouteCoordinates != null) {
@@ -1656,7 +1657,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
         _dismissRouteInfoModal();
 
         // L’utilisateur confirme : on nettoie l’ancien parcours
-        print('🧹 Nettoyage du parcours existant');
+        LogConfig.logInfo('🧹 Nettoyage du parcours existant');
 
         if (routeLineManager != null && mapboxMap != null) {
           try {
@@ -1666,7 +1667,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
             );
             routeLineManager = null;
           } catch (e) {
-            print('❌ Erreur suppression route: $e');
+            LogConfig.logError('❌ Erreur suppression route: $e');
           }
         }
 
@@ -1718,9 +1719,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
         );
       }
 
-      print('✅ Position manuelle définie avec sauvegarde d\'état');
+      LogConfig.logInfo('Position manuelle définie avec sauvegarde d\'état');
     } catch (e) {
-      print('❌ Erreur lors de l\'activation manuelle: $e');
+      LogConfig.logError('❌ Erreur lors de l\'activation manuelle: $e');
 
       if (_userLatitude != null && _userLongitude != null) {
         await _setManualPositionFallback(_userLongitude!, _userLatitude!);
@@ -1733,7 +1734,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
     if (styleId == _currentMapStyleId || mapboxMap == null) return;
 
     try {
-      print('🎨 Changement de style vers: $styleId');
+      LogConfig.logInfo('🎨 Changement de style vers: $styleId');
 
       // Sauvegarder le nouvel ID de style
       setState(() {
@@ -1752,16 +1753,16 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
       // Feedback haptique
       HapticFeedback.lightImpact();
 
-      print('✅ Style de carte mis à jour: ${newStyle.name}');
+      LogConfig.logInfo('Style de carte mis à jour: ${newStyle.name}');
     } catch (e) {
-      print('❌ Erreur changement de style: $e');
+      LogConfig.logError('❌ Erreur changement de style: $e');
     }
   }
 
   /// 🔄 Restaurer le style depuis le service
   void _restoreMapStyleFromService() {
     _currentMapStyleId = _mapStateService.selectedMapStyleId;
-    print('🎨 Style restauré depuis le service: $_currentMapStyleId');
+    LogConfig.logInfo('🎨 Style restauré depuis le service: $_currentMapStyleId');
   }
 
   // === INTERFACE UTILISATEUR ===
@@ -1814,7 +1815,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
           authState is! Authenticated ||
           su.Supabase.instance.client.auth.currentUser == null;
 
-      print('👤 Mode: ${isGuest ? "Guest" : "Authentifié"}');
+      LogConfig.logInfo('👤 Mode: ${isGuest ? "Guest" : "Authentifié"}');
 
       if (isGuest) {
         // Logique guest existante (inchangée)
@@ -1843,7 +1844,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
             .verifyCreditsForGeneration(requiredCredits: 1);
 
         if (!creditResult.isValid) {
-          print('❌ Crédits insuffisants pour utilisateur authentifié');
+          LogConfig.logError('❌ Crédits insuffisants pour utilisateur authentifié');
 
           // Utiliser la nouvelle UI spécialement conçue pour les utilisateurs connectés
           _showInsufficientCreditsBottomSheet(
@@ -1877,13 +1878,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
         );
 
         ConversionTriggers.onRouteGenerated(context);
-        print('🚀 Génération lancée avec succès');
+        LogConfig.logInfo('🚀 Génération lancée avec succès');
 
         MonitoringService.instance.finishOperation(operationId, success: true);
         _trackUserAction('route_generated');
       }
     } catch (e, stackTrace) {
-      print('❌ Erreur génération: $e');
+      LogConfig.logError('❌ Erreur génération: $e');
       _showRouteGenerationError('Erreur: $e');
       context.captureError(e, stackTrace, extra: {
         'operation': 'route_generation',
@@ -2001,7 +2002,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
           ) !=
           null;
     } catch (e) {
-      print('❌ Erreur lors de la vérification du parcours: $e');
+      LogConfig.logError('❌ Erreur lors de la vérification du parcours: $e');
       return false;
     }
   }
@@ -2197,7 +2198,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (mounted) {
             _showRouteInfoModal();
-            print('✅ RouteInfoCard affiché pour parcours historique');
+            LogConfig.logInfo('RouteInfoCard affiché pour parcours historique');
           }
         });
       }

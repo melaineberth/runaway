@@ -1,4 +1,5 @@
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:runaway/core/helper/config/log_config.dart';
 
 class EnvironmentConfig {
   static String get apiBaseUrl {
@@ -26,9 +27,9 @@ class EnvironmentConfig {
   static void validate() {
     try {
       apiBaseUrl; // Déclenche la validation
-      print('✅ Configuration environment');
+      LogConfig.logInfo('Configuration environment');
     } catch (e) {
-      print('❌ Erreur configuration: $e');
+      LogConfig.logError('❌ Erreur configuration: $e');
       rethrow;
     }
   }

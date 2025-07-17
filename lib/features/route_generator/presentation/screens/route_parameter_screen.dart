@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hugeicons/hugeicons.dart';
+import 'package:runaway/core/helper/config/log_config.dart';
 import 'package:runaway/core/helper/extensions/extensions.dart';
 import 'package:runaway/core/utils/injections/bloc_provider_extension.dart';
 import 'package:runaway/core/helper/extensions/monitoring_extensions.dart';
@@ -405,7 +406,7 @@ class _RouteParameterScreenState extends State<RouteParameterScreen> with Ticker
   }
 
   Future<void> _handleGenerate() async {
-    print('🔍 === VÉRIFICATION CRÉDITS AVANT GÉNÉRATION ===');
+    LogConfig.logInfo('🔍 === VÉRIFICATION CRÉDITS AVANT GÉNÉRATION ===');
       
     // Fermer la modal des paramètres
     if (mounted) {

@@ -15,6 +15,7 @@ import 'package:runaway/features/auth/presentation/bloc/auth_event.dart';
 import 'package:runaway/features/auth/presentation/bloc/auth_state.dart';
 import 'package:runaway/features/auth/presentation/widgets/auth_text_field.dart';
 import 'package:top_snackbar_flutter/top_snack_bar.dart';
+import 'package:runaway/core/helper/config/log_config.dart';
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
@@ -62,9 +63,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       final suggestedFullName = socialInfo['fullName'];
       if (suggestedFullName != null && suggestedFullName.trim().isNotEmpty) {
         _fullNameController.text = suggestedFullName.trim();
-        print('📝 Nom complet suggéré: ${suggestedFullName.trim()}');
+        LogConfig.logInfo('📝 Nom complet suggéré: ${suggestedFullName.trim()}');
       } else {
-        print('⚠️ Aucun nom complet suggéré disponible');
+        LogConfig.logInfo('Aucun nom complet suggéré disponible');
       }
       
       // Générer une suggestion de nom d'utilisateur via le BLoC
@@ -76,20 +77,20 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               ? suggestedUsername 
               : '@$suggestedUsername';
           _usernameController.text = usernameWithAt;
-          print('📝 Username suggéré: $usernameWithAt');
+          LogConfig.logInfo('📝 Username suggéré: $usernameWithAt');
         }
       } catch (e) {
-        print('⚠️ Impossible de suggérer un nom d\'utilisateur: $e');
+        LogConfig.logInfo('Impossible de suggérer un nom d\'utilisateur: $e');
         // Fallback local
         final email = socialInfo['email'];
         if (email != null) {
           final fallbackUsername = '@${email.split('@').first.toLowerCase()}';
           _usernameController.text = fallbackUsername;
-          print('📝 Username fallback: $fallbackUsername');
+          LogConfig.logInfo('📝 Username fallback: $fallbackUsername');
         }
       }
     } catch (e) {
-      print('⚠️ Erreur lors du chargement des suggestions: $e');
+      LogConfig.logInfo('Erreur lors du chargement des suggestions: $e');
       // En cas d'erreur, on continue sans suggestions
     } finally {
       setState(() {
@@ -387,7 +388,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         username = username.substring(1);
       }
 
-      print('📝 Envoi complétion profil: ${_fullNameController.text.trim()} / $username');
+      LogConfig.logInfo('📝 Envoi complétion profil: ${_fullNameController.text.trim()} / $username');
 
       context.authBloc.add(
         CompleteProfileRequested(

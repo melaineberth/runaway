@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hugeicons/hugeicons.dart';
+import 'package:runaway/core/helper/config/log_config.dart';
 import 'package:runaway/core/helper/extensions/extensions.dart';
 import 'package:runaway/core/blocs/app_data/app_data_bloc.dart';
 import 'package:runaway/core/blocs/app_data/app_data_state.dart';
@@ -40,7 +41,7 @@ class _CreditPlansScreenState extends State<CreditPlansScreen> {
     // 🆕 Déclencher le pré-chargement si les données ne sont pas disponibles
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!context.isCreditDataLoaded) {
-        print('💳 Pré-chargement des données de crédits depuis CreditPlansScreen');
+        LogConfig.logInfo('💳 Pré-chargement des données de crédits depuis CreditPlansScreen');
         context.preloadCreditData();
       }
       context.finishScreenLoad(_screenLoadId);
@@ -314,7 +315,7 @@ class _CreditPlansScreenState extends State<CreditPlansScreen> {
             SquircleContainer(
               onTap: () {
                 // 🆕 Utiliser AppDataBloc pour le retry
-                print('🔄 Retry: rafraîchissement des données de crédits');
+                LogConfig.logInfo('🔄 Retry: rafraîchissement des données de crédits');
                 context.refreshCreditData();
               },
               height: 44,

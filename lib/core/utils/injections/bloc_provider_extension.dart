@@ -5,6 +5,7 @@ import 'package:runaway/core/blocs/app_data/app_data_event.dart';
 import 'package:runaway/core/blocs/locale/locale_bloc.dart';
 import 'package:runaway/core/blocs/notification/notification_bloc.dart';
 import 'package:runaway/core/blocs/theme_bloc/theme_bloc.dart';
+import 'package:runaway/core/helper/config/log_config.dart';
 import 'package:runaway/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:runaway/features/credits/data/services/credit_verification_service.dart';
 import 'package:runaway/features/credits/domain/models/credit_plan.dart';
@@ -67,7 +68,7 @@ extension BlocAccess on BuildContext {
     try {
       return await creditService.canGenerateRoute();
     } catch (e) {
-      print('❌ Erreur vérification génération async: $e');
+      LogConfig.logError('❌ Erreur vérification génération async: $e');
       return false;
     }
   }
@@ -78,7 +79,7 @@ extension BlocAccess on BuildContext {
     try {
       return await creditService.getAvailableCredits();
     } catch (e) {
-      print('❌ Erreur récupération crédits async: $e');
+      LogConfig.logError('❌ Erreur récupération crédits async: $e');
       return 0;
     }
   }
@@ -93,7 +94,7 @@ extension BlocAccess on BuildContext {
     try {
       return await creditService.verifyCreditsForGeneration(requiredCredits: requiredCredits);
     } catch (e) {
-      print('❌ Erreur vérification crédits pour génération: $e');
+      LogConfig.logError('❌ Erreur vérification crédits pour génération: $e');
       return CreditVerificationResult(
         hasEnoughCredits: false,
         availableCredits: 0,
@@ -161,10 +162,7 @@ extension BlocAccess on BuildContext {
   
   /// Vérifie si toutes les données sont chargées
   bool get isAllDataLoaded => appDataBloc.state.isDataLoaded;
-  
-  /// Vérifie si les données d'activité sont chargées
-  bool get isActivityDataLoaded => appDataBloc.state.hasActivityData;
-  
+    
   /// Vérifie si les données d'historique sont chargées
   bool get isHistoricDataLoaded => appDataBloc.state.hasHistoricData;
   
@@ -175,12 +173,7 @@ extension BlocAccess on BuildContext {
   void refreshAllData() {
     appDataBloc.add(const AppDataRefreshRequested());
   }
-  
-  /// Rafraîchit les données d'activité
-  void refreshActivityData() {
-    appDataBloc.add(const ActivityDataRefreshRequested());
-  }
-  
+    
   /// Rafraîchit les données d'historique
   void refreshHistoricData() {
     appDataBloc.add(const HistoricDataRefreshRequested());
@@ -192,12 +185,12 @@ extension BlocAccess on BuildContext {
   void debugCreditStats() {
     final state = appDataBloc.state;
     print('🎯 === DEBUG CREDIT STATS ===');
-    print('💳 Available Credits: ${state.availableCredits}');
-    print('📊 Has Credits: ${state.hasCredits}');
-    print('✅ Can Generate Route: ${state.canGenerateRoute}');
-    print('📦 Credit Data Loaded: ${state.isCreditDataLoaded}');
+    LogConfig.logInfo('💳 Available Credits: ${state.availableCredits}');
+    LogConfig.logInfo('📊 Has Credits: ${state.hasCredits}');
+    LogConfig.logInfo('Can Generate Route: ${state.canGenerateRoute}');
+    LogConfig.logInfo('📦 Credit Data Loaded: ${state.isCreditDataLoaded}');
     print('📋 Active Plans: ${state.activePlans.length}');
-    print('🔄 Recent Transactions: ${state.recentTransactions.length}');
+    LogConfig.logInfo('🔄 Recent Transactions: ${state.recentTransactions.length}');
     print('🎯 === END DEBUG STATS ===');
   }
 
@@ -205,12 +198,11 @@ extension BlocAccess on BuildContext {
   void debugAppStats() {
     final state = appDataBloc.state;
     print('🎯 === DEBUG APP STATS ===');
-    print('⚡ Is Loading: ${state.isLoading}');
-    print('📊 Data Ready: ${state.isDataReady}');
-    print('🏃 Activity Data: ${state.hasActivityData}');
+    LogConfig.logInfo('Is Loading: ${state.isLoading}');
+    LogConfig.logInfo('📊 Data Ready: ${state.isDataReady}');
     print('📋 Historic Data: ${state.hasHistoricData}');
-    print('💳 Credit Data: ${state.hasCreditData}');
-    print('❌ Last Error: ${state.lastError}');
+    LogConfig.logInfo('💳 Credit Data: ${state.hasCreditData}');
+    LogConfig.logError('❌ Last Error: ${state.lastError}');
     print('🎯 === END APP STATS ===');
   }
 }
@@ -308,7 +300,7 @@ extension CreditAdvancedAccess on BuildContext {
     if (!result.isValid) {
       // Ici vous pourriez afficher un snackbar ou une modal
       // En fonction de votre système de notifications
-      print('⚠️ Crédits insuffisants: ${result.errorMessage}');
+      LogConfig.logInfo('Crédits insuffisants: ${result.errorMessage}');
       return false;
     }
     

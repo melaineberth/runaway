@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:math';
 
+import 'package:runaway/core/helper/config/log_config.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Service pour gérer l'affichage intelligent des invitations à l'inscription
@@ -73,7 +74,7 @@ class ConversionService {
         if (isToday) {
           // Continuer la session du jour
           _sessionStart = storedDate;
-          print('🔄 Reprise de session du jour : $_sessionStart');
+          LogConfig.logInfo('🔄 Reprise de session du jour : $_sessionStart');
         } else {
           // Nouvelle session
           _sessionStart = now;
@@ -98,10 +99,10 @@ class ConversionService {
       _initializationCompleter?.complete();
       _initializationCompleter = null;
       
-      print('📈 ConversionService initialized - Session: ${_getSessionDuration()}min, Routes: $_routesGenerated, Activities: $_activityViews');
+      LogConfig.logInfo(' 📈 ConversionService initialized - Session: ${_getSessionDuration()}min, Routes: $_routesGenerated, Activities: $_activityViews');
       
     } catch (e) {
-      print('❌ Erreur initialisation ConversionService: $e');
+      LogConfig.logError('❌ Erreur initialisation ConversionService: $e');
       // 🆕 AJOUT : Signaler l'erreur au completer
       _initializationCompleter?.completeError(e);
       _initializationCompleter = null;
@@ -139,7 +140,7 @@ class ConversionService {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setInt(_activityViewsKey, _activityViews);
     
-    print('📊 Activité consultée (#$_activityViews) - Session: ${_getSessionDuration()}min');
+    LogConfig.logInfo('📊 Activité consultée (#$_activityViews) - Session: ${_getSessionDuration()}min');
   }
   
   /// Vérifie si on doit afficher une invitation
@@ -155,7 +156,7 @@ class ConversionService {
       // 1. Vérifier les limites générales
       final totalPrompts = prefs.getInt(_promptCountKey) ?? 0;
       if (totalPrompts >= _maxPromptsTotal) {
-        print('🚫 Limite totale de prompts atteinte');
+        LogConfig.logInfo('🚫 Limite totale de prompts atteinte');
         return false;
       }
       
@@ -184,7 +185,7 @@ class ConversionService {
       // 4. 🔧 AMÉLIORATION : Vérification plus robuste du temps de session
       final sessionDurationMinutes = _getSessionDuration();
       if (sessionDurationMinutes < _minSessionTimeMinutes) {
-        print('⏱️ Session trop courte ($sessionDurationMinutes/$_minSessionTimeMinutes min)');
+        LogConfig.logInfo('⏱️ Session trop courte ($sessionDurationMinutes/$_minSessionTimeMinutes min)');
         return false;
       }
       
@@ -193,7 +194,7 @@ class ConversionService {
       final hasEnoughActivityViews = _activityViews >= _activityThreshold;
       
       if (!hasEnoughRoutes && !hasEnoughActivityViews) {
-        print('📈 Pas assez d\'engagement (Routes: $_routesGenerated/$_routesThreshold, Activités: $_activityViews/$_activityThreshold)');
+        LogConfig.logInfo(' 📈 Pas assez d\'engagement (Routes: $_routesGenerated/$_routesThreshold, Activités: $_activityViews/$_activityThreshold)');
         return false;
       }
       
@@ -206,11 +207,11 @@ class ConversionService {
         return false;
       }
       
-      print('✅ Conditions réunies pour afficher le prompt (Session: ${sessionDurationMinutes}min)');
+      LogConfig.logInfo('Conditions réunies pour afficher le prompt (Session: ${sessionDurationMinutes}min)');
       return true;
       
     } catch (e) {
-      print('❌ Erreur vérification prompt: $e');
+      LogConfig.logError('❌ Erreur vérification prompt: $e');
       return false;
     }
   }
@@ -235,10 +236,10 @@ class ConversionService {
       final todayPrompts = (prefs.getInt('prompts_$todayKey') ?? 0) + 1;
       await prefs.setInt('prompts_$todayKey', todayPrompts);
       
-      print('📝 Prompt enregistré (#$totalPrompts total, #$todayPrompts aujourd\'hui)');
+      LogConfig.logInfo('📝 Prompt enregistré (#$totalPrompts total, #$todayPrompts aujourd\'hui)');
       
     } catch (e) {
-      print('❌ Erreur enregistrement prompt: $e');
+      LogConfig.logError('❌ Erreur enregistrement prompt: $e');
     }
   }
   
@@ -254,7 +255,7 @@ class ConversionService {
       print('👎 Utilisateur a refusé - réduction temporaire des prompts');
       
     } catch (e) {
-      print('❌ Erreur enregistrement refus: $e');
+      LogConfig.logError('❌ Erreur enregistrement refus: $e');
     }
   }
   
@@ -267,10 +268,10 @@ class ConversionService {
       await prefs.setBool(_userDeclinedKey, false);
       _userDeclined = false;
       
-      print('🔄 Reset du statut de refus utilisateur');
+      LogConfig.logInfo('🔄 Reset du statut de refus utilisateur');
       
     } catch (e) {
-      print('❌ Erreur reset refus: $e');
+      LogConfig.logError('❌ Erreur reset refus: $e');
     }
   }
   
@@ -306,6 +307,6 @@ class ConversionService {
     _sessionStart = null;
     _initializationCompleter?.complete();
     _initializationCompleter = null;
-    print('🗑️ ConversionService disposed');
+    LogConfig.logInfo('🗑️ ConversionService disposed');
   }
 }

@@ -20,6 +20,7 @@ import 'package:runaway/features/auth/presentation/bloc/auth_event.dart';
 import 'package:runaway/features/auth/presentation/bloc/auth_state.dart';
 import 'package:runaway/features/auth/presentation/widgets/auth_text_field.dart';
 import 'package:top_snackbar_flutter/top_snack_bar.dart';
+import 'package:runaway/core/helper/config/log_config.dart';
 
 class EditProfileScreen extends StatefulWidget {
   final Profile profile;
@@ -119,7 +120,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> with TickerProvid
       try {
         CachedNetworkImage.evictFromCache(widget.profile.avatarUrl!);
       } catch (e) {
-        print('⚠️ Erreur vidage cache: $e');
+        LogConfig.logInfo('Erreur vidage cache: $e');
       }
     }
 

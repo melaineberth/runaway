@@ -10,6 +10,7 @@ import 'package:flutter_svg/svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+import 'package:runaway/core/helper/config/log_config.dart';
 import 'package:runaway/core/helper/extensions/extensions.dart';
 import 'package:runaway/core/blocs/app_data/app_data_bloc.dart';
 import 'package:runaway/core/blocs/app_data/app_data_state.dart';
@@ -60,7 +61,7 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
     // Déclencher le pré-chargement uniquement si les données ne sont pas disponibles
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
-        print('💳 Pré-chargement des données de crédits depuis AccountScreen');
+        LogConfig.logInfo('💳 Pré-chargement des données de crédits depuis AccountScreen');
         context.refreshCreditData();
         context.finishScreenLoad(_screenLoadId);
       }

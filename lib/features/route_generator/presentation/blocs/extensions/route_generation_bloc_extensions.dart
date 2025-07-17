@@ -5,6 +5,7 @@ import 'package:runaway/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:runaway/features/auth/presentation/bloc/auth_state.dart';
 import 'package:runaway/features/route_generator/presentation/blocs/route_generation/route_generation_bloc.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' as su;
+import 'package:runaway/core/helper/config/log_config.dart';
 
 /// Extensions pour RouteGenerationBloc qui gèrent les limitations des guests
 /// 🆕 Optimisées pour les cas offline
@@ -18,7 +19,7 @@ extension RouteGenerationBlocGuestExtensions on RouteGenerationBloc {
       );
       return !ConnectivityService.instance.isOffline;
     } catch (e) {
-      print('⚠️ Erreur vérification connectivité: $e');
+      LogConfig.logInfo('Erreur vérification connectivité: $e');
       return false; // En cas de doute, on assume offline
     }
   }
@@ -54,7 +55,7 @@ extension RouteGenerationBlocGuestExtensions on RouteGenerationBloc {
       final currentUser = su.Supabase.instance.client.auth.currentUser;
       return currentUser != null;
     } catch (e) {
-      print('❌ Erreur vérification session Supabase: $e');
+      LogConfig.logError('❌ Erreur vérification session Supabase: $e');
       return false;
     }
   }
@@ -64,8 +65,8 @@ extension RouteGenerationBlocGuestExtensions on RouteGenerationBloc {
     try {
       final authState = authBloc.state;
       
-      print('🔍 === VÉRIFICATION CAPACITÉ GÉNÉRATION ===');
-      print('🔍 AuthState: ${authState.runtimeType}');
+      LogConfig.logInfo('🔍 === VÉRIFICATION CAPACITÉ GÉNÉRATION ===');
+      LogConfig.logInfo('🔍 AuthState: ${authState.runtimeType}');
       
       // 🆕 ÉTAPE 1: Vérification rapide de la connectivité
       final connectivityService = ConnectivityService.instance;
@@ -76,30 +77,30 @@ extension RouteGenerationBlocGuestExtensions on RouteGenerationBloc {
       );
       
       final isOffline = connectivityService.isOffline;
-      print('🌐 État connectivité: ${isOffline ? 'OFFLINE' : 'ONLINE'}');
+      LogConfig.logInfo('🌐 État connectivité: ${isOffline ? 'OFFLINE' : 'ONLINE'}');
       
       // 🆕 ÉTAPE 2: Vérification authentification (rapide, locale)
       final isReallyAuth = _isReallyAuthenticated(authState);
-      print('🔍 Vraiment authentifié: $isReallyAuth');
+      LogConfig.logInfo('🔍 Vraiment authentifié: $isReallyAuth');
       
       // 🆕 ÉTAPE 3: Mode offline - fallback immédiat vers guest
       if (isOffline) {
-        print('📱 Mode OFFLINE détecté - fallback guest immédiat');
+        LogConfig.logInfo('📱 Mode OFFLINE détecté - fallback guest immédiat');
         return _handleGuestModeOffline();
       }
       
       // 🆕 ÉTAPE 4: Mode online - vérifications normales avec timeouts courts
       if (isReallyAuth) {
-        print('💳 Mode: Utilisateur authentifié avec crédits');
+        LogConfig.logInfo('💳 Mode: Utilisateur authentifié avec crédits');
         return await _handleAuthenticatedModeOnline();
       }
       
       // Utilisateur non authentifié - mode guest
-      print('👤 Mode: Utilisateur guest ou session expirée');
+      LogConfig.logInfo('👤 Mode: Utilisateur guest ou session expirée');
       return _handleGuestMode();
       
     } catch (e) {
-      print('❌ Erreur globale vérification capacité génération: $e');
+      LogConfig.logError('❌ Erreur globale vérification capacité génération: $e');
       // En cas d'erreur, fallback vers guest mode
       return _handleGuestModeOffline();
     }
@@ -114,14 +115,14 @@ extension RouteGenerationBlocGuestExtensions on RouteGenerationBloc {
       final canGenerate = await guestService.canGuestGenerate();
       final remaining = await guestService.getRemainingGuestGenerations();
       
-      print('👤 Guest OFFLINE: canGenerate=$canGenerate, remaining=$remaining');
+      LogConfig.logInfo('👤 Guest OFFLINE: canGenerate=$canGenerate, remaining=$remaining');
       
       return GenerationCapability.guest(
         canGenerate: canGenerate,
         remainingGenerations: remaining,
       );
     } catch (e) {
-      print('❌ Erreur mode guest offline: $e');
+      LogConfig.logError('❌ Erreur mode guest offline: $e');
       // Fallback conservateur
       return GenerationCapability.guest(
         canGenerate: true,
@@ -149,7 +150,7 @@ extension RouteGenerationBlocGuestExtensions on RouteGenerationBloc {
       final canGenerate = results[0] as bool;
       final availableCredits = results[1] as int;
       
-      print('💳 Résultat: canGenerate=$canGenerate, credits=$availableCredits');
+      LogConfig.logInfo('💳 Résultat: canGenerate=$canGenerate, credits=$availableCredits');
       
       return GenerationCapability.authenticated(
         canGenerate: canGenerate,
@@ -157,9 +158,9 @@ extension RouteGenerationBlocGuestExtensions on RouteGenerationBloc {
       );
       
     } catch (e) {
-      print('❌ Erreur récupération crédits (timeout ou erreur réseau): $e');
+      LogConfig.logError('❌ Erreur récupération crédits (timeout ou erreur réseau): $e');
       // Fallback vers mode guest si l'API des crédits échoue
-      print('🔄 Fallback vers mode guest...');
+      LogConfig.logInfo('🔄 Fallback vers mode guest...');
       return _handleGuestMode();
     }
   }
@@ -171,14 +172,14 @@ extension RouteGenerationBlocGuestExtensions on RouteGenerationBloc {
       final canGenerate = await guestService.canGuestGenerate();
       final remaining = await guestService.getRemainingGuestGenerations();
       
-      print('👤 Guest: canGenerate=$canGenerate, remaining=$remaining');
+      LogConfig.logInfo('👤 Guest: canGenerate=$canGenerate, remaining=$remaining');
       
       return GenerationCapability.guest(
         canGenerate: canGenerate,
         remainingGenerations: remaining,
       );
     } catch (e) {
-      print('❌ Erreur mode guest: $e');
+      LogConfig.logError('❌ Erreur mode guest: $e');
       return GenerationCapability.unavailable('Erreur mode guest');
     }
   }
@@ -189,25 +190,25 @@ extension RouteGenerationBlocGuestExtensions on RouteGenerationBloc {
       final authState = authBloc.state;
       final isReallyAuth = _isReallyAuthenticated(authState);
       
-      print('💳 === CONSOMMATION GÉNÉRATION ===');
-      print('💳 AuthState: ${authState.runtimeType}');
-      print('💳 Vraiment authentifié: $isReallyAuth');
+      LogConfig.logInfo('💳 === CONSOMMATION GÉNÉRATION ===');
+      LogConfig.logInfo('💳 AuthState: ${authState.runtimeType}');
+      LogConfig.logInfo('💳 Vraiment authentifié: $isReallyAuth');
       
       // Utilisateur authentifié avec session valide - NE PAS consommer ici
       if (isReallyAuth) {
-        print('👤 Utilisateur authentifié - consommation sera gérée par RouteGenerationBloc');
+        LogConfig.logInfo('👤 Utilisateur authentifié - consommation sera gérée par RouteGenerationBloc');
         return true; // On laisse le bloc gérer la consommation de crédits
       }
       
       // Utilisateur non authentifié ou session expirée - consommer une génération guest
-      print('👤 Mode guest - consommation d\'une génération gratuite');
+      LogConfig.logInfo('👤 Mode guest - consommation d\'une génération gratuite');
       final guestService = GuestLimitationService.instance;
       final consumed = await guestService.consumeGuestGeneration();
-      print('👤 Guest - consommation: ${consumed ? "✅" : "❌"}');
+      LogConfig.logInfo('👤 Guest - consommation: ${consumed ? "✅" : "❌"}');
       return consumed;
       
     } catch (e) {
-      print('❌ Erreur consommation génération: $e');
+      LogConfig.logError('❌ Erreur consommation génération: $e');
       return false;
     }
   }
@@ -217,9 +218,9 @@ extension RouteGenerationBlocGuestExtensions on RouteGenerationBloc {
     try {
       final guestService = GuestLimitationService.instance;
       await guestService.clearGuestDataOnLogin();
-      print('🧹 Données guest nettoyées après connexion');
+      LogConfig.logInfo('🧹 Données guest nettoyées après connexion');
     } catch (e) {
-      print('❌ Erreur nettoyage données guest: $e');
+      LogConfig.logError('❌ Erreur nettoyage données guest: $e');
     }
   }
 }

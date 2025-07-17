@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:runaway/core/blocs/connectivity/connectivity_cubit.dart';
+import 'package:runaway/core/helper/config/log_config.dart';
 import 'package:runaway/core/helper/services/connectivity_service.dart';
 import 'package:runaway/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:runaway/features/route_generator/presentation/blocs/extensions/route_generation_bloc_extensions.dart';
@@ -63,7 +64,7 @@ class _OfflineGenerationCapabilityState
       }
 
     } catch (e) {
-      print('❌ Erreur vérification capacité: $e');
+      LogConfig.logError('❌ Erreur vérification capacité: $e');
       
       if (mounted) {
         // 🆕 Fallback intelligent basé sur l'état de connectivité
@@ -90,7 +91,7 @@ class _OfflineGenerationCapabilityState
         if (connectionStatus != ConnectionStatus.offline && 
             _cachedCapability?.type == GenerationType.guest &&
             _error != null) {
-          print('🔄 Reconnexion détectée - re-vérification capacité');
+          LogConfig.logInfo('🔄 Reconnexion détectée - re-vérification capacité');
           _checkCapabilityOptimized();
         }
       },

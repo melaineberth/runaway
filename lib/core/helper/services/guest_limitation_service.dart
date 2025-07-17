@@ -1,3 +1,4 @@
+import 'package:runaway/core/helper/config/log_config.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Service pour gérer les limitations des utilisateurs non connectés
@@ -40,7 +41,7 @@ class GuestLimitationService {
       return generationsCount < _maxGuestGenerations;
       
     } catch (e) {
-      print('❌ Erreur vérification limitation guest: $e');
+      LogConfig.logError('❌ Erreur vérification limitation guest: $e');
       return false; // En cas d'erreur, refuser par sécurité
     }
   }
@@ -61,11 +62,11 @@ class GuestLimitationService {
       // Incrémenter le compteur
       await prefs.setInt(_keyGuestGenerations, currentCount + 1);
       
-      print('💳 Génération guest consommée: ${currentCount + 1}/$_maxGuestGenerations');
+      LogConfig.logInfo('💳 Génération guest consommée: ${currentCount + 1}/$_maxGuestGenerations');
       return true;
       
     } catch (e) {
-      print('❌ Erreur consommation génération guest: $e');
+      LogConfig.logError('❌ Erreur consommation génération guest: $e');
       return false;
     }
   }
@@ -82,7 +83,7 @@ class GuestLimitationService {
       return _maxGuestGenerations - used;
       
     } catch (e) {
-      print('❌ Erreur récupération générations restantes: $e');
+      LogConfig.logError('❌ Erreur récupération générations restantes: $e');
       return 0;
     }
   }
@@ -91,7 +92,7 @@ class GuestLimitationService {
   Future<void> _initializeGuestData(SharedPreferences prefs) async {
     await prefs.setInt(_keyGuestGenerations, 0);
     await prefs.setString(_keyFirstUseDate, DateTime.now().toIso8601String());
-    print('✅ Données guest initialisées');
+    LogConfig.logSuccess('Données guest initialisées');
   }
 
   /// ⚠️ À n’utiliser que pour le debug / les tests.
@@ -105,7 +106,7 @@ class GuestLimitationService {
   Future<void> _resetGuestData(SharedPreferences prefs) async {
     await prefs.setInt(_keyGuestGenerations, 0);
     await prefs.setString(_keyFirstUseDate, DateTime.now().toIso8601String());
-    print('🔄 Données guest réinitialisées');
+    LogConfig.logInfo('🔄 Données guest réinitialisées');
   }
 
   /// Nettoie les données guest lors de la connexion utilisateur
@@ -114,9 +115,9 @@ class GuestLimitationService {
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove(_keyGuestGenerations);
       await prefs.remove(_keyFirstUseDate);
-      print('🧹 Données guest nettoyées après connexion');
+      LogConfig.logInfo('🧹 Données guest nettoyées après connexion');
     } catch (e) {
-      print('❌ Erreur nettoyage données guest: $e');
+      LogConfig.logError('❌ Erreur nettoyage données guest: $e');
     }
   }
 

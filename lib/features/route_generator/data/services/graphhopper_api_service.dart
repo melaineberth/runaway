@@ -10,6 +10,7 @@ import 'package:runaway/features/route_generator/domain/models/graphhopper_route
 import 'package:runaway/features/route_generator/domain/models/terrain_type.dart';
 import 'package:runaway/features/route_generator/domain/models/urban_density.dart';
 import '../../domain/models/route_parameters.dart';
+import 'package:runaway/core/helper/config/log_config.dart';
 
 class GraphHopperApiService {
 
@@ -21,8 +22,8 @@ class GraphHopperApiService {
   static Future<GraphHopperRouteResult> generateRoute({
   required RouteParameters parameters,
 }) async {
-  print('🛣️ Génération de parcours via API GraphHopper...');
-  print('📍 ${parameters.distanceKm}km, ${parameters.activityType.name}, ${parameters.terrainType.name}');
+  LogConfig.logInfo('🛣️ Génération de parcours via API GraphHopper...');
+  LogConfig.logInfo('📍 ${parameters.distanceKm}km, ${parameters.activityType.name}, ${parameters.terrainType.name}');
 
   try {
     final requestBody = {
@@ -45,11 +46,11 @@ class GraphHopperApiService {
       'preferScenic': parameters.preferScenic,
     };
 
-    print('📤 Envoi requête: ${jsonEncode(requestBody)}');
+    LogConfig.logInfo('📤 Envoi requête: ${jsonEncode(requestBody)}');
 
     // 🆕 Timeout adaptatif basé sur la connectivité
     final timeout = _getAdaptiveTimeout();
-    print('⏱️ Timeout configuré: ${timeout.inSeconds}s');
+    LogConfig.logInfo('⏱️ Timeout configuré: ${timeout.inSeconds}s');
 
     final response = await http.post(
       Uri.parse('${EnvironmentConfig.apiBaseUrl}/routes/generate'),
@@ -62,7 +63,7 @@ class GraphHopperApiService {
       body: jsonEncode(requestBody),
     ).timeout(timeout); // Timeout adaptatif
 
-    print('📥 Réponse reçue: status=${response.statusCode}, body_length=${response.body.length}');
+    LogConfig.logInfo('📥 Réponse reçue: status=${response.statusCode}, body_length=${response.body.length}');
 
     if (response.statusCode == 200) {
       // Validation et parsing sécurisé
@@ -75,7 +76,7 @@ class GraphHopperApiService {
 
       // Vérification du succès
       if (data['success'] == true) {
-        print('✅ Parsing des données de route...');
+        LogConfig.logInfo('Parsing des données de route...');
         return GraphHopperRouteResult.fromApiResponse(data);
       } else {
         final errorMsg = data['error'] as String? ?? 'Erreur inconnue du serveur';
@@ -83,24 +84,24 @@ class GraphHopperApiService {
       }
     } else {
       // Gestion des erreurs HTTP
-      print('❌ Erreur HTTP ${response.statusCode}: ${response.body}');
+      LogConfig.logError('❌ Erreur HTTP ${response.statusCode}: ${response.body}');
       throw ErrorHandler.handleHttpError(response);
     }
     
   } on AppException {
     rethrow; // Re-lancer les exceptions déjà typées
   } on FormatException catch (e) {
-    print('❌ Erreur format JSON: $e');
+    LogConfig.logError('❌ Erreur format JSON: $e');
     throw RouteGenerationException('Réponse serveur mal formatée');
   } on TimeoutException catch (e) {
-    print('❌ Timeout: $e');
+    LogConfig.logError('❌ Timeout: $e');
     // 🆕 Message plus spécifique pour les timeouts
     throw NetworkException(
       'Délai d\'attente dépassé (${_getAdaptiveTimeout().inSeconds}s). Votre connexion semble lente.',
       code: 'TIMEOUT'
     );
   } catch (e) {
-    print('❌ Erreur inattendue: $e');
+    LogConfig.logError('❌ Erreur inattendue: $e');
     throw ErrorHandler.handleNetworkError(e);
   }
 }
@@ -112,8 +113,8 @@ class GraphHopperApiService {
     required double endLon,
     String profile = 'foot', // foot, driving, cycling
   }) async {
-    print('🛣️ Génération itinéraire simple via backend...');
-    print('📍 De: $startLat, $startLon vers: $endLat, $endLon');
+    LogConfig.logInfo('🛣️ Génération itinéraire simple via backend...');
+    LogConfig.logInfo('📍 De: $startLat, $startLon vers: $endLat, $endLon');
 
     try {
       final requestBody = {
@@ -124,7 +125,7 @@ class GraphHopperApiService {
         'profile': profile,
       };
 
-      print('📤 Envoi requête itinéraire: ${jsonEncode(requestBody)}');
+      LogConfig.logInfo('📤 Envoi requête itinéraire: ${jsonEncode(requestBody)}');
 
       final response = await http.post(
         Uri.parse('${EnvironmentConfig.apiBaseUrl}/routes/simple'),
@@ -135,7 +136,7 @@ class GraphHopperApiService {
         body: jsonEncode(requestBody),
       ).timeout(Duration(seconds: 15));
 
-      print('📥 Réponse itinéraire: status=${response.statusCode}');
+      LogConfig.logInfo('📥 Réponse itinéraire: status=${response.statusCode}');
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body) as Map<String, dynamic>;
@@ -151,9 +152,9 @@ class GraphHopperApiService {
             ];
           }).toList();
           
-          print('✅ Itinéraire généré: ${routeCoordinates.length} points');
-          print('📊 Distance: ${(route['distance'] / 1000).toStringAsFixed(1)}km');
-          print('⏱️ Durée: ${(route['duration'] / 60000).round()}min');
+          LogConfig.logInfo('Itinéraire généré: ${routeCoordinates.length} points');
+          LogConfig.logInfo('📊 Distance: ${(route['distance'] / 1000).toStringAsFixed(1)}km');
+          LogConfig.logInfo('⏱️ Durée: ${(route['duration'] / 60000).round()}min');
           
           return routeCoordinates;
         } else {
@@ -164,10 +165,10 @@ class GraphHopperApiService {
       }
       
     } catch (e) {
-      print('❌ Erreur génération itinéraire simple: $e');
+      LogConfig.logError('❌ Erreur génération itinéraire simple: $e');
       
       // Fallback : retourner une ligne droite si l'API échoue
-      print('📍 Fallback: ligne droite');
+      LogConfig.logInfo('📍 Fallback: ligne droite');
       return [
         [startLon, startLat],
         [endLon, endLat],
@@ -192,7 +193,7 @@ class GraphHopperApiService {
         throw Exception('Analyse route failed: ${response.statusCode}');
       }
     } catch (e) {
-      print('❌ Erreur analyse route: $e');
+      LogConfig.logError('❌ Erreur analyse route: $e');
       return {};
     }
   }
@@ -264,7 +265,7 @@ class GraphHopperApiService {
       
       return response.statusCode == 200;
     } catch (e) {
-      print('❌ Test connectivité API échoué: $e');
+      LogConfig.logError('❌ Test connectivité API échoué: $e');
       return false;
     }
   }

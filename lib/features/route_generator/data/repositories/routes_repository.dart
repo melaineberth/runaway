@@ -1,6 +1,7 @@
 // lib/features/route_generator/data/repositories/routes_repository.dart
 
 import 'dart:convert';
+import 'package:runaway/core/helper/config/log_config.dart';
 import 'package:runaway/core/helper/extensions/extensions.dart';
 import 'package:runaway/core/helper/services/monitoring_service.dart';
 import 'package:runaway/features/route_generator/data/services/route_cache.dart';
@@ -37,13 +38,13 @@ class RoutesRepository {
     // 🆕 Validation d'intégrité au démarrage
     final integrityReport = await _persistenceService.validateDataIntegrity();
     if (!integrityReport.isHealthy) {
-      print('⚠️ Problèmes d\'intégrité détectés: ${integrityReport.errors.length} erreurs');
+      LogConfig.logInfo('Problèmes d\'intégrité détectés: ${integrityReport.errors.length} erreurs');
       
       // Tentative de restauration automatique
       final restoredRoutes = await _persistenceService.restoreFromLatestBackup();
       if (restoredRoutes != null) {
         await _updateLocalCache(restoredRoutes);
-        print('🔄 Données restaurées depuis la sauvegarde: ${restoredRoutes.length} routes');
+        LogConfig.logInfo('🔄 Données restaurées depuis la sauvegarde: ${restoredRoutes.length} routes');
       }
     }
     
@@ -75,7 +76,7 @@ class RoutesRepository {
       final routeId = _uuid.v4();
       final now = DateTime.now().toLocal();
 
-      print('💾 Sauvegarde parcours avec persistance avancée: $name');
+      LogConfig.logInfo('💾 Sauvegarde parcours avec persistance avancée: $name');
 
       final route = SavedRoute(
         id: routeId,
@@ -103,7 +104,7 @@ class RoutesRepository {
       // 5. Invalider les caches existants pour forcer le refresh
       await _invalidateRoutesCache();
 
-      print('✅ Parcours sauvé avec persistance avancée: $routeId');
+      LogConfig.logInfo('Parcours sauvé avec persistance avancée: $routeId');
       return route;
     });
   }
@@ -122,7 +123,7 @@ class RoutesRepository {
           final cachedRoutes = await _getRoutesFromFastCache();
           if (cachedRoutes.isNotEmpty && !await _needsSync()) {
             stopwatch.stop();
-            print('⚡ Routes depuis cache rapide: ${cachedRoutes.length} (${stopwatch.elapsedMilliseconds}ms)');
+            LogConfig.logInfo('Routes depuis cache rapide: ${cachedRoutes.length} (${stopwatch.elapsedMilliseconds}ms)');
             return cachedRoutes;
           }
         }
@@ -167,19 +168,19 @@ class RoutesRepository {
           final localRoutes = await _getLocalRoutes();
           stopwatch.stop();
           
-          print('📱 Routes depuis cache local: ${localRoutes.length} (${stopwatch.elapsedMilliseconds}ms)');
+          LogConfig.logInfo('📱 Routes depuis cache local: ${localRoutes.length} (${stopwatch.elapsedMilliseconds}ms)');
           return localRoutes;
         }
 
       } catch (e, stackTrace) {
         stopwatch.stop();
         
-        print('❌ Erreur récupération routes, tentative de restauration: $e');
+        LogConfig.logError('❌ Erreur récupération routes, tentative de restauration: $e');
 
         // 🆕 Tentative de restauration automatique en cas d'erreur
         final restoredRoutes = await _persistenceService.restoreFromLatestBackup();
         if (restoredRoutes != null && restoredRoutes.isNotEmpty) {
-          print('🔄 Routes restaurées depuis backup: ${restoredRoutes.length}');
+          LogConfig.logInfo('🔄 Routes restaurées depuis backup: ${restoredRoutes.length}');
           return restoredRoutes;
         }
         
@@ -221,9 +222,9 @@ class RoutesRepository {
       if (route.hasImage) {
         try {
           await ScreenshotService.deleteScreenshot(route.imageUrl!);
-          print('✅ Screenshot supprimée du storage');
+          LogConfig.logInfo('Screenshot supprimée du storage');
         } catch (e) {
-          print('❌ Erreur suppression screenshot: $e');
+          LogConfig.logError('❌ Erreur suppression screenshot: $e');
         }
       }
       
@@ -238,7 +239,7 @@ class RoutesRepository {
           await _supabase.from('user_routes').delete().eq('id', routeId);
           print('☁️ Route supprimée de Supabase: $routeId');
         } catch (e) {
-          print('❌ Erreur suppression Supabase: $e');
+          LogConfig.logError('❌ Erreur suppression Supabase: $e');
           // Marquer pour suppression ultérieure
           await _markForDeletion(routeId);
         }
@@ -253,7 +254,7 @@ class RoutesRepository {
       // 6. Invalider les caches
       await _invalidateRoutesCache();
 
-      print('🗑️ Route supprimée avec nettoyage persistant complet: $routeId');
+      LogConfig.logInfo('🗑️ Route supprimée avec nettoyage persistant complet: $routeId');
 
     } catch (e, stackTrace) {
       MonitoringService.instance.captureError(
@@ -273,10 +274,21 @@ class RoutesRepository {
       throw Exception('Utilisateur non connecté');
     }
 
-    print('✏️ Renommage du parcours: $routeId -> $newName');
+    LogConfig.logInfo('✏️ Renommage du parcours: $routeId -> $newName');
 
     // 1. Mise à jour locale
     await _renameRouteLocally(routeId, newName);
+
+    // 🆕 2. Mettre à jour le cache individuel de la route
+    final cachedRoute = await _routeCache.getRoute(routeId);
+    if (cachedRoute != null) {
+      final updatedRoute = cachedRoute.copyWith(name: newName);
+      await _routeCache.cacheRoute(routeId, updatedRoute);
+      LogConfig.logSuccess('✅ Cache individuel mis à jour pour: $routeId');
+    }
+
+    // 🆕 3. Invalider le cache rapide pour forcer le refresh
+    await _invalidateRoutesCache();
 
     // 2. Synchronisation avec Supabase si connecté
     try {
@@ -287,19 +299,19 @@ class RoutesRepository {
         if (routeExists) {
           // Route existe → UPDATE
           await _updateRouteNameInSupabase(routeId, newName, user.id);
-          print('✅ Nom du parcours mis à jour dans Supabase');
+          LogConfig.logSuccess('✅ Nom du parcours mis à jour dans Supabase');
         } else {
           // Route n'existe pas → marquer pour synchronisation complète
           await _markRouteForSync(routeId);
-          print('📝 Route marquée pour synchronisation complète (n\'existe pas encore sur le serveur)');
+          LogConfig.logInfo('📝 Route marquée pour synchronisation complète (n\'existe pas encore sur le serveur)');
         }
       } else {
         // Marquer pour synchronisation ultérieure si hors ligne
         await _markRouteForSync(routeId);
-        print('📱 Parcours renommé localement, synchronisation en attente');
+        LogConfig.logInfo('📱 Parcours renommé localement, synchronisation en attente');
       }
     } catch (e) {
-      print('❌ Erreur sync renommage Supabase: $e');
+      LogConfig.logError('❌ Erreur sync renommage Supabase: $e');
       await _markRouteForSync(routeId);
     }
   }
@@ -315,10 +327,10 @@ class RoutesRepository {
           .maybeSingle();
       
       final exists = response != null;
-      print('🔍 Route $routeId existe dans Supabase: $exists');
+      LogConfig.logInfo('🔍 Route $routeId existe dans Supabase: $exists');
       return exists;
     } catch (e) {
-      print('❌ Erreur vérification existence route: $e');
+      LogConfig.logError('❌ Erreur vérification existence route: $e');
       return false;
     }
   }
@@ -341,9 +353,9 @@ class RoutesRepository {
         throw Exception('Route non trouvée lors de la mise à jour');
       }
 
-      print('✅ Nom du parcours mis à jour dans Supabase: $routeId');
+      LogConfig.logInfo('Nom du parcours mis à jour dans Supabase: $routeId');
     } catch (e) {
-      print('❌ Erreur mise à jour nom Supabase: $e');
+      LogConfig.logError('❌ Erreur mise à jour nom Supabase: $e');
       throw Exception('Erreur lors de la mise à jour du nom sur le serveur');
     }
   }
@@ -360,9 +372,9 @@ class RoutesRepository {
       }).toList();
 
       await _saveRoutesToLocal(updatedRoutes);
-      print('✅ Parcours renommé localement: $routeId');
+      LogConfig.logInfo('Parcours renommé localement: $routeId');
     } catch (e) {
-      print('❌ Erreur renommage local: $e');
+      LogConfig.logError('❌ Erreur renommage local: $e');
       throw Exception('Erreur lors du renommage local du parcours');
     }
   }
@@ -388,10 +400,10 @@ class RoutesRepository {
         await _markRouteForSync(routeId);
       }
 
-      print('📊 Statistiques d\'usage mises à jour: $routeId');
+      LogConfig.logInfo('📊 Statistiques d\'usage mises à jour: $routeId');
 
     } catch (e) {
-      print('❌ Erreur mise à jour usage: $e');
+      LogConfig.logError('❌ Erreur mise à jour usage: $e');
     }
   }
 
@@ -411,10 +423,10 @@ class RoutesRepository {
         routes[routeIndex] = updatedRoute;
         await _updateLocalCache(routes);
         
-        print('✅ Cache local mis à jour pour: $routeId');
+        LogConfig.logInfo('Cache local mis à jour pour: $routeId');
       }
     } catch (e) {
-      print('❌ Erreur mise à jour cache local: $e');
+      LogConfig.logError('❌ Erreur mise à jour cache local: $e');
     }
   }
 
@@ -431,7 +443,7 @@ class RoutesRepository {
 
     // 🆕 Logs des statistiques après sync
     final stats = await getSystemStats();
-    print('📊 Stats post-sync: ${stats['cache']['total_routes']} routes, ${stats['cache']['size_formatted']}');
+    LogConfig.logInfo('📊 Stats post-sync: ${stats['cache']['total_routes']} routes, ${stats['cache']['size_formatted']}');
   }
 
   /// 🆕 Planifie la maintenance périodique (toutes les 24h)
@@ -443,7 +455,7 @@ class RoutesRepository {
         // Replanifier pour dans 24h
         _schedulePeriodicMaintenance();
       } catch (e) {
-        print('❌ Erreur maintenance périodique: $e');
+        LogConfig.logError('❌ Erreur maintenance périodique: $e');
         // Replanifier quand même pour dans 24h
         _schedulePeriodicMaintenance();
       }
@@ -452,12 +464,12 @@ class RoutesRepository {
 
   /// 🆕 Méthode de maintenance complète
   Future<void> performMaintenanceTasks() async {
-    print('🔧 Démarrage des tâches de maintenance...');
+    LogConfig.logInfo('🔧 Démarrage des tâches de maintenance...');
     
     try {
       // 1. Validation d'intégrité
       final report = await _persistenceService.validateDataIntegrity();
-      print('📊 Rapport d\'intégrité: ${report.toString()}');
+      LogConfig.logInfo('📊 Rapport d\'intégrité: ${report.toString()}');
       
       // 2. Compression des anciennes données
       await _persistenceService.compressOldRoutes();
@@ -475,10 +487,10 @@ class RoutesRepository {
       // 5. Optimisation en arrière-plan
       await _persistenceService.performBackgroundOptimization();
       
-      print('✅ Tâches de maintenance terminées');
+      LogConfig.logInfo('Tâches de maintenance terminées');
       
     } catch (e) {
-      print('❌ Erreur maintenance: $e');
+      LogConfig.logError('❌ Erreur maintenance: $e');
     }
   }
 
@@ -493,7 +505,7 @@ class RoutesRepository {
         print('🛡️ Sauvegarde de sécurité automatique créée');
       }
     } catch (e) {
-      print('❌ Erreur création backup automatique: $e');
+      LogConfig.logError('❌ Erreur création backup automatique: $e');
     }
   }
 
@@ -522,7 +534,7 @@ class RoutesRepository {
   /// 🆕 Sauvegarde un parcours dans Supabase avec image_url
   Future<void> _saveRouteToSupabase(SavedRoute route, String userId) async {
     try {
-      print('📤 Envoi vers Supabase: ${route.id}');
+      LogConfig.logInfo('📤 Envoi vers Supabase: ${route.id}');
       
       // Convertir la date en UTC pour la sauvegarde
       final createdAtUtc = route.createdAt.toUtc();
@@ -559,12 +571,12 @@ class RoutesRepository {
         'elevation_range_max': route.parameters.elevationRange.max,
       });
 
-      print('✅ Route sauvée dans Supabase avec image: ${route.id}');
+      LogConfig.logInfo('Route sauvée dans Supabase avec image: ${route.id}');
       if (route.hasImage) {
         print('🖼️ Image URL: ${route.imageUrl}');
       }
     } catch (e) {
-      print('❌ Erreur sauvegarde Supabase détaillée: $e');
+      LogConfig.logError('❌ Erreur sauvegarde Supabase détaillée: $e');
       rethrow;
     }
   }
@@ -588,11 +600,8 @@ class RoutesRepository {
         final utcDate = DateTime.parse(createdAtString).toUtc();
         createdAt = utcDate.toLocal();
         
-        print('🕒 Date Supabase: $createdAtString');
-        print('   -> UTC: $utcDate');  
-        print('   -> Local: $createdAt');
       } catch (e) {
-        print('❌ Erreur parsing date: $e');
+        LogConfig.logError('❌ Erreur parsing date: $e');
         createdAt = DateTime.now().toLocal(); // Fallback
       }
       
@@ -602,7 +611,7 @@ class RoutesRepository {
           final utcLastUsed = DateTime.parse(lastUsedAtString).toUtc();
           lastUsedAt = utcLastUsed.toLocal();
         } catch (e) {
-          print('❌ Erreur parsing last_used_at: $e');
+          LogConfig.logError('❌ Erreur parsing last_used_at: $e');
           lastUsedAt = null;
         }
       }
@@ -663,9 +672,9 @@ class RoutesRepository {
       final prefs = await SharedPreferences.getInstance();
       final routesJson = routes.map((route) => route.toJson()).toList();
       await prefs.setString(_localCacheKey, jsonEncode(routesJson));
-      print('✅ ${routes.length} routes sauvegardées localement');
+      LogConfig.logInfo('${routes.length} routes sauvegardées localement');
     } catch (e) {
-      print('❌ Erreur sauvegarde locale: $e');
+      LogConfig.logError('❌ Erreur sauvegarde locale: $e');
       throw Exception('Erreur lors de la sauvegarde locale');
     }
   }
@@ -685,7 +694,7 @@ class RoutesRepository {
     final routesJson = routes.map((r) => r.toJson()).toList();
     await prefs.setString(_localCacheKey, jsonEncode(routesJson));
     
-    print('💾 Route sauvée localement: ${route.id} - Image: ${route.hasImage ? "✅" : "❌"}');
+    LogConfig.logInfo('💾 Route sauvée localement: ${route.id} - Image: ${route.hasImage ? "✅" : "❌"}');
   }
 
   /// 🆕 Récupération locale avec support image_url
@@ -701,14 +710,14 @@ class RoutesRepository {
         try {
           return SavedRoute.fromJson(json);
         } catch (e) {
-          print('❌ Erreur parsing route locale: $e');
+          LogConfig.logError('❌ Erreur parsing route locale: $e');
           print('📄 JSON problématique: $json');
           // Retourner null pour filtrer cette route corrompue
           return null;
         }
       }).whereType<SavedRoute>().toList(); // 🔧 Filtrer les nulls
     } catch (e) {
-      print('❌ Erreur lecture cache local: $e');
+      LogConfig.logError('❌ Erreur lecture cache local: $e');
       return [];
     }
   }
@@ -730,7 +739,7 @@ class RoutesRepository {
       final connectivityResult = await Connectivity().checkConnectivity();
       return connectivityResult != ConnectivityResult.none;
     } catch (e) {
-      print('❌ Erreur vérification connectivité: $e');
+      LogConfig.logError('❌ Erreur vérification connectivité: $e');
       return false;
     }
   }
@@ -743,10 +752,10 @@ class RoutesRepository {
       if (!pendingSync.contains(routeId)) {
         pendingSync.add(routeId);
         await prefs.setStringList(_pendingSyncKey, pendingSync);
-        print('📝 Route marquée pour sync: $routeId');
+        LogConfig.logInfo('📝 Route marquée pour sync: $routeId');
       }
     } catch (e) {
-      print('❌ Erreur marquage sync: $e');
+      LogConfig.logError('❌ Erreur marquage sync: $e');
     }
   }
 
@@ -767,17 +776,17 @@ class RoutesRepository {
       final pendingSync = prefs.getStringList(_pendingSyncKey) ?? [];
       
       if (pendingSync.isEmpty) {
-        print('📝 Aucune route en attente de synchronisation');
+        LogConfig.logInfo('📝 Aucune route en attente de synchronisation');
         return;
       }
 
-      print('🔄 Synchronisation de ${pendingSync.length} routes en attente...');
+      LogConfig.logInfo('🔄 Synchronisation de ${pendingSync.length} routes en attente...');
       
       final localRoutes = await _getLocalRoutes();
       final user = _supabase.auth.currentUser;
       
       if (user == null) {
-        print('❌ Utilisateur non connecté pour la sync');
+        LogConfig.logError('❌ Utilisateur non connecté pour la sync');
         return;
       }
 
@@ -796,18 +805,18 @@ class RoutesRepository {
           if (exists) {
             // Route existe → UPDATE complet
             await _updateCompleteRouteInSupabase(route, user.id);
-            print('✅ Route mise à jour dans Supabase: $routeId');
+            LogConfig.logInfo('Route mise à jour dans Supabase: $routeId');
           } else {
             // Route n'existe pas → INSERT
             await _saveRouteToSupabase(route, user.id);
-            print('✅ Route insérée dans Supabase: $routeId');
+            LogConfig.logInfo('Route insérée dans Supabase: $routeId');
           }
           
           successfulSyncs.add(routeId);
           await _markRouteSynced(routeId);
           
         } catch (e) {
-          print('❌ Erreur sync route $routeId: $e');
+          LogConfig.logError('❌ Erreur sync route $routeId: $e');
           // Continue avec les autres routes
         }
       }
@@ -816,11 +825,11 @@ class RoutesRepository {
       if (successfulSyncs.isNotEmpty) {
         final remainingPending = pendingSync.where((id) => !successfulSyncs.contains(id)).toList();
         await prefs.setStringList(_pendingSyncKey, remainingPending);
-        print('✅ ${successfulSyncs.length} routes synchronisées avec succès');
+        LogConfig.logInfo('${successfulSyncs.length} routes synchronisées avec succès');
       }
 
     } catch (e) {
-      print('❌ Erreur synchronisation générale: $e');
+      LogConfig.logError('❌ Erreur synchronisation générale: $e');
     }
   }
 
@@ -847,7 +856,7 @@ class RoutesRepository {
       }).eq('id', route.id).eq('user_id', userId);
 
     } catch (e) {
-      print('❌ Erreur mise à jour complète Supabase: $e');
+      LogConfig.logError('❌ Erreur mise à jour complète Supabase: $e');
       rethrow;
     }
   }
@@ -863,7 +872,7 @@ class RoutesRepository {
     
     if (validPendingIds.length != pendingIds.length) {
       await prefs.setStringList(_pendingSyncKey, validPendingIds);
-      print('🧹 ${pendingIds.length - validPendingIds.length} routes en attente nettoyées');
+      LogConfig.logInfo('🧹 ${pendingIds.length - validPendingIds.length} routes en attente nettoyées');
     }
   }
 
@@ -888,7 +897,7 @@ class RoutesRepository {
       return routesList.map((json) => SavedRoute.fromJson(json)).toList();
       
     } catch (e) {
-      print('❌ Erreur cache rapide: $e');
+      LogConfig.logError('❌ Erreur cache rapide: $e');
       return [];
     }
   }
@@ -910,7 +919,7 @@ class RoutesRepository {
     final routeMap = {for (var route in routes) route.id: route};
     await _routeCache.cacheRoutes(routeMap);
 
-    print('🔄 Tous les niveaux de cache mis à jour: ${routes.length} routes');
+    LogConfig.logInfo('🔄 Tous les niveaux de cache mis à jour: ${routes.length} routes');
   }
 
   /// Vérifica si une synchronisation est nécessaire
@@ -943,7 +952,7 @@ class RoutesRepository {
           print('📡 Route marquée pour sync ultérieure: ${route.id}');
         }
       } catch (e) {
-        print('❌ Erreur sync cloud asynchrone: $e');
+        LogConfig.logError('❌ Erreur sync cloud asynchrone: $e');
         await _markRouteForSync(route.id);
       }
     });
@@ -954,7 +963,7 @@ class RoutesRepository {
     try {
       if (!await _needsSync() || !await _isConnected()) return;
       
-      print('🔄 Synchronisation intelligente en cours...');
+      LogConfig.logInfo('🔄 Synchronisation intelligente en cours...');
       
       // Sync les routes en attente en arrière-plan
       Future.microtask(() async {
@@ -962,12 +971,12 @@ class RoutesRepository {
           await syncPendingRoutes();
           await _cleanupOldPendingSync();
         } catch (e) {
-          print('❌ Erreur sync intelligente: $e');
+          LogConfig.logError('❌ Erreur sync intelligente: $e');
         }
       });
       
     } catch (e) {
-      print('❌ Erreur sync intelligente: $e');
+      LogConfig.logError('❌ Erreur sync intelligente: $e');
     }
   }
 
@@ -998,7 +1007,7 @@ class RoutesRepository {
       // Garder seulement les 20 plus récentes
       final cleanedRoutes = pendingRoutes.take(20).toList();
       await prefs.setStringList(_pendingSyncKey, cleanedRoutes);
-      print('🧹 Nettoyage des anciennes routes en attente: ${pendingRoutes.length - 20} supprimées');
+      LogConfig.logInfo('🧹 Nettoyage des anciennes routes en attente: ${pendingRoutes.length - 20} supprimées');
     }
   }
 

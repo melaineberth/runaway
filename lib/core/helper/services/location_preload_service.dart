@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:geolocator/geolocator.dart' as gl;
+import 'package:runaway/core/helper/config/log_config.dart';
 import 'package:runaway/core/helper/services/monitoring_service.dart';
 
 /// Service pour pré-charger la géolocalisation avant l'affichage de la carte
@@ -30,13 +31,13 @@ class LocationPreloadService {
     
     // STRATÉGIE 1: Notre cache valide - Retour immédiat
     if (_isInitialized && _lastKnownPosition != null && _isPositionCacheValid()) {
-      print('⚡ NOTRE cache valide - Position immédiate: ${_formatPosition(_lastKnownPosition!)}');
+      LogConfig.logInfo('NOTRE cache valide - Position immédiate: ${_formatPosition(_lastKnownPosition!)}');
       return _lastKnownPosition!;
     }
 
     // STRATÉGIE 2: Initialisation en cours - Attendre
     if (_initializationCompleter != null) {
-      print('⏳ Initialisation en cours...');
+      LogConfig.logInfo('⏳ Initialisation en cours...');
       return await _initializationCompleter!.future;
     }
 
@@ -49,11 +50,11 @@ class LocationPreloadService {
       
       _updatePosition(position);
       _initializationCompleter!.complete(position);
-      print('✅ Position fraîche obtenue et mise en cache');
+      LogConfig.logInfo('Position fraîche obtenue et mise en cache');
       return position;
       
     } catch (e) {
-      print('❌ Erreur géolocalisation: $e');
+      LogConfig.logError('❌ Erreur géolocalisation: $e');
       _initializationCompleter!.completeError(e);
       rethrow;
     } finally {
@@ -75,7 +76,7 @@ class LocationPreloadService {
     
     // 2. FORCER une géolocalisation fraîche
     try {
-      print('📍 Demande de position actuelle...');
+      LogConfig.logInfo('📍 Demande de position actuelle...');
       
       final currentPosition = await gl.Geolocator.getCurrentPosition(
         locationSettings: gl.LocationSettings(
@@ -84,7 +85,7 @@ class LocationPreloadService {
         ),
       ).timeout(_locationTimeout);
       
-      print('✅ Position actuelle obtenue: ${_formatPosition(currentPosition)}');
+      LogConfig.logInfo('Position actuelle obtenue: ${_formatPosition(currentPosition)}');
       print('📅 Timestamp: ${currentPosition.timestamp}');
 
       MonitoringService.instance.finishOperation(operationId, success: true, data: {
@@ -106,7 +107,7 @@ class LocationPreloadService {
       return currentPosition;
       
     } catch (e, stackTrace) {
-      print('❌ Erreur getCurrentPosition: $e');
+      LogConfig.logError('❌ Erreur getCurrentPosition: $e');
 
       MonitoringService.instance.finishOperation(
         operationId,
@@ -137,7 +138,7 @@ class LocationPreloadService {
       
       final lastPosition = await gl.Geolocator.getLastKnownPosition();
       if (lastPosition == null) {
-        print('❌ Aucune position système disponible');
+        LogConfig.logError('❌ Aucune position système disponible');
         return null;
       }
       
@@ -147,15 +148,15 @@ class LocationPreloadService {
       
       // TRÈS STRICT: Seulement si moins d'1 minute
       if (age.inMinutes < 1) {
-        print('✅ Position système acceptable (< 1 min): ${_formatPosition(lastPosition)}');
+        LogConfig.logInfo('Position système acceptable (< 1 min): ${_formatPosition(lastPosition)}');
         return lastPosition;
       } else {
-        print('❌ Position système trop ancienne (${age.inMinutes} min), rejetée');
+        LogConfig.logError('❌ Position système trop ancienne (${age.inMinutes} min), rejetée');
         return null;
       }
       
     } catch (e) {
-      print('❌ Erreur fallback position système: $e');
+      LogConfig.logError('❌ Erreur fallback position système: $e');
       return null;
     }
   }
@@ -179,7 +180,7 @@ class LocationPreloadService {
       throw LocationException('Permission de localisation refusée définitivement');
     }
     
-    print('✅ Permissions de géolocalisation OK');
+    LogConfig.logInfo('Permissions de géolocalisation OK');
   }
 
   /// Met à jour la position en cache
@@ -187,14 +188,14 @@ class LocationPreloadService {
     _lastKnownPosition = position;
     _lastPositionUpdate = DateTime.now();
     _isInitialized = true;
-    print('💾 Position mise à jour en NOTRE cache: ${_formatPosition(position)}');
-    print('💾 Sauvegardé à: $_lastPositionUpdate');
+    LogConfig.logInfo('💾 Position mise à jour en NOTRE cache: ${_formatPosition(position)}');
+    LogConfig.logInfo('💾 Sauvegardé à: $_lastPositionUpdate');
   }
 
   /// Vérifie si NOTRE position en cache est encore valide
   bool _isPositionCacheValid() {
     if (_lastPositionUpdate == null) {
-      print('❌ Pas de timestamp de cache');
+      LogConfig.logError('❌ Pas de timestamp de cache');
       return false;
     }
     
@@ -217,7 +218,7 @@ class LocationPreloadService {
     _lastPositionUpdate = null;
     _isInitialized = false;
     _initializationCompleter = null;
-    print('🧹 Cache de géolocalisation nettoyé');
+    LogConfig.logInfo('🧹 Cache de géolocalisation nettoyé');
   }
 
   /// 🛠️ Méthode de debug pour forcer une nouvelle géolocalisation

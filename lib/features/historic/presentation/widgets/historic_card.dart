@@ -4,6 +4,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:pull_down_button/pull_down_button.dart';
+import 'package:runaway/core/helper/config/log_config.dart';
 import 'package:runaway/core/utils/constant/constants.dart';
 import 'package:runaway/core/helper/extensions/extensions.dart';
 import 'package:runaway/core/widgets/modal_sheet.dart';
@@ -142,7 +143,7 @@ class _HistoricCardState extends State<HistoricCard> {
     
     widget.onRename?.call(newName);
     
-    print('✏️ Renommage confirmé: ${widget.route.id} -> $newName');
+    LogConfig.logInfo('✏️ Renommage confirmé: ${widget.route.id} -> $newName');
   }
 
   /// Annule le renommage
@@ -180,7 +181,7 @@ class _HistoricCardState extends State<HistoricCard> {
         });
       }
     } catch (e) {
-      print('❌ Erreur reverse geocoding pour ${widget.route.id}: $e');
+      LogConfig.logError('❌ Erreur reverse geocoding pour ${widget.route.id}: $e');
       if (mounted) {
         setState(() {
           _locationName = 'Localisation';
@@ -531,7 +532,7 @@ class _HistoricCardState extends State<HistoricCard> {
             return _buildLoadingState(loadingProgress);
           },
           errorBuilder: (context, error, stackTrace) {
-            print('❌ Erreur chargement image: $error');
+            LogConfig.logError('❌ Erreur chargement image: $error');
             // Marquer l'erreur et afficher le fallback
             WidgetsBinding.instance.addPostFrameCallback((_) {
               if (mounted) {

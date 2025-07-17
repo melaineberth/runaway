@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:runaway/core/blocs/connectivity/connectivity_cubit.dart';
+import 'package:runaway/core/helper/config/log_config.dart';
 import 'package:runaway/core/helper/extensions/extensions.dart';
 import 'package:runaway/core/helper/services/connectivity_service.dart';
 
@@ -41,7 +42,7 @@ class _OfflineIndicatorState extends State<OfflineIndicator> {
     try {
       ConnectivityService.instance.forceCheck();
     } catch (e) {
-      print('❌ Erreur force check: $e');
+      LogConfig.logError('❌ Erreur force check: $e');
     }
   }
 
@@ -74,7 +75,7 @@ class _OfflineIndicatorState extends State<OfflineIndicator> {
       builder: (context, connectionStatus) {
         final isOffline = connectionStatus == ConnectionStatus.offline;
         
-        print('🎨 OfflineIndicator rebuild: offline=$isOffline, status=$connectionStatus, initial=$_isInitialLoad');
+        LogConfig.logInfo('🎨 OfflineIndicator rebuild: offline=$isOffline, status=$connectionStatus, initial=$_isInitialLoad');
 
         // 🆕 Gestion de l'écran blanc initial
         Widget content = widget.child;

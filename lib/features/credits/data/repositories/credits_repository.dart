@@ -8,6 +8,7 @@ import 'package:runaway/features/credits/domain/models/credit_plan.dart';
 import 'package:runaway/features/credits/domain/models/credit_transaction.dart';
 import 'package:runaway/features/credits/domain/models/credit_usage_result.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:runaway/core/helper/config/log_config.dart';
 
 /// Repository optimisé pour les crédits avec CacheService intégré
 class CreditsRepository {
@@ -28,17 +29,17 @@ class CreditsRepository {
       if (cachedCreditsRaw != null) {
         try {
           final cachedCredits = UserCredits.fromJson(Map<String, dynamic>.from(cachedCreditsRaw));
-          print('📦 Crédits récupérés depuis le cache: ${cachedCredits.availableCredits}');
+          LogConfig.logInfo('📦 Crédits récupérés depuis le cache: ${cachedCredits.availableCredits}');
           return cachedCredits;
         } catch (e) {
-          print('❌ Erreur conversion cache crédits: $e');
+          LogConfig.logError('❌ Erreur conversion cache crédits: $e');
           // Continuer vers l'API si erreur de conversion
         }
       }
     }
 
     try {
-      print('🌐 Récupération des crédits depuis l\'API pour: ${user.id}');
+      LogConfig.logInfo('🌐 Récupération des crédits depuis l\'API pour: ${user.id}');
       
       final data = await _supabase
           .from('user_credits')
@@ -51,7 +52,7 @@ class CreditsRepository {
       // Mise en cache avec expiration
       await _cache.set('cache_user_credits', credits);
       
-      print('✅ Crédits récupérés: ${credits.availableCredits} disponibles');
+      LogConfig.logInfo('Crédits récupérés: ${credits.availableCredits} disponibles');
       
       // 🆕 Métrique des crédits utilisateur
       MonitoringService.instance.recordMetric(
@@ -67,7 +68,7 @@ class CreditsRepository {
       return credits;
       
     } catch (e, stackTrace) {
-      print('❌ Erreur récupération crédits: $e');
+      LogConfig.logError('❌ Erreur récupération crédits: $e');
 
       MonitoringService.instance.captureError(
         e,
@@ -83,10 +84,10 @@ class CreditsRepository {
       if (cachedCreditsRaw != null) {
         try {
           final cachedCredits = UserCredits.fromJson(Map<String, dynamic>.from(cachedCreditsRaw));
-          print('📦 Crédits récupérés depuis le cache de secours');
+          LogConfig.logInfo('📦 Crédits récupérés depuis le cache de secours');
           return cachedCredits;
         } catch (e) {
-          print('❌ Erreur conversion cache de secours: $e');
+          LogConfig.logError('❌ Erreur conversion cache de secours: $e');
         }
       }
       
@@ -115,7 +116,7 @@ class CreditsRepository {
     }
 
     try {
-      print('💰 Utilisation de $amount crédits pour: $reason');
+      LogConfig.logInfo('💰 Utilisation de $amount crédits pour: $reason');
       
       // ✅ ÉTAPE 1: Appel de la fonction corrigée use_user_credits
       final success = await _supabase.rpc('use_user_credits', params: {
@@ -129,7 +130,7 @@ class CreditsRepository {
         );
       }
 
-      print('✅ Consommation des crédits réussie');
+      LogConfig.logInfo('Consommation des crédits réussie');
 
       // ✅ ÉTAPE 2: Créer la transaction manuellement
       String? transactionId;
@@ -148,9 +149,9 @@ class CreditsRepository {
             .single();
         
         transactionId = transactionData['id'] as String;
-        print('✅ Transaction créée: $transactionId');
+        LogConfig.logInfo('Transaction créée: $transactionId');
       } catch (e) {
-        print('⚠️ Erreur création transaction: $e');
+        LogConfig.logInfo('Erreur création transaction: $e');
         // Continue quand même car les crédits ont été débités
       }
 
@@ -170,7 +171,7 @@ class CreditsRepository {
         // Mettre à jour le cache avec les nouvelles données
         await _cache.set('cache_user_credits', updatedCredits);
         
-        print('✅ Nouveau solde: ${updatedCredits.availableCredits} crédits');
+        LogConfig.logInfo('Nouveau solde: ${updatedCredits.availableCredits} crédits');
 
         return CreditUsageResult.success(
           updatedCredits: updatedCredits,
@@ -178,7 +179,7 @@ class CreditsRepository {
         );
 
       } catch (e) {
-        print('❌ Erreur récupération crédits mis à jour: $e');
+        LogConfig.logError('❌ Erreur récupération crédits mis à jour: $e');
         
         // En cas d'erreur, on retourne quand même un succès car les crédits ont été débités
         // mais sans les données mises à jour
@@ -197,7 +198,7 @@ class CreditsRepository {
       }
       
     } catch (e, stackTrace) {
-      print('❌ Erreur utilisation crédits: $e');
+      LogConfig.logError('❌ Erreur utilisation crédits: $e');
 
       MonitoringService.instance.captureError(
         e,
@@ -244,17 +245,17 @@ class CreditsRepository {
           final cachedPlans = cachedPlansRaw
               .map((item) => CreditPlan.fromJson(item as Map<String, dynamic>))
               .toList();
-          print('📦 Plans récupérés depuis le cache: ${cachedPlans.length} plans');
+          LogConfig.logInfo('📦 Plans récupérés depuis le cache: ${cachedPlans.length} plans');
           return cachedPlans;
         } catch (e) {
-          print('❌ Erreur conversion cache plans: $e');
+          LogConfig.logError('❌ Erreur conversion cache plans: $e');
           // Continuer vers l'API si erreur de conversion
         }
       }
     }
 
     try {
-      print('🌐 Récupération des plans depuis l\'API');
+      LogConfig.logInfo('🌐 Récupération des plans depuis l\'API');
       
       final data = await _supabase
           .from('credit_plans')
@@ -268,11 +269,11 @@ class CreditsRepository {
       await _cache.set('cache_credit_plans', plans, 
         customExpiration: const Duration(hours: 2));
       
-      print('✅ Plans récupérés: ${plans.length} plans disponibles');
+      LogConfig.logInfo('Plans récupérés: ${plans.length} plans disponibles');
       return plans;
       
     } catch (e) {
-      print('❌ Erreur récupération plans: $e');
+      LogConfig.logError('❌ Erreur récupération plans: $e');
       
       // Tentative de récupération depuis le cache en cas d'erreur
       final cachedPlansRaw = await _cache.get<List>('cache_credit_plans');
@@ -281,10 +282,10 @@ class CreditsRepository {
           final cachedPlans = cachedPlansRaw
               .map((item) => CreditPlan.fromJson(item as Map<String, dynamic>))
               .toList();
-          print('📦 Plans récupérés depuis le cache de secours');
+          LogConfig.logInfo('📦 Plans récupérés depuis le cache de secours');
           return cachedPlans;
         } catch (e) {
-          print('❌ Erreur conversion cache de secours: $e');
+          LogConfig.logError('❌ Erreur conversion cache de secours: $e');
         }
       }
       
@@ -329,12 +330,12 @@ class CreditsRepository {
               final parsed = jsonDecode(cachedRaw);
               cachedList = parsed is List ? parsed : [parsed];
             } catch (e) {
-              print('❌ Cache corrompu (JSON invalide): $e');
+              LogConfig.logError('❌ Cache corrompu (JSON invalide): $e');
               await _cache.remove(cacheKey);
               cachedList = [];
             }
           } else {
-            print('❌ Cache format inattendu: ${cachedRaw.runtimeType}');
+            LogConfig.logError('❌ Cache format inattendu: ${cachedRaw.runtimeType}');
             await _cache.remove(cacheKey);
             cachedList = [];
           }
@@ -345,23 +346,23 @@ class CreditsRepository {
                   .cast<Map<String, dynamic>>()
                   .map((item) => CreditTransaction.fromJson(item))
                   .toList();
-              print('📦 Transactions récupérées depuis le cache: ${cachedTransactions.length}');
+              LogConfig.logInfo('📦 Transactions récupérées depuis le cache: ${cachedTransactions.length}');
               return cachedTransactions;
             } catch (e) {
-              print('❌ Erreur conversion cache transactions: $e');
+              LogConfig.logError('❌ Erreur conversion cache transactions: $e');
               // Supprimer le cache corrompu
               await _cache.remove(cacheKey);
             }
           }
         }
       } catch (e) {
-        print('❌ Erreur lecture cache transactions: $e');
+        LogConfig.logError('❌ Erreur lecture cache transactions: $e');
         // Continuer vers l'API
       }
     }
 
     try {
-      print('🌐 Récupération des transactions depuis l\'API');
+      LogConfig.logInfo('🌐 Récupération des transactions depuis l\'API');
       
       final data = await _supabase
           .from('credit_transactions')
@@ -379,17 +380,17 @@ class CreditsRepository {
         final serializableData = transactions.map((t) => t.toJson()).toList();
         await _cache.set(cacheKey, serializableData, 
           customExpiration: const Duration(minutes: 5));
-        print('💾 Cache mis à jour: $cacheKey (expire dans 5min)');
+        LogConfig.logInfo('💾 Cache mis à jour: $cacheKey (expire dans 5min)');
       } catch (e) {
-        print('⚠️ Erreur mise en cache transactions: $e');
+        LogConfig.logInfo('Erreur mise en cache transactions: $e');
         // Continuer même si le cache échoue
       }
       
-      print('✅ Transactions récupérées: ${transactions.length}');
+      LogConfig.logInfo('Transactions récupérées: ${transactions.length}');
       return transactions;
       
     } catch (e, stackTrace) {
-      print('❌ Erreur récupération transactions: $e');
+      LogConfig.logError('❌ Erreur récupération transactions: $e');
       
       MonitoringService.instance.captureError(
         e,
@@ -410,11 +411,11 @@ class CreditsRepository {
               .cast<Map<String, dynamic>>()
               .map((item) => CreditTransaction.fromJson(item))
               .toList();
-          print('📦 Transactions récupérées depuis le cache de secours');
+          LogConfig.logInfo('📦 Transactions récupérées depuis le cache de secours');
           return cachedTransactions;
         }
       } catch (cacheError) {
-        print('❌ Erreur cache de secours: $cacheError');
+        LogConfig.logError('❌ Erreur cache de secours: $cacheError');
       }
       
       if (e is PostgrestException) {
@@ -441,7 +442,7 @@ class CreditsRepository {
     }
 
     try {
-      print('💰 Ajout de $amount crédits après achat IAP');
+      LogConfig.logInfo('💰 Ajout de $amount crédits après achat IAP');
       
       // ✅ ÉTAPE 1: Appel de la fonction corrigée add_user_credits
       await _supabase.rpc('add_user_credits', params: {
@@ -449,7 +450,7 @@ class CreditsRepository {
         'p_amount': amount,
       });
 
-      print('✅ Ajout des crédits réussi');
+      LogConfig.logInfo('Ajout des crédits réussi');
 
       // ✅ ÉTAPE 2: Créer la transaction d'achat
       try {
@@ -468,9 +469,9 @@ class CreditsRepository {
               },
             });
         
-        print('✅ Transaction d\'achat créée');
+        LogConfig.logInfo('Transaction d\'achat créée');
       } catch (e) {
-        print('⚠️ Erreur création transaction d\'achat: $e');
+        LogConfig.logInfo('Erreur création transaction d\'achat: $e');
         // Continue quand même car les crédits ont été ajoutés
       }
 
@@ -489,11 +490,11 @@ class CreditsRepository {
       // Mettre à jour le cache avec les nouvelles données
       await _cache.set('cache_user_credits', newCredits);
       
-      print('✅ Crédits ajoutés avec succès. Nouveau solde: ${newCredits.availableCredits}');
+      LogConfig.logInfo('Crédits ajoutés avec succès. Nouveau solde: ${newCredits.availableCredits}');
       return newCredits;
       
     } catch (e, stackTrace) {
-      print('❌ Erreur ajout crédits: $e');
+      LogConfig.logError('❌ Erreur ajout crédits: $e');
 
       MonitoringService.instance.captureError(
         e,
@@ -521,7 +522,7 @@ class CreditsRepository {
   /// Invalide spécifiquement le cache des crédits
   Future<void> invalidateCreditsCache() async {
     await _cache.invalidateCreditsCache();
-    print('🧹 Cache crédits invalidé');
+    LogConfig.logInfo('🧹 Cache crédits invalidé');
   }
 
   /// Vérifie si l'utilisateur a suffisamment de crédits
@@ -530,7 +531,7 @@ class CreditsRepository {
       final credits = await getUserCredits();
       return credits.availableCredits >= requiredAmount;
     } catch (e) {
-      print('❌ Erreur vérification crédits: $e');
+      LogConfig.logError('❌ Erreur vérification crédits: $e');
       return false;
     }
   }
@@ -541,7 +542,7 @@ class CreditsRepository {
       final cachedCredits = await _cache.get<UserCredits>('cache_user_credits');
       return cachedCredits?.availableCredits ?? 0;
     } catch (e) {
-      print('❌ Erreur lecture solde rapide: $e');
+      LogConfig.logError('❌ Erreur lecture solde rapide: $e');
       return 0;
     }
   }

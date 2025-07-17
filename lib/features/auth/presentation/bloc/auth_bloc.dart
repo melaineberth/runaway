@@ -8,6 +8,7 @@ import 'package:runaway/features/auth/data/repositories/auth_repository.dart';
 import 'package:runaway/features/auth/domain/models/profile.dart';
 import 'package:runaway/features/credits/presentation/blocs/credits_bloc.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' as supabase;
+import 'package:runaway/core/helper/config/log_config.dart';
 import 'auth_event.dart';
 import 'auth_state.dart';
 
@@ -55,20 +56,20 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
           final isCorrupted = await _repo.isCorruptedAccount(user.id);
           
           if (isCorrupted) {
-            print('🧹 Compte corrompu détecté - nettoyage');
+            LogConfig.logInfo('🧹 Compte corrompu détecté - nettoyage');
             await _repo.cleanupCorruptedAccount();
             add(_InternalLoggedOut());
           } else {
-            print('✅ Nouveau compte sans profil - OK pour onboarding');
+            LogConfig.logInfo('Nouveau compte sans profil - OK pour onboarding');
             add(_InternalProfileIncomplete(user));
           }
         } else {
           // FIX: Utiliser la méthode isComplete pour vérifier
           if (!p.isComplete) {
-            print('⚠️ Profil trouvé mais incomplet');
+            LogConfig.logInfo('Profil trouvé mais incomplet');
             add(_InternalProfileIncomplete(user));
           } else {
-            print('✅ Profil complet trouvé');
+            LogConfig.logInfo('Profil complet trouvé');
             add(_InternalProfileLoaded(p));
           }
         }
@@ -117,7 +118,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       AppDataInitializationService.startDataPreloading();
     }
     
-    print('✅ Utilisateur authentifié: ${event.profile.username}');
+    LogConfig.logInfo('Utilisateur authentifié: ${event.profile.username}');
   }
 
   // Ajouter cette méthode dans la classe AuthBloc :
@@ -134,7 +135,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     if (user == null) return emit(AuthError('Session expirée'));
     
     try {
-      print('📝 Début mise à jour profil');
+      LogConfig.logInfo('📝 Début mise à jour profil');
 
       // 🆕 Conserver l'état authenticated pendant la mise à jour
       emit(AuthLoading()); // État de chargement temporaire
@@ -151,16 +152,16 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         try {
           await CachedNetworkImage.evictFromCache(currentState.profile.avatarUrl!);
         } catch (e) {
-          print('⚠️ Erreur vidage cache ancien avatar: $e');
+          LogConfig.logInfo('Erreur vidage cache ancien avatar: $e');
         }
       }
       
       // 🆕 Remettre l'état Authenticated immédiatement
-      print('✅ Profil mis à jour avec succès');
+      LogConfig.logInfo('Profil mis à jour avec succès');
       emit(Authenticated(updatedProfile!));
       
     } catch (err) {
-      print('❌ Erreur mise à jour profil: $err');
+      LogConfig.logError('❌ Erreur mise à jour profil: $err');
       emit(AuthError(err.toString()));
       // Retourner à l'état précédent après l'erreur
       Future.delayed(const Duration(seconds: 2), () {
@@ -178,18 +179,18 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     emit(AuthLoading());
     
     try {
-      print('🗑️ Suppression du compte demandée...');
+      LogConfig.logInfo('🗑️ Suppression du compte demandée...');
       
       // Utiliser la méthode existante du repository
       await _repo.deleteAccount();
       
-      print('✅ Compte supprimé avec succès');
+      LogConfig.logInfo('Compte supprimé avec succès');
       
       // L'utilisateur sera automatiquement déconnecté par le stream listener
       // qui détectera que la session n'existe plus
       
     } catch (e) {
-      print('❌ Erreur suppression compte: $e');
+      LogConfig.logError('❌ Erreur suppression compte: $e');
       
       // Retourner à l'état précédent en cas d'erreur
       final currentState = state;
@@ -253,10 +254,10 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       );
       if (p == null) return emit(AuthError('Impossible de sauvegarder'));
       
-      print('✅ Profil complété avec succès: ${p.username}');
+      LogConfig.logInfo('Profil complété avec succès: ${p.username}');
       emit(Authenticated(p));
     } catch (err) {
-      print('❌ Erreur complétion profil: $err');
+      LogConfig.logError('❌ Erreur complétion profil: $err');
       emit(AuthError(err.toString()));
     }
   }
@@ -269,7 +270,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         return emit(AuthError('Échec de création de compte'));
       }
 
-      print('✅ Inscription réussie pour: ${user.email}');
+      LogConfig.logInfo('Inscription réussie pour: ${user.email}');
       print('📧 Email confirmé: ${user.emailConfirmedAt != null}');
       
       // Toujours rediriger vers la confirmation d'email si configuré dans Supabase
@@ -278,11 +279,11 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         print('📧 Email de confirmation requis pour: ${e.email}');
         emit(EmailConfirmationRequired(e.email));
       } else {
-        print('✅ Inscription réussie, transition vers ProfileIncomplete');
+        LogConfig.logInfo('Inscription réussie, transition vers ProfileIncomplete');
         emit(ProfileIncomplete(user));
       }
     } catch (err) {
-      print('❌ Erreur inscription: $err');
+      LogConfig.logError('❌ Erreur inscription: $err');
       emit(AuthError(err.toString()));
     }
   }
@@ -368,17 +369,17 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         // Connexion réussie mais pas de profil - rare mais possible
         final user = supabase.Supabase.instance.client.auth.currentUser;
         if (user != null) {
-          print('⚠️ Connexion Google réussie mais pas de profil');
+          LogConfig.logInfo('Connexion Google réussie mais pas de profil');
           emit(ProfileIncomplete(user));
         } else {
           emit(AuthError('Connexion Google échouée'));
         }
       } else {
-        print('✅ Connexion Google réussie: ${profile.email}');
+        LogConfig.logInfo('Connexion Google réussie: ${profile.email}');
         emit(Authenticated(profile));
       }
     } catch (err) {
-      print('❌ Erreur Google Sign-In: $err');
+      LogConfig.logError('❌ Erreur Google Sign-In: $err');
       emit(AuthError(err.toString()));
     }
   }
@@ -395,17 +396,17 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         // Connexion réussie mais pas de profil - rare mais possible
         final user = supabase.Supabase.instance.client.auth.currentUser;
         if (user != null) {
-          print('⚠️ Connexion Apple réussie mais pas de profil');
+          LogConfig.logInfo('Connexion Apple réussie mais pas de profil');
           emit(ProfileIncomplete(user));
         } else {
           emit(AuthError('Connexion Apple échouée'));
         }
       } else {
-        print('✅ Connexion Apple réussie: ${profile.email}');
+        LogConfig.logInfo('Connexion Apple réussie: ${profile.email}');
         emit(Authenticated(profile));
       }
     } catch (err) {
-      print('❌ Erreur Apple Sign-In: $err');
+      LogConfig.logError('❌ Erreur Apple Sign-In: $err');
       emit(AuthError(err.toString()));
     }
   }
@@ -414,10 +415,10 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   Future<String> getUsernameSuggestion() async {
     try {
       final suggestion = await _repo.suggestUsernameFromSocialData();
-      print('📝 Suggestion username reçue du repository: $suggestion');
+      LogConfig.logInfo('📝 Suggestion username reçue du repository: $suggestion');
       return suggestion;
     } catch (e) {
-      print('⚠️ Erreur récupération suggestion username: $e');
+      LogConfig.logInfo('Erreur récupération suggestion username: $e');
       // Fallback local en cas d'erreur
       final user = supabase.Supabase.instance.client.auth.currentUser;
       if (user?.email != null) {
@@ -432,10 +433,10 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     try {
       // Utiliser la méthode du repository qui gère les données temporaires
       final socialInfo = _repo.getSocialUserInfo();
-      print('📝 Infos sociales reçues du repository: $socialInfo');
+      LogConfig.logInfo('📝 Infos sociales reçues du repository: $socialInfo');
       return socialInfo;
     } catch (e) {
-      print('⚠️ Erreur récupération infos sociales: $e');
+      LogConfig.logInfo('Erreur récupération infos sociales: $e');
       // Fallback local
       try {
         final user = supabase.Supabase.instance.client.auth.currentUser;
@@ -446,7 +447,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
           'email': user.email,
         };
       } catch (e2) {
-        print('⚠️ Erreur fallback infos sociales: $e2');
+        LogConfig.logInfo('Erreur fallback infos sociales: $e2');
         return {};
       }
     }
@@ -493,7 +494,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         if (!isClosed) emit(Unauthenticated());
       });
     } catch (err) {
-      print('❌ Erreur mot de passe oublié: $err');
+      LogConfig.logError('❌ Erreur mot de passe oublié: $err');
       emit(AuthError(err.toString()));
       
       // Retourner à l'état précédent après l'erreur
@@ -507,11 +508,11 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     // Ne pas émettre AuthLoading pour éviter de bloquer l'UI
     try {
       await _repo.resendConfirmationEmail(email: e.email);
-      print('✅ Email de confirmation renvoyé avec succès');
+      LogConfig.logInfo('Email de confirmation renvoyé avec succès');
       // Rester sur EmailConfirmationRequired pour maintenir l'écran
       emit(EmailConfirmationRequired(e.email));
     } catch (err) {
-      print('❌ Erreur renvoi confirmation: $err');
+      LogConfig.logError('❌ Erreur renvoi confirmation: $err');
       emit(AuthError(err.toString()));
       
       // Retourner à l'état précédent après l'erreur

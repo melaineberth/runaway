@@ -1,3 +1,5 @@
+import 'package:runaway/core/helper/config/log_config.dart';
+
 class GraphHopperRouteResult {
   final List<List<double>> coordinates;
   final double distanceKm;
@@ -19,7 +21,7 @@ class GraphHopperRouteResult {
 
   factory GraphHopperRouteResult.fromApiResponse(Map<String, dynamic> data) {
     try {
-      print('🔍 Parsing API response: ${data.keys}');
+      LogConfig.logInfo('🔍 Parsing API response: ${data.keys}');
       
       // FIX: Vérifier la structure de la réponse
       if (data['success'] != true) {
@@ -59,7 +61,7 @@ class GraphHopperRouteResult {
         throw Exception('Distance is missing from route data');
       }
 
-      print('✅ Successfully parsed ${coordinates.length} coordinates, ${(distance / 1000).toStringAsFixed(1)}km');
+      LogConfig.logInfo('Successfully parsed ${coordinates.length} coordinates, ${(distance / 1000).toStringAsFixed(1)}km');
       
       return GraphHopperRouteResult(
         coordinates: coordinates,
@@ -75,7 +77,7 @@ class GraphHopperRouteResult {
       );
       
     } catch (e) {
-      print('❌ Erreur parsing GraphHopper response: $e');
+      LogConfig.logError('❌ Erreur parsing GraphHopper response: $e');
       print('📄 Response data: $data');
       rethrow; // Re-lancer l'exception pour qu'elle soit gérée par le caller
     }

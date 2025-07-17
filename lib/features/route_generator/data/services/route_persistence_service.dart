@@ -1,11 +1,10 @@
-// lib/features/route_generator/data/services/route_persistence_service.dart
-
 import 'dart:convert';
 import 'dart:isolate';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:runaway/features/route_generator/domain/models/saved_route.dart';
 import 'package:runaway/features/route_generator/data/services/route_cache.dart';
+import 'package:runaway/core/helper/config/log_config.dart';
 
 /// Service de persistance avancée pour les parcours
 class RoutePersistenceService {
@@ -44,7 +43,7 @@ class RoutePersistenceService {
       print('🛡️ Sauvegarde de sécurité créée: ${routes.length} routes');
       
     } catch (e) {
-      print('❌ Erreur création backup: $e');
+      LogConfig.logError('❌ Erreur création backup: $e');
     }
   }
 
@@ -76,23 +75,23 @@ class RoutePersistenceService {
           final actualChecksum = _calculateChecksum(routes);
           
           if (expectedChecksum == actualChecksum) {
-            print('✅ Restauration réussie: ${routes.length} routes');
+            LogConfig.logInfo('Restauration réussie: ${routes.length} routes');
             return routes;
           } else {
-            print('⚠️ Checksum invalide pour $key, tentative suivante...');
+            LogConfig.logInfo('Checksum invalide pour $key, tentative suivante...');
           }
           
         } catch (e) {
-          print('❌ Erreur lecture backup $key: $e');
+          LogConfig.logError('❌ Erreur lecture backup $key: $e');
           continue;
         }
       }
       
-      print('❌ Aucune sauvegarde valide trouvée');
+      LogConfig.logError('❌ Aucune sauvegarde valide trouvée');
       return null;
       
     } catch (e) {
-      print('❌ Erreur restauration backup: $e');
+      LogConfig.logError('❌ Erreur restauration backup: $e');
       return null;
     }
   }
@@ -127,7 +126,7 @@ class RoutePersistenceService {
             await _cache.removeRoute(routeData.id);
           }
         } catch (e) {
-          print('❌ Erreur compression route $key: $e');
+          LogConfig.logError('❌ Erreur compression route $key: $e');
         }
       }
       
@@ -137,7 +136,7 @@ class RoutePersistenceService {
       }
       
     } catch (e) {
-      print('❌ Erreur compression: $e');
+      LogConfig.logError('❌ Erreur compression: $e');
     }
   }
 
@@ -148,17 +147,17 @@ class RoutePersistenceService {
       final version = prefs.getString('data_version') ?? '1.0';
       
       if (version == '1.0') {
-        print('🔄 Migration vers format v1.1...');
+        LogConfig.logInfo('🔄 Migration vers format v1.1...');
         
         // Exemple de migration : ajouter des champs manquants
         await _migrateToV11();
         await prefs.setString('data_version', '1.1');
         
-        print('✅ Migration vers v1.1 terminée');
+        LogConfig.logInfo('Migration vers v1.1 terminée');
       }
       
     } catch (e) {
-      print('❌ Erreur migration: $e');
+      LogConfig.logError('❌ Erreur migration: $e');
     }
   }
 
@@ -178,11 +177,11 @@ class RoutePersistenceService {
       // 3. Vérifier la cohérence entre caches
       await _validateCacheConsistency(report);
       
-      print('🔍 Validation d\'intégrité terminée: ${report.toString()}');
+      LogConfig.logInfo('🔍 Validation d\'intégrité terminée: ${report.toString()}');
       
     } catch (e) {
       report.errors.add('Erreur validation: $e');
-      print('❌ Erreur validation intégrité: $e');
+      LogConfig.logError('❌ Erreur validation intégrité: $e');
     }
     
     return report;
@@ -200,10 +199,10 @@ class RoutePersistenceService {
         );
         
         final result = await receivePort.first;
-        print('🚀 Optimisation en arrière-plan terminée: $result');
+        LogConfig.logInfo('🚀 Optimisation en arrière-plan terminée: $result');
         
       } catch (e) {
-        print('❌ Erreur optimisation background: $e');
+        LogConfig.logError('❌ Erreur optimisation background: $e');
         // Fallback vers optimisation synchrone
         await _performSynchronousOptimization();
       }
@@ -233,7 +232,7 @@ class RoutePersistenceService {
         await prefs.remove(key);
       }
       
-      print('🧹 ${toRemove.length} anciennes sauvegardes supprimées');
+      LogConfig.logInfo('🧹 ${toRemove.length} anciennes sauvegardes supprimées');
     }
   }
 
@@ -260,7 +259,7 @@ class RoutePersistenceService {
           }
         }
       } catch (e) {
-        print('❌ Erreur migration route $key: $e');
+        LogConfig.logError('❌ Erreur migration route $key: $e');
       }
     }
   }
@@ -334,7 +333,7 @@ class RoutePersistenceService {
     // Optimisation synchrone (fallback)
     await _cache.cleanupExpiredCache();
     await compressOldRoutes();
-    print('🔧 Optimisation synchrone terminée');
+    LogConfig.logInfo('🔧 Optimisation synchrone terminée');
   }
 }
 

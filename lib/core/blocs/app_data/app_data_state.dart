@@ -1,18 +1,10 @@
 import 'package:equatable/equatable.dart';
-import 'package:runaway/features/activity/domain/models/activity_stats.dart';
 import 'package:runaway/features/credits/domain/models/credit_plan.dart';
 import 'package:runaway/features/credits/domain/models/credit_transaction.dart';
 import 'package:runaway/features/credits/domain/models/user_credits.dart';
 import 'package:runaway/features/route_generator/domain/models/saved_route.dart';
 
 class AppDataState extends Equatable {
-  // ===== ACTIVITÉ =====
-  final ActivityStats? activityStats;
-  final List<ActivityTypeStats> activityTypeStats;
-  final List<PeriodStats> periodStats;
-  final List<PersonalGoal> personalGoals;
-  final List<PersonalRecord> personalRecords;
-
   // ===== HISTORIQUE =====
   final List<SavedRoute> savedRoutes;
   
@@ -30,14 +22,7 @@ class AppDataState extends Equatable {
   final bool isDataLoaded;
   final DateTime? lastCacheUpdate;
 
-  const AppDataState({
-    // Activité
-    this.activityStats,
-    this.activityTypeStats = const [],
-    this.periodStats = const [],
-    this.personalGoals = const [],
-    this.personalRecords = const [],
-    
+  const AppDataState({    
     // Historique
     this.savedRoutes = const [],
     
@@ -56,14 +41,7 @@ class AppDataState extends Equatable {
     this.lastCacheUpdate,
   });
 
-  AppDataState copyWith({
-    // Activité
-    ActivityStats? activityStats,
-    List<ActivityTypeStats>? activityTypeStats,
-    List<PeriodStats>? periodStats,
-    List<PersonalGoal>? personalGoals,
-    List<PersonalRecord>? personalRecords,
-    
+  AppDataState copyWith({    
     // Historique
     List<SavedRoute>? savedRoutes,
     
@@ -81,14 +59,7 @@ class AppDataState extends Equatable {
     bool? isDataLoaded,
     DateTime? lastCacheUpdate,
   }) {
-    return AppDataState(
-      // Activité
-      activityStats: activityStats ?? this.activityStats,
-      activityTypeStats: activityTypeStats ?? this.activityTypeStats,
-      periodStats: periodStats ?? this.periodStats,
-      personalGoals: personalGoals ?? this.personalGoals,
-      personalRecords: personalRecords ?? this.personalRecords,
-      
+    return AppDataState(      
       // Historique
       savedRoutes: savedRoutes ?? this.savedRoutes,
       
@@ -110,13 +81,6 @@ class AppDataState extends Equatable {
 
   @override
   List<Object?> get props => [
-    // Activité
-    activityStats,
-    activityTypeStats,
-    periodStats,
-    personalGoals,
-    personalRecords,
-    
     // Historique
     savedRoutes,
     
@@ -137,14 +101,10 @@ class AppDataState extends Equatable {
 
   /// Vérifie si toutes les données sont chargées
   bool get isDataLoadedFinish=> hasHistoricData && 
-                          activityStats != null && 
                           isCreditDataLoaded;
 
   /// Vérifie si les données d'historique sont présentes
   bool get hasHistoricData => savedRoutes.isNotEmpty;
-
-  /// Vérifie si les données d'activité sont présentes
-  bool get hasActivityData => activityStats != null;
 
   // ===== 🆕 GETTERS CRÉDITS =====
   

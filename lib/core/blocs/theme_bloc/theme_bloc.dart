@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:hydrated_bloc/hydrated_bloc.dart';
+import 'package:runaway/core/helper/config/log_config.dart';
 import 'package:runaway/core/helper/services/theme_service.dart';
 
 part 'theme_event.dart';
@@ -48,9 +49,9 @@ class ThemeBloc extends HydratedBloc<ThemeEvent, ThemeState> {
         isLoading: false,
       ));
       
-      print('✅ Theme initialisé: ${savedThemeMode.name}');
+      LogConfig.logInfo('Theme initialisé: ${savedThemeMode.name}');
     } catch (e) {
-      print('❌ Erreur initialisation theme: $e');
+      LogConfig.logError('❌ Erreur initialisation theme: $e');
       emit(state.copyWith(
         themeMode: AppThemeMode.dark,
         isLoading: false,
@@ -73,9 +74,9 @@ class ThemeBloc extends HydratedBloc<ThemeEvent, ThemeState> {
         isLoading: false,
       ));
       
-      print('✅ Theme changé vers: ${event.themeMode.name}');
+      LogConfig.logInfo('Theme changé vers: ${event.themeMode.name}');
     } catch (e) {
-      print('❌ Erreur changement theme: $e');
+      LogConfig.logError('❌ Erreur changement theme: $e');
       emit(state.copyWith(
         isLoading: false,
         error: e.toString(),
@@ -88,7 +89,7 @@ class ThemeBloc extends HydratedBloc<ThemeEvent, ThemeState> {
     try {
       return ThemeState.fromJson(json);
     } catch (e) {
-      print('❌ Erreur hydratation theme: $e');
+      LogConfig.logError('❌ Erreur hydratation theme: $e');
       return null;
     }
   }
@@ -98,7 +99,7 @@ class ThemeBloc extends HydratedBloc<ThemeEvent, ThemeState> {
     try {
       return state.toJson();
     } catch (e) {
-      print('❌ Erreur sérialisation theme: $e');
+      LogConfig.logError('❌ Erreur sérialisation theme: $e');
       return null;
     }
   }

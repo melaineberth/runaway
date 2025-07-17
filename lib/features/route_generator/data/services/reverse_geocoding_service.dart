@@ -1,9 +1,8 @@
-// lib/core/services/reverse_geocoding_service.dart
-
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:runaway/core/helper/config/secure_config.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:runaway/core/helper/config/log_config.dart';
 
 class ReverseGeocodingService {
   static final String _baseUrl = 'https://api.mapbox.com/geocoding/v5/mapbox.places';
@@ -24,7 +23,7 @@ class ReverseGeocodingService {
       if (useCache) {
         final cachedResult = await _getCachedLocation(cacheKey);
         if (cachedResult != null) {
-          print('📍 Localisation depuis cache: ${cachedResult.displayName}');
+          LogConfig.logInfo('📍 Localisation depuis cache: ${cachedResult.displayName}');
           return cachedResult;
         }
       }
@@ -37,11 +36,11 @@ class ReverseGeocodingService {
         await _cacheLocation(cacheKey, locationInfo);
       }
 
-      print('📍 Localisation depuis API: ${locationInfo.displayName}');
+      LogConfig.logInfo('📍 Localisation depuis API: ${locationInfo.displayName}');
       return locationInfo;
 
     } catch (e) {
-      print('❌ Erreur reverse geocoding: $e');
+      LogConfig.logError('❌ Erreur reverse geocoding: $e');
       return LocationInfo.fallback(latitude, longitude);
     }
   }
@@ -157,7 +156,7 @@ class ReverseGeocodingService {
       return LocationInfo.fromJson(data['location']);
 
     } catch (e) {
-      print('❌ Erreur lecture cache geocoding: $e');
+      LogConfig.logError('❌ Erreur lecture cache geocoding: $e');
       return null;
     }
   }
@@ -175,7 +174,7 @@ class ReverseGeocodingService {
       await prefs.setString(cacheKey, json.encode(cacheData));
 
     } catch (e) {
-      print('❌ Erreur mise en cache geocoding: $e');
+      LogConfig.logError('❌ Erreur mise en cache geocoding: $e');
     }
   }
 
@@ -202,10 +201,10 @@ class ReverseGeocodingService {
         }
       }
 
-      print('✅ Cache de géocodage nettoyé');
+      LogConfig.logInfo('Cache de géocodage nettoyé');
 
     } catch (e) {
-      print('❌ Erreur nettoyage cache: $e');
+      LogConfig.logError('❌ Erreur nettoyage cache: $e');
     }
   }
 }

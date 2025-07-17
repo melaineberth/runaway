@@ -1,3 +1,4 @@
+import 'package:runaway/core/helper/config/log_config.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' as su;
 import 'package:runaway/core/blocs/app_data/app_data_bloc.dart';
 import 'package:runaway/core/blocs/app_data/app_data_event.dart';
@@ -56,8 +57,8 @@ class CreditVerificationService {
     int requiredCredits = 1,
   }) async {
     try {
-      print('💳 === VÉRIFICATION CRÉDITS ===');
-      print('💳 Crédits requis: $requiredCredits');
+      LogConfig.logInfo('💳 === VÉRIFICATION CRÉDITS ===');
+      LogConfig.logInfo('💳 Crédits requis: $requiredCredits');
 
       // Vérifier l'authentification
       final currentUser = su.Supabase.instance.client.auth.currentUser;
@@ -76,7 +77,7 @@ class CreditVerificationService {
       // Priorité 1: AppDataBloc si données chargées
       if (_appDataBloc != null && _appDataBloc.state.isCreditDataLoaded) {
         availableCredits = _appDataBloc.state.availableCredits;
-        print('💳 Crédits depuis AppDataBloc: $availableCredits');
+        LogConfig.logInfo('💳 Crédits depuis AppDataBloc: $availableCredits');
       } 
       // Priorité 2: CreditsBloc local
       else {
@@ -90,12 +91,12 @@ class CreditVerificationService {
           final userCredits = await _creditsRepository.getUserCredits();
           availableCredits = userCredits.availableCredits;
         }
-        print('💳 Crédits depuis API: $availableCredits');
+        LogConfig.logInfo('💳 Crédits depuis API: $availableCredits');
       }
 
       final hasEnough = availableCredits >= requiredCredits;
       
-      print('💳 Résultat: ${hasEnough ? "✅" : "❌"} ($availableCredits >= $requiredCredits)');
+      LogConfig.logInfo('💳 Résultat: ${hasEnough ? "✅" : "❌"} ($availableCredits >= $requiredCredits)');
 
       return CreditVerificationResult(
         hasEnoughCredits: hasEnough,
@@ -104,7 +105,7 @@ class CreditVerificationService {
       );
 
     } catch (e) {
-      print('❌ Erreur vérification crédits: $e');
+      LogConfig.logError('❌ Erreur vérification crédits: $e');
       return CreditVerificationResult(
         hasEnoughCredits: false,
         availableCredits: 0,
@@ -121,8 +122,8 @@ class CreditVerificationService {
     required Map<String, dynamic> metadata,
   }) async {
     try {
-      print('💳 === CONSOMMATION CRÉDITS ===');
-      print('💳 Montant: $amount, ID: $generationId');
+      LogConfig.logInfo('💳 === CONSOMMATION CRÉDITS ===');
+      LogConfig.logInfo('💳 Montant: $amount, ID: $generationId');
 
       // Mise à jour optimiste si AppDataBloc disponible
       int? originalBalance;
@@ -134,7 +135,7 @@ class CreditVerificationService {
           newBalance: newBalance,
           isOptimistic: true,
         ));
-        print('⚡ Mise à jour optimiste: $originalBalance → $newBalance crédits');
+        LogConfig.logInfo('Mise à jour optimiste: $originalBalance → $newBalance crédits');
       }
 
       // Consommation réelle via API
@@ -146,8 +147,8 @@ class CreditVerificationService {
       );
 
       if (usageResult.success && usageResult.updatedCredits != null) {
-        print('✅ Consommation réussie');
-        print('💰 Nouveau solde: ${usageResult.updatedCredits!.availableCredits}');
+        LogConfig.logInfo('Consommation réussie');
+        LogConfig.logInfo('💰 Nouveau solde: ${usageResult.updatedCredits!.availableCredits}');
         
         return CreditConsumptionResult(
           success: true,
@@ -155,7 +156,7 @@ class CreditVerificationService {
           transactionId: usageResult.transactionId,
         );
       } else {
-        print('❌ Échec consommation: ${usageResult.errorMessage}');
+        LogConfig.logError('❌ Échec consommation: ${usageResult.errorMessage}');
         
         // Annuler la mise à jour optimiste
         if (_appDataBloc != null && originalBalance != null) {
@@ -171,7 +172,7 @@ class CreditVerificationService {
         );
       }
     } catch (e) {
-      print('❌ Erreur consommation crédits: $e');
+      LogConfig.logError('❌ Erreur consommation crédits: $e');
       return CreditConsumptionResult(
         success: false,
         errorMessage: 'Erreur lors de la consommation des crédits: $e',
@@ -190,7 +191,7 @@ class CreditVerificationService {
       // Fallback vers CreditsBloc
       return await _creditsBloc.hasEnoughCredits(1);
     } catch (e) {
-      print('❌ Erreur vérification possibilité génération: $e');
+      LogConfig.logError('❌ Erreur vérification possibilité génération: $e');
       return false;
     }
   }
@@ -207,7 +208,7 @@ class CreditVerificationService {
       final userCredits = await _creditsRepository.getUserCredits();
       return userCredits.availableCredits;
     } catch (e) {
-      print('❌ Erreur récupération crédits: $e');
+      LogConfig.logError('❌ Erreur récupération crédits: $e');
       return 0;
     }
   }
@@ -215,7 +216,7 @@ class CreditVerificationService {
   /// Déclenche le pré-chargement des crédits si nécessaire
   void ensureCreditDataLoaded() {
     if (_appDataBloc != null && !_appDataBloc.state.isCreditDataLoaded) {
-      print('💳 Déclenchement pré-chargement crédits depuis CreditVerificationService');
+      LogConfig.logInfo('💳 Déclenchement pré-chargement crédits depuis CreditVerificationService');
       _appDataBloc.add(const CreditDataPreloadRequested());
     }
   }

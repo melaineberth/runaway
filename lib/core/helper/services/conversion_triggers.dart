@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:runaway/core/helper/config/log_config.dart';
 import 'package:runaway/core/helper/services/conversion_service.dart';
 import 'package:runaway/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:runaway/features/auth/presentation/bloc/auth_state.dart';
@@ -33,7 +34,7 @@ class ConversionTriggers {
         _scheduleContextualPrompt(context, 'route_generated');
       }
     } catch (e) {
-      print('❌ Erreur ConversionTriggers.onRouteGenerated: $e');
+      LogConfig.logError('❌ Erreur ConversionTriggers.onRouteGenerated: $e');
     }
   }
   
@@ -51,7 +52,7 @@ class ConversionTriggers {
         _scheduleContextualPrompt(context, 'activity_viewed');
       }
     } catch (e) {
-      print('❌ Erreur ConversionTriggers.onActivityViewed: $e');
+      LogConfig.logError('❌ Erreur ConversionTriggers.onActivityViewed: $e');
     }
   }
   
@@ -66,7 +67,7 @@ class ConversionTriggers {
         _scheduleContextualPrompt(context, 'long_session');
       }
     } catch (e) {
-      print('❌ Erreur ConversionTriggers.onLongSession: $e');
+      LogConfig.logError('❌ Erreur ConversionTriggers.onLongSession: $e');
     }
   }
   
@@ -81,7 +82,7 @@ class ConversionTriggers {
         _scheduleContextualPrompt(context, 'multiple_routes');
       }
     } catch (e) {
-      print('❌ Erreur ConversionTriggers.onMultipleRoutes: $e');
+      LogConfig.logError('❌ Erreur ConversionTriggers.onMultipleRoutes: $e');
     }
   }
   
@@ -95,13 +96,13 @@ class ConversionTriggers {
       final currentAuthState = authBloc.state;
       
       if (!context.mounted || currentAuthState is Authenticated) {
-        print('🚫 Prompt contextuel annulé - utilisateur connecté ou contexte invalide');
+        LogConfig.logInfo('🚫 Prompt contextuel annulé - utilisateur connecté ou contexte invalide');
         return;
       }
       
       // 🔧 CORRECTION: Vérification supplémentaire avant affichage
       if (currentAuthState is AuthLoading) {
-        print('🚫 Prompt contextuel annulé - authentification en cours');
+        LogConfig.logInfo('🚫 Prompt contextuel annulé - authentification en cours');
         return;
       }
       
@@ -115,7 +116,7 @@ class ConversionTriggers {
           builder: (context) => ConversionPromptModal(context: promptType),
         );
       } catch (e) {
-        print('❌ Erreur affichage prompt contextuel: $e');
+        LogConfig.logError('❌ Erreur affichage prompt contextuel: $e');
       }
     });
   }

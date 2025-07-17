@@ -434,7 +434,7 @@ class _TrailixState extends State<Trailix> {
     _sessionSubscription = SessionManager.instance.sessionEvents.listen((event) {
       if (event.status == SessionStatus.expired || event.status == SessionStatus.error) {
         // Rediriger vers l'écran de connexion ou afficher un message
-        print('⚠️ Session ${event.status}: ${event.reason}');
+        LogConfig.logInfo('⚠️ Session ${event.status}: ${event.reason}');
       }
     });
   }

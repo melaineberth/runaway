@@ -2,13 +2,14 @@ import 'dart:async';
 
 import 'package:runaway/features/route_generator/data/services/reverse_geocoding_service.dart';
 import 'package:runaway/core/helper/services/location_preload_service.dart';
+import 'package:runaway/core/helper/config/log_config.dart';
 
 /// Service pour initialiser les différents composants de l'application au démarrage
 class AppInitializationService {
   
   /// Initialise tous les services nécessaires au démarrage de l'application
   static Future<void> initialize() async {
-    print('🚀 === INITIALISATION RAPIDE DE L\'APPLICATION ===');
+    LogConfig.logInfo('🚀 === INITIALISATION RAPIDE DE L\'APPLICATION ===');
       
     // 🌍 PRIORITÉ ABSOLUE: Démarrer la géolocalisation en premier
     final locationFuture = _initializeLocationServiceImmediate();
@@ -25,7 +26,7 @@ class AppInitializationService {
     // Vérifier l'état de la géolocalisation (sans bloquer)
     _checkLocationInitializationStatus(locationFuture);
     
-    print('✅ Initialisation de l\'application terminée');
+    LogConfig.logInfo('Initialisation de l\'application terminée');
   }
 
   /// 🚀 Initialise la géolocalisation immédiatement et en arrière-plan
@@ -34,9 +35,9 @@ class AppInitializationService {
     
     // Fire-and-forget: démarrer le processus immédiatement
     LocationPreloadService.instance.initializeLocation().then((position) {
-      print('✅ 🎯 Géolocalisation pré-chargée avec succès: ${position.latitude}, ${position.longitude}');
+      LogConfig.logInfo('🎯 Géolocalisation pré-chargée avec succès: ${position.latitude}, ${position.longitude}');
     }).catchError((e) {
-      print('⚠️ Pré-chargement géolocalisation échoué (non bloquant): $e');
+      LogConfig.logInfo('Pré-chargement géolocalisation échoué (non bloquant): $e');
       // Ne pas bloquer l'app, l'utilisateur aura juste un loader un peu plus long
     });
   }
@@ -48,28 +49,28 @@ class AppInitializationService {
       if (LocationPreloadService.instance.hasValidPosition) {
         print('🎉 Géolocalisation prête en 2s - UX optimale !');
       } else {
-        print('⏳ Géolocalisation encore en cours après 2s');
+        LogConfig.logInfo('⏳ Géolocalisation encore en cours après 2s');
       }
     });
   }
 
   /// Initialise le pré-chargement des données une fois l'authentification prête
   static Future<void> initializeDataPreloading() async {
-    print('📊 Initialisation du système de pré-chargement...');
+    LogConfig.logInfo('📊 Initialisation du système de pré-chargement...');
     
     // Le pré-chargement sera déclenché automatiquement 
     // quand l'utilisateur s'authentifie via l'AuthListener
     
-    print('✅ Système de pré-chargement prêt');
+    LogConfig.logInfo('Système de pré-chargement prêt');
   }
     
   /// Nettoie le cache de reverse geocoding (non bloquant)
   static Future<void> _cleanupReverseGeocodingCache() async {
     try {
       await ReverseGeocodingService.cleanExpiredCache();
-      print('✅ Cache de géocodage nettoyé');
+      LogConfig.logInfo('Cache de géocodage nettoyé');
     } catch (e) {
-      print('❌ Erreur nettoyage cache géocodage: $e');
+      LogConfig.logError('❌ Erreur nettoyage cache géocodage: $e');
       // Non bloquant, l'app peut continuer
     }
   }
@@ -81,9 +82,9 @@ class AppInitializationService {
     
     // Exemple d'initialisation non bloquante:
     // await AnalyticsService.initialize().catchError((e) {
-    //   print('⚠️ Analytics init failed: $e');
+    //   LogConfig.logInfo('Analytics init failed: $e');
     // });
     
-    print('✅ Autres services initialisés');
+    LogConfig.logInfo('Autres services initialisés');
   }
 }

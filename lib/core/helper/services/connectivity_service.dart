@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:runaway/core/helper/config/secure_config.dart';
+import 'package:runaway/core/helper/config/log_config.dart';
 
 enum ConnectionStatus { onlineWifi, onlineMobile, offline }
 
@@ -41,7 +42,7 @@ class ConnectivityService {
     
     try {
       if (!SecureConfig.kIsProduction) {
-        print('🔄 Initialisation ConnectivityService...');
+        LogConfig.logInfo('🔄 Initialisation ConnectivityService...');
       }
       
       // 🚀 Vérification initiale rapide
@@ -58,7 +59,7 @@ class ConnectivityService {
       _logWithCooldown('✅ ConnectivityService initialisé: $_lastStatus');
       
     } catch (e) {
-      print('❌ Erreur ConnectivityService: $e - assumé offline');
+      LogConfig.logError('❌ Erreur ConnectivityService: $e - assumé offline');
       _setStatus(ConnectionStatus.offline);
       _isInitialized = true;
       _initCompleter!.complete();
@@ -77,7 +78,7 @@ class ConnectivityService {
         _emit(result);
       },
       onError: (e) {
-        print('❌ Erreur listener natif: $e');
+        LogConfig.logError('❌ Erreur listener natif: $e');
       },
     );
   }
@@ -156,7 +157,7 @@ class ConnectivityService {
     // Émettre le changement
     _controller.add(newStatus);
     
-    print('🔄 ConnectivityService: $oldStatus → $newStatus');
+    LogConfig.logInfo('🔄 ConnectivityService: $oldStatus → $newStatus');
     
     // Logger seulement les vrais changements d'état
     if (oldStatus != newStatus) {
@@ -190,7 +191,7 @@ class ConnectivityService {
   /// Force une vérification immédiate
   Future<void> forceCheck() async {
     if (!SecureConfig.kIsProduction) {
-      print('🔄 Vérification forcée...');
+      LogConfig.logInfo('🔄 Vérification forcée...');
     }
     await _checkConnectivityNow();
   }
@@ -233,7 +234,7 @@ class ConnectivityService {
       await _initCompleter?.future.timeout(timeout);
     } catch (e) {
       if (!SecureConfig.kIsProduction) {
-        print('⚠️ Timeout initialisation ConnectivityService');
+        LogConfig.logInfo('Timeout initialisation ConnectivityService');
       }
       if (!_isInitialized) {
         _lastStatus = ConnectionStatus.offline;

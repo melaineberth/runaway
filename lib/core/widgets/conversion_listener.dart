@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:runaway/core/helper/config/log_config.dart';
 import 'package:runaway/core/helper/services/conversion_service.dart';
 import 'package:runaway/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:runaway/features/auth/presentation/bloc/auth_state.dart';
@@ -53,7 +54,7 @@ class _ConversionListenerState extends State<ConversionListener> {
         } else if (authState is AuthLoading) {
           // 🔧 CORRECTION: Annuler les prompts pendant le chargement d'auth
           _delayedPromptTimer?.cancel();
-          print('⏳ Authentification en cours - annulation des prompts');
+          LogConfig.logInfo('⏳ Authentification en cours - annulation des prompts');
         }
       },
       child: widget.child,
@@ -66,7 +67,7 @@ class _ConversionListenerState extends State<ConversionListener> {
       final authState = context.read<AuthBloc>().state;
       return authState is Authenticated;
     } catch (e) {
-      print('❌ Erreur vérification auth: $e');
+      LogConfig.logError('❌ Erreur vérification auth: $e');
       return false;
     }
   }
@@ -91,14 +92,14 @@ class _ConversionListenerState extends State<ConversionListener> {
     
     // ✅ VÉRIFICATION CRITIQUE : Ne jamais afficher le prompt si l'utilisateur est connecté
     if (_isUserAuthenticated()) {
-      print('🚫 Prompt annulé - utilisateur connecté');
+      LogConfig.logInfo('🚫 Prompt annulé - utilisateur connecté');
       return;
     }
     
     // 🔧 CORRECTION: Vérifier aussi l'état de chargement
     final authState = context.read<AuthBloc>().state;
     if (authState is AuthLoading) {
-      print('🚫 Prompt annulé - authentification en cours');
+      LogConfig.logInfo('🚫 Prompt annulé - authentification en cours');
       return;
     }
     
@@ -120,10 +121,10 @@ class _ConversionListenerState extends State<ConversionListener> {
         
         _isPromptShowing = false;
       } else {
-        print('🚫 Prompt annulé - conditions non remplies');
+        LogConfig.logInfo('🚫 Prompt annulé - conditions non remplies');
       }
     } catch (e) {
-      print('❌ Erreur vérification prompt: $e');
+      LogConfig.logError('❌ Erreur vérification prompt: $e');
       _isPromptShowing = false;
     }
   }

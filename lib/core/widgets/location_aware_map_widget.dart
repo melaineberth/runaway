@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart' as mp;
 import 'package:geolocator/geolocator.dart' as gl;
 import 'package:hugeicons/hugeicons.dart';
+import 'package:runaway/core/helper/config/log_config.dart';
 import 'package:runaway/core/helper/services/location_preload_service.dart';
 
 /// Widget qui charge la géolocalisation AVANT d'afficher la carte
@@ -85,7 +86,7 @@ class _LocationAwareMapWidgetState extends State<LocationAwareMapWidget>
       // Si on doit restaurer depuis le cache et qu'on a une position valide
       if (widget.restoreFromCache && LocationPreloadService.instance.hasValidPosition) {
         _initialPosition = LocationPreloadService.instance.lastKnownPosition;
-        print('✅ Position restaurée depuis le cache');
+        LogConfig.logSuccess('Position restaurée depuis le cache');
         _showMapWithPosition();
         return;
       }
@@ -95,11 +96,11 @@ class _LocationAwareMapWidgetState extends State<LocationAwareMapWidget>
           .timeout(Duration(seconds: 5)); // Timeout plus court pour UX
       
       _initialPosition = position;
-      print('✅ Géolocalisation chargée: ${position.latitude}, ${position.longitude}');
+      LogConfig.logSuccess('Géolocalisation chargée: ${position.latitude}, ${position.longitude}');
       _showMapWithPosition();
       
     } catch (e) {
-      print('❌ Erreur géolocalisation: $e');
+      LogConfig.logError('❌ Erreur géolocalisation: $e');
       setState(() {
         _locationError = true;
         _errorMessage = _getErrorMessage(e);

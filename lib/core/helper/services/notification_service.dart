@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'package:runaway/core/helper/config/log_config.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:runaway/core/errors/api_exceptions.dart';
 
@@ -40,10 +41,10 @@ class NotificationService {
       }
       
       _isInitialized = true;
-      print('✅ Service de notifications initialisé');
+      LogConfig.logSuccess('Service de notifications initialisé');
       
     } catch (e) {
-      print('❌ Erreur initialisation notifications: $e');
+      LogConfig.logError('❌ Erreur initialisation notifications: $e');
       // Ne pas faire échouer l'app pour les notifications
     }
   }
@@ -65,10 +66,10 @@ class NotificationService {
         await _disablePushNotifications();
       }
       
-      print('✅ Notifications ${enabled ? "activées" : "désactivées"}');
+      LogConfig.logInfo('Notifications ${enabled ? "activées" : "désactivées"}');
       
     } catch (e) {
-      print('❌ Erreur toggle notifications: $e');
+      LogConfig.logError('❌ Erreur toggle notifications: $e');
       throw NetworkException('Erreur lors de la modification des notifications: $e');
     }
   }
@@ -79,7 +80,7 @@ class NotificationService {
     _notificationsEnabled = prefs.getBool(_notificationsEnabledKey) ?? true;
     _fcmToken = prefs.getString(_fcmTokenKey);
     
-    print('📱 Préférences chargées: notifications=$_notificationsEnabled');
+    LogConfig.logInfo('📱 Préférences chargées: notifications=$_notificationsEnabled');
   }
   
   /// Initialise les notifications push (Firebase/FCM)
@@ -106,7 +107,7 @@ class NotificationService {
       await _setupNotificationHandlers();
       
     } catch (e) {
-      print('❌ Erreur initialisation push: $e');
+      LogConfig.logError('❌ Erreur initialisation push: $e');
       rethrow;
     }
   }
@@ -124,7 +125,7 @@ class NotificationService {
       print('🔕 Token FCM supprimé');
       
     } catch (e) {
-      print('❌ Erreur désactivation push: $e');
+      LogConfig.logError('❌ Erreur désactivation push: $e');
     }
   }
   
@@ -137,10 +138,10 @@ class NotificationService {
       //   badge: true,
       //   sound: true,
       // );
-      print('📱 Permissions iOS demandées');
+      LogConfig.logInfo('📱 Permissions iOS demandées');
     } else if (Platform.isAndroid) {
       // Les permissions Android sont généralement automatiques
-      print('📱 Permissions Android automatiques');
+      LogConfig.logInfo('📱 Permissions Android automatiques');
     }
   }
   
@@ -158,7 +159,7 @@ class NotificationService {
     //   _handleBackgroundMessage(message);
     // });
     
-    print('🔧 Handlers de notifications configurés');
+    LogConfig.logInfo('🔧 Handlers de notifications configurés');
   }
   
   // /// Gère les messages reçus en foreground
@@ -182,6 +183,6 @@ class NotificationService {
   Future<void> dispose() async {
     _isInitialized = false;
     _fcmToken = null;
-    print('🗑️ Service de notifications nettoyé');
+    LogConfig.logInfo('🗑️ Service de notifications nettoyé');
   }
 }

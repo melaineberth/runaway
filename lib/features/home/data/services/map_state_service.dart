@@ -3,6 +3,7 @@ import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart' as mp;
 import 'package:runaway/features/home/domain/enums/tracking_mode.dart';
 import 'package:runaway/features/home/domain/models/mapbox_style_constants.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:runaway/core/helper/config/log_config.dart';
 
 /// 🗺️ Service singleton pour la persistance de l'état de la carte
 class MapStateService {
@@ -68,14 +69,14 @@ class MapStateService {
   /// 🎨 Sauvegarder le style de carte sélectionné avec persistance
   Future<void> saveMapStyleId(String styleId) async {
     _selectedMapStyleId = styleId;
-    print('🎨 Style de carte sauvegardé: $styleId');
+    LogConfig.logInfo('🎨 Style de carte sauvegardé: $styleId');
     
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(_mapStyleKey, styleId);
-      print('🎨 Style persisté dans SharedPreferences');
+      LogConfig.logInfo('🎨 Style persisté dans SharedPreferences');
     } catch (e) {
-      print('❌ Erreur sauvegarde style dans SharedPreferences: $e');
+      LogConfig.logError('❌ Erreur sauvegarde style dans SharedPreferences: $e');
     }
   }
 
@@ -90,17 +91,17 @@ class MapStateService {
         try {
           MapboxStyleConstants.getStyleById(savedStyleId);
           _selectedMapStyleId = savedStyleId;
-          print('🎨 Style chargé depuis SharedPreferences: $savedStyleId');
+          LogConfig.logInfo('🎨 Style chargé depuis SharedPreferences: $savedStyleId');
         } catch (e) {
-          print('⚠️ Style inexistant dans SharedPreferences, utilisation du défaut');
+          LogConfig.logInfo('Style inexistant dans SharedPreferences, utilisation du défaut');
           _selectedMapStyleId = MapboxStyleConstants.getDefaultStyleId();
         }
       } else {
-        print('🎨 Aucun style sauvegardé, utilisation du défaut');
+        LogConfig.logInfo('🎨 Aucun style sauvegardé, utilisation du défaut');
         _selectedMapStyleId = MapboxStyleConstants.getDefaultStyleId();
       }
     } catch (e) {
-      print('❌ Erreur chargement style depuis SharedPreferences: $e');
+      LogConfig.logError('❌ Erreur chargement style depuis SharedPreferences: $e');
       _selectedMapStyleId = MapboxStyleConstants.getDefaultStyleId();
     }
   }
@@ -111,7 +112,7 @@ class MapStateService {
       _savedCameraState = await mapboxMap.getCameraState();
       print('📸 État caméra sauvegardé: ${_savedCameraState?.center.coordinates}');
     } catch (e) {
-      print('❌ Erreur sauvegarde état caméra: $e');
+      LogConfig.logError('❌ Erreur sauvegarde état caméra: $e');
     }
   }
 
@@ -135,7 +136,7 @@ class MapStateService {
       
       print('🎬 État caméra restauré ${animate ? "avec" : "sans"} animation');
     } catch (e) {
-      print('❌ Erreur restauration état caméra: $e');
+      LogConfig.logError('❌ Erreur restauration état caméra: $e');
     }
   }
 
@@ -155,7 +156,7 @@ class MapStateService {
   void saveUserPosition(double latitude, double longitude) {
     _lastUserLatitude = latitude;
     _lastUserLongitude = longitude;
-    print('📍 Position utilisateur sauvegardée: ($latitude, $longitude)');
+    LogConfig.logInfo('📍 Position utilisateur sauvegardée: ($latitude, $longitude)');
   }
 
   /// 🎯 Sauvegarder la position sélectionnée
@@ -168,7 +169,7 @@ class MapStateService {
   /// 🔄 Sauvegarder le mode de tracking
   void saveTrackingMode(TrackingMode mode) {
     _trackingMode = mode;
-    print('🔄 Mode tracking sauvegardé: $mode');
+    LogConfig.logInfo('🔄 Mode tracking sauvegardé: $mode');
   }
 
   /// 🛣️ Sauvegarder le parcours généré
@@ -176,7 +177,7 @@ class MapStateService {
     _generatedRouteCoordinates = coordinates;
     _routeMetadata = metadata;
     _hasAutoSaved = hasAutoSaved;
-    print('🛣️ Parcours sauvegardé: ${coordinates?.length ?? 0} points');
+    LogConfig.logInfo('🛣️ Parcours sauvegardé: ${coordinates?.length ?? 0} points');
   }
 
   /// 📌 Sauvegarder l'état du marqueur
@@ -204,7 +205,7 @@ class MapStateService {
     _markerLatitude = null;
     _markerLongitude = null;
     // Le style de carte n'est PAS réinitialisé lors du clearState pour conserver les préférences utilisateur
-    print('🧹 État de la carte nettoyé (style conservé)');
+    LogConfig.logInfo('🧹 État de la carte nettoyé (style conservé)');
   }
 
   /// 🔄 Réinitialiser seulement les marqueurs et parcours
@@ -215,6 +216,6 @@ class MapStateService {
     _hasActiveMarker = false;
     _markerLatitude = null;
     _markerLongitude = null;
-    print('🔄 Marqueurs et parcours nettoyés');
+    LogConfig.logInfo('🔄 Marqueurs et parcours nettoyés');
   }
 }

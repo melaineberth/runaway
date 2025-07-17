@@ -4,6 +4,7 @@ import 'package:runaway/features/route_generator/presentation/blocs/route_genera
 import 'package:runaway/features/route_generator/presentation/blocs/route_generation/route_generation_state.dart';
 import 'package:runaway/features/route_generator/domain/models/saved_route.dart';
 import 'dart:async';
+import 'package:runaway/core/helper/config/log_config.dart';
 
 /// Service pour synchroniser automatiquement les données entre RouteGenerationBloc et AppDataBloc
 class RouteDataSyncService {
@@ -26,26 +27,26 @@ class RouteDataSyncService {
     required AppDataBloc appDataBloc,
   }) {
     if (_isInitialized) {
-      print('⚠️ RouteDataSyncService déjà initialisé');
+      LogConfig.logInfo('RouteDataSyncService déjà initialisé');
       return;
     }
 
     _appDataBloc = appDataBloc;
     _lastKnownRoutes = List.from(routeGenerationBloc.state.savedRoutes);
     
-    print('🔄 Initialisation RouteDataSyncService...');
-    print('📊 Routes initiales: ${_lastKnownRoutes.length}');
+    LogConfig.logInfo('🔄 Initialisation RouteDataSyncService...');
+    LogConfig.logInfo('📊 Routes initiales: ${_lastKnownRoutes.length}');
 
     // Écouter les changements dans RouteGenerationBloc
     _routeSubscription = routeGenerationBloc.stream.listen(
       _onRouteStateChanged,
       onError: (error) {
-        print('❌ Erreur dans RouteDataSyncService: $error');
+        LogConfig.logError('❌ Erreur dans RouteDataSyncService: $error');
       },
     );
 
     _isInitialized = true;
-    print('✅ RouteDataSyncService initialisé et en écoute');
+    LogConfig.logInfo('RouteDataSyncService initialisé et en écoute');
   }
 
   /// Traite les changements d'état du RouteGenerationBloc
@@ -170,11 +171,11 @@ class RouteDataSyncService {
         break;
         
       case RouteChangeType.mixed:
-        print('🔄 Changements mixtes: ${analysis.addedRoutes.length} ajoutées, ${analysis.deletedRoutes.length} supprimées');
+        LogConfig.logInfo('🔄 Changements mixtes: ${analysis.addedRoutes.length} ajoutées, ${analysis.deletedRoutes.length} supprimées');
         break;
         
       case RouteChangeType.modified:
-        print('🔄 Route modifiée');
+        LogConfig.logInfo('🔄 Route modifiée');
         break;
     }
   }
@@ -182,28 +183,17 @@ class RouteDataSyncService {
   /// Déclenche manuellement une synchronisation
   void forceSyncData() {
     if (_appDataBloc == null) {
-      print('❌ AppDataBloc non disponible pour la synchronisation forcée');
+      LogConfig.logError('❌ AppDataBloc non disponible pour la synchronisation forcée');
       return;
     }
     
-    print('🔄 Synchronisation forcée des données');
+    LogConfig.logInfo('🔄 Synchronisation forcée des données');
     _appDataBloc!.add(const ForceDataSyncRequested());
-  }
-
-  /// Déclenche manuellement une mise à jour des statistiques d'activité
-  void forceActivityRefresh() {
-    if (_appDataBloc == null) {
-      print('❌ AppDataBloc non disponible pour le rafraîchissement d\'activité');
-      return;
-    }
-    
-    print('📊 Rafraîchissement forcé des statistiques d\'activité');
-    _appDataBloc!.add(const ActivityDataRefreshRequested());
   }
 
   /// Nettoie les ressources
   void dispose() {
-    print('🗑️ Nettoyage RouteDataSyncService ($_syncCount synchronisations effectuées)');
+    LogConfig.logInfo('🗑️ Nettoyage RouteDataSyncService ($_syncCount synchronisations effectuées)');
     _debounceTimer?.cancel();
     _routeSubscription?.cancel();
     _routeSubscription = null;

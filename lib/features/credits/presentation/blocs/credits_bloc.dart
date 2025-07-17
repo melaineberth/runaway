@@ -6,6 +6,7 @@ import 'package:runaway/features/credits/data/repositories/credits_repository.da
 import 'package:runaway/features/credits/data/services/iap_service.dart';
 import 'package:runaway/features/credits/domain/models/credit_plan.dart';
 import 'package:runaway/features/credits/domain/models/user_credits.dart';
+import 'package:runaway/core/helper/config/log_config.dart';
 
 import 'credits_event.dart';
 import 'credits_state.dart';
@@ -36,7 +37,7 @@ class CreditsBloc extends Bloc<CreditsEvent, CreditsState> {
         final appState = _appDataBloc.state;
         if (appState.hasCreditData) {
           final hasEnough = appState.availableCredits >= requiredCredits;
-          print('💰 Vérification crédits (AppData): $requiredCredits requis, ${appState.availableCredits} disponibles → ${hasEnough ? "✅" : "❌"}');
+          LogConfig.logInfo('💰 Vérification crédits (AppData): $requiredCredits requis, ${appState.availableCredits} disponibles → ${hasEnough ? "✅" : "❌"}');
           return hasEnough;
         }
       }
@@ -55,15 +56,15 @@ class CreditsBloc extends Bloc<CreditsEvent, CreditsState> {
 
       if (currentCredits != null) {
         final hasEnough = currentCredits.availableCredits >= requiredCredits;
-        print('💰 Vérification crédits (local): $requiredCredits requis, ${currentCredits.availableCredits} disponibles → ${hasEnough ? "✅" : "❌"}');
+        LogConfig.logInfo('💰 Vérification crédits (local): $requiredCredits requis, ${currentCredits.availableCredits} disponibles → ${hasEnough ? "✅" : "❌"}');
         return hasEnough;
       }
 
       // Dernier recours: appel direct au repository
-      print('💰 Vérification crédits via API...');
+      LogConfig.logInfo('💰 Vérification crédits via API...');
       return await _creditsRepository.hasEnoughCredits(requiredCredits);
     } catch (e) {
-      print('❌ Erreur vérification crédits: $e');
+      LogConfig.logError('❌ Erreur vérification crédits: $e');
       return false;
     }
   }
@@ -91,7 +92,7 @@ class CreditsBloc extends Bloc<CreditsEvent, CreditsState> {
       _appDataBloc?.add(const CreditDataPreloadRequested());
       
     } catch (e) {
-      print('❌ Erreur chargement crédits: $e');
+      LogConfig.logError('❌ Erreur chargement crédits: $e');
       emit(CreditsError(_getErrorMessage(e)));
     }
   }
@@ -155,7 +156,7 @@ class CreditsBloc extends Bloc<CreditsEvent, CreditsState> {
           transactionId: result.transactionId!,
         ));
 
-        print('✅ Utilisation de ${event.amount} crédits réussie');
+        LogConfig.logInfo('Utilisation de ${event.amount} crédits réussie');
       } else {
         // 🆕 Annuler la mise à jour optimiste
         _appDataBloc?.add(CreditBalanceUpdatedInAppData(
@@ -166,7 +167,7 @@ class CreditsBloc extends Bloc<CreditsEvent, CreditsState> {
         emit(CreditsError(result.errorMessage ?? 'Erreur lors de l\'utilisation'));
       }
     } catch (e) {
-      print('❌ Erreur utilisation crédits: $e');
+      LogConfig.logError('❌ Erreur utilisation crédits: $e');
       
       // 🆕 Annuler la mise à jour optimiste
       _appDataBloc?.add(CreditBalanceUpdatedInAppData(
@@ -204,7 +205,7 @@ class CreditsBloc extends Bloc<CreditsEvent, CreditsState> {
       print('🛒 Début processus d\'achat: ${plan.name}');
       
     } catch (e) {
-      print('❌ Erreur préparation achat: $e');
+      LogConfig.logError('❌ Erreur préparation achat: $e');
       emit(CreditsError(_getErrorMessage(e)));
     }
   }
@@ -238,9 +239,9 @@ class CreditsBloc extends Bloc<CreditsEvent, CreditsState> {
         creditsAdded: purchasedPlan.totalCreditsWithBonus,
       ));
 
-      print('✅ Achat de crédits confirmé');
+      LogConfig.logInfo('Achat de crédits confirmé');
     } catch (e) {
-      print('❌ Erreur confirmation achat: $e');
+      LogConfig.logError('❌ Erreur confirmation achat: $e');
       emit(CreditsError(_getErrorMessage(e)));
     }
   }
@@ -268,7 +269,7 @@ class CreditsBloc extends Bloc<CreditsEvent, CreditsState> {
       
       emit(CreditPlansLoaded(activePlans, currentCredits: currentCredits));
     } catch (e) {
-      print('❌ Erreur chargement plans: $e');
+      LogConfig.logError('❌ Erreur chargement plans: $e');
       emit(CreditsError(_getErrorMessage(e)));
     }
   }
@@ -298,7 +299,7 @@ class CreditsBloc extends Bloc<CreditsEvent, CreditsState> {
       
       emit(TransactionHistoryLoaded(transactions, currentCredits: currentCredits));
     } catch (e) {
-      print('❌ Erreur chargement historique: $e');
+      LogConfig.logError('❌ Erreur chargement historique: $e');
       emit(CreditsError(_getErrorMessage(e)));
     }
   }

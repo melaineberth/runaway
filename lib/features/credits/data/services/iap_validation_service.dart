@@ -1,6 +1,6 @@
 import 'dart:io' show Platform;
-import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:runaway/core/helper/config/log_config.dart';
 
 class ValidatedPurchase {
   final bool valid;
@@ -51,7 +51,7 @@ class IapValidationService {
     required String verificationData,
   }) async {
     try {
-      debugPrint('🔍 Validation serveur pour $productId (${Platform.isIOS ? 'iOS' : 'Android'})');
+      LogConfig.logInfo('🔍 Validation serveur pour $productId (${Platform.isIOS ? 'iOS' : 'Android'})');
       
       // Vérification de l'authentification
       final user = _supabase.auth.currentUser;
@@ -67,7 +67,7 @@ class IapValidationService {
         'verificationData': verificationData,
       };
 
-      debugPrint('📤 Envoi requête validation: $requestBody');
+      LogConfig.logInfo('📤 Envoi requête validation: $requestBody');
 
       // Appel de l'edge function
       final response = await _supabase.functions.invoke(
@@ -78,7 +78,7 @@ class IapValidationService {
         },
       );
 
-      debugPrint('📥 Réponse serveur (${response.status}): ${response.data}');
+      LogConfig.logInfo('📥 Réponse serveur (${response.status}): ${response.data}');
 
       // Gestion des erreurs HTTP
       if (response.status != 200) {
@@ -97,7 +97,7 @@ class IapValidationService {
         throw ValidationException(message, reason);
       }
 
-      debugPrint('✅ Validation réussie: ${result.creditsAdded} crédits');
+      LogConfig.logInfo('Validation réussie: ${result.creditsAdded} crédits');
       return result;
 
     } catch (e) {
@@ -105,7 +105,7 @@ class IapValidationService {
         rethrow;
       }
       
-      debugPrint('❌ Erreur validation: $e');
+      LogConfig.logError('❌ Erreur validation: $e');
       throw ValidationException('Erreur de connexion au serveur: $e', 'network_error');
     }
   }
@@ -141,7 +141,7 @@ class IapValidationService {
       );
       return response.status == 405; // Method not allowed pour GET, c'est normal
     } catch (e) {
-      debugPrint('❌ Health check failed: $e');
+      LogConfig.logError('❌ Health check failed: $e');
       return false;
     }
   }
