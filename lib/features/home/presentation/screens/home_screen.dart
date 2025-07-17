@@ -117,10 +117,17 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
 
   // Variable dans la classe _HomeScreenState
   bool _isSaveDialogOpen = false;
-
   final LoadingOverlay _loading = LoadingOverlay();
-
   OverlayEntry? _routeInfoEntry;
+
+  // 🆕 Variables pour le loading avec temps minimum
+  Timer? _loadingMinimumTimer;
+  DateTime? _loadingStartTime;
+  bool _isMinimumLoadingTimeElapsed = false;
+  bool _isPendingRouteInfoDisplay = false;
+
+  // 🆕 Temps minimum de loading (configurable)
+  static const Duration _minimumLoadingDuration = Duration(milliseconds: 1500);
 
   @override
   void initState() {
@@ -152,6 +159,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
     _fadeController.dispose();
     _positionStream?.cancel();
     _lottieController.dispose();
+    // 🆕 Nettoyer le timer
+    _loadingMinimumTimer?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
@@ -738,9 +747,50 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
     return false;
   }
 
+  Future<void> _clearRouteOnUserTrackingActivation() async {
+    // Vérifier s'il y a un parcours à nettoyer
+    if (generatedRouteCoordinates != null && routeMetadata != null) {
+      LogConfig.logInfo('🧹 Nettoyage parcours lors activation suivi utilisateur');
+      
+      // 1. Supprimer la route de la carte
+      if (routeLineManager != null && mapboxMap != null) {
+        try {
+          await routeLineManager!.deleteAll();
+          await mapboxMap!.annotations.removeAnnotationManager(routeLineManager!);
+          routeLineManager = null;
+        } catch (e) {
+          LogConfig.logError('❌ Erreur suppression route: $e');
+        }
+      }
+
+      // 2. Réinitialiser l'état du bloc
+      if (mounted) {
+        context.routeGenerationBloc.add(const RouteStateReset());
+      }
+
+      // 3. Réinitialiser les variables locales
+      setState(() {
+        generatedRouteCoordinates = null;
+        routeMetadata = null;
+        _hasAutoSaved = false;
+      });
+
+      // 4. Fermer le RouteInfoCard s'il est ouvert
+      _removeRouteInfoPanel();
+
+      // 5. Sauvegarder l'état nettoyé
+      _mapStateService.saveGeneratedRoute(null, null, false);
+      
+      LogConfig.logInfo('✅ Parcours nettoyé lors activation suivi utilisateur');
+    }
+  }
+
   /// 🎯 Restaure vers le mode UserTracking (supprime markers, focus user)
   Future<void> _restoreToUserTrackingMode() async {
     print('🎯 === RESTAURATION MODE USER TRACKING ===');
+
+    // 🆕 AJOUT : Nettoyer le parcours existant avant de changer le mode
+    await _clearRouteOnUserTrackingActivation();
 
     // 1. Changer le mode
     setState(() {
@@ -1240,39 +1290,70 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
   }
 
   /// Active le mode suivi utilisateur
-  void _activateUserTracking() {
-    if (_userLatitude != null && _userLongitude != null) {
-      setState(() {
-        _trackingMode = TrackingMode.userTracking;
-        // 🔧 IMPORTANT : Synchroniser immédiatement avec la position GPS
-        _selectedLatitude = _userLatitude!;
-        _selectedLongitude = _userLongitude!;
+  void _activateUserTracking() async {
+    // Vérifier qu'on a une position GPS
+    if (_userLatitude == null || _userLongitude == null) {
+      LogConfig.logWarning('⚠️ Pas de position GPS disponible');
+      return;
+    }
+
+    if (generatedRouteCoordinates != null) {
+      final bool? shouldContinue = await _presentModalSheet<bool>((_) {
+        return ModalDialog(
+          title: "Voulez-vous vraiment continuer?",
+          subtitle: "Cette action supprimera le parcours précédemment généré, il sera alors irrécupérable!",
+          validLabel: "Continuer",
+          cancelLabel: "Annuler",
+          onValid: () => context.pop(true),
+          onCancel: () => context.pop(false),
+        );
       });
 
-      // 💾 Sauvegarder le mode et la position
-      _mapStateService.saveTrackingMode(_trackingMode);
-      _mapStateService.saveSelectedPosition(_userLatitude!, _userLongitude!);
+      // L’utilisateur annule ou ferme la feuille : on arrête tout
+      if (shouldContinue != true) return;
 
-      // 🔧 CORRECTION : Mettre à jour le bloc avec la position GPS actuelle
-      if (mounted) {
-        context.routeParametersBloc.add(
-          StartLocationUpdated(
-            longitude: _userLongitude!,
-            latitude: _userLatitude!,
-          ),
-        );
-      }
+      // 🔐 Ajoute ça AVANT de remettre l’état à zéro
+      _dismissRouteInfoModal();
+    }
 
-      // Centrer la caméra
-      _centerOnUserLocation(animate: true);
+    // Nettoyer le parcours existant
+    await _clearRouteOnUserTrackingActivation();
 
-      // Nettoyer les marqueurs car on suit la position en temps réel
-      _clearLocationMarkers();
+    setState(() {
+      _trackingMode = TrackingMode.userTracking;
+      // Synchroniser immédiatement avec la position GPS
+      _selectedLatitude = _userLatitude!;
+      _selectedLongitude = _userLongitude!;
+    });
 
-      print(
-        '✅ Mode UserTracking activé avec position GPS: $_userLatitude, $_userLongitude',
+    // 💾 Sauvegarder le mode et la position
+    _mapStateService.saveTrackingMode(_trackingMode);
+    _mapStateService.saveSelectedPosition(_userLatitude!, _userLongitude!);
+
+    // Mettre à jour le bloc avec la position GPS actuelle
+    if (mounted) {
+      context.routeParametersBloc.add(
+        StartLocationUpdated(
+          longitude: _userLongitude!,
+          latitude: _userLatitude!,
+        ),
       );
     }
+
+    // Centrer la caméra
+    _centerOnUserLocation(animate: true);
+
+    // Nettoyer les marqueurs car on suit la position en temps réel
+    _clearLocationMarkers();
+    setState(() {
+      _showLottieMarker = false;
+      _lottieMarkerLat = null;
+      _lottieMarkerLng = null;
+    });
+
+    LogConfig.logSuccess(
+      '✅ Mode UserTracking activé avec position GPS: $_userLatitude, $_userLongitude',
+    );
   }
 
   // 🔧 MÉTHODE FALLBACK : En cas d'erreur, utiliser la position utilisateur
@@ -2153,11 +2234,75 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
     }
   }
 
+  // 🆕 Démarre le timer de temps minimum pour le loading
+  void _startMinimumLoadingTimer() {
+    _loadingMinimumTimer?.cancel();
+    _loadingStartTime = DateTime.now();
+    _isMinimumLoadingTimeElapsed = false;
+    _isPendingRouteInfoDisplay = false;
+    
+    _loadingMinimumTimer = Timer(_minimumLoadingDuration, () {
+      if (mounted) {
+        setState(() {
+          _isMinimumLoadingTimeElapsed = true;
+        });
+        
+        // Si on a un RouteInfoCard en attente d'affichage, on l'affiche maintenant
+        if (_isPendingRouteInfoDisplay) {
+          _showPendingRouteInfoModal();
+        }
+      }
+    });
+  }
+
+  // 🆕 Affiche le RouteInfoModal en attente
+  void _showPendingRouteInfoModal() {
+    if (mounted && generatedRouteCoordinates != null && routeMetadata != null) {
+      _isPendingRouteInfoDisplay = false;
+      _showRouteInfoModal();
+    }
+  }
+
+  // 🆕 Gère l'affichage du RouteInfoCard avec respect du temps minimum
+  void _handleRouteInfoDisplay() {
+    if (_isMinimumLoadingTimeElapsed) {
+      // Le temps minimum est écoulé, on peut afficher immédiatement
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _showRouteInfoModal();
+      });
+    } else {
+      // Le temps minimum n'est pas écoulé, on marque comme en attente
+      _isPendingRouteInfoDisplay = true;
+    }
+  }
+
   void _toggleLoader(BuildContext context, bool show, String msg) {
     if (show) {
+      // 🆕 Démarrer le timer quand on affiche le loader
+      _startMinimumLoadingTimer();
       _loading.show(context, msg);
     } else {
-      _loading.hide();
+      // 🆕 Ne cacher le loader que si le temps minimum est écoulé
+      if (_isMinimumLoadingTimeElapsed || _loadingStartTime == null) {
+        _loading.hide();
+        _loadingMinimumTimer?.cancel();
+      } else {
+        // Calculer le temps restant et programmer la fermeture
+        final elapsed = DateTime.now().difference(_loadingStartTime!);
+        final remaining = _minimumLoadingDuration - elapsed;
+        
+        if (remaining.inMilliseconds > 0) {
+          Timer(remaining, () {
+            if (mounted) {
+              _loading.hide();
+              _loadingMinimumTimer?.cancel();
+            }
+          });
+        } else {
+          _loading.hide();
+          _loadingMinimumTimer?.cancel();
+        }
+      }
     }
   }
 
@@ -2172,19 +2317,19 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
 
     _toggleLoader(context, msg != null, msg ?? '');
 
-    // succès de génération : on stocke & on affiche
+    // succès de génération : on stocke & on affiche (avec respect du temps minimum)
     if (state.hasGeneratedRoute && state.isNewlyGenerated && !state.isGeneratingRoute) {
       setState(() {
         generatedRouteCoordinates = state.generatedRoute;
         routeMetadata = state.routeMetadata;
       });
       if (state.generatedRoute case final coords?) _displayRouteOnMap(coords);
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) _showRouteInfoModal();
-      });
+      
+      // 🆕 Utiliser la nouvelle méthode qui respecte le temps minimum
+      _handleRouteInfoDisplay();
     }
 
-    // 🆕 AJOUT : parcours chargé depuis l'historique
+    // 🆕 AJOUT : parcours chargé depuis l'historique (avec respect du temps minimum)
     if (state.hasGeneratedRoute && state.isLoadedFromHistory && !state.isGeneratingRoute) {
       setState(() {
         generatedRouteCoordinates = state.generatedRoute;
@@ -2194,7 +2339,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
       if (state.generatedRoute case final coords?) {
         _displayRouteOnMap(coords);
 
-        // 🆕 Afficher le RouteInfoCard pour les parcours de l'historique
+        // 🆕 Pour l'historique, pas de temps minimum (affichage immédiat)
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (mounted) {
             _showRouteInfoModal();
@@ -2268,8 +2413,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
       
           // 2️⃣  Sauvegarde de parcours
           BlocListener<AppDataBloc, AppDataState>(
-            listenWhen: (p, c) => p.isSavingRoute != c.isSavingRoute,
-            listener: (ctx, s) => _toggleLoader(ctx, s.isSavingRoute, 'Sauvegarde en cours…'),
+            listenWhen: (previous, current) => previous.isSavingRoute != current.isSavingRoute,
+            listener: (context, state) => _toggleLoader(context, state.isSavingRoute, 'Sauvegarde en cours…'),
           ),
         ],
         child: BlocBuilder<RouteGenerationBloc, RouteGenerationState>(

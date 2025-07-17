@@ -51,30 +51,30 @@ class LogConfig {
     }
   }
   
-  // 🔧 HELPERS pour les logs conditionnels
+  // 🔧 HELPERS pour les logs conditionnels - CORRIGÉ: plus de récursion
   static void logDebug(String message) {
     if (enableDebugLogs) {
-      LogConfig.logInfo('🐛 $message');
+      print('🐛 $message'); // ✅ Utilise print directement
     }
   }
   
   static void logInfo(String message) {
     if (isVerboseLoggingEnabled) {
-      LogConfig.logInfo('ℹ️ $message');
+      print('ℹ️ $message'); // ✅ Utilise print directement
     }
   }
   
   static void logWarning(String message) {
-    LogConfig.logInfo('$message');
+    print('⚠️ $message'); // ✅ Utilise print directement
   }
   
   static void logError(String message) {
-    LogConfig.logError('❌ $message');
+    print('❌ $message'); // ✅ Utilise print directement
   }
   
   static void logSuccess(String message) {
     if (isVerboseLoggingEnabled) {
-      LogConfig.logInfo('$message');
+      print('✅ $message'); // ✅ Utilise print directement
     }
   }
   

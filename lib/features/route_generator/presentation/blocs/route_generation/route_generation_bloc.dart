@@ -744,7 +744,6 @@ class RouteGenerationBloc extends HydratedBloc<RouteGenerationEvent, RouteGenera
     return false; // Par défaut, on considère que c'est récupérable
   }
 
-
   Map<String, dynamic> _createDummyPoi(double lat, double lon) {
     return {
       'id': 'start_point',

@@ -39,7 +39,7 @@ class LoadingOverlay {
   void hide() {
     if (_entry == null) return;
 
-    final elapsed   = DateTime.now().difference(_shownAt!);
+    final elapsed = DateTime.now().difference(_shownAt!);
     final remaining = _minDisplay - elapsed;
 
     if (remaining.isNegative || remaining == Duration.zero) {
@@ -52,9 +52,9 @@ class LoadingOverlay {
 
   void _remove() {
     _entry?.remove();
-    _entry            = null;
-    _shownAt          = null;
-    _isHideScheduled  = false;
+    _entry = null;
+    _shownAt = null;
+    _isHideScheduled = false;
   }
 
   void _updateMessage(String msg) {

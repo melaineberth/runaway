@@ -4,8 +4,9 @@ import 'package:bounce/bounce.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:go_router/go_router.dart';
 import 'package:hugeicons/hugeicons.dart';
+import 'package:runaway/core/blocs/app_data/app_data_bloc.dart';
+import 'package:runaway/core/blocs/app_data/app_data_state.dart';
 import 'package:runaway/core/helper/config/log_config.dart';
 import 'package:runaway/core/helper/extensions/extensions.dart';
 import 'package:runaway/core/utils/injections/bloc_provider_extension.dart';
@@ -16,9 +17,6 @@ import 'package:runaway/core/widgets/blurry_page.dart';
 import 'package:runaway/core/widgets/modal_sheet.dart';
 import 'package:runaway/core/widgets/squircle_btn.dart';
 import 'package:runaway/core/widgets/tick_slider.dart';
-import 'package:runaway/features/credits/presentation/blocs/credits_bloc.dart';
-import 'package:runaway/features/credits/presentation/blocs/credits_event.dart';
-import 'package:runaway/features/credits/presentation/blocs/credits_state.dart';
 import 'package:runaway/features/route_generator/data/validation/route_parameters_validator.dart';
 import 'package:runaway/features/route_generator/domain/models/route_parameters.dart';
 
@@ -56,6 +54,9 @@ class _RouteParameterScreenState extends State<RouteParameterScreen> with Ticker
   ValidationResult? _currentValidation;
   List<AppPermissionStatus> _missingPermissions = [];
 
+  // ✅ Variables pour éviter les fuites mémoire
+  bool _isDisposed = false;
+
   @override
   void initState() {
     super.initState();
@@ -91,9 +92,6 @@ class _RouteParameterScreenState extends State<RouteParameterScreen> with Ticker
       ),
     );
 
-    // Charger les crédits
-    context.creditsBloc.add(const CreditsRequested());
-
     // Vérifier les permissions
     await _checkPermissions();
 
@@ -107,15 +105,18 @@ class _RouteParameterScreenState extends State<RouteParameterScreen> with Ticker
   }
 
   Future<void> _checkPermissions() async {
-    final permissions = await PermissionService.instance.checkAllPermissions();
-    final missing = permissions.values
-        .where((p) => p.needsAction && p.permission == AppPermission.location)
-        .toList();
-    
-    if (missing.isNotEmpty) {
-      setState(() {
+    try {
+      final permissions = await PermissionService.instance.checkAllPermissions();
+      final missing = permissions.values
+          .where((p) => p.needsAction && p.permission == AppPermission.location)
+          .toList();
+      
+      // ✅ Utiliser _safeSetState
+      _safeSetState(() {
         _missingPermissions = missing;
       });
+    } catch (e) {
+      LogConfig.logError('❌ Erreur vérification permissions: $e');
     }
   }
 
@@ -133,44 +134,75 @@ class _RouteParameterScreenState extends State<RouteParameterScreen> with Ticker
   }
 
   void _performInitialValidation() {
-    final state = context.routeParametersBloc.state;
-    final validation = RouteParametersValidator.validate(state.parameters);
+    if (_isDisposed) return;
     
-    setState(() {
-      _currentValidation = validation;
-    });
-    
-    if (!validation.isValid) {
-      _validationAnimationController.forward();
+    try {
+      final state = context.routeParametersBloc.state;
+      final validation = RouteParametersValidator.validate(state.parameters);
+      
+      _safeSetState(() {
+        _currentValidation = validation;
+      });
+      
+      if (!validation.isValid && !_isDisposed) {
+        _validationAnimationController.forward();
+      }
+    } catch (e) {
+      LogConfig.logError('❌ Erreur validation initiale: $e');
     }
   }
 
   @override
   void dispose() {
+    _isDisposed = true;
+    
+    // Arrêter toutes les animations en cours
+    _validationAnimationController.stop();
     _validationAnimationController.dispose();
+    
+    // Nettoyer les variables
+    _currentValidation = null;
+    _missingPermissions.clear();
+    
     super.dispose();
   }
 
+  void _safeSetState(VoidCallback fn) {
+    if (!_isDisposed && mounted) {
+      setState(fn);
+    }
+  }
+
   void _handleParametersChanged(BuildContext context, RouteParametersState state) {
-    // Validation en temps réel
-    final validation = RouteParametersValidator.validate(state.parameters);
+    if (_isDisposed) return;
     
-    if (validation != _currentValidation) {
-      setState(() {
-        _currentValidation = validation;
-      });
+    try {
+      // Validation en temps réel
+      final validation = RouteParametersValidator.validate(state.parameters);
       
-      if (!validation.isValid) {
-        _validationAnimationController.forward();
-        HapticFeedback.lightImpact();
-      } else {
-        _validationAnimationController.reverse();
+      if (validation != _currentValidation) {
+        _safeSetState(() {
+          _currentValidation = validation;
+        });
+        
+        if (!validation.isValid && !_isDisposed) {
+          _validationAnimationController.forward();
+          HapticFeedback.lightImpact();
+        } else if (!_isDisposed) {
+          _validationAnimationController.reverse();
+        }
       }
+    } catch (e) {
+      LogConfig.logError('❌ Erreur gestion changement paramètres: $e');
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    if (_isDisposed) {
+      return const SizedBox.shrink();
+    }
+
     return MonitoredScreen(
       screenName: 'route_parameter',
       screenData: {
@@ -182,15 +214,19 @@ class _RouteParameterScreenState extends State<RouteParameterScreen> with Ticker
         height: MediaQuery.of(context).size.height * 0.8,
         child: BlocConsumer<RouteParametersBloc, RouteParametersState>(
           // ✅ Optimiser les rebuilds pour la validation
-          buildWhen: (previous, current) =>
-            previous.parameters != current.parameters ||
-            previous.validationResult != current.validationResult ||
-            previous.errorMessage != current.errorMessage,
+          buildWhen: (previous, current) {
+            if (_isDisposed) return false;
+            return previous.parameters != current.parameters ||
+                previous.validationResult != current.validationResult ||
+                previous.errorMessage != current.errorMessage;
+          },
             
           // ✅ Écouter seulement les changements de validation
-          listenWhen: (previous, current) =>
-            previous.validationResult != current.validationResult,
-            
+          listenWhen: (previous, current) {
+            if (_isDisposed) return false;
+            return previous.validationResult != current.validationResult;
+          },
+
           listener: _handleParametersChanged,
           builder: (context, state) {
             return Stack(
@@ -382,20 +418,44 @@ class _RouteParameterScreenState extends State<RouteParameterScreen> with Ticker
   Widget _buildGenerateButton() {
     return Padding(
       padding: const EdgeInsets.all(30.0),
-      child: BlocBuilder<CreditsBloc, CreditsState>(
-        builder: (context, creditsState) {
-          // Déterminer si on peut générer
-          final isLoadingCredits = creditsState is CreditsLoading;
+      child: BlocBuilder<AppDataBloc, AppDataState>(
+      builder: (context, appDataState) {
+          // Déterminer si on peut générer selon les données disponibles
+          bool isLoadingCredits = false;
+          bool canGenerate = true;
+          String? errorMessage;
+
+          // Si on est en train de charger pour la première fois
+          if (!appDataState.isCreditDataLoaded && appDataState.isLoading) {
+            isLoadingCredits = true;
+          } else if (appDataState.lastError != null && !appDataState.hasCreditData) {
+            // Erreur de chargement mais permettre quand même la génération
+            canGenerate = true;
+            errorMessage = 'Données non disponibles (mode déconnecté)';
+          }
 
           return Column(
             mainAxisSize: MainAxisSize.min,
-            children: [              
+            children: [           
+              // Message d'information si nécessaire
+              if (errorMessage != null)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 12.0),
+                  child: Text(
+                    errorMessage,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.orange,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),   
               
               // Bouton principal
               SquircleBtn(
                 isPrimary: true,
                 isLoading: isLoadingCredits,
-                onTap: _handleGenerate,
+                onTap: canGenerate ? _handleGenerate : null,
                 label: context.l10n.generate,
               ),
             ],
@@ -406,18 +466,43 @@ class _RouteParameterScreenState extends State<RouteParameterScreen> with Ticker
   }
 
   Future<void> _handleGenerate() async {
-    LogConfig.logInfo('🔍 === VÉRIFICATION CRÉDITS AVANT GÉNÉRATION ===');
+    try {
+      LogConfig.logInfo('🔍 === GÉNÉRATION DEMANDÉE ===');
       
-    // Fermer la modal des paramètres
-    if (mounted) {
-      context.pop();
+      // Validation des paramètres avant de continuer
+      final validation = _currentValidation;
+      if (validation != null && !validation.isValid) {
+        LogConfig.logWarning('❌ Paramètres invalides, génération annulée');
+        return;
+      }
+        
+      // Fermer la modal des paramètres
+      if (mounted) {
+        Navigator.of(context).pop();
+      }
+      
+      // Attendre un peu pour que la modal se ferme proprement
+      await Future.delayed(const Duration(milliseconds: 150));
+      
+      // Lancer la génération normale
+      widget.generateRoute();
+      
+      LogConfig.logInfo('✅ Génération déclenchée avec succès');
+      
+    } catch (e) {
+      LogConfig.logError('❌ Erreur lors du lancement de la génération: $e');
+      
+      // Afficher un message d'erreur à l'utilisateur si nécessaire
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erreur lors du lancement: ${e.toString()}'),
+            backgroundColor: Colors.red,
+            duration: Duration(seconds: 3),
+          ),
+        );
+      }
     }
-    
-    // Attendre un peu pour que la modal se ferme proprement
-    await Future.delayed(const Duration(milliseconds: 100));
-    
-    // Lancer la génération normale
-    widget.generateRoute();
   }
 
   Widget _buildAdvancedOptions(RouteParametersState state) {

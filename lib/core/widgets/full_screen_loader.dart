@@ -16,7 +16,7 @@ class FullScreenLoader extends StatelessWidget {
     return Material(
       color: Colors.transparent,
       child: Container(
-        color: Colors.black.withValues(alpha: 0.95),
+        color: Colors.black,
         height: double.infinity,
         width: double.infinity,
         child: ClipRRect(

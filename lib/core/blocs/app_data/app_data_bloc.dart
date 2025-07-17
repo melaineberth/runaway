@@ -23,19 +23,16 @@ class AppDataBloc extends Bloc<AppDataEvent, AppDataState> {
   // Cache avec expiration optimisé
   static const Duration _cacheExpiration = Duration(minutes: 30);
   DateTime? _lastCacheUpdate;
-  DateTime? _lastActivityUpdate;
   DateTime? _lastHistoricUpdate;
   DateTime? _lastCreditUpdate; // 🆕
   
   // 🛡️ Protection contre les synchronisations multiples
-  bool _isActivitySyncInProgress = false;
   bool _isHistoricSyncInProgress = false;
   bool _isCreditSyncInProgress = false; // 🆕
   bool _isFullSyncInProgress = false;
   
   // 🕒 Timing pour éviter les appels trop fréquents
   static const Duration _minSyncInterval = Duration(seconds: 5);
-  DateTime? _lastActivitySync;
   DateTime? _lastHistoricSync;
   DateTime? _lastCreditSync; // 🆕
   DateTime? _lastFullSync;
@@ -465,7 +462,6 @@ class AppDataBloc extends Bloc<AppDataEvent, AppDataState> {
       // Mettre à jour le cache
       final now = DateTime.now();
       _lastCacheUpdate = now;
-      _lastActivityUpdate = now;
       _lastHistoricUpdate = now;
       _lastCreditUpdate = now;
       _lastFullSync = now;
@@ -606,11 +602,6 @@ class AppDataBloc extends Bloc<AppDataEvent, AppDataState> {
     Emitter<AppDataState> emit,
   ) async {
     print('➕ Sync optimisée - Route ajoutée: ${event.routeName}');
-    
-    if (!_isActivitySyncInProgress) {
-    } else {
-      LogConfig.logInfo('Sync activité déjà en cours pour ajout route');
-    }
   }
 
   /// 🆕 Synchronisation optimisée lors de suppression de route
@@ -621,7 +612,7 @@ class AppDataBloc extends Bloc<AppDataEvent, AppDataState> {
     print('Sync optimisée – Route supprimée : ${event.routeName}');
 
     // Éviter de lancer une deuxième sync si l’une est déjà en cours
-    if (_isHistoricSyncInProgress || _isActivitySyncInProgress) {
+    if (_isHistoricSyncInProgress) {
       LogConfig.logInfo('Sync déjà en cours pour suppression de route');
       return;
     }
@@ -646,10 +637,8 @@ class AppDataBloc extends Bloc<AppDataEvent, AppDataState> {
     LogConfig.logInfo('🔄 Synchronisation forcée des données');
     
     // Nettoyer tous les verrous et timestamps
-    _isActivitySyncInProgress = false;
     _isHistoricSyncInProgress = false;
     _isFullSyncInProgress = false;
-    _lastActivitySync = null;
     _lastHistoricSync = null;
     _lastCreditUpdate = null;
     _lastFullSync = null;
@@ -688,14 +677,11 @@ class AppDataBloc extends Bloc<AppDataEvent, AppDataState> {
     
     // Nettoyer tous les timestamps et verrous
     _lastCacheUpdate = null;
-    _lastActivityUpdate = null;
     _lastHistoricUpdate = null;
     _lastCreditUpdate = null; // 🆕
-    _lastActivitySync = null;
     _lastHistoricSync = null;
     _lastCreditSync = null; // 🆕
     _lastFullSync = null;
-    _isActivitySyncInProgress = false;
     _isHistoricSyncInProgress = false;
     _isFullSyncInProgress = false;
     
@@ -743,7 +729,6 @@ class CreditDataResult {
 }
 
 enum SyncType {
-  activityOnly,
   historicOnly,
   full,
 }

@@ -194,8 +194,10 @@ class AppBlocObserver extends BlocObserver {
           );
         }
 
-        // 🔧 CHANGEMENT: Logger seulement les transitions lentes (>2s au lieu de 1s)
-        if (duration.inMilliseconds > 2000) {
+        // 🔧 NOUVEAU: Seuils adaptatifs selon le type de bloc
+        final slowThreshold = _getSlowThresholdForBloc(blocName, eventName);
+        
+        if (duration.inMilliseconds > slowThreshold) {
           LoggingService.instance.warning(
             'BlocPerformance',
             'Transition lente: $blocName ($eventName) - ${duration.inMilliseconds}ms',
@@ -203,11 +205,35 @@ class AppBlocObserver extends BlocObserver {
               'bloc_type': blocName,
               'event_type': eventName,
               'duration_ms': duration.inMilliseconds,
+              'threshold_ms': slowThreshold,
             },
           );
         }
       }
     }
+  }
+
+  // 🔧 NOUVELLE MÉTHODE: Seuils adaptatifs
+  int _getSlowThresholdForBloc(String blocName, String eventName) {
+    // Seuils plus élevés pour les opérations complexes
+    if (blocName.contains('RouteGeneration')) {
+      return 10000; // 10 secondes pour la génération de route
+    }
+    
+    if (blocName.contains('Credits') && eventName.contains('Purchase')) {
+      return 15000; // 15 secondes pour les achats
+    }
+    
+    if (blocName.contains('Auth') && eventName.contains('Login')) {
+      return 8000; // 8 secondes pour l'authentification
+    }
+    
+    if (blocName.contains('AppData') && eventName.contains('Preload')) {
+      return 5000; // 5 secondes pour le préchargement
+    }
+    
+    // Seuil par défaut pour les autres opérations
+    return 2000; // 2 secondes
   }
 
   @override
