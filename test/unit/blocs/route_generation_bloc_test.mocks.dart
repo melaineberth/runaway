@@ -16,6 +16,8 @@ import 'package:runaway/features/route_generator/data/repositories/routes_reposi
     as _i6;
 import 'package:runaway/features/route_generator/data/services/route_cache.dart'
     as _i3;
+import 'package:runaway/features/route_generator/data/services/screenshot_service.dart'
+    as _i12;
 import 'package:runaway/features/route_generator/domain/models/route_parameters.dart'
     as _i8;
 import 'package:runaway/features/route_generator/domain/models/saved_route.dart'
@@ -368,4 +370,13 @@ class MockAppDataBloc extends _i1.Mock implements _i9.AppDataBloc {
     Invocation.method(#onError, [error, stackTrace]),
     returnValueForMissingStub: null,
   );
+}
+
+/// A class which mocks [ScreenshotService].
+///
+/// See the documentation for Mockito's code generation for more information.
+class MockScreenshotService extends _i1.Mock implements _i12.ScreenshotService {
+  MockScreenshotService() {
+    _i1.throwOnMissingStub(this);
+  }
 }

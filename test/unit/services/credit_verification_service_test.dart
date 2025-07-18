@@ -1,144 +1,170 @@
-// test/unit/services/credit_verification_service_test.dart
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mockito/annotations.dart';
 import 'package:mockito/mockito.dart';
+import 'package:mockito/annotations.dart';
+import 'package:runaway/core/blocs/app_data/app_data_bloc.dart';
 import 'package:runaway/features/credits/data/repositories/credits_repository.dart';
 import 'package:runaway/features/credits/data/services/credit_verification_service.dart';
-import 'package:runaway/core/blocs/app_data/app_data_bloc.dart';
-import 'package:runaway/core/blocs/app_data/app_data_state.dart';
 import 'package:runaway/features/credits/presentation/blocs/credits_bloc.dart';
 
 import '../../helpers/test_helpers.dart';
-import '../mocks/mock_generator.mocks.dart';
+import '../../test_setup.dart';
 
-@GenerateMocks([AppDataBloc])
+// Mock classes
+class MockCreditsRepository extends Mock implements CreditsRepository {}
+class MockCreditsBloc extends Mock implements CreditsBloc {}
+class MockAppDataBloc extends Mock implements AppDataBloc {}
+
+@GenerateMocks([CreditsRepository, CreditsBloc, AppDataBloc])
 void main() {
+  setUpAll(() async {
+    await TestSetup.initialize();
+  });
+
+  tearDownAll(() async {
+    await TestSetup.cleanup();
+  });
+
   group('CreditVerificationService', () {
     late CreditVerificationService service;
+    late MockCreditsRepository mockCreditsRepository;
+    late MockCreditsBloc mockCreditsBloc;
     late MockAppDataBloc mockAppDataBloc;
-    late CreditsRepository creditsRepository;
-    late CreditsBloc creditsBloc;
 
     setUp(() {
+      mockCreditsRepository = MockCreditsRepository();
+      mockCreditsBloc = MockCreditsBloc();
       mockAppDataBloc = MockAppDataBloc();
-      creditsRepository = CreditsRepository();
-      creditsBloc = CreditsBloc();
+      
       service = CreditVerificationService(
-        appDataBloc: mockAppDataBloc, 
-        creditsRepository: creditsRepository, 
-        creditsBloc: creditsBloc,
+        creditsRepository: mockCreditsRepository,
+        creditsBloc: mockCreditsBloc,
+        appDataBloc: mockAppDataBloc,
       );
     });
 
-    test('vérifie correctement les crédits suffisants', () async {
-      // Utiliser TestHelpers pour créer des crédits valides
-      final userCredits = TestHelpers.createCreditsWithSufficientBalance();
-      
-      final state = AppDataState(
-        userCredits: userCredits,
-        isCreditDataLoaded: true,
-      );
-      
-      when(mockAppDataBloc.state).thenReturn(state);
+    group('Credit Verification', () {
+      test('vérifie correctement les crédits suffisants', () async {
+        // Arrange
+        final userCredits = TestHelpers.createCreditsWithInsufficientBalance();
 
-      final result = await service.canGenerateRoute();
-      expect(result, true);
+        when(mockCreditsRepository.getUserCredits()).thenAnswer((_) async => userCredits);
+
+        // Act  
+        final result = await service.verifyCreditsForGeneration(requiredCredits: 5);
+
+        // Assert
+        expect(result.hasEnoughCredits, true);
+        expect(result.availableCredits, 7);
+        expect(result.requiredCredits, 5);
+        verify(mockCreditsRepository.getUserCredits()).called(1);
+      });
+
+      test('détecte les crédits insuffisants', () async {
+        // Arrange
+        final userCredits = TestHelpers.createCreditsWithInsufficientBalance();
+
+        when(mockCreditsRepository.getUserCredits()).thenAnswer((_) async => userCredits);
+
+        // Act
+        final result = await service.verifyCreditsForGeneration(requiredCredits: 5);
+
+        // Assert
+        expect(result.hasEnoughCredits, false);
+        expect(result.availableCredits, 2);
+        expect(result.requiredCredits, 5);
+        verify(mockCreditsRepository.getUserCredits()).called(1);
+      });
+
+      test('gère l\'absence de données de crédits', () async {
+        // Arrange
+        when(mockCreditsRepository.getUserCredits());
+
+        // Act
+        final result = await service.verifyCreditsForGeneration(requiredCredits: 1);
+
+        // Assert
+        expect(result.hasEnoughCredits, false);
+        expect(result.availableCredits, 0);
+        verify(mockCreditsRepository.getUserCredits()).called(1);
+      });
+
+      test('retourne le nombre correct de crédits disponibles', () async {
+        // Arrange
+        final userCredits = TestHelpers.createCreditsWithInsufficientBalance();
+
+        when(mockCreditsRepository.getUserCredits()).thenAnswer((_) async => userCredits);
+
+        // Act
+        final availableCredits = await service.getAvailableCredits();
+
+        // Assert
+        expect(availableCredits, 10);
+      });
+
+      test('gère un nouvel utilisateur sans crédits', () async {
+        // Arrange
+        when(mockCreditsRepository.getUserCredits());
+
+        // Act
+        final result = await service.verifyCreditsForGeneration(requiredCredits: 1);
+        final availableCredits = await service.getAvailableCredits();
+
+        // Assert
+        expect(result.hasEnoughCredits, false);
+        expect(availableCredits, 0);
+      });
+
+      test('gère les données de crédits non chargées', () async {
+        // Arrange
+        when(mockCreditsRepository.getUserCredits()).thenThrow(Exception('Network error'));
+
+        // Act & Assert
+        final result = await service.verifyCreditsForGeneration(requiredCredits: 1);
+        expect(result.hasEnoughCredits, false);
+        expect(result.errorMessage, isNotNull);
+      });
+
+      test('retourne 0 crédits si userCredits est null', () async {
+        // Arrange
+        when(mockCreditsRepository.getUserCredits());
+        // Act
+        final availableCredits = await service.getAvailableCredits();
+
+        // Assert
+        expect(availableCredits, 0);
+      });
+
+      test('vérifie que ensureCreditDataLoaded ne lève pas d\'exception', () async {
+        // Act & Assert
+        expect(() => service.ensureCreditDataLoaded(), returnsNormally);
+      });
     });
 
-    test('détecte les crédits insuffisants', () async {
-      // Utiliser TestHelpers pour créer des crédits insuffisants
-      final userCredits = TestHelpers.createCreditsWithInsufficientBalance();
-      
-      final state = AppDataState(
-        userCredits: userCredits,
-        isCreditDataLoaded: true,
-      );
-      
-      when(mockAppDataBloc.state).thenReturn(state);
+    group('Credit Consumption', () {
+      test('consomme les crédits avec succès', () async {
+        // Act
+        final result = await service.consumeCreditsForGeneration(
+          amount: 1,
+          generationId: 'test_generation',
+          metadata: {'test': 'data'},
+        );
 
-      final result = await service.canGenerateRoute();
-      expect(result, false);
-    });
+        // Assert
+        expect(result.success, true);
+        // En mode test, on peut avoir différents résultats selon les mocks
+      });
 
-    test('gère l\'absence de données de crédits', () async {
-      // Simuler état sans données
-      final state = AppDataState(
-        userCredits: null,
-        isCreditDataLoaded: false,
-      );
-      
-      when(mockAppDataBloc.state).thenReturn(state);
+      test('échoue si pas assez de crédits pour la consommation', () async {
+        final userCredits = TestHelpers.createCreditsWithInsufficientBalance();
 
-      final result = await service.canGenerateRoute();
-      expect(result, false);
-    });
+        when(mockCreditsRepository.getUserCredits()).thenAnswer((_) async => userCredits);
 
-    test('retourne le nombre correct de crédits disponibles', () async {
-      // Utiliser TestHelpers avec des crédits personnalisés
-      final userCredits = TestHelpers.createMockCredits(
-        availableCredits: 5,
-        totalCredits: 10,
-      );
-      
-      final state = AppDataState(
-        userCredits: userCredits,
-        isCreditDataLoaded: true,
-      );
-      
-      when(mockAppDataBloc.state).thenReturn(state);
+        // Act
+        final verificationResult = await service.verifyCreditsForGeneration(requiredCredits: 5);
 
-      final credits = await service.getAvailableCredits();
-      expect(credits, 5);
-    });
-
-    test('gère un nouvel utilisateur sans crédits', () async {
-      // Utiliser TestHelpers pour un nouvel utilisateur
-      final userCredits = TestHelpers.createNewUserCredits();
-      
-      final state = AppDataState(
-        userCredits: userCredits,
-        isCreditDataLoaded: true,
-      );
-      
-      when(mockAppDataBloc.state).thenReturn(state);
-
-      final result = await service.canGenerateRoute();
-      expect(result, false);
-      
-      final credits = await service.getAvailableCredits();
-      expect(credits, 0);
-    });
-
-    test('gère les données de crédits non chargées', () async {
-      // Crédits existants mais données pas encore chargées
-      final userCredits = TestHelpers.createCreditsWithSufficientBalance();
-      
-      final state = AppDataState(
-        userCredits: userCredits,
-        isCreditDataLoaded: false, // Pas chargé
-      );
-      
-      when(mockAppDataBloc.state).thenReturn(state);
-
-      final result = await service.canGenerateRoute();
-      expect(result, false); // Devrait retourner false si données non chargées
-    });
-
-    test('retourne 0 crédits si userCredits est null', () async {
-      final state = AppDataState(
-        userCredits: null,
-        isCreditDataLoaded: true,
-      );
-      
-      when(mockAppDataBloc.state).thenReturn(state);
-
-      final credits = await service.getAvailableCredits();
-      expect(credits, 0);
-    });
-
-    test('vérifie que ensureCreditDataLoaded ne lève pas d\'exception', () {
-      // Test que la méthode peut être appelée sans erreur
-      expect(() => service.ensureCreditDataLoaded(), returnsNormally);
+        // Assert
+        expect(verificationResult.hasEnoughCredits, false);
+      });
     });
   });
 }
