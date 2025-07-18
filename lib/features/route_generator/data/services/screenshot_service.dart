@@ -458,3 +458,32 @@ class _RouteBounds {
   double get centerLat => (minLat + maxLat) / 2;
   double get centerLng => (minLng + maxLng) / 2;
 }
+
+abstract class IScreenshotService {
+  Future<String?> captureAndUploadMapSnapshot({
+    required MapboxMap liveMap,
+    required List<List<double>> routeCoords,
+    required String routeId,
+    required String userId,
+    MapStateService? mapStateService,
+  });
+}
+
+class ScreenshotServiceImpl implements IScreenshotService {
+  @override
+  Future<String?> captureAndUploadMapSnapshot({
+    required MapboxMap liveMap,
+    required List<List<double>> routeCoords,
+    required String routeId,
+    required String userId,
+    MapStateService? mapStateService,
+  }) {
+    return ScreenshotService.captureAndUploadMapSnapshot(
+      liveMap: liveMap,
+      routeCoords: routeCoords,
+      routeId: routeId,
+      userId: userId,
+      mapStateService: mapStateService,
+    );
+  }
+}

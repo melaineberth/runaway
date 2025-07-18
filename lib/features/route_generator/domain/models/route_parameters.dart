@@ -338,4 +338,35 @@ class RouteParameters {
       startLatitude: startLatitude,
     );
   }
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+
+    return other is RouteParameters &&
+      other.activityType == activityType &&
+      other.distanceKm == distanceKm &&
+      other.elevationRange == elevationRange &&
+      other.maxInclinePercent == maxInclinePercent &&
+      other.preferredWaypoints == preferredWaypoints &&
+      other.surfacePreference == surfacePreference &&
+      other.terrainType == terrainType &&
+      other.urbanDensity == urbanDensity &&
+      other.startLongitude == startLongitude &&
+      other.startLatitude == startLatitude;
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    activityType,
+    distanceKm,
+    elevationRange,
+    maxInclinePercent,
+    preferredWaypoints,
+    surfacePreference,
+    terrainType,
+    urbanDensity,
+    startLongitude,
+    startLatitude,
+  );
 }

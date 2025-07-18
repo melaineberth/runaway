@@ -92,7 +92,7 @@ class SecureConfig {
     }
 
     _retryCount++;
-    LogConfig.logInfo('🔄 Tentative de récupération du stockage sécurisé (${_retryCount}/${_maxRetries})');
+    LogConfig.logInfo('🔄 Tentative de récupération du stockage sécurisé ($_retryCount/$_maxRetries)');
     
     final isAvailable = await isSecureStorageAvailable();
     if (isAvailable) {

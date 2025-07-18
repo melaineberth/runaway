@@ -29,6 +29,7 @@ class ConnectivityService {
   ConnectionStatus get current => _lastStatus;
   bool get isOffline => _lastStatus == ConnectionStatus.offline;
   bool get isInitialized => _isInitialized;
+  bool get isOnline => _lastStatus == ConnectionStatus.onlineMobile;
 
   /// À appeler une seule fois, au démarrage de l'appli.
   Future<void> initialize() async {
