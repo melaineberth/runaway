@@ -110,7 +110,7 @@ class MapStateService {
   Future<void> saveCameraState(mp.MapboxMap mapboxMap) async {
     try {
       _savedCameraState = await mapboxMap.getCameraState();
-      print('📸 État caméra sauvegardé: ${_savedCameraState?.center.coordinates}');
+      LogConfig.logSuccess('📸 État caméra sauvegardé: ${_savedCameraState?.center.coordinates}');
     } catch (e) {
       LogConfig.logError('❌ Erreur sauvegarde état caméra: $e');
     }
@@ -134,7 +134,7 @@ class MapStateService {
         await mapboxMap.setCamera(cameraOptions);
       }
       
-      print('🎬 État caméra restauré ${animate ? "avec" : "sans"} animation');
+      LogConfig.logSuccess('🎬 État caméra restauré ${animate ? "avec" : "sans"} animation');
     } catch (e) {
       LogConfig.logError('❌ Erreur restauration état caméra: $e');
     }
@@ -143,13 +143,13 @@ class MapStateService {
   /// 🏗️ Marquer la carte comme initialisée
   void markMapAsInitialized() {
     _isMapInitialized = true;
-    print('🏗️ Carte marquée comme initialisée');
+    LogConfig.logSuccess('🏗️ Carte marquée comme initialisée');
   }
 
   /// 📷 Marquer la caméra initiale comme définie
   void markInitialCameraAsSet() {
     _hasInitialCameraBeenSet = true;
-    print('📷 Caméra initiale marquée comme définie');
+    LogConfig.logSuccess('📷 Caméra initiale marquée comme définie');
   }
 
   /// 📍 Sauvegarder la position utilisateur
@@ -163,7 +163,7 @@ class MapStateService {
   void saveSelectedPosition(double latitude, double longitude) {
     _selectedLatitude = latitude;
     _selectedLongitude = longitude;
-    print('🎯 Position sélectionnée sauvegardée: ($latitude, $longitude)');
+    LogConfig.logSuccess('🎯 Position sélectionnée sauvegardée: ($latitude, $longitude)');
   }
 
   /// 🔄 Sauvegarder le mode de tracking
@@ -185,7 +185,7 @@ class MapStateService {
     _hasActiveMarker = hasMarker;
     _markerLatitude = latitude;
     _markerLongitude = longitude;
-    print('📌 État marqueur sauvegardé: $hasMarker à ($latitude, $longitude)');
+    LogConfig.logSuccess('📌 État marqueur sauvegardé: $hasMarker à ($latitude, $longitude)');
   }
 
   /// 🧹 Nettoyer l'état (pour réinitialisation complète)

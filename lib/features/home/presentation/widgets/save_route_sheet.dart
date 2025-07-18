@@ -39,14 +39,14 @@ class _SaveRouteSheetState extends State<SaveRouteSheet> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              "Choisissez un nom",
+              context.l10n.chooseName,
               style: context.bodySmall?.copyWith(
                 color: context.adaptiveTextPrimary,
               ),
             ),
             2.h,
             Text(
-              "Vous pourrez le modifier ultérieurement",
+              context.l10n.canModifyLater,
               style: context.bodySmall?.copyWith(
                 color: context.adaptiveTextSecondary,
                 fontSize: 15,
@@ -56,7 +56,7 @@ class _SaveRouteSheetState extends State<SaveRouteSheet> {
             20.h,
             AuthTextField(
               controller: _ctl,
-              hint: 'Nom du parcours',
+              hint: context.l10n.routeName,
               maxLines: 1,
             ),
               

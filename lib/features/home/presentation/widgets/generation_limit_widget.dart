@@ -1,15 +1,11 @@
 // lib/core/widgets/generation_limit_widget.dart
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:runaway/core/helper/extensions/extensions.dart';
-import 'package:runaway/core/utils/injections/bloc_provider_extension.dart';
+import 'package:runaway/core/utils/constant/constants.dart';
 import 'package:runaway/core/widgets/modal_dialog.dart';
 import 'package:runaway/core/widgets/squircle_btn.dart';
 import 'package:runaway/core/widgets/squircle_container.dart';
-import 'package:runaway/features/auth/presentation/bloc/auth_bloc.dart';
-import 'package:runaway/features/auth/presentation/bloc/auth_event.dart';
-import 'package:runaway/features/auth/presentation/bloc/auth_state.dart';
 import 'package:runaway/features/route_generator/presentation/blocs/extensions/route_generation_bloc_extensions.dart';
 
 /// Widget qui affiche les limitations de génération et encourage l'achat/connexion
@@ -92,7 +88,7 @@ class GenerationLimitWidget extends StatelessWidget {
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  'Générations gratuites',
+                  context.l10n.freeGenerations,
                   style: context.textTheme.titleSmall?.copyWith(
                     color: context.colorScheme.primary,
                     fontWeight: FontWeight.w600,
@@ -113,7 +109,7 @@ class GenerationLimitWidget extends StatelessWidget {
             children: [
               Expanded(
                 child: SquircleBtn(
-                  onTap: onLogin ?? () => _showLoginOptions(context),
+                  onTap: onLogin ?? () => showAuthModal(context),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
@@ -124,7 +120,7 @@ class GenerationLimitWidget extends StatelessWidget {
                       ),
                       const SizedBox(width: 6),
                       Text(
-                        'Créer un compte',
+                        context.l10n.createAccount,
                         style: TextStyle(
                           color: context.colorScheme.primary,
                           fontWeight: FontWeight.w600,
@@ -153,11 +149,11 @@ class GenerationLimitWidget extends StatelessWidget {
   Widget _buildLimitReached(BuildContext context) {
     final container = ModalDialog(
       title: capability.type == GenerationType.guest 
-        ? 'Générations gratuites épuisées'
-        : 'Crédits épuisés', 
-      subtitle: 'Créez un compte gratuit pour plus de générations', 
-      validLabel: "Créer un compte gratuit",
-      onValid: onLogin ?? () => _showLoginOptions(context),
+        ? context.l10n.exhaustedFreeGenerations
+        : context.l10n.exhaustedCredits, 
+      subtitle: context.l10n.authForMoreGenerations, 
+      validLabel: context.l10n.createFreeAccount,
+      onValid: onLogin ?? () => showAuthModal(context),
       cancelLabel: "Debug",
       onCancel: onDebug,
     );
@@ -165,127 +161,5 @@ class GenerationLimitWidget extends StatelessWidget {
     if (!showBackground) return container;
 
     return container;
-  }
-
-  /// Affiche les options de connexion
-  void _showLoginOptions(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => const LoginOptionsModal(),
-    );
-  }
-}
-
-/// Modal pour les options de connexion
-class LoginOptionsModal extends StatelessWidget {
-  const LoginOptionsModal({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return SquircleContainer(
-      margin: const EdgeInsets.all(16),
-      padding: const EdgeInsets.all(24),
-      color: context.colorScheme.surface,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 40,
-            height: 4,
-            decoration: BoxDecoration(
-              color: context.colorScheme.onSurfaceVariant.withValues(alpha: 0.4),
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-          const SizedBox(height: 20),
-          Icon(
-            HugeIcons.strokeRoundedUserAdd01,
-            size: 48,
-            color: context.colorScheme.primary,
-          ),
-          const SizedBox(height: 16),
-          Text(
-            'Rejoignez Runaway',
-            style: context.textTheme.headlineSmall?.copyWith(
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Créez un compte pour débloquer plus de générations et sauvegarder vos parcours',
-            style: context.textTheme.bodyMedium?.copyWith(
-              color: context.colorScheme.onSurfaceVariant,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 24),
-          BlocBuilder<AuthBloc, AuthState>(
-            builder: (context, state) {
-              return Column(
-                children: [
-                  SquircleBtn(
-                    onTap: () {
-                      Navigator.pop(context);
-                      context.authBloc.add(GoogleSignInRequested());
-                    },
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        // Vous pouvez ajouter l'icône Google ici
-                        const Icon(Icons.g_translate, color: Colors.white),
-                        const SizedBox(width: 8),
-                        Text(
-                          'Continuer avec Google',
-                          style: TextStyle(
-                            color: context.colorScheme.onPrimary,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  SquircleBtn(
-                    onTap: () {
-                      Navigator.pop(context);
-                      context.authBloc.add(AppleSignInRequested());
-                    },
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.apple,
-                          color: context.colorScheme.surface,
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          'Continuer avec Apple',
-                          style: TextStyle(
-                            color: context.colorScheme.surface,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              );
-            },
-          ),
-          const SizedBox(height: 16),
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(
-              'Plus tard',
-              style: TextStyle(
-                color: context.colorScheme.onSurfaceVariant,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
   }
 }

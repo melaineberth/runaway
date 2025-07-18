@@ -1237,5 +1237,288 @@
     "placeholders": {
       "count": { "type": "int", "example": "5" }
     }
+  },
+  "elevationRange": "Rango de desnivel",
+  "@elevationRange": {
+    "description": "Desnivel total positivo y negativo de una ruta"
+  },
+  "minElevation": "Desnivel mínimo",
+  "@minElevation": {
+    "description": "Altitud más baja alcanzada en la ruta"
+  },
+  "maxElevation": "Desnivel máximo",
+  "@maxElevation": {
+    "description": "Altitud más alta alcanzada en la ruta"
+  },
+  "difficulty": "Dificultad",
+  "@difficulty": {
+    "description": "Nivel de dificultad de la ruta (fácil, medio, difícil)"
+  },
+  "maxIncline": "Pendiente máxima",
+  "@maxIncline": {
+    "description": "Inclinación más pronunciada en la ruta"
+  },
+  "waypointsCount": "Puntos de interés",
+  "@waypointsCount": {
+    "description": "Número de puntos de interés o paradas en la ruta"
+  },
+  "points": "pts",
+  "@points": {
+    "description": "Unidad de puntos para el usuario (ej.: 45 pts ganados)"
+  },
+  "surfacePreference": "Superficie",
+  "@surfacePreference": {
+    "description": "Preferencia del usuario sobre el tipo de superficie de la ruta"
+  },
+  "naturalPaths": "Caminos naturales",
+  "@naturalPaths": {
+    "description": "Opción de superficie con caminos de tierra o senderos naturales"
+  },
+  "pavedRoads": "Carreteras pavimentadas",
+  "@pavedRoads": {
+    "description": "Opción de superficie con carreteras asfaltadas"
+  },
+  "mixed": "Mixto",
+  "@mixed": {
+    "description": "Superficie que combina caminos naturales y asfaltados"
+  },
+  "avoidHighways": "Evitar autopistas",
+  "@avoidHighways": {
+    "description": "Preferencia para excluir autopistas de la ruta"
+  },
+  "avoidMajorRoads": "Evitar vías principales",
+  "@avoidMajorRoads": {
+    "description": "Preferencia para evitar carreteras grandes o transitadas"
+  },
+  "prioritizeParks": "Priorizar parques",
+  "@prioritizeParks": {
+    "description": "Preferencia para pasar por parques o áreas verdes"
+  },
+  "preferGreenSpaces": "Preferir espacios verdes",
+  "@preferGreenSpaces": {
+    "description": "Preferencia para incluir espacios verdes en la ruta"
+  },
+  "elevationLoss": "Desnivel negativo",
+  "@elevationLoss": {
+    "description": "Pérdida de altitud acumulada en la ruta"
+  },
+  "duration": "Duración",
+  "@duration": {
+    "description": "Duración estimada de la ruta (en minutos u horas)"
+  },
+  "calories": "Calorías",
+  "@calories": {
+    "description": "Estimación de calorías quemadas durante la ruta"
+  },
+  "scenic": "Paisaje",
+  "@scenic": {
+    "description": "Nivel de atractivo visual o belleza de la ruta"
+  },
+  "maxSlope": "Pendiente máx.",
+  "@maxSlope": {
+    "description": "Pendiente máxima en la ruta (ascenso o descenso)"
+  },
+  "highlights": "Lugares destacados",
+  "@highlights": {
+    "description": "Puntos clave o lugares notables de la ruta"
+  },
+  "surfaces": "Superficies",
+  "@surfaces": {
+    "description": "Tipos de superficie presentes o disponibles en la ruta"
+  },
+  "easyDifficultyLevel": "Fácil",
+  "@easyDifficultyLevel": {
+    "description": "Etiqueta para el nivel de dificultad fácil de una ruta o actividad."
+  },
+
+  "moderateDifficultyLevel": "Moderado",
+  "@moderateDifficultyLevel": {
+    "description": "Etiqueta para el nivel de dificultad moderado de una ruta o actividad."
+  },
+
+  "hardDifficultyLevel": "Difícil",
+  "@hardDifficultyLevel": {
+    "description": "Etiqueta para el nivel de dificultad difícil de una ruta o actividad."
+  },
+
+  "expertDifficultyLevel": "Experto",
+  "@expertDifficultyLevel": {
+    "description": "Etiqueta para el nivel de dificultad experto de una ruta o actividad."
+  },
+
+  "asphaltSurfaceTitle": "Asfalto",
+  "@asphaltSurfaceTitle": {
+    "description": "Título para un tipo de superficie de carreteras o aceras pavimentadas."
+  },
+
+  "asphaltSurfaceDesc": "Prioriza carreteras y aceras pavimentadas",
+  "@asphaltSurfaceDesc": {
+    "description": "Descripción para la superficie asfaltada, prioriza carreteras y aceras."
+  },
+
+  "mixedSurfaceTitle": "Mixto",
+  "@mixedSurfaceTitle": {
+    "description": "Título para un tipo de superficie que mezcla carreteras y senderos."
+  },
+
+  "mixedSurfaceDesc": "Mezcla de carreteras y senderos según la ruta",
+  "@mixedSurfaceDesc": {
+    "description": "Descripción para la superficie mixta, combinación de carreteras y senderos."
+  },
+
+  "naturalSurfaceTitle": "Natural",
+  "@naturalSurfaceTitle": {
+    "description": "Título para un tipo de superficie con senderos naturales."
+  },
+
+  "naturalSurfaceDesc": "Prioriza senderos naturales",
+  "@naturalSurfaceDesc": {
+    "description": "Descripción para la superficie natural, prioriza senderos naturales."
+  },
+
+  "searchAdress": "Buscar una dirección...",
+  "@searchAdress": {
+    "description": "Texto de marcador para la búsqueda de una dirección."
+  },
+
+  "chooseName": "Elegir un nombre",
+  "@chooseName": {
+    "description": "Invita al usuario a elegir un nombre para la ruta."
+  },
+
+  "canModifyLater": "Podrás modificarlo más tarde",
+  "@canModifyLater": {
+    "description": "Indica que el nombre se puede modificar después."
+  },
+
+  "routeName": "Nombre de la ruta",
+  "@routeName": {
+    "description": "Etiqueta para el campo del nombre de la ruta."
+  },
+
+  "limitReachedGenerations": "Límite alcanzado",
+  "@limitReachedGenerations": {
+    "description": "Mensaje mostrado cuando se alcanza el límite de generaciones."
+  },
+
+  "exhaustedGenerations": "Generaciones agotadas",
+  "@exhaustedGenerations": {
+    "description": "Mensaje que indica que todas las generaciones permitidas se han agotado."
+  },
+
+  "remainingLimitGenerations": "Límite restante",
+  "@remainingLimitGenerations": {
+    "description": "Indica cuántas generaciones quedan disponibles."
+  },
+
+  "remainingGenerationsLabel": "{remainingGenerations} generación gratuita{remainingGenerations, plural, =1 {} other {es}}",
+  "@remainingGenerationsLabel": {
+    "description": "Etiqueta que muestra cuántas generaciones gratuitas quedan, con plural correcto.",
+    "placeholders": {
+      "remainingGenerations": {
+        "type": "int",
+        "example": "1"
+      }
+    }
+  },
+
+  "freeGenerations": "Generaciones gratuitas",
+  "@freeGenerations": {
+    "description": "Etiqueta para el cupo de generaciones gratuitas."
+  },
+
+  "exhaustedFreeGenerations": "Generaciones gratuitas agotadas",
+  "@exhaustedFreeGenerations": {
+    "description": "Mensaje cuando se agota el cupo de generaciones gratuitas."
+  },
+
+  "exhaustedCredits": "Créditos agotados",
+  "@exhaustedCredits": {
+    "description": "Mensaje que indica que todos los créditos se han utilizado."
+  },
+
+  "authForMoreGenerations": "Crea una cuenta gratuita para más generaciones",
+  "@authForMoreGenerations": {
+    "description": "Invita a crear una cuenta para obtener más generaciones."
+  },
+
+  "createFreeAccount": "Crear cuenta gratuita",
+  "@createFreeAccount": {
+    "description": "Etiqueta para el botón o enlace para crear una cuenta gratuita."
+  },
+
+  "exportRouteTitle": "Exportar la ruta",
+  "@exportRouteTitle": {
+    "description": "Título para exportar una ruta."
+  },
+
+  "exportRouteDesc": "Elige el formato de exportación",
+  "@exportRouteDesc": {
+    "description": "Texto que explica cómo elegir el formato de exportación."
+  },
+
+  "generateInProgress": "Generando la ruta...",
+  "@generateInProgress": {
+    "description": "Mensaje mostrado mientras se genera la ruta."
+  },
+
+  "emptyRouteForSave": "No hay ruta para guardar",
+  "@emptyRouteForSave": {
+    "description": "Mensaje cuando no hay ninguna ruta para guardar."
+  },
+
+  "connectionError": "Error de conexión",
+  "@connectionError": {
+    "description": "Mensaje en caso de error de conexión."
+  },
+
+  "notAvailableMap": "Mapa no disponible",
+  "@notAvailableMap": {
+    "description": "Mensaje cuando el mapa no está disponible."
+  },
+
+  "missingRouteSettings": "Faltan configuraciones de la ruta",
+  "@missingRouteSettings": {
+    "description": "Mensaje cuando faltan configuraciones de la ruta."
+  },
+
+  "savedRoute": "Ruta guardada",
+  "@savedRoute": {
+    "description": "Confirmación de que la ruta se ha guardado."
+  },
+
+  "loginRequiredTitle": "Inicio de sesión requerido",
+  "@loginRequiredTitle": {
+    "description": "Título de un cuadro de diálogo que indica que es necesario iniciar sesión."
+  },
+
+  "loginRequiredDesc": "Debes iniciar sesión para guardar tus rutas",
+  "@loginRequiredDesc": {
+    "description": "Descripción que explica por qué es necesario iniciar sesión."
+  },
+
+  "reallyContinueTitle": "¿Realmente quieres continuar?",
+  "@reallyContinueTitle": {
+    "description": "Título para confirmar si el usuario realmente quiere continuar."
+  },
+
+  "reallyContinueDesc": "Esta acción eliminará la ruta generada previamente, ¡será irrecuperable!",
+  "@reallyContinueDesc": {
+    "description": "Advertencia de que continuar eliminará la ruta actual."
+  },
+
+  "generationEmptyLocation": "No hay ubicación disponible para la generación",
+  "@generationEmptyLocation": {
+    "description": "Mensaje que indica que no hay ubicación disponible para la generación."
+  },
+
+  "unableLaunchGeneration": "No se puede iniciar la generación",
+  "@unableLaunchGeneration": {
+    "description": "Mensaje cuando no se puede iniciar la generación."
+  },
+
+  "invalidParameters": "Parámetros inválidos",
+  "@invalidParameters": {
+    "description": "Mensaje cuando los parámetros son inválidos."
   }
 }

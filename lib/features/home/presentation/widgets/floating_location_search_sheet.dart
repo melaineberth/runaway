@@ -538,7 +538,7 @@ class _FloatingLocationSearchSheetState extends State<FloatingLocationSearchShee
           12.w,
           Expanded(
             child: RoundedTextField(
-              hint: "Rechercher une adresse...",
+              hint: context.l10n.searchAdress,
               controller: _searchController,
               focusNode: _focusNode,
               onChanged: _onSearchChanged,

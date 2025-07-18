@@ -96,12 +96,14 @@ class _RouteParameterScreenState extends State<RouteParameterScreen> with Ticker
     await _checkPermissions();
 
     // Tracking de l'écran
-    _screenLoadId = context.trackScreenLoad('enhanced_route_parameter_screen');
-    
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.finishScreenLoad(_screenLoadId);
-      _performInitialValidation();
-    });
+    if (mounted) {
+      _screenLoadId = context.trackScreenLoad('enhanced_route_parameter_screen');
+      
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        context.finishScreenLoad(_screenLoadId);
+        _performInitialValidation();
+      });
+    }
   }
 
   Future<void> _checkPermissions() async {
@@ -674,7 +676,7 @@ class DifficultySelector extends StatelessWidget {
                     ],
                   ),
                   child: Text(
-                    difficulty.title,
+                    difficulty.label(context),
                     style: context.bodySmall?.copyWith(
                       color: isSelected ? Colors.white : context.adaptiveTextSecondary.withValues(alpha: 0.5),
                       fontWeight: FontWeight.w600,
@@ -715,7 +717,7 @@ class SurfacePreferenceSelector extends StatelessWidget {
         ),
         3.h,
         Text(
-          _getDescription(currentType),
+          _getDescription(context, currentType),
           style: context.bodySmall?.copyWith(
             color: context.adaptiveTextSecondary,
             fontSize: 15,
@@ -745,7 +747,7 @@ class SurfacePreferenceSelector extends StatelessWidget {
                     ],
                   ),
                   child: Text(
-                    surface.title,
+                    surface.label(context),
                     style: context.bodySmall?.copyWith(
                       color: isSelected ? Colors.white : context.adaptiveTextSecondary.withValues(alpha: 0.5),
                       fontWeight: FontWeight.w600,
@@ -760,14 +762,14 @@ class SurfacePreferenceSelector extends StatelessWidget {
     );
   }
 
-  String _getDescription(SurfaceType surface) {
+  String _getDescription(BuildContext context, SurfaceType surface) {
     switch (surface) {
       case SurfaceType.asphalt:
-        return 'Privilégie les routes goudronnées et trottoirs';
+        return context.l10n.asphaltSurfaceDesc;
       case SurfaceType.mixed:
-        return 'Mélange de routes et chemins selon le parcours';
+        return context.l10n.mixedSurfaceDesc;
       case SurfaceType.natural:
-        return 'Privilégie les sentiers et chemins naturels';
+        return context.l10n.naturalSurfaceDesc;
     }
   }
 }

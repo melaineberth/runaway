@@ -341,7 +341,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
         return;
       }
 
-      print('🗺️ Démarrage du tracking de position...');
+      LogConfig.logInfo('🗺️ Démarrage du tracking de position...');
 
       const locationSettings = gl.LocationSettings(
         accuracy: gl.LocationAccuracy.high,
@@ -532,14 +532,14 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
     if (generatedRouteCoordinates == null || routeMetadata == null) {
       showTopSnackBar(
         overlay,
-        TopSnackBar(title: 'Aucun parcours à sauvegarder'),
+        TopSnackBar(title: context.l10n.emptyRouteForSave),
       );
       return;
     }
 
     // Vérifier si déjà en cours de sauvegarde
     if (_isSavingRoute) {
-      showTopSnackBar(overlay, TopSnackBar(title: 'Sauvegarde en cours...'));
+      showTopSnackBar(overlay, TopSnackBar(title: context.l10n.saving));
       return;
     }
 
@@ -554,7 +554,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
       LogConfig.logError('❌ Erreur vérification auth: $e');
       showTopSnackBar(
         overlay,
-        TopSnackBar(isError: true, title: 'Erreur de connexion'),
+        TopSnackBar(isError: true, title: context.l10n.connectionError),
       );
       return;
     }
@@ -590,7 +590,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
     if (mapboxMap == null) {
       showTopSnackBar(
         overlay,
-        TopSnackBar(isError: true, title: 'Carte non disponible'),
+        TopSnackBar(isError: true, title: context.l10n.notAvailableMap),
       );
       return;
     }
@@ -598,7 +598,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
     if (generatedRouteCoordinates == null || routeMetadata == null) {
       showTopSnackBar(
         overlay,
-        TopSnackBar(isError: true, title: 'Aucun parcours à sauvegarder'),
+        TopSnackBar(isError: true, title: context.l10n.emptyRouteForSave),
       );
       return;
     }
@@ -608,7 +608,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
     if (routeState.usedParameters == null) {
       showTopSnackBar(
         overlay,
-        TopSnackBar(isError: true, title: 'Paramètres de parcours manquants'),
+        TopSnackBar(isError: true, title: context.l10n.missingRouteSettings),
       );
       return;
     }
@@ -628,16 +628,16 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
     LogConfig.logInfo('🚀 Sauvegarde via AppDataBloc démarrée: $routeName');
 
     // Afficher feedback immédiat
-    showTopSnackBar(overlay, TopSnackBar(title: 'Parcours sauvegardé'));
+    showTopSnackBar(overlay, TopSnackBar(title: context.l10n.savedRoute));
   }
 
   /// 🆕 Dialogue pour demander la connexion
   void _showLoginRequiredDialog() {
     _presentModalSheet<void>(
       (_) => ModalDialog(
-        title: 'Connexion requise',
-        subtitle: 'Vous devez être connecté pour sauvegarder vos parcours.',
-        validLabel: 'Se connecter',
+        title: context.l10n.loginRequiredTitle,
+        subtitle: context.l10n.loginRequiredDesc,
+        validLabel: context.l10n.logIn,
         onValid: () {
           HapticFeedback.mediumImpact();
           showSignModal(context, 1);
@@ -684,15 +684,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
       lastSelectedLat,
       lastSelectedLng,
     );
-
-    LogConfig.logInfo('🔍 Analyse situation:');
-    print('   Position user: $_userLatitude, $_userLongitude');
-    print('   Position selected: $lastSelectedLat, $lastSelectedLng');
-    print(
-      '   Markers actifs: ${locationMarkers.isNotEmpty || _showLottieMarker}',
-    );
-    print('   Mode actuel: $_trackingMode');
-    print('   → Restaurer UserTracking: $shouldRestoreToUserTracking');
 
     // 5. Appliquer le mode et les actions appropriées
     if (shouldRestoreToUserTracking) {
@@ -920,9 +911,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
     try {
       print('🎬 Début animation d\'affichage de route...');
 
-      // // ÉTAPE 1 : Animation vers le point de départ
-      // await _animateToRouteStart(coordinates);
-
       // // ÉTAPE 2 : Afficher progressivement le tracé
       await _drawRouteProgressively(coordinates);
 
@@ -1146,7 +1134,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
     if (mapboxMap == null) return;
 
     try {
-      print('🎯 Placement du marqueur Lottie à: ($lat, $lon)');
+      LogConfig.logInfo('🎯 Placement du marqueur Lottie à: ($lat, $lon)');
 
       // Retour haptique immédiat
       HapticFeedback.mediumImpact();
@@ -1300,10 +1288,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
     if (generatedRouteCoordinates != null) {
       final bool? shouldContinue = await _presentModalSheet<bool>((_) {
         return ModalDialog(
-          title: "Voulez-vous vraiment continuer?",
-          subtitle: "Cette action supprimera le parcours précédemment généré, il sera alors irrécupérable!",
-          validLabel: "Continuer",
-          cancelLabel: "Annuler",
+          title: context.l10n.reallyContinueTitle,
+          subtitle: context.l10n.reallyContinueDesc,
+          validLabel: context.l10n.continueForms,
+          cancelLabel: context.l10n.cancel,
           onValid: () => context.pop(true),
           onCancel: () => context.pop(false),
         );
@@ -1382,7 +1370,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
   Map<String, double> getGenerationPosition() {
     // En priorité, utiliser la position sélectionnée
     if (_selectedLatitude != null && _selectedLongitude != null) {
-      print(
+      LogConfig.logInfo(
         '🎯 Position génération: sélectionnée ($_selectedLatitude, $_selectedLongitude)',
       );
       return {'latitude': _selectedLatitude!, 'longitude': _selectedLongitude!};
@@ -1390,14 +1378,14 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
 
     // Fallback sur la position utilisateur
     if (_userLatitude != null && _userLongitude != null) {
-      print(
+      LogConfig.logInfo(
         '🎯 Position génération: fallback utilisateur ($_userLatitude, $_userLongitude)',
       );
       return {'latitude': _userLatitude!, 'longitude': _userLongitude!};
     }
 
     // Erreur : aucune position disponible
-    throw Exception('Aucune position disponible pour la génération');
+    throw Exception(context.l10n.generationEmptyLocation);
   }
 
   /// Sélection via recherche d'adresse
@@ -1485,8 +1473,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
   Future<void> _onMapCreated(mp.MapboxMap mapboxMap) async {
     this.mapboxMap = mapboxMap;
 
-    print('🗺️ === CARTE CRÉÉE - POSITION DÉJÀ DÉFINIE ===');
-    print('🗺️ Première initialisation: ${!_mapStateService.isMapInitialized}');
+    LogConfig.logInfo('🗺️ === CARTE CRÉÉE - POSITION DÉJÀ DÉFINIE ===');
+    LogConfig.logInfo('🗺️ Première initialisation: ${!_mapStateService.isMapInitialized}');
 
     // Configuration de base
     await _setupMapboxSettings();
@@ -1496,7 +1484,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
     // 🔄 Gestion intelligente de l'initialisation
     if (!_mapStateService.isMapInitialized) {
       // === PREMIÈRE INITIALISATION ===
-      print('🆕 Première initialisation de la carte');
+      LogConfig.logInfo('🆕 Première initialisation de la carte');
       await _performInitialSetup();
       _mapStateService.markMapAsInitialized();
     } else {
@@ -1508,7 +1496,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
 
   /// 🆕 Configuration initiale (première fois)
   Future<void> _performInitialSetup() async {
-    print('🆕 Configuration initiale de la carte');
+    LogConfig.logInfo('🆕 Configuration initiale de la carte');
 
     // 🎯 La position est déjà définie par LocationAwareMapWidget !
     // On récupère juste la position pour nos variables locales
@@ -1548,7 +1536,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
           position.longitude,
         );
 
-        print(
+        LogConfig.logSuccess(
           '✅ Position synchronisée: ${position.latitude}, ${position.longitude}',
         );
       }
@@ -1584,8 +1572,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
 
   /// 🎯 Centrer sur la position utilisateur
   Future<void> _centerOnUserLocation({required bool animate}) async {
-    if (mapboxMap == null || _userLatitude == null || _userLongitude == null)
-      return;
+    if (mapboxMap == null || _userLatitude == null || _userLongitude == null) return;
 
     try {
       final cameraOptions = mp.CameraOptions(
@@ -1602,10 +1589,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
           cameraOptions,
           mp.MapAnimationOptions(duration: 1500),
         );
-        print('🎬 Centrage animé sur position utilisateur');
+        LogConfig.logSuccess('🎬 Centrage animé sur position utilisateur');
       } else {
         await mapboxMap!.setCamera(cameraOptions);
-        print('📷 Centrage instantané sur position utilisateur');
+        LogConfig.logSuccess('📷 Centrage instantané sur position utilisateur');
       }
     } catch (e) {
       LogConfig.logError('❌ Erreur centrage position utilisateur: $e');
@@ -1642,7 +1629,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
         mp.ScaleBarSettings(enabled: false),
       );
 
-      print('⚙️ Paramètres Mapbox configurés');
+      LogConfig.logSuccess('⚙️ Paramètres Mapbox configurés');
     } catch (e) {
       LogConfig.logError('❌ Erreur configuration Mapbox: $e');
     }
@@ -1667,7 +1654,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
       }
     });
 
-    print('🤏 Listener de déplacement configuré');
+    LogConfig.logInfo('🤏 Listener de déplacement configuré');
   }
 
   /// 🆕 CONFIGURATION DE L'INTERACTION LONGTAP
@@ -1683,7 +1670,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
           final longitude = point.coordinates.lng.toDouble();
           final latitude = point.coordinates.lat.toDouble();
 
-          print('🔗 LongTap détecté à: ($latitude, $longitude)');
+          LogConfig.logSuccess('🔗 LongTap détecté à: ($latitude, $longitude)');
 
           // Activer le mode manuel à cette position
           _activateManualSelectionAtPosition(longitude, latitude);
@@ -1722,10 +1709,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
       if (generatedRouteCoordinates != null) {
         final bool? shouldContinue = await _presentModalSheet<bool>((_) {
           return ModalDialog(
-            title: "Voulez-vous vraiment continuer?",
-            subtitle: "Cette action supprimera le parcours précédemment généré, il sera alors irrécupérable!",
-            validLabel: "Continuer",
-            cancelLabel: "Annuler",
+            title: context.l10n.reallyContinueTitle,
+            subtitle: context.l10n.reallyContinueDesc,
+            validLabel: context.l10n.continueForms,
+            cancelLabel: context.l10n.cancel,
             onValid: () => context.pop(true),
             onCancel: () => context.pop(false),
           );
@@ -1914,8 +1901,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
           final consumed = await context.routeGenerationBloc.consumeGeneration(
             context.authBloc,
           );
-          if (!consumed) {
-            _showRouteGenerationError('Impossible de lancer la génération');
+          if (!consumed && mounted) {
+            _showRouteGenerationError(context.l10n.unableLaunchGeneration);
             return;
           }
         }
@@ -1946,7 +1933,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
         final parameters = parametersState.parameters;
 
         if (!parameters.isValid) {
-          _showRouteGenerationError('Paramètres invalides');
+          _showRouteGenerationError(context.l10n.invalidParameters);
           return;
         }
 
@@ -1967,10 +1954,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
     } catch (e, stackTrace) {
       LogConfig.logError('❌ Erreur génération: $e');
       _showRouteGenerationError('Erreur: $e');
-      context.captureError(e, stackTrace, extra: {
-        'operation': 'route_generation',
-        'selected_location': {'lat': _selectedLatitude, 'lng': _selectedLongitude},
-      });
+      if (mounted) {
+        context.captureError(e, stackTrace, extra: {
+          'operation': 'route_generation',
+          'selected_location': {'lat': _selectedLatitude, 'lng': _selectedLongitude},
+        });
+      }
       
       MonitoringService.instance.finishOperation(
         operationId, 
@@ -1989,8 +1978,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
       backgroundColor: Colors.transparent,
       child: ModalDialog(
         title: 'Crédits épuisés',
-        subtitle:
-            "Vous avez $availableCredits crédit${availableCredits > 1 ? 's' : ''} disponible${availableCredits > 1 ? 's' : ''}. Il vous en faut au moins $requiredCredits pour générer un nouveau parcours.",
+        subtitle: "Vous avez $availableCredits crédit${availableCredits > 1 ? 's' : ''} disponible${availableCredits > 1 ? 's' : ''}. Il vous en faut au moins $requiredCredits pour générer un nouveau parcours.",
         validLabel: "Acheter des crédits",
         cancelLabel: "Plus tard",
         onValid: () {
@@ -2248,19 +2236,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
         });
         
         // Si on a un RouteInfoCard en attente d'affichage, on l'affiche maintenant
-        if (_isPendingRouteInfoDisplay) {
-          _showPendingRouteInfoModal();
-        }
+        _showRouteInfoModal();
       }
     });
-  }
-
-  // 🆕 Affiche le RouteInfoModal en attente
-  void _showPendingRouteInfoModal() {
-    if (mounted && generatedRouteCoordinates != null && routeMetadata != null) {
-      _isPendingRouteInfoDisplay = false;
-      _showRouteInfoModal();
-    }
   }
 
   // 🆕 Gère l'affichage du RouteInfoCard avec respect du temps minimum
@@ -2312,7 +2290,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
   ) {
     // gestion du loader plein-écran
     final msg = state.isGeneratingRoute
-      ? 'Génération du parcours…'
+      ? context.l10n.generateInProgress
       : null; // ici pas de sauvegarde (gérée par AppDataBloc)
 
     _toggleLoader(context, msg != null, msg ?? '');
@@ -2414,7 +2392,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
           // 2️⃣  Sauvegarde de parcours
           BlocListener<AppDataBloc, AppDataState>(
             listenWhen: (previous, current) => previous.isSavingRoute != current.isSavingRoute,
-            listener: (context, state) => _toggleLoader(context, state.isSavingRoute, 'Sauvegarde en cours…'),
+            listener: (context, state) => _toggleLoader(context, state.isSavingRoute, context.l10n.saving),
           ),
         ],
         child: BlocBuilder<RouteGenerationBloc, RouteGenerationState>(

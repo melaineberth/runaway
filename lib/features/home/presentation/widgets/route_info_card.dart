@@ -7,6 +7,8 @@ import 'package:runaway/core/widgets/icon_btn.dart';
 import 'package:runaway/core/widgets/squircle_btn.dart';
 import 'package:runaway/features/home/domain/models/route_metrics.dart';
 import 'package:runaway/features/route_generator/domain/models/route_parameters.dart';
+import 'package:runaway/features/route_generator/domain/models/terrain_type.dart';
+import 'package:runaway/features/route_generator/domain/models/urban_density.dart';
 
 /// Widget pour afficher les informations de la route générée
 class RouteInfoCard extends StatelessWidget {
@@ -107,14 +109,14 @@ class RouteInfoCard extends StatelessWidget {
           // Type de terrain
           _InfoChip(
             icon: getTerrainIcon(parameters.terrainType.id),
-            label: parameters.terrainType.title,
+            label: parameters.terrainType.label(context),
           ),
           10.w,
           
           // Densité urbaine
           _InfoChip(
             icon: getUrbanDensityIcon(parameters.urbanDensity.id),
-            label: parameters.urbanDensity.title,
+            label: parameters.urbanDensity.label(context),
           ),
           10.w,
           

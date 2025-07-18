@@ -932,68 +932,190 @@ class AppLocalizationsIt extends AppLocalizations {
   }
 
   @override
-  String get elevationRange => 'Elevation range';
+  String get elevationRange => 'Intervallo di dislivello';
 
   @override
-  String get minElevation => 'Minimum elevation';
+  String get minElevation => 'Dislivello minimo';
 
   @override
-  String get maxElevation => 'Maximum elevation';
+  String get maxElevation => 'Dislivello massimo';
 
   @override
-  String get difficulty => 'Difficulty';
+  String get difficulty => 'Difficoltà';
 
   @override
-  String get maxIncline => 'Maximum incline';
+  String get maxIncline => 'Pendenza massima';
 
   @override
-  String get waypointsCount => 'Waypoints';
+  String get waypointsCount => 'Punti di interesse';
 
   @override
   String get points => 'pts';
 
   @override
-  String get surfacePreference => 'Surface';
+  String get surfacePreference => 'Superficie';
 
   @override
-  String get naturalPaths => 'Natural paths';
+  String get naturalPaths => 'Sentieri naturali';
 
   @override
-  String get pavedRoads => 'Paved roads';
+  String get pavedRoads => 'Strade asfaltate';
 
   @override
-  String get mixed => 'Mixed';
+  String get mixed => 'Misto';
 
   @override
-  String get avoidHighways => 'Avoid highways';
+  String get avoidHighways => 'Evitare autostrade';
 
   @override
-  String get avoidMajorRoads => 'Avoid major roads';
+  String get avoidMajorRoads => 'Evitare strade principali';
 
   @override
-  String get prioritizeParks => 'Prioritize parks';
+  String get prioritizeParks => 'Dare priorità ai parchi';
 
   @override
-  String get preferGreenSpaces => 'Prefer green spaces';
+  String get preferGreenSpaces => 'Preferire aree verdi';
 
   @override
-  String get elevationLoss => 'Elevation loss';
+  String get elevationLoss => 'Dislivello negativo';
 
   @override
-  String get duration => 'Duration';
+  String get duration => 'Durata';
 
   @override
-  String get calories => 'Calories';
+  String get calories => 'Calorie';
 
   @override
-  String get scenic => 'Scenic';
+  String get scenic => 'Panoramico';
 
   @override
-  String get maxSlope => 'Max slope';
+  String get maxSlope => 'Pendenza max';
 
   @override
-  String get highlights => 'Highlights';
+  String get highlights => 'Punti salienti';
 
   @override
-  String get surfaces => 'Surfaces';
+  String get surfaces => 'Superfici';
+
+  @override
+  String get easyDifficultyLevel => 'Facile';
+
+  @override
+  String get moderateDifficultyLevel => 'Moderato';
+
+  @override
+  String get hardDifficultyLevel => 'Difficile';
+
+  @override
+  String get expertDifficultyLevel => 'Esperto';
+
+  @override
+  String get asphaltSurfaceTitle => 'Asfalto';
+
+  @override
+  String get asphaltSurfaceDesc => 'Privilegia strade e marciapiedi asfaltati';
+
+  @override
+  String get mixedSurfaceTitle => 'Misto';
+
+  @override
+  String get mixedSurfaceDesc => 'Mix di strade e sentieri a seconda del percorso';
+
+  @override
+  String get naturalSurfaceTitle => 'Naturale';
+
+  @override
+  String get naturalSurfaceDesc => 'Privilegia sentieri naturali';
+
+  @override
+  String get searchAdress => 'Cerca un indirizzo...';
+
+  @override
+  String get chooseName => 'Scegli un nome';
+
+  @override
+  String get canModifyLater => 'Puoi modificarlo in seguito';
+
+  @override
+  String get routeName => 'Nome del percorso';
+
+  @override
+  String get limitReachedGenerations => 'Limite raggiunto';
+
+  @override
+  String get exhaustedGenerations => 'Generazioni esaurite';
+
+  @override
+  String get remainingLimitGenerations => 'Limite rimanente';
+
+  @override
+  String remainingGenerationsLabel(int remainingGenerations) {
+    String _temp0 = intl.Intl.pluralLogic(
+      remainingGenerations,
+      locale: localeName,
+      other: 'i',
+      one: '',
+    );
+    return '$remainingGenerations generazione gratuita$_temp0';
+  }
+
+  @override
+  String get freeGenerations => 'Generazioni gratuite';
+
+  @override
+  String get exhaustedFreeGenerations => 'Generazioni gratuite esaurite';
+
+  @override
+  String get exhaustedCredits => 'Crediti esauriti';
+
+  @override
+  String get authForMoreGenerations => 'Crea un account gratuito per altre generazioni';
+
+  @override
+  String get createFreeAccount => 'Crea account gratuito';
+
+  @override
+  String get exportRouteTitle => 'Esporta il percorso';
+
+  @override
+  String get exportRouteDesc => 'Scegli il formato di esportazione';
+
+  @override
+  String get generateInProgress => 'Generazione del percorso in corso...';
+
+  @override
+  String get emptyRouteForSave => 'Nessun percorso da salvare';
+
+  @override
+  String get connectionError => 'Errore di connessione';
+
+  @override
+  String get notAvailableMap => 'Mappa non disponibile';
+
+  @override
+  String get missingRouteSettings => 'Impostazioni del percorso mancanti';
+
+  @override
+  String get savedRoute => 'Percorso salvato';
+
+  @override
+  String get loginRequiredTitle => 'Accesso richiesto';
+
+  @override
+  String get loginRequiredDesc => 'Devi effettuare l\'accesso per salvare i tuoi percorsi';
+
+  @override
+  String get reallyContinueTitle => 'Vuoi davvero continuare?';
+
+  @override
+  String get reallyContinueDesc => 'Questa azione eliminerà il percorso generato in precedenza, sarà irrecuperabile!';
+
+  @override
+  String get generationEmptyLocation => 'Nessuna posizione disponibile per la generazione';
+
+  @override
+  String get unableLaunchGeneration => 'Impossibile avviare la generazione';
+
+  @override
+  String get invalidParameters => 'Parametri non validi';
 }

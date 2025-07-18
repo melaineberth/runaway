@@ -1,46 +1,8 @@
-import 'dart:io';
-
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:runaway/core/styles/colors.dart';
 import 'package:runaway/core/helper/services/session_manager.dart';
 import 'package:runaway/features/route_generator/domain/models/route_parameters.dart';
 import 'package:runaway/l10n/app_localizations.dart';
-
-  final _channel = const MethodChannel('corner_radius');
-
-  Future<double> getDeviceCornerRadius() async {
-    if (kDebugMode) debugPrint('[CR] ▶︎ Demande du rayon…');
-
-    // 1️⃣ plateforme non prise en charge
-    if (!Platform.isAndroid && !Platform.isIOS) {
-      if (kDebugMode) debugPrint('[CR] ⛔️ Desktop / Web – retourne 0');
-      return 0;
-    }
-
-    try {
-      final radius = await _channel.invokeMethod<double>('getCornerRadius');
-
-      if (kDebugMode) {
-        debugPrint('[CR] ✔︎ Réponse native = ${radius ?? 'null'}');
-      }
-
-      return radius ?? 0;
-    } on PlatformException catch (e, s) {
-      if (kDebugMode) {
-        debugPrint('[CR] 💥 PlatformException : ${e.message}');
-        debugPrint('[CR] Stack :\n$s');
-      }
-      return 0;
-    } catch (e, s) {
-      if (kDebugMode) {
-        debugPrint('[CR] 🔥 Erreur inconnue : $e');
-        debugPrint('[CR] Stack :\n$s');
-      }
-      return 0;
-    }
-  }
 
 extension SpacingExtension on num {
   SizedBox get h => SizedBox(height: toDouble());
@@ -82,65 +44,54 @@ extension SmartRadius on EdgeInsets {
   /// Calcule le radius externe basé sur le radius interne et le padding
   double calculateOuterRadius(double innerRadius) {
     // Prend la valeur maximale du padding pour le calcul
-    final maxPadding = [left, top, right, bottom].reduce((a, b) => a > b ? a : b);
+    final maxPadding = [
+      left,
+      top,
+      right,
+      bottom,
+    ].reduce((a, b) => a > b ? a : b);
     return innerRadius + maxPadding;
   }
-  
+
   /// Calcule le radius interne basé sur le radius externe et le padding
   double calculateInnerRadius(double outerRadius) {
-    final maxPadding = [left, top, right, bottom].reduce((a, b) => a > b ? a : b);
+    final maxPadding = [
+      left,
+      top,
+      right,
+      bottom,
+    ].reduce((a, b) => a > b ? a : b);
     return (outerRadius - maxPadding).clamp(0.0, double.infinity);
   }
 }
 
-/// Accès rapide aux chaînes localisées :
 extension L10nExtension on BuildContext {
   /// Utilisation : `context.l10n.helloWorld`
   AppLocalizations get l10n => AppLocalizations.of(this)!;
 }
 
-void showModalSheet({required BuildContext context, required Widget child, Color backgroundColor = Colors.black, bool isDismissible = true, bool useSafeArea = false}) {
-    showModalBottomSheet(
-      useRootNavigator: true,
-      isScrollControlled: true,
-      isDismissible: isDismissible,
-      enableDrag: false,
-      context: context,
-      useSafeArea: useSafeArea,
-      backgroundColor: backgroundColor,
-      clipBehavior: Clip.antiAliasWithSaveLayer,
-      builder: (modalCtx) {
-        return child;
-      },
-    );
-  }
-
-  String generateAutoRouteName(RouteParameters p, double distanceKm) {
-  final now        = DateTime.now();
-  final timeString = '${now.hour.toString().padLeft(2, '0')}:'
-                     '${now.minute.toString().padLeft(2, '0')}';
-  final dateString = '${now.day}/${now.month}';
-  return '${p.activityType.title} '
-         '${distanceKm.toStringAsFixed(0)}km - $timeString ($dateString)';
-}
-
 extension ThemeExtension on BuildContext {
   /// Accès rapide au thème actuel
   ThemeData get theme => Theme.of(this);
-  
+
   /// Accès rapide au ColorScheme
   ColorScheme get colorScheme => theme.colorScheme;
-  
+
   /// Vérifie si on est en mode sombre
   bool get isDarkMode => theme.brightness == Brightness.dark;
-  
+
   /// Couleurs adaptatives selon le thème
-  Color get adaptiveTextPrimary => isDarkMode ? AppColorsDark.textPrimary : AppColors.textPrimary;
-  Color get adaptiveTextSecondary => isDarkMode ? AppColorsDark.textSecondary : AppColors.textSecondary;
-  Color get adaptiveBackground => isDarkMode ? AppColorsDark.background : AppColors.background;
-  Color get adaptiveSurface => isDarkMode ? AppColorsDark.surface : AppColors.surface;
-  Color get adaptivePrimary => isDarkMode ? AppColorsDark.primary : AppColors.primary;
-  
+  Color get adaptiveTextPrimary =>
+      isDarkMode ? AppColorsDark.textPrimary : AppColors.textPrimary;
+  Color get adaptiveTextSecondary =>
+      isDarkMode ? AppColorsDark.textSecondary : AppColors.textSecondary;
+  Color get adaptiveBackground =>
+      isDarkMode ? AppColorsDark.background : AppColors.background;
+  Color get adaptiveSurface =>
+      isDarkMode ? AppColorsDark.surface : AppColors.surface;
+  Color get adaptivePrimary =>
+      isDarkMode ? AppColorsDark.primary : AppColors.primary;
+
   /// Couleurs avec opacité adaptative
   Color get adaptiveWhite => isDarkMode ? Colors.white : Colors.black;
   Color get adaptiveBlack => isDarkMode ? Colors.black : Colors.white;
@@ -155,5 +106,37 @@ extension SessionValidation on Object {
       throw Exception('Session invalide ou expirée');
     }
     return await action();
+  }
+}
+
+extension SurfaceTypeL10n on SurfaceType {
+  /// Renvoie la chaîne localisée pour *cette* valeur de enum.
+  String label(BuildContext context) {
+    final l10n = context.l10n; // ou `content.l10n` dans ton widget
+    switch (this) {
+      case SurfaceType.asphalt:
+        return l10n.asphaltSurfaceTitle; // clé ARB : "statusPending"
+      case SurfaceType.mixed:
+        return l10n.mixedSurfaceTitle;
+      case SurfaceType.natural:
+        return l10n.naturalSurfaceTitle;
+    }
+  }
+}
+
+extension DifficultyLevelL10n on DifficultyLevel {
+  /// Renvoie la chaîne localisée pour *cette* valeur de enum.
+  String label(BuildContext context) {
+    final l10n = context.l10n; // ou `content.l10n` dans ton widget
+    switch (this) {
+      case DifficultyLevel.easy:
+        return l10n.easyDifficultyLevel; // clé ARB : "statusPending"
+      case DifficultyLevel.moderate:
+        return l10n.moderateDifficultyLevel;
+      case DifficultyLevel.hard:
+        return l10n.hardDifficultyLevel;
+      case DifficultyLevel.expert:
+        return l10n.expertDifficultyLevel;
+    }
   }
 }

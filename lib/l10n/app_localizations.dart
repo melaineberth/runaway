@@ -2024,6 +2024,234 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Surfaces'**
   String get surfaces;
+
+  /// Label for easy difficulty level for a route or activity.
+  ///
+  /// In en, this message translates to:
+  /// **'Easy'**
+  String get easyDifficultyLevel;
+
+  /// Label for moderate difficulty level for a route or activity.
+  ///
+  /// In en, this message translates to:
+  /// **'Moderate'**
+  String get moderateDifficultyLevel;
+
+  /// Label for hard difficulty level for a route or activity.
+  ///
+  /// In en, this message translates to:
+  /// **'Hard'**
+  String get hardDifficultyLevel;
+
+  /// Label for expert difficulty level for a route or activity.
+  ///
+  /// In en, this message translates to:
+  /// **'Expert'**
+  String get expertDifficultyLevel;
+
+  /// Title for a surface type that uses asphalt roads or sidewalks.
+  ///
+  /// In en, this message translates to:
+  /// **'Asphalt'**
+  String get asphaltSurfaceTitle;
+
+  /// Description for asphalt surface, prioritizing paved roads and sidewalks.
+  ///
+  /// In en, this message translates to:
+  /// **'Prioritizes paved roads and sidewalks'**
+  String get asphaltSurfaceDesc;
+
+  /// Title for a surface type mixing roads and paths.
+  ///
+  /// In en, this message translates to:
+  /// **'Mixed'**
+  String get mixedSurfaceTitle;
+
+  /// Description for mixed surface type, combining roads and paths.
+  ///
+  /// In en, this message translates to:
+  /// **'Mix of roads and paths according to the route'**
+  String get mixedSurfaceDesc;
+
+  /// Title for a surface type using natural trails and paths.
+  ///
+  /// In en, this message translates to:
+  /// **'Natural'**
+  String get naturalSurfaceTitle;
+
+  /// Description for natural surface, prioritizing natural trails and paths.
+  ///
+  /// In en, this message translates to:
+  /// **'Prioritizes natural trails and paths'**
+  String get naturalSurfaceDesc;
+
+  /// Placeholder text for search field to find an address.
+  ///
+  /// In en, this message translates to:
+  /// **'Search for an address...'**
+  String get searchAdress;
+
+  /// Label prompting the user to choose a name for a route.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a name'**
+  String get chooseName;
+
+  /// Hint that the user can modify the chosen name later.
+  ///
+  /// In en, this message translates to:
+  /// **'You can modify it later'**
+  String get canModifyLater;
+
+  /// Label for the route name input field.
+  ///
+  /// In en, this message translates to:
+  /// **'Route name'**
+  String get routeName;
+
+  /// Message shown when the user has reached the limit of allowed generations.
+  ///
+  /// In en, this message translates to:
+  /// **'Limit reached'**
+  String get limitReachedGenerations;
+
+  /// Message indicating all allowed generations have been exhausted.
+  ///
+  /// In en, this message translates to:
+  /// **'Exhausted generations'**
+  String get exhaustedGenerations;
+
+  /// Label indicating how many generations the user can still perform.
+  ///
+  /// In en, this message translates to:
+  /// **'Remaining limit'**
+  String get remainingLimitGenerations;
+
+  /// Label showing how many free generations remain, with correct pluralization for 'generation'.
+  ///
+  /// In en, this message translates to:
+  /// **'{remainingGenerations} free generation{remainingGenerations, plural, =1 {} other {s}}'**
+  String remainingGenerationsLabel(int remainingGenerations);
+
+  /// Label for free generations quota.
+  ///
+  /// In en, this message translates to:
+  /// **'Free generations'**
+  String get freeGenerations;
+
+  /// Message shown when free generations quota is exhausted.
+  ///
+  /// In en, this message translates to:
+  /// **'Exhausted free generations'**
+  String get exhaustedFreeGenerations;
+
+  /// Message shown when all credits are used up.
+  ///
+  /// In en, this message translates to:
+  /// **'Credits exhausted'**
+  String get exhaustedCredits;
+
+  /// Prompt telling the user to create an account for more generations.
+  ///
+  /// In en, this message translates to:
+  /// **'Create a free account for more generations'**
+  String get authForMoreGenerations;
+
+  /// Label for button or link to create a free account.
+  ///
+  /// In en, this message translates to:
+  /// **'Create a free account'**
+  String get createFreeAccount;
+
+  /// Title for exporting a route.
+  ///
+  /// In en, this message translates to:
+  /// **'Export the route'**
+  String get exportRouteTitle;
+
+  /// Description text explaining how to choose the export format.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose the export format'**
+  String get exportRouteDesc;
+
+  /// Message shown when the route is being generated.
+  ///
+  /// In en, this message translates to:
+  /// **'Generation of the route...'**
+  String get generateInProgress;
+
+  /// Message shown when there is no route to save.
+  ///
+  /// In en, this message translates to:
+  /// **'No route to save'**
+  String get emptyRouteForSave;
+
+  /// Message shown when there is a connection error.
+  ///
+  /// In en, this message translates to:
+  /// **'Connection error'**
+  String get connectionError;
+
+  /// Message shown when the map is not available.
+  ///
+  /// In en, this message translates to:
+  /// **'Map not available'**
+  String get notAvailableMap;
+
+  /// Message shown when route settings are missing.
+  ///
+  /// In en, this message translates to:
+  /// **'Missing route settings'**
+  String get missingRouteSettings;
+
+  /// Confirmation message that the route has been saved.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved route'**
+  String get savedRoute;
+
+  /// Title for a dialog or screen indicating login is required.
+  ///
+  /// In en, this message translates to:
+  /// **'Login required'**
+  String get loginRequiredTitle;
+
+  /// Description explaining why login is required.
+  ///
+  /// In en, this message translates to:
+  /// **'You must be logged in to save your courses'**
+  String get loginRequiredDesc;
+
+  /// Title for a confirmation dialog asking if the user really wants to continue.
+  ///
+  /// In en, this message translates to:
+  /// **'Do you really want to continue?'**
+  String get reallyContinueTitle;
+
+  /// Description warning the user that continuing will delete the current route.
+  ///
+  /// In en, this message translates to:
+  /// **'This action will delete the previously generated route, it will then be unrecoverable!'**
+  String get reallyContinueDesc;
+
+  /// Message indicating no position is available for generating a route.
+  ///
+  /// In en, this message translates to:
+  /// **'No position available for the generation'**
+  String get generationEmptyLocation;
+
+  /// Message shown when generation cannot be launched due to an error.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to launch the generation'**
+  String get unableLaunchGeneration;
+
+  /// Message shown when input parameters are invalid.
+  ///
+  /// In en, this message translates to:
+  /// **'Invalid parameters'**
+  String get invalidParameters;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

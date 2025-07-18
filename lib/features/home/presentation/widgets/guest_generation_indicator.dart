@@ -76,7 +76,7 @@ class _GuestGenerationIndicatorState extends State<GuestGenerationIndicator> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              "Limite atteinte",
+              context.l10n.limitReachedGenerations,
               style: context.bodySmall?.copyWith(
                 color: context.colorScheme.onSurfaceVariant,
                 fontWeight: FontWeight.w500,
@@ -87,7 +87,7 @@ class _GuestGenerationIndicatorState extends State<GuestGenerationIndicator> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 IconBtn(
-                  label: 'Générations épuisées',
+                  label: context.l10n.exhaustedGenerations,
                   icon: Icons.block,
                   backgroundColor: Colors.red.withValues(alpha: 0.2),
                   iconColor: Colors.red,
@@ -110,7 +110,7 @@ class _GuestGenerationIndicatorState extends State<GuestGenerationIndicator> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              "Limite restante",
+              context.l10n.remainingLimitGenerations,
               style: context.bodySmall?.copyWith(
                 color: context.colorScheme.onSurfaceVariant,
                 fontWeight: FontWeight.w500,
@@ -118,7 +118,8 @@ class _GuestGenerationIndicatorState extends State<GuestGenerationIndicator> {
             ),
             12.h,
             IconBtn(
-              label: '$_remainingGenerations génération${_remainingGenerations > 1 ? 's' : ''} gratuite${_remainingGenerations > 1 ? 's' : ''}',
+              label: context.l10n.remainingGenerationsLabel(_remainingGenerations),
+              // label: '$_remainingGenerations génération${_remainingGenerations > 1 ? 's' : ''} gratuite${_remainingGenerations > 1 ? 's' : ''}',
               icon: Icons.block,
               backgroundColor: Colors.blue.withValues(alpha: 0.2),
               iconColor: Colors.blue,

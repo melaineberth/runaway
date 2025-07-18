@@ -23,7 +23,7 @@ class ExportFormatDialog extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Exporter le parcours',
+            context.l10n.exportRouteTitle,
             style: context.bodySmall?.copyWith(
               color: context.adaptiveTextPrimary,
             ),
@@ -32,7 +32,7 @@ class ExportFormatDialog extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Choisissez le format d\'export',
+                context.l10n.exportRouteDesc,
                 style: context.bodySmall?.copyWith(
                   color: context.adaptiveTextSecondary,
                   fontSize: 15,

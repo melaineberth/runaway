@@ -996,4 +996,126 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get surfaces => 'Surfaces';
+
+  @override
+  String get easyDifficultyLevel => 'Facile';
+
+  @override
+  String get moderateDifficultyLevel => 'Modéré';
+
+  @override
+  String get hardDifficultyLevel => 'Difficile';
+
+  @override
+  String get expertDifficultyLevel => 'Expert';
+
+  @override
+  String get asphaltSurfaceTitle => 'Bitume';
+
+  @override
+  String get asphaltSurfaceDesc => 'Privilégie les routes et trottoirs pavés';
+
+  @override
+  String get mixedSurfaceTitle => 'Mixte';
+
+  @override
+  String get mixedSurfaceDesc => 'Mélange de routes et chemins selon l\'itinéraire';
+
+  @override
+  String get naturalSurfaceTitle => 'Naturel';
+
+  @override
+  String get naturalSurfaceDesc => 'Privilégie les sentiers naturels';
+
+  @override
+  String get searchAdress => 'Rechercher une adresse...';
+
+  @override
+  String get chooseName => 'Choisir un nom';
+
+  @override
+  String get canModifyLater => 'Vous pourrez le modifier plus tard';
+
+  @override
+  String get routeName => 'Nom de l\'itinéraire';
+
+  @override
+  String get limitReachedGenerations => 'Limite atteinte';
+
+  @override
+  String get exhaustedGenerations => 'Générations épuisées';
+
+  @override
+  String get remainingLimitGenerations => 'Limite restante';
+
+  @override
+  String remainingGenerationsLabel(int remainingGenerations) {
+    String _temp0 = intl.Intl.pluralLogic(
+      remainingGenerations,
+      locale: localeName,
+      other: 's',
+      one: '',
+    );
+    return '$remainingGenerations génération gratuite$_temp0';
+  }
+
+  @override
+  String get freeGenerations => 'Générations gratuites';
+
+  @override
+  String get exhaustedFreeGenerations => 'Générations gratuites épuisées';
+
+  @override
+  String get exhaustedCredits => 'Crédits épuisés';
+
+  @override
+  String get authForMoreGenerations => 'Créez un compte gratuit pour plus de générations';
+
+  @override
+  String get createFreeAccount => 'Créer un compte gratuit';
+
+  @override
+  String get exportRouteTitle => 'Exporter l\'itinéraire';
+
+  @override
+  String get exportRouteDesc => 'Choisissez le format d\'export';
+
+  @override
+  String get generateInProgress => 'Génération de l\'itinéraire...';
+
+  @override
+  String get emptyRouteForSave => 'Aucun itinéraire à sauvegarder';
+
+  @override
+  String get connectionError => 'Erreur de connexion';
+
+  @override
+  String get notAvailableMap => 'Carte non disponible';
+
+  @override
+  String get missingRouteSettings => 'Paramètres d\'itinéraire manquants';
+
+  @override
+  String get savedRoute => 'Itinéraire sauvegardé';
+
+  @override
+  String get loginRequiredTitle => 'Connexion requise';
+
+  @override
+  String get loginRequiredDesc => 'Vous devez être connecté pour sauvegarder vos parcours';
+
+  @override
+  String get reallyContinueTitle => 'Voulez-vous vraiment continuer ?';
+
+  @override
+  String get reallyContinueDesc => 'Cette action supprimera l\'itinéraire généré précédemment, il sera alors irrécupérable !';
+
+  @override
+  String get generationEmptyLocation => 'Aucune position disponible pour la génération';
+
+  @override
+  String get unableLaunchGeneration => 'Impossible de lancer la génération';
+
+  @override
+  String get invalidParameters => 'Paramètres invalides';
 }

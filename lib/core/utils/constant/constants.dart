@@ -1,8 +1,79 @@
+import 'dart:io';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:runaway/core/helper/extensions/extensions.dart';
 import 'package:runaway/core/widgets/modal_dialog.dart';
 import 'package:runaway/features/auth/presentation/screens/auth_screen.dart';
+import 'package:runaway/features/route_generator/domain/models/route_parameters.dart';
+
+final _channel = const MethodChannel('corner_radius');
+
+Future<double> getDeviceCornerRadius() async {
+  if (kDebugMode) debugPrint('[CR] ▶︎ Demande du rayon…');
+
+  // 1️⃣ plateforme non prise en charge
+  if (!Platform.isAndroid && !Platform.isIOS) {
+    if (kDebugMode) debugPrint('[CR] ⛔️ Desktop / Web – retourne 0');
+    return 0;
+  }
+
+  try {
+    final radius = await _channel.invokeMethod<double>('getCornerRadius');
+
+    if (kDebugMode) {
+      debugPrint('[CR] ✔︎ Réponse native = ${radius ?? 'null'}');
+    }
+
+    return radius ?? 0;
+  } on PlatformException catch (e, s) {
+    if (kDebugMode) {
+      debugPrint('[CR] 💥 PlatformException : ${e.message}');
+      debugPrint('[CR] Stack :\n$s');
+    }
+    return 0;
+  } catch (e, s) {
+    if (kDebugMode) {
+      debugPrint('[CR] 🔥 Erreur inconnue : $e');
+      debugPrint('[CR] Stack :\n$s');
+    }
+    return 0;
+  }
+}
+
+void showModalSheet({
+  required BuildContext context,
+  required Widget child,
+  Color backgroundColor = Colors.black,
+  bool isDismissible = true,
+  bool useSafeArea = false,
+}) {
+  showModalBottomSheet(
+    useRootNavigator: true,
+    isScrollControlled: true,
+    isDismissible: isDismissible,
+    enableDrag: false,
+    context: context,
+    useSafeArea: useSafeArea,
+    backgroundColor: backgroundColor,
+    clipBehavior: Clip.antiAliasWithSaveLayer,
+    builder: (modalCtx) {
+      return child;
+    },
+  );
+}
+
+String generateAutoRouteName(RouteParameters p, double distanceKm) {
+  final now = DateTime.now();
+  final timeString =
+      '${now.hour.toString().padLeft(2, '0')}:'
+      '${now.minute.toString().padLeft(2, '0')}';
+  final dateString = '${now.day}/${now.month}';
+  return '${p.activityType.title} '
+      '${distanceKm.toStringAsFixed(0)}km - $timeString ($dateString)';
+}
 
 void showSignModal(BuildContext context, int index) {
   showModalSheet(

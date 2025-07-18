@@ -1154,7 +1154,6 @@
   "@supportEmailBody": {
     "description": "Body content for the support email."
   },
-
   "insufficientCreditsTitle": "Insufficient credits",
   "@insufficientCreditsTitle": {
     "description": "Titre affiché quand l'utilisateur n'a pas assez de crédits"
@@ -1163,82 +1162,114 @@
   "@insufficientCreditsDescription": {
     "description": "Description expliquant le manque de crédits",
     "placeholders": {
-      "requiredCredits": { "type": "int", "example": "1" },
-      "action":       { "type": "String", "example": "generate a route" },
-      "availableCredits": { "type": "int", "example": "0" }
+      "requiredCredits": {
+        "type": "int",
+        "example": "1"
+      },
+      "action": {
+        "type": "String",
+        "example": "generate a route"
+      },
+      "availableCredits": {
+        "type": "int",
+        "example": "0"
+      }
     }
   },
   "buyCredits": "Buy credits",
-  "@buyCredits": { "description": "Bouton pour acheter des crédits" },
-
+  "@buyCredits": {
+    "description": "Bouton pour acheter des crédits"
+  },
   "currentCredits": "Current credits",
-  "@currentCredits": { "description": "Label pour afficher les crédits actuels" },
-
+  "@currentCredits": {
+    "description": "Label pour afficher les crédits actuels"
+  },
   "availableCredits": "Available credits",
-  "@availableCredits": { "description": "Label pour les crédits disponibles" },
-
+  "@availableCredits": {
+    "description": "Label pour les crédits disponibles"
+  },
   "totalUsed": "Total used",
-  "@totalUsed": { "description": "Label pour le total de crédits utilisés" },
-
+  "@totalUsed": {
+    "description": "Label pour le total de crédits utilisés"
+  },
   "popular": "Popular",
-  "@popular": { "description": "Badge pour le plan le plus populaire" },
-
+  "@popular": {
+    "description": "Badge pour le plan le plus populaire"
+  },
   "buySelectedPlan": "Buy this plan",
-  "@buySelectedPlan": { "description": "Bouton pour acheter le plan sélectionné" },
-
+  "@buySelectedPlan": {
+    "description": "Bouton pour acheter le plan sélectionné"
+  },
   "selectPlan": "Select a plan",
-  "@selectPlan": { "description": "Message quand aucun plan n'est sélectionné" },
-
+  "@selectPlan": {
+    "description": "Message quand aucun plan n'est sélectionné"
+  },
   "purchaseSimulated": "Purchase simulated",
-  "@purchaseSimulated": { "description": "Titre pour la simulation d'achat" },
-
+  "@purchaseSimulated": {
+    "description": "Titre pour la simulation d'achat"
+  },
   "purchaseSimulatedDescription": "In development mode, purchases are simulated. Do you want to simulate this purchase?",
-  "@purchaseSimulatedDescription": { "description": "Description pour la simulation d'achat" },
-
+  "@purchaseSimulatedDescription": {
+    "description": "Description pour la simulation d'achat"
+  },
   "simulatePurchase": "Simulate purchase",
-  "@simulatePurchase": { "description": "Bouton pour simuler un achat" },
-
+  "@simulatePurchase": {
+    "description": "Bouton pour simuler un achat"
+  },
   "purchaseSuccess": "Purchase successful!",
-  "@purchaseSuccess": { "description": "Titre de succès d'achat" },
-
+  "@purchaseSuccess": {
+    "description": "Titre de succès d'achat"
+  },
   "transactionHistory": "Transaction history",
-  "@transactionHistory": { "description": "Titre de l'écran d'historique" },
-
+  "@transactionHistory": {
+    "description": "Titre de l'écran d'historique"
+  },
   "noTransactions": "No transactions yet",
-  "@noTransactions": { "description": "Message quand il n'y a pas de transactions" },
-
+  "@noTransactions": {
+    "description": "Message quand il n'y a pas de transactions"
+  },
   "yesterday": "Yesterday",
-  "@yesterday": { "description": "Libellé pour hier dans les dates" },
-
+  "@yesterday": {
+    "description": "Libellé pour hier dans les dates"
+  },
   "daysAgo": "days",
-  "@daysAgo": { "description": "Suffixe pour les jours passés" },
-
+  "@daysAgo": {
+    "description": "Suffixe pour les jours passés"
+  },
   "ok": "OK",
-  "@ok": { "description": "Bouton OK générique" },
-
+  "@ok": {
+    "description": "Bouton OK générique"
+  },
   "creditUsageSuccess": "Credits used successfully",
-  "@creditUsageSuccess": { "description": "Message de succès d'utilisation de crédits" },
-
+  "@creditUsageSuccess": {
+    "description": "Message de succès d'utilisation de crédits"
+  },
   "routeGenerationWithCredits": "1 credit will be used to generate this route",
-  "@routeGenerationWithCredits": { "description": "Information sur l'utilisation de crédits pour la génération" },
-
+  "@routeGenerationWithCredits": {
+    "description": "Information sur l'utilisation de crédits pour la génération"
+  },
   "creditsRequiredForGeneration": "Route generation (1 credit)",
-  "@creditsRequiredForGeneration": { "description": "Description de l'action qui consomme des crédits" },
-
+  "@creditsRequiredForGeneration": {
+    "description": "Description de l'action qui consomme des crédits"
+  },
   "manageCredits": "Manage my credits",
-  "@manageCredits": { "description": "Lien pour gérer les crédits" },
-
+  "@manageCredits": {
+    "description": "Lien pour gérer les crédits"
+  },
   "freeCreditsWelcome": "🎉 Welcome! You have received 3 free credits to start",
-  "@freeCreditsWelcome": { "description": "Message de bienvenue avec crédits gratuits" },
-
+  "@freeCreditsWelcome": {
+    "description": "Message de bienvenue avec crédits gratuits"
+  },
   "creditsLeft": "{count} credit(s) left",
   "@creditsLeft": {
     "description": "Affichage du nombre de crédits restants",
     "placeholders": {
-      "count": { "type": "int", "example": "5" }
+      "count": {
+        "type": "int",
+        "example": "5"
+      }
     }
   },
-
   "elevationRange": "Elevation range",
   "@elevationRange": {
     "description": "Total elevation gain and loss over a route"
@@ -1326,5 +1357,163 @@
   "surfaces": "Surfaces",
   "@surfaces": {
     "description": "Types of surfaces found or available on the route"
+  },
+  "easyDifficultyLevel": "Easy",
+  "@easyDifficultyLevel": {
+    "description": "Label for easy difficulty level for a route or activity."
+  },
+  "moderateDifficultyLevel": "Moderate",
+  "@moderateDifficultyLevel": {
+    "description": "Label for moderate difficulty level for a route or activity."
+  },
+  "hardDifficultyLevel": "Hard",
+  "@hardDifficultyLevel": {
+    "description": "Label for hard difficulty level for a route or activity."
+  },
+  "expertDifficultyLevel": "Expert",
+  "@expertDifficultyLevel": {
+    "description": "Label for expert difficulty level for a route or activity."
+  },
+  "asphaltSurfaceTitle": "Asphalt",
+  "@asphaltSurfaceTitle": {
+    "description": "Title for a surface type that uses asphalt roads or sidewalks."
+  },
+  "asphaltSurfaceDesc": "Prioritizes paved roads and sidewalks",
+  "@asphaltSurfaceDesc": {
+    "description": "Description for asphalt surface, prioritizing paved roads and sidewalks."
+  },
+  "mixedSurfaceTitle": "Mixed",
+  "@mixedSurfaceTitle": {
+    "description": "Title for a surface type mixing roads and paths."
+  },
+  "mixedSurfaceDesc": "Mix of roads and paths according to the route",
+  "@mixedSurfaceDesc": {
+    "description": "Description for mixed surface type, combining roads and paths."
+  },
+  "naturalSurfaceTitle": "Natural",
+  "@naturalSurfaceTitle": {
+    "description": "Title for a surface type using natural trails and paths."
+  },
+  "naturalSurfaceDesc": "Prioritizes natural trails and paths",
+  "@naturalSurfaceDesc": {
+    "description": "Description for natural surface, prioritizing natural trails and paths."
+  },
+  "searchAdress": "Search for an address...",
+  "@searchAdress": {
+    "description": "Placeholder text for search field to find an address."
+  },
+  "chooseName": "Choose a name",
+  "@chooseName": {
+    "description": "Label prompting the user to choose a name for a route."
+  },
+  "canModifyLater": "You can modify it later",
+  "@canModifyLater": {
+    "description": "Hint that the user can modify the chosen name later."
+  },
+  "routeName": "Route name",
+  "@routeName": {
+    "description": "Label for the route name input field."
+  },
+  "limitReachedGenerations": "Limit reached",
+  "@limitReachedGenerations": {
+    "description": "Message shown when the user has reached the limit of allowed generations."
+  },
+  "exhaustedGenerations": "Exhausted generations",
+  "@exhaustedGenerations": {
+    "description": "Message indicating all allowed generations have been exhausted."
+  },
+  "remainingLimitGenerations": "Remaining limit",
+  "@remainingLimitGenerations": {
+    "description": "Label indicating how many generations the user can still perform."
+  },
+  "remainingGenerationsLabel": "{remainingGenerations} free generation{remainingGenerations, plural, =1 {} other {s}}",
+  "@remainingGenerationsLabel": {
+    "description": "Label showing how many free generations remain, with correct pluralization for 'generation'.",
+    "placeholders": {
+      "remainingGenerations": {
+        "type": "int",
+        "example": "1"
+      }
+    }
+  },
+  "freeGenerations": "Free generations",
+  "@freeGenerations": {
+    "description": "Label for free generations quota."
+  },
+  "exhaustedFreeGenerations": "Exhausted free generations",
+  "@exhaustedFreeGenerations": {
+    "description": "Message shown when free generations quota is exhausted."
+  },
+  "exhaustedCredits": "Credits exhausted",
+  "@exhaustedCredits": {
+    "description": "Message shown when all credits are used up."
+  },
+  "authForMoreGenerations": "Create a free account for more generations",
+  "@authForMoreGenerations": {
+    "description": "Prompt telling the user to create an account for more generations."
+  },
+  "createFreeAccount": "Create a free account",
+  "@createFreeAccount": {
+    "description": "Label for button or link to create a free account."
+  },
+  "exportRouteTitle": "Export the route",
+  "@exportRouteTitle": {
+    "description": "Title for exporting a route."
+  },
+  "exportRouteDesc": "Choose the export format",
+  "@exportRouteDesc": {
+    "description": "Description text explaining how to choose the export format."
+  },
+  "generateInProgress": "Generation of the route...",
+  "@generateInProgress": {
+    "description": "Message shown when the route is being generated."
+  },
+  "emptyRouteForSave": "No route to save",
+  "@emptyRouteForSave": {
+    "description": "Message shown when there is no route to save."
+  },
+  "connectionError": "Connection error",
+  "@connectionError": {
+    "description": "Message shown when there is a connection error."
+  },
+  "notAvailableMap": "Map not available",
+  "@notAvailableMap": {
+    "description": "Message shown when the map is not available."
+  },
+  "missingRouteSettings": "Missing route settings",
+  "@missingRouteSettings": {
+    "description": "Message shown when route settings are missing."
+  },
+  "savedRoute": "Saved route",
+  "@savedRoute": {
+    "description": "Confirmation message that the route has been saved."
+  },
+  "loginRequiredTitle": "Login required",
+  "@loginRequiredTitle": {
+    "description": "Title for a dialog or screen indicating login is required."
+  },
+  "loginRequiredDesc": "You must be logged in to save your courses",
+  "@loginRequiredDesc": {
+    "description": "Description explaining why login is required."
+  },
+  "reallyContinueTitle": "Do you really want to continue?",
+  "@reallyContinueTitle": {
+    "description": "Title for a confirmation dialog asking if the user really wants to continue."
+  },
+  "reallyContinueDesc": "This action will delete the previously generated route, it will then be unrecoverable!",
+  "@reallyContinueDesc": {
+    "description": "Description warning the user that continuing will delete the current route."
+  },
+  "generationEmptyLocation": "No position available for the generation",
+  "@generationEmptyLocation": {
+    "description": "Message indicating no position is available for generating a route."
+  },
+  "unableLaunchGeneration": "Unable to launch the generation",
+  "@unableLaunchGeneration": {
+    "description": "Message shown when generation cannot be launched due to an error."
+  },
+  "invalidParameters": "Invalid parameters",
+  "@invalidParameters": {
+    "description": "Message shown when input parameters are invalid."
   }
 }

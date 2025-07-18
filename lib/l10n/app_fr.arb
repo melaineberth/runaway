@@ -1273,7 +1273,6 @@
       }
     }
   },
-
   "elevationRange": "Plage de dénivelé",
   "@elevationRange": {
     "description": "Plage totale de dénivelé positif et négatif d'un parcours"
@@ -1361,5 +1360,200 @@
   "surfaces": "Surfaces",
   "@surfaces": {
     "description": "Types de surface rencontrés ou disponibles dans le parcours"
+  },
+  "easyDifficultyLevel": "Facile",
+  "@easyDifficultyLevel": {
+    "description": "Label pour le niveau de difficulté facile d'un itinéraire ou d'une activité."
+  },
+
+  "moderateDifficultyLevel": "Modéré",
+  "@moderateDifficultyLevel": {
+    "description": "Label pour le niveau de difficulté modéré d'un itinéraire ou d'une activité."
+  },
+
+  "hardDifficultyLevel": "Difficile",
+  "@hardDifficultyLevel": {
+    "description": "Label pour le niveau de difficulté difficile d'un itinéraire ou d'une activité."
+  },
+
+  "expertDifficultyLevel": "Expert",
+  "@expertDifficultyLevel": {
+    "description": "Label pour le niveau de difficulté expert d'un itinéraire ou d'une activité."
+  },
+
+  "asphaltSurfaceTitle": "Bitume",
+  "@asphaltSurfaceTitle": {
+    "description": "Titre pour un type de surface en routes ou trottoirs asphaltés."
+  },
+
+  "asphaltSurfaceDesc": "Privilégie les routes et trottoirs pavés",
+  "@asphaltSurfaceDesc": {
+    "description": "Description pour la surface bitumée, privilégie routes et trottoirs pavés."
+  },
+
+  "mixedSurfaceTitle": "Mixte",
+  "@mixedSurfaceTitle": {
+    "description": "Titre pour un type de surface mélangeant routes et sentiers."
+  },
+
+  "mixedSurfaceDesc": "Mélange de routes et chemins selon l'itinéraire",
+  "@mixedSurfaceDesc": {
+    "description": "Description pour la surface mixte, combinaison de routes et sentiers."
+  },
+
+  "naturalSurfaceTitle": "Naturel",
+  "@naturalSurfaceTitle": {
+    "description": "Titre pour un type de surface avec sentiers naturels."
+  },
+
+  "naturalSurfaceDesc": "Privilégie les sentiers naturels",
+  "@naturalSurfaceDesc": {
+    "description": "Description pour surface naturelle, privilégie sentiers naturels."
+  },
+
+  "searchAdress": "Rechercher une adresse...",
+  "@searchAdress": {
+    "description": "Texte indicatif pour la recherche d'une adresse."
+  },
+
+  "chooseName": "Choisir un nom",
+  "@chooseName": {
+    "description": "Invite l'utilisateur à choisir un nom pour l'itinéraire."
+  },
+
+  "canModifyLater": "Vous pourrez le modifier plus tard",
+  "@canModifyLater": {
+    "description": "Indique que le nom pourra être modifié plus tard."
+  },
+
+  "routeName": "Nom de l'itinéraire",
+  "@routeName": {
+    "description": "Label pour le champ de nom de l'itinéraire."
+  },
+
+  "limitReachedGenerations": "Limite atteinte",
+  "@limitReachedGenerations": {
+    "description": "Message affiché lorsque la limite de générations est atteinte."
+  },
+
+  "exhaustedGenerations": "Générations épuisées",
+  "@exhaustedGenerations": {
+    "description": "Message indiquant que toutes les générations autorisées sont épuisées."
+  },
+
+  "remainingLimitGenerations": "Limite restante",
+  "@remainingLimitGenerations": {
+    "description": "Indique combien de générations sont encore possibles."
+  },
+
+  "remainingGenerationsLabel": "{remainingGenerations} génération gratuite{remainingGenerations, plural, =1 {} other {s}}",
+  "@remainingGenerationsLabel": {
+    "description": "Indique combien de générations gratuites restent, avec le pluriel correct pour 'génération'.",
+    "placeholders": {
+      "remainingGenerations": {
+        "type": "int",
+        "example": "1"
+      }
+    }
+  },
+
+  "freeGenerations": "Générations gratuites",
+  "@freeGenerations": {
+    "description": "Label pour le quota de générations gratuites."
+  },
+
+  "exhaustedFreeGenerations": "Générations gratuites épuisées",
+  "@exhaustedFreeGenerations": {
+    "description": "Message lorsque le quota de générations gratuites est épuisé."
+  },
+
+  "exhaustedCredits": "Crédits épuisés",
+  "@exhaustedCredits": {
+    "description": "Message indiquant que tous les crédits sont utilisés."
+  },
+
+  "authForMoreGenerations": "Créez un compte gratuit pour plus de générations",
+  "@authForMoreGenerations": {
+    "description": "Invite à créer un compte pour obtenir plus de générations."
+  },
+
+  "createFreeAccount": "Créer un compte gratuit",
+  "@createFreeAccount": {
+    "description": "Label pour le bouton ou lien pour créer un compte gratuit."
+  },
+
+  "exportRouteTitle": "Exporter l'itinéraire",
+  "@exportRouteTitle": {
+    "description": "Titre pour l'export d'un itinéraire."
+  },
+
+  "exportRouteDesc": "Choisissez le format d'export",
+  "@exportRouteDesc": {
+    "description": "Texte expliquant comment choisir le format d'export."
+  },
+
+  "generateInProgress": "Génération de l'itinéraire...",
+  "@generateInProgress": {
+    "description": "Message affiché pendant la génération de l'itinéraire."
+  },
+
+  "emptyRouteForSave": "Aucun itinéraire à sauvegarder",
+  "@emptyRouteForSave": {
+    "description": "Message lorsqu'il n'y a aucun itinéraire à sauvegarder."
+  },
+
+  "connectionError": "Erreur de connexion",
+  "@connectionError": {
+    "description": "Message en cas d'erreur de connexion."
+  },
+
+  "notAvailableMap": "Carte non disponible",
+  "@notAvailableMap": {
+    "description": "Message lorsque la carte n'est pas disponible."
+  },
+
+  "missingRouteSettings": "Paramètres d'itinéraire manquants",
+  "@missingRouteSettings": {
+    "description": "Message lorsque les paramètres d'itinéraire sont manquants."
+  },
+
+  "savedRoute": "Itinéraire sauvegardé",
+  "@savedRoute": {
+    "description": "Confirmation que l'itinéraire a été sauvegardé."
+  },
+
+  "loginRequiredTitle": "Connexion requise",
+  "@loginRequiredTitle": {
+    "description": "Titre d'une boîte de dialogue indiquant qu'une connexion est requise."
+  },
+
+  "loginRequiredDesc": "Vous devez être connecté pour sauvegarder vos parcours",
+  "@loginRequiredDesc": {
+    "description": "Description expliquant pourquoi une connexion est requise."
+  },
+
+  "reallyContinueTitle": "Voulez-vous vraiment continuer ?",
+  "@reallyContinueTitle": {
+    "description": "Titre pour confirmer si l'utilisateur veut vraiment continuer."
+  },
+
+  "reallyContinueDesc": "Cette action supprimera l'itinéraire généré précédemment, il sera alors irrécupérable !",
+  "@reallyContinueDesc": {
+    "description": "Avertissement que continuer supprimera l'itinéraire actuel."
+  },
+
+  "generationEmptyLocation": "Aucune position disponible pour la génération",
+  "@generationEmptyLocation": {
+    "description": "Message indiquant qu'aucune position n'est disponible pour la génération."
+  },
+
+  "unableLaunchGeneration": "Impossible de lancer la génération",
+  "@unableLaunchGeneration": {
+    "description": "Message lorsque la génération ne peut pas être lancée."
+  },
+
+  "invalidParameters": "Paramètres invalides",
+  "@invalidParameters": {
+    "description": "Message lorsque les paramètres sont invalides."
   }
 }

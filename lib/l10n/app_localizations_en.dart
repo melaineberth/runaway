@@ -996,4 +996,126 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get surfaces => 'Surfaces';
+
+  @override
+  String get easyDifficultyLevel => 'Easy';
+
+  @override
+  String get moderateDifficultyLevel => 'Moderate';
+
+  @override
+  String get hardDifficultyLevel => 'Hard';
+
+  @override
+  String get expertDifficultyLevel => 'Expert';
+
+  @override
+  String get asphaltSurfaceTitle => 'Asphalt';
+
+  @override
+  String get asphaltSurfaceDesc => 'Prioritizes paved roads and sidewalks';
+
+  @override
+  String get mixedSurfaceTitle => 'Mixed';
+
+  @override
+  String get mixedSurfaceDesc => 'Mix of roads and paths according to the route';
+
+  @override
+  String get naturalSurfaceTitle => 'Natural';
+
+  @override
+  String get naturalSurfaceDesc => 'Prioritizes natural trails and paths';
+
+  @override
+  String get searchAdress => 'Search for an address...';
+
+  @override
+  String get chooseName => 'Choose a name';
+
+  @override
+  String get canModifyLater => 'You can modify it later';
+
+  @override
+  String get routeName => 'Route name';
+
+  @override
+  String get limitReachedGenerations => 'Limit reached';
+
+  @override
+  String get exhaustedGenerations => 'Exhausted generations';
+
+  @override
+  String get remainingLimitGenerations => 'Remaining limit';
+
+  @override
+  String remainingGenerationsLabel(int remainingGenerations) {
+    String _temp0 = intl.Intl.pluralLogic(
+      remainingGenerations,
+      locale: localeName,
+      other: 's',
+      one: '',
+    );
+    return '$remainingGenerations free generation$_temp0';
+  }
+
+  @override
+  String get freeGenerations => 'Free generations';
+
+  @override
+  String get exhaustedFreeGenerations => 'Exhausted free generations';
+
+  @override
+  String get exhaustedCredits => 'Credits exhausted';
+
+  @override
+  String get authForMoreGenerations => 'Create a free account for more generations';
+
+  @override
+  String get createFreeAccount => 'Create a free account';
+
+  @override
+  String get exportRouteTitle => 'Export the route';
+
+  @override
+  String get exportRouteDesc => 'Choose the export format';
+
+  @override
+  String get generateInProgress => 'Generation of the route...';
+
+  @override
+  String get emptyRouteForSave => 'No route to save';
+
+  @override
+  String get connectionError => 'Connection error';
+
+  @override
+  String get notAvailableMap => 'Map not available';
+
+  @override
+  String get missingRouteSettings => 'Missing route settings';
+
+  @override
+  String get savedRoute => 'Saved route';
+
+  @override
+  String get loginRequiredTitle => 'Login required';
+
+  @override
+  String get loginRequiredDesc => 'You must be logged in to save your courses';
+
+  @override
+  String get reallyContinueTitle => 'Do you really want to continue?';
+
+  @override
+  String get reallyContinueDesc => 'This action will delete the previously generated route, it will then be unrecoverable!';
+
+  @override
+  String get generationEmptyLocation => 'No position available for the generation';
+
+  @override
+  String get unableLaunchGeneration => 'Unable to launch the generation';
+
+  @override
+  String get invalidParameters => 'Invalid parameters';
 }
