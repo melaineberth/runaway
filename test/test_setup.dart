@@ -67,8 +67,7 @@ class TestSetup {
 
   /// Initialise dotenv directement en mémoire
   static void _initializeDotenvInMemory() {
-    dotenv.env.clear();
-    dotenv.env.addAll({
+    final testEnvContent = '''
       'MAPBOX_TOKEN': 'pk.test_token_for_tests_only',
       'SUPABASE_URL': 'https://test.supabase.co',
       'SUPABASE_ANON_KEY': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRlc3QiLCJyb2xlIjoiYW5vbiIsImlhdCI6MTY0NzY4NzI2MCwiZXhwIjoxOTYzMjYzMjYwfQ.test_signature',
@@ -80,7 +79,10 @@ class TestSetup {
       'ENABLE_PERFORMANCE_MONITORING': 'false',
       'LOG_LEVEL_DEV': 'debug',
       'ENVIRONMENT': 'test',
-    });
+      ''';
+
+      dotenv.testLoad(fileInput: testEnvContent);  // ✅ API officielle pour tests
+
   }
 
   /// Initialise HydratedStorage pour les tests
