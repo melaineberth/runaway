@@ -5,22 +5,14 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:hydrated_bloc/hydrated_bloc.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:get_it/get_it.dart';
-import 'package:runaway/core/utils/injections/service_locator.dart';
 import 'package:runaway/core/helper/config/log_config.dart';
 import 'package:runaway/core/blocs/app_data/app_data_bloc.dart';
 import 'package:runaway/core/blocs/notification/notification_bloc.dart';
 import 'package:runaway/core/blocs/locale/locale_bloc.dart';
 import 'package:runaway/core/blocs/theme_bloc/theme_bloc.dart';
-import 'package:runaway/core/blocs/connectivity/connectivity_cubit.dart';
-import 'package:runaway/features/auth/presentation/bloc/auth_bloc.dart';
-import 'package:runaway/features/credits/presentation/blocs/credits_bloc.dart';
-import 'package:runaway/features/credits/data/repositories/credits_repository.dart';
-import 'package:runaway/features/credits/data/services/credit_verification_service.dart';
 import 'package:runaway/features/route_generator/data/repositories/routes_repository.dart';
 import 'package:runaway/features/auth/data/repositories/auth_repository.dart';
 import 'package:runaway/features/home/data/services/map_state_service.dart';
-import 'package:runaway/core/helper/services/connectivity_service.dart';
-import 'package:runaway/core/helper/services/guest_limitation_service.dart';
 
 /// Configuration ultra-simplifiée pour les tests
 class TestSetup {
