@@ -2362,10 +2362,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
           validLabel: context.l10n.logIn,
           cancelLabel: context.l10n.createAccount,
           onValid: () {
-            showSignModal(context, 1);
+            // showSignModal(context, 1);
+            context.push('/auth/1'); // Login
           },
           onCancel: () {
-            showSignModal(context, 0);
+            // showSignModal(context, 0);
+            context.push('/auth/0');
           },
         ));
       }
@@ -2558,8 +2560,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
                                                               .adaptiveTextSecondary,
                                                   size: 28.0,
                                                 ),
-                                                onPressed:
-                                                    _activateUserTracking,
+                                                onPressed: _activateUserTracking,
                                               ),
                                               // Map style
                                               IconButton(
@@ -2568,8 +2569,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
                                                       .solidRoundedLayerMask01,
                                                   size: 28.0,
                                                 ),
-                                                onPressed:
-                                                    _openMapStyleSelector,
+                                                onPressed: _openMapStyleSelector,
                                               ),
                                             ],
                                           ),

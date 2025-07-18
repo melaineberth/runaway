@@ -2,15 +2,20 @@ import 'package:animated_flip_counter/animated_flip_counter.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/physics.dart';
 import 'package:flutter/services.dart';
+import 'package:go_router/go_router.dart';
+import 'package:runaway/core/helper/config/log_config.dart';
 import 'package:runaway/core/helper/extensions/extensions.dart';
+import 'package:runaway/core/widgets/modal_sheet.dart';
+import 'package:runaway/core/widgets/squircle_btn.dart';
 import 'package:runaway/core/widgets/squircle_container.dart';
+import 'package:runaway/features/auth/presentation/widgets/auth_text_field.dart';
 
-/// ✅ NOUVEAU : Enum pour l'intensité haptique
+/// Enum pour l'intensité haptique
 enum HapticIntensity {
-  light,   // HapticFeedback.lightImpact()
-  medium,  // HapticFeedback.mediumImpact()  
-  heavy,   // HapticFeedback.heavyImpact()
-  custom   // Mix intelligent selon vitesse
+  light, // HapticFeedback.lightImpact()
+  medium, // HapticFeedback.mediumImpact()  
+  heavy, // HapticFeedback.heavyImpact()
+  custom // Mix intelligent selon vitesse
 }
 
 /// Slider squircle avec graduations + **stretch élastique façon iOS**.
@@ -26,7 +31,7 @@ class TickSlider extends StatefulWidget {
   final int minorTickCount, majorEvery;
   final Color majorTickColor, minorTickColor;
 
-  // ✅ NOUVEAU : Configuration haptique
+  // Configuration haptique
   final bool enableHapticFeedback;
   final HapticIntensity hapticIntensity;
 
@@ -37,12 +42,12 @@ class TickSlider extends StatefulWidget {
     required this.initialValue,
     required this.onChanged,
     required this.unit,
-    this.stretch = .80,        // 8 % par défaut
+    this.stretch = .80, // 8 % par défaut
     this.minorTickCount = 48,
     this.majorEvery = 6,
     this.majorTickColor = Colors.grey,
     this.minorTickColor = const Color(0xFF555555),
-    this.enableHapticFeedback = true, // ✅ Activé par défaut
+    this.enableHapticFeedback = true, // Activé par défaut
     this.hapticIntensity = HapticIntensity.medium,
   });
 
@@ -50,27 +55,25 @@ class TickSlider extends StatefulWidget {
   State<TickSlider> createState() => _TickSliderState();
 }
 
-/*────────────────────────────────────────────────────────────*/
 class _TickSliderState extends State<TickSlider> with TickerProviderStateMixin {
   static const _trackH  = 46.0;
   static const _radius  = 30.0;
 
-  late double _value;                   // valeur effective
-  double _overscroll = 0;               // zone de stretch (signée)
-  double _trackW = 0;                   // largeur de la piste (Layout)
+  late double _value; // valeur effective
+  double _overscroll = 0; // zone de stretch (signée)
+  double _trackW = 0; // largeur de la piste (Layout)
 
-  // ✅ NOUVEAU : Variables pour le feedback haptique
-  int _currentTick = 0;              // Cran actuel
+  // Variables pour le feedback haptique
+  int _currentTick = 0; // Cran actuel
   DateTime _lastHapticTime = DateTime.now();
-  double _lastPosition = 0;          // Position précédente pour calcul vitesse
+  double _lastPosition = 0; // Position précédente pour calcul vitesse
   DateTime _lastMoveTime = DateTime.now();
-  final List<double> _velocityHistory = [];  // Historique des vitesses
+  final List<double> _velocityHistory = []; // Historique des vitesses
   bool _isDragging = false;
 
   late final AnimationController _spring;
 
-  double get _maxStretchPx =>
-      widget.stretch <= 1 ? _trackW * widget.stretch : widget.stretch;
+  double get _maxStretchPx => widget.stretch <= 1 ? _trackW * widget.stretch : widget.stretch;
 
   @override
   void initState() {
@@ -78,14 +81,13 @@ class _TickSliderState extends State<TickSlider> with TickerProviderStateMixin {
     _value = widget.initialValue.clamp(widget.min, widget.max);
     _currentTick = _valueToTick(_value);
 
-    // ✅ Initialiser dans initState au lieu de la déclaration
+    // Initialiser dans initState au lieu de la déclaration
     _spring = AnimationController.unbounded(vsync: this)
       ..addListener(() {
         if (mounted) {
           setState(() => _overscroll = _spring.value);
         }
       });
-
   }
 
   @override
@@ -94,7 +96,6 @@ class _TickSliderState extends State<TickSlider> with TickerProviderStateMixin {
     super.dispose();
   }
 
-/*──────────────── helpers ────────────────*/
   /// Convertit une valeur en numéro de cran
   int _valueToTick(double value) {
     final normalizedValue = (value - widget.min) / (widget.max - widget.min);
@@ -132,7 +133,7 @@ class _TickSliderState extends State<TickSlider> with TickerProviderStateMixin {
     
     final now = DateTime.now();
     
-    // ✅ Limiter la fréquence selon la vitesse
+    // Limiter la fréquence selon la vitesse
     final minInterval = _getMinHapticInterval(velocity);
     if (now.difference(_lastHapticTime).inMilliseconds < minInterval) {
       return;
@@ -140,7 +141,7 @@ class _TickSliderState extends State<TickSlider> with TickerProviderStateMixin {
     
     _lastHapticTime = now;
     
-    // ✅ Choisir le type de feedback selon l'intensité configurée et la vitesse
+    // Choisir le type de feedback selon l'intensité configurée et la vitesse
     switch (widget.hapticIntensity) {
       case HapticIntensity.light:
         HapticFeedback.lightImpact();
@@ -176,11 +177,11 @@ class _TickSliderState extends State<TickSlider> with TickerProviderStateMixin {
     if (velocity < 50) {
       return 150; // Lent : max 6.7 haptics/sec
     } else if (velocity < 200) {
-      return 80;  // Moyen : max 12.5 haptics/sec
+      return 80; // Moyen : max 12.5 haptics/sec
     } else if (velocity < 500) {
-      return 50;  // Rapide : max 20 haptics/sec
+      return 50; // Rapide : max 20 haptics/sec
     } else {
-      return 30;  // Très rapide : max 33 haptics/sec
+      return 30; // Très rapide : max 33 haptics/sec
     }
   }
 
@@ -195,7 +196,7 @@ class _TickSliderState extends State<TickSlider> with TickerProviderStateMixin {
   void _updateDrag(Offset pos) {
     final x = pos.dx;
 
-    // ✅ Calculer la vitesse pour le feedback haptique
+    // Calculer la vitesse pour le feedback haptique
     final velocity = _calculateVelocity(x);
 
     if (x >= 0 && x <= _trackW) {
@@ -203,7 +204,7 @@ class _TickSliderState extends State<TickSlider> with TickerProviderStateMixin {
       final p = x / _trackW;
       final v = widget.min + (widget.max - widget.min) * p;
 
-      // ✅ NOUVEAU : Détection des changements de cran
+      // Détection des changements de cran
       final newTick = _valueToTick(v);
       if (_isDragging && newTick != _currentTick) {
         _currentTick = newTick;
@@ -224,7 +225,7 @@ class _TickSliderState extends State<TickSlider> with TickerProviderStateMixin {
     _lastMoveTime = DateTime.now();
     _velocityHistory.clear();
     
-    // ✅ Feedback haptique de début de drag
+    // Feedback haptique de début de drag
     if (widget.enableHapticFeedback) {
       HapticFeedback.selectionClick();
     }
@@ -234,7 +235,7 @@ class _TickSliderState extends State<TickSlider> with TickerProviderStateMixin {
     _isDragging = false;
     _velocityHistory.clear();
     
-    // ✅ Feedback haptique de fin de drag si overscroll
+    // Feedback haptique de fin de drag si overscroll
     if (_overscroll != 0 && widget.enableHapticFeedback) {
       HapticFeedback.lightImpact();
     }
@@ -249,13 +250,10 @@ class _TickSliderState extends State<TickSlider> with TickerProviderStateMixin {
     _spring.animateWith(SpringSimulation(spring, _overscroll, 0, 0));
   }
 
-
-/*──────────────── build ─────────────*/
   @override
   Widget build(BuildContext context) {
     return Row(
       children: [
-        /* pill valeur */
         SquircleContainer(
           radius: _radius,
           width: 90,
@@ -263,6 +261,35 @@ class _TickSliderState extends State<TickSlider> with TickerProviderStateMixin {
           color: context.adaptivePrimary,
           isGlow: true,
           gradient: false,
+          onTap: () async {
+            final newInput = await showModalBottomSheet<double>(
+              context: context, 
+              backgroundColor: Colors.transparent,
+              builder: (context) {
+                return SaveRouteSheet(
+                  unit: widget.unit,
+                  minValue: widget.min,
+                  maxValue: widget.max,
+                  initialValue: _value.toStringAsFixed(0),
+                );
+              },
+            );
+            
+            if (!mounted) return;
+
+            if (newInput != null) {
+              final clamped = newInput.clamp(widget.min, widget.max);
+
+              LogConfig.logDebug('Nouvelle valeur : $clamped');
+
+              setState(() {
+                _value = clamped;
+                _currentTick = _valueToTick(_value);
+              });
+
+              widget.onChanged(_value);
+            }
+          },
           child: Center(
             child: AnimatedFlipCounter(
               duration: Duration(milliseconds: 500),
@@ -308,11 +335,11 @@ class _TickSliderState extends State<TickSlider> with TickerProviderStateMixin {
             return GestureDetector(
               behavior: HitTestBehavior.opaque,
               onTapDown: (d) {
-                _startDrag(); // ✅ NOUVEAU
+                _startDrag();
                 _updateDrag(d.localPosition);
               },
               onHorizontalDragStart: (d) {
-                _startDrag(); // ✅ NOUVEAU  
+                _startDrag();  
                 _updateDrag(d.localPosition);
               },
               onHorizontalDragUpdate:(d) => _updateDrag(d.localPosition),
@@ -427,3 +454,89 @@ class _RulerPainter extends CustomPainter {
       old.minorColor  != minorColor;
 }
 
+class SaveRouteSheet extends StatefulWidget {
+  final String initialValue;
+  final String unit;
+  final double maxValue, minValue;
+
+  const SaveRouteSheet({
+    super.key,
+    required this.unit, 
+    required this.initialValue, 
+    required this.minValue, 
+    required this.maxValue, 
+  });
+
+  @override
+  State<SaveRouteSheet> createState() => _SaveRouteSheetState();
+}
+
+class _SaveRouteSheetState extends State<SaveRouteSheet> {
+  late final TextEditingController _ctl;
+  final formKey = GlobalKey<FormState>();
+
+  @override
+  void initState() {
+    super.initState();
+    _ctl = TextEditingController(text: widget.initialValue);
+  }
+
+  @override
+  void dispose() {
+    _ctl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ModalSheet(
+      child: Padding(
+        padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+        child: Form(
+          key: formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              AuthTextField(
+                controller: _ctl,
+                autofocus: true,
+                keyboardType: TextInputType.numberWithOptions(),
+                hint:widget.unit,
+                validator: (value) {
+                  if (value == null || value.trim().isEmpty) {
+                    return 'Champ obligatoire';
+                  }
+                  final parsed = double.tryParse(value.trim().replaceAll(',', '.'));
+                  if (parsed == null) {
+                    return 'Veuillez entrer un nombre valide';
+                  }
+                  if (parsed <= widget.minValue) {
+                    return 'La valeur doit être supérieur ou égale à ${widget.minValue.toStringAsFixed(0)}';
+                  }
+                  if (parsed > widget.maxValue) {
+                    return 'La valeur doit être inférieure ou égale à ${widget.maxValue.toStringAsFixed(0)}';
+                  }
+                  return null;
+                },
+              ),
+                
+              12.h,
+          
+              SquircleBtn(
+                isPrimary: true,
+                onTap: () {
+                  if (formKey.currentState?.validate() ?? false) {
+                    final value = double.parse(_ctl.text.trim().replaceAll(',', '.'));
+                    context.pop(value); // On renvoie un double, plus un String
+                  }
+                }, // Désactiver si loading
+                label: context.l10n.save,
+              ),              
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}

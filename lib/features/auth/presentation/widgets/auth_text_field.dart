@@ -10,6 +10,7 @@ class AuthTextField extends StatefulWidget {
   final Function(String)? onChanged;
   final String? Function(String?)? validator;
   final bool enabled;
+  final bool autofocus;
   final TextInputType? keyboardType;
   final int? maxLength;
   final Widget? suffixIcon;
@@ -26,6 +27,7 @@ class AuthTextField extends StatefulWidget {
     this.obscureText = false,
     this.validator,
     this.enabled = true,
+    this.autofocus = false,
     this.keyboardType,
     this.maxLength,
     this.suffixIcon,
@@ -57,6 +59,7 @@ class _AuthTextFieldState extends State<AuthTextField> {
         children: [
           Expanded(
             child: TextFormField(
+              autofocus: widget.autofocus,
               initialValue: widget.initialValue,
               textCapitalization: widget.textCapitalization ?? TextCapitalization.none,
               autocorrect: false,

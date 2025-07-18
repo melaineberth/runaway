@@ -30,13 +30,13 @@ class SelectableBtn extends StatelessWidget {
               color: active ? Colors.red : Colors.red.shade200,
               borderRadius: BorderRadius.circular(15),
               border:
-                  active
-                      ? Border.all(
-                        color: Colors.blue,
-                        width: 4,
-                        strokeAlign: BorderSide.strokeAlignInside,
-                      )
-                      : null,
+                active
+                  ? Border.all(
+                    color: Colors.blue,
+                    width: 4,
+                    strokeAlign: BorderSide.strokeAlignInside,
+                  )
+                  : null,
             ),
             child: HugeIcon(
               icon: icon,

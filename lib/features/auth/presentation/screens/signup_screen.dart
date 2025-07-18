@@ -1,22 +1,32 @@
-import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
-import 'package:hugeicons/hugeicons.dart';
 import 'package:runaway/core/helper/extensions/extensions.dart';
 import 'package:runaway/core/utils/injections/bloc_provider_extension.dart';
-import 'package:runaway/core/widgets/label_divider.dart';
+import 'package:runaway/core/widgets/modal_sheet.dart';
 import 'package:runaway/core/widgets/squircle_btn.dart';
 import 'package:runaway/features/auth/presentation/bloc/auth_event.dart';
 import 'package:runaway/features/auth/presentation/widgets/auth_text_field.dart';
 import 'package:runaway/features/auth/presentation/widgets/password_strength_indicator.dart';
 
 class SignupScreen extends StatefulWidget {
-  final VoidCallback onSwitchToLogin;
   final bool isLoading;
+  final bool passwordStrength;
+  final GlobalKey<FormState> formKey;
+  final TextEditingController emailController;
+  final TextEditingController passwordController;
+  final TextEditingController confirmPasswordController;
+  final String? Function(String?)? emailValidator;
+  final String? Function(String?)? passwordValidator;
 
   const SignupScreen({
     super.key,
-    required this.onSwitchToLogin,
     required this.isLoading,
+    required this.passwordStrength,
+    required this.formKey,
+    required this.emailController,
+    required this.passwordController,
+    required this.confirmPasswordController,
+    required this.emailValidator,
+    required this.passwordValidator,
   });
 
   @override
@@ -24,259 +34,74 @@ class SignupScreen extends StatefulWidget {
 }
 
 class _SignupScreenState extends State<SignupScreen> {
-  final _formKey = GlobalKey<FormState>();
-  final TextEditingController _emailController = TextEditingController();
-  final TextEditingController _passwordController = TextEditingController();
-  final TextEditingController _confirmPasswordController = TextEditingController();
 
-  // 🆕 Ajouter ces variables pour l'indicateur de force
-  bool _showPasswordStrength = false;
-
-  @override
-  void initState() {
-    super.initState();
-    // 🆕 Écouter les changements du mot de passe
-    _passwordController.addListener(_onPasswordChanged);
-  }
-
-  // 🆕 Ajouter cette méthode
-  void _onPasswordChanged() {
-    setState(() {
-      _showPasswordStrength = _passwordController.text.isNotEmpty;
-    });
-  }
-
-  @override
-  void dispose() {
-    _emailController.dispose();
-    _passwordController.dispose();
-    _confirmPasswordController.dispose();
-    super.dispose();
-  }
-
-  String? emailValidator(String? v) => v != null && v.contains('@') ? null : context.l10n.emailInvalid;
-
-  // 🆕 Modifier la validation du mot de passe pour inclure toutes les exigences
-  String? passwordValidator(String? v) {
-    if (v == null || v.isEmpty) {
-      return 'Mot de passe requis';
-    }
-    
-    if (v.length < 8) {
-      return 'Au moins 8 caractères requis';
-    }
-    
-    if (!v.contains(RegExp(r'[A-Z]'))) {
-      return 'Au moins une majuscule requise';
-    }
-    
-    if (!v.contains(RegExp(r'[a-z]'))) {
-      return 'Au moins une minuscule requise';
-    }
-    
-    if (!v.contains(RegExp(r'[0-9]'))) {
-      return 'Au moins un chiffre requis';
-    }
-    
-    if (!v.contains(RegExp(r'[!@#$%^&*(),.?":{}|<>]'))) {
-      return 'Au moins un symbole requis';
-    }
-    
-    return null;
-  }
-  
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        const Spacer(),
-        _buildSignUpInfo(),
-        40.h,
-        _buildSocialButtons(),
-        30.h,
-        LabelDivider(
-          label: context.l10n.orDivider,
-        ),
-        30.h,
-        Form(
-          key: _formKey,
-          child: Padding(
-            padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
-            child: Column(
+    return ModalSheet(
+      child: Padding(
+        padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Column(
               children: [
                 AuthTextField(
                   hint: context.l10n.emailHint,
-                  validator: emailValidator,
-                  controller: _emailController,
+                  validator: widget.emailValidator,
+                  controller: widget.emailController,
                   enabled: !widget.isLoading,
                 ),
                 10.h,
                 AuthTextField(
                   hint: context.l10n.passwordHint,
                   obscureText: true,
-                  validator: passwordValidator,
-                  controller: _passwordController,
+                  validator: widget.passwordValidator,
+                  controller: widget.passwordController,
                   enabled: !widget.isLoading,
                 ),
                 // 🆕 Ajouter l'indicateur de force
                 PasswordStrengthIndicator(
-                  password: _passwordController.text,
-                  isVisible: _showPasswordStrength,
+                  password: widget.passwordController.text,
+                  isVisible: widget.passwordStrength,
                 ),
                 10.h,
                 AuthTextField(
                   hint: context.l10n.confirmPasswordHint,
                   obscureText: true,
-                  validator: (v) => v == _passwordController.text 
+                  validator: (v) => v == widget.passwordController.text 
                       ? null 
                       : context.l10n.passwordsDontMatchError,
-                  controller: _confirmPasswordController,
+                  controller: widget.confirmPasswordController,
                   enabled: !widget.isLoading,
                 ),
               ],
             ),
-          ),
-        ),
-        10.h,
+            10.h,
         
-        _buildSignUpButton(),
-        
-        25.h,
-        const Spacer(),
-        Text.rich(
-          TextSpan(
-            children: [
-              TextSpan(
-                text: context.l10n.haveAccount,
-                style: context.bodySmall?.copyWith(
-                  fontSize: 15,
-                  color: context.adaptiveTextPrimary,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-              TextSpan(
-                text: ' ${context.l10n.logIn}',
-                style: context.bodySmall?.copyWith(
-                  fontSize: 15,
-                  color: context.adaptivePrimary,
-                  fontWeight: FontWeight.w700,
-                ),
-                recognizer: TapGestureRecognizer()..onTap = widget.onSwitchToLogin,
-              ),
-            ],
-          ),
+            _buildSignUpButton(isLoading: widget.isLoading),
+          ],
         ),
-        10.h,
-      ],
+      ),
     );
   }
-
-  Widget _buildSignUpInfo() {
-    return Column(
-      children: [
-        Text(
-          context.l10n.createAccountTitle,
-          style: context.bodyMedium?.copyWith(
-            fontSize: 22,
-            color: context.adaptiveTextPrimary,
-          ),
-          textAlign: TextAlign.center,
-        ),
-        12.h,
-        Text(
-          context.l10n.createAccountSubtitle,
-          style: context.bodySmall?.copyWith(
-            color: context.adaptiveTextSecondary,
-            fontWeight: FontWeight.w400,
-          ),
-          textAlign: TextAlign.center,
-        ),
-      ],
-    );
-  }
-
-  Widget _buildSignUpButton() {
+  
+  Widget _buildSignUpButton({required bool isLoading}) {
     return SquircleBtn(
       isPrimary: true,
-      isLoading: widget.isLoading,
-      onTap: widget.isLoading ? null : _handleSignUp,
+      isLoading: isLoading,
+      onTap: isLoading ? null : _handleSignUp,
       label: context.l10n.continueForms,
     );
   }
 
-  Widget _buildSocialButtons() {
-    return SizedBox(
-      width: double.infinity,
-      child: Row(
-        children: [
-          Expanded(
-            child: SquircleBtn(
-              isPrimary: true,
-              isLoading: widget.isLoading,
-              onTap: widget.isLoading ? null : _handleAppleSignIn,
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    HugeIcons.solidSharpApple,
-                    color: Colors.white,
-                  ),
-                  5.w,
-                  Text(
-                    context.l10n.apple,
-                    style: context.bodySmall?.copyWith(
-                      color: Colors.white,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          8.w,
-          Expanded(
-            child: SquircleBtn(
-              isPrimary: true,
-              isLoading: widget.isLoading,
-              onTap: widget.isLoading ? null : _handleGoogleSignIn,
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    HugeIcons.solidSharpGoogle,
-                    color: Colors.white,
-                  ),
-                  5.w,
-                  Text(
-                    context.l10n.google,
-                    style: context.bodySmall?.copyWith(
-                      color: Colors.white,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   void _handleSignUp() {
-    if (_formKey.currentState!.validate()) {
+    if (widget.formKey.currentState!.validate()) {
       context.authBloc.add(
         SignUpBasicRequested(
-          email: _emailController.text.trim(),
-          password: _passwordController.text, 
+          email: widget.emailController.text.trim(),
+          password: widget.passwordController.text, 
         ),
       );
     }
-  }
-
-  void _handleGoogleSignIn() {
-    context.authBloc.add(GoogleSignInRequested());
-  }
-
-  void _handleAppleSignIn() {
-    context.authBloc.add(AppleSignInRequested());
   }
 }

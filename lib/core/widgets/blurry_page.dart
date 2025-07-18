@@ -149,7 +149,7 @@ class _BlurryPageState extends State<BlurryPage> with TickerProviderStateMixin {
                 IgnorePointer(
                   ignoring: true,
                   child: Container(
-                    height: MediaQuery.of(context).size.height / 3,
+                    height: MediaQuery.of(context).size.height / 2.5,
                     decoration: BoxDecoration(
                       gradient: SmoothGradient(
                         from:

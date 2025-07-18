@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:go_router/go_router.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:runaway/core/helper/extensions/extensions.dart';
 import 'package:runaway/core/widgets/modal_dialog.dart';
@@ -98,12 +99,12 @@ void showAuthModal(BuildContext context) {
       validLabel: context.l10n.logIn,
       cancelLabel: context.l10n.createAccount,
       onValid: () {
-        showSignModal(context, 1);
-        // context.go('/auth/1'); // Login
+        // showSignModal(context, 1);
+        context.push('/auth/1'); // Login
       },
       onCancel: () {
-        showSignModal(context, 0);
-        // context.go('/auth/0');
+        // showSignModal(context, 0);
+        context.push('/auth/0');
       },
     ),
   );
