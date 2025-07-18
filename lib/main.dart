@@ -105,6 +105,7 @@ Future<void> _initializeCriticalServices() async {
   
   try {
     await Future.wait([
+      _testSecureStorage(),
       // Configuration et environnement
       _loadEnvironmentConfig(),
       // Storage local pour HydratedBloc
@@ -239,6 +240,18 @@ Future<void> _loadEnvironmentConfig() async {
       errorMessage: e.toString(),
     );
     rethrow;
+  }
+}
+
+Future<void> _testSecureStorage() async {
+  try {        
+    final isHealthy = await SecureConfig.checkSecureStorageHealth();
+    
+    if (!isHealthy) {
+      await SecureConfig.forceKeychainCleanup();
+    }
+  } catch (e) {
+    LogConfig.logError('❌ Erreur de stockage sécurisé: $e');
   }
 }
 

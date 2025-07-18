@@ -30,12 +30,25 @@ class AuthRepository {
   /// 🔒 Stocke les tokens d'une session de façon sécurisée
   Future<void> _storeSessionTokensSecurely(Session session) async {
     try {
+      // 🆕 FORCER l'affichage avec print pour diagnostic
+      print('🔒 DEBUT STOCKAGE TOKENS SESSION');
+      
+      // Vérifier d'abord l'état du stockage sécurisé
+      final isStorageHealthy = await SecureConfig.checkSecureStorageHealth();
+      print('🔒 SANTE STOCKAGE SECURISE: $isStorageHealthy');
+      
       await SecureConfig.storeAccessToken(session.accessToken);
+      print('🔒 ACCESS TOKEN TRAITE');
+      
       if (session.refreshToken != null) {
         await SecureConfig.storeRefreshToken(session.refreshToken!);
+        print('🔒 REFRESH TOKEN TRAITE');
       }
+      
+      print('🔒 TOKENS SESSION STOCKES AVEC SUCCES');
       LogConfig.logInfo('🔒 Tokens session stockés de façon sécurisée');
     } catch (e) {
+      print('⚠️ ERREUR STOCKAGE SECURISE: $e');
       LogConfig.logWarning('⚠️ Stockage sécurisé échoué (continuons): $e');
       // Ne pas faire échouer l'auth si le stockage sécurisé échoue
     }
