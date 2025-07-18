@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
+import 'package:runaway/core/helper/config/secure_config.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:runaway/core/helper/config/log_config.dart';
 
@@ -28,17 +29,19 @@ class SessionManager {
 
   Timer? _sessionTimer;
   Timer? _refreshTimer;
+  Timer? _rotationTimer; // 🔒 Timer pour rotation automatique
   StreamController<SessionEvent>? _eventController;
   StreamSubscription<AuthState>? _authSubscription;
 
   SessionStatus _currentStatus = SessionStatus.unauthenticated;
   DateTime? _lastRefresh;
+  DateTime? _lastRotation; // 🔒 Dernière rotation des tokens
   int _consecutiveErrors = 0;
+  bool _isRotating = false; // 🔒 Éviter les rotations multiples
 
   static const Duration _monitoringInterval = Duration(minutes: 2);
-  static const Duration _refreshWarningThreshold = Duration(
-    minutes: 50,
-  ); // Refresh avant expiration
+  static const Duration _refreshWarningThreshold = Duration(minutes: 50); // Refresh avant expiration
+  static const Duration _tokenRotationInterval = Duration(hours: 6); // 🔒 Rotation toutes les 6h
   static const int _maxConsecutiveErrors = 3;
 
   /// Stream des événements de session
@@ -51,14 +54,25 @@ class SessionManager {
   SessionStatus get currentStatus => _currentStatus;
 
   /// Démarre le monitoring des sessions
-  void startSessionMonitoring() {
+  void startSessionMonitoring() async {
     if (_sessionTimer != null) return; // Déjà démarré
 
-    debugPrint('🔐 Démarrage monitoring des sessions');
+    debugPrint('🔐 Démarrage monitoring des sessions avec rotation automatique');
+
+    // Vérifier que le stockage sécurisé est disponible
+    final isSecureStorageOk = await SecureConfig.isSecureStorageAvailable();
+    if (!isSecureStorageOk) {
+      LogConfig.logWarning('⚠️ Stockage sécurisé non disponible, fonctionnalités limitées');
+    }
 
     // Monitoring principal
     _sessionTimer = Timer.periodic(_monitoringInterval, (timer) {
       _checkSessionHealth();
+    });
+
+    // 🔒 Monitoring de rotation automatique
+    _rotationTimer = Timer.periodic(_tokenRotationInterval, (timer) {
+      _performTokenRotation();
     });
 
     // Écouter les changements d'authentification Supabase
@@ -71,9 +85,67 @@ class SessionManager {
     );
 
     // Vérification initiale
+    await _initializeStoredTokens();
     _checkSessionHealth();
 
     LogConfig.logInfo('Monitoring des sessions démarré');
+  }
+
+  /// 🔒 Initialise les tokens stockés au démarrage
+  Future<void> _initializeStoredTokens() async {
+    try {
+      final session = Supabase.instance.client.auth.currentSession;
+      if (session != null) {
+        // Stocker les tokens de la session actuelle
+        await SecureConfig.storeAccessToken(session.accessToken);
+        if (session.refreshToken != null) {
+          await SecureConfig.storeRefreshToken(session.refreshToken!);
+        }
+        
+        // Générer une clé de rotation si pas déjà présente
+        await SecureConfig.generateRotationKey();
+        
+        LogConfig.logInfo('🔒 Tokens initialisés dans le stockage sécurisé');
+      }
+    } catch (e) {
+      LogConfig.logError('❌ Erreur initialisation tokens: $e');
+    }
+  }
+
+  /// 🔒 Rotation automatique des tokens
+  Future<void> _performTokenRotation() async {
+    if (_isRotating || _currentStatus != SessionStatus.authenticated) {
+      return;
+    }
+
+    try {
+      _isRotating = true;
+      LogConfig.logInfo('🔄 Début rotation automatique des tokens');
+
+      // Vérifier si une rotation est nécessaire
+      if (_lastRotation != null) {
+        final timeSinceLastRotation = DateTime.now().difference(_lastRotation!);
+        if (timeSinceLastRotation < _tokenRotationInterval) {
+          LogConfig.logInfo('🔒 Rotation non nécessaire, trop récente');
+          return;
+        }
+      }
+
+      // Effectuer le refresh qui va générer de nouveaux tokens
+      await _attemptRefresh();
+      
+      // Générer une nouvelle clé de rotation
+      await SecureConfig.generateRotationKey();
+      
+      _lastRotation = DateTime.now();
+      LogConfig.logSuccess('🔒 Rotation automatique des tokens réussie');
+      
+    } catch (e) {
+      LogConfig.logError('❌ Erreur rotation automatique: $e');
+      _emitEvent(SessionStatus.error, 'Erreur rotation: $e');
+    } finally {
+      _isRotating = false;
+    }
   }
 
   /// Arrête le monitoring
@@ -83,6 +155,10 @@ class SessionManager {
 
     _refreshTimer?.cancel();
     _refreshTimer = null;
+
+    // 🔒 Arrêter le timer de rotation
+    _rotationTimer?.cancel();
+    _rotationTimer = null;
 
     _authSubscription?.cancel();
     _authSubscription = null;
@@ -109,7 +185,7 @@ class SessionManager {
     debugPrint('⏰ Refresh programmé dans ${refreshDelay.inMinutes} minutes');
   }
 
-  /// Tente un refresh du token
+  /// 🔒 Tente un refresh du token avec stockage sécurisé
   Future<void> _attemptRefresh() async {
     if (_currentStatus == SessionStatus.refreshing) return; // Éviter les refresh multiples
 
@@ -117,6 +193,16 @@ class SessionManager {
       _updateStatus(SessionStatus.refreshing, 'Refresh en cours');
 
       await Supabase.instance.client.auth.refreshSession();
+      
+      // 🔒 Stocker les nouveaux tokens de façon sécurisée
+      final newSession = Supabase.instance.client.auth.currentSession;
+      if (newSession != null) {
+        await SecureConfig.storeAccessToken(newSession.accessToken);
+        if (newSession.refreshToken != null) {
+          await SecureConfig.storeRefreshToken(newSession.refreshToken!);
+        }
+      }
+      
       _lastRefresh = DateTime.now();
 
       LogConfig.logInfo('Session refreshed avec succès');
@@ -136,6 +222,9 @@ class SessionManager {
       case AuthChangeEvent.signedIn:
         _updateStatus(SessionStatus.authenticated, 'Connexion réussie');
         _lastRefresh = DateTime.now();
+        
+        // 🔒 Stocker les tokens lors de la connexion
+        _storeSessionTokens();
         break;
 
       case AuthChangeEvent.signedOut:
@@ -146,6 +235,9 @@ class SessionManager {
       case AuthChangeEvent.tokenRefreshed:
         _updateStatus(SessionStatus.authenticated, 'Token refreshed');
         _lastRefresh = DateTime.now();
+        
+        // 🔒 Mettre à jour les tokens stockés
+        _storeSessionTokens();
         break;
 
       case AuthChangeEvent.userUpdated:
@@ -153,7 +245,6 @@ class SessionManager {
         LogConfig.logInfo('👤 Profil utilisateur mis à jour');
         break;
 
-      // 🆕 AJOUT : Gestion de l'événement initialSession
       case AuthChangeEvent.initialSession:
         // Session restaurée au démarrage - vérifier sa validité
         final user = Supabase.instance.client.auth.currentUser;
@@ -163,6 +254,10 @@ class SessionManager {
             'Session initiale restaurée',
           );
           _lastRefresh = DateTime.now();
+          
+          // 🔒 Stocker les tokens de la session restaurée
+          _storeSessionTokens();
+          
           LogConfig.logSuccess('Session initiale valide restaurée pour: ${user.email}');
         } else {
           _updateStatus(SessionStatus.expired, 'Session initiale expirée');
@@ -170,14 +265,28 @@ class SessionManager {
         }
         break;
 
-      // 🆕 AJOUT : Gestion des événements de mot de passe
       case AuthChangeEvent.passwordRecovery:
         debugPrint('🔑 Récupération de mot de passe initiée');
         break;
 
       default:
         debugPrint('🤔 Événement auth non critique: ${authState.event}');
-      // Pour les événements non critiques, on ne change pas le statut mais on log
+    }
+  }
+
+  /// 🔒 Stocke les tokens de session de façon sécurisée
+  Future<void> _storeSessionTokens() async {
+    try {
+      final session = Supabase.instance.client.auth.currentSession;
+      if (session != null) {
+        await SecureConfig.storeAccessToken(session.accessToken);
+        if (session.refreshToken != null) {
+          await SecureConfig.storeRefreshToken(session.refreshToken!);
+        }
+        LogConfig.logInfo('🔒 Tokens session stockés de façon sécurisée');
+      }
+    } catch (e) {
+      LogConfig.logError('❌ Erreur stockage tokens session: $e');
     }
   }
 
@@ -197,22 +306,35 @@ class SessionManager {
     _eventController?.add(SessionEvent(status: status, reason: reason));
   }
 
-  /// Force la déconnexion en cas de problème critique
+  /// 🔒 Force la déconnexion avec nettoyage sécurisé
   void _forceLogout(String reason) async {
     try {
       debugPrint('🚪 Déconnexion forcée: $reason');
+      
+      // 🔒 Nettoyer les tokens stockés avant déconnexion
+      await SecureConfig.clearStoredTokens();
+      
       await Supabase.instance.client.auth.signOut();
     } catch (e) {
       LogConfig.logError('❌ Erreur déconnexion forcée: $e');
     }
   }
 
-  /// Nettoyage après déconnexion
-  void _cleanup() {
+  /// 🔒 Nettoyage après déconnexion avec tokens
+  void _cleanup() async {
     _refreshTimer?.cancel();
     _refreshTimer = null;
+    
+    _rotationTimer?.cancel();
+    _rotationTimer = null;
+    
     _lastRefresh = null;
+    _lastRotation = null;
     _consecutiveErrors = 0;
+    _isRotating = false;
+    
+    // 🔒 Nettoyer les tokens stockés
+    await SecureConfig.clearStoredTokens();
   }
 
   /// Vérifie si la session est réellement valide
@@ -230,7 +352,8 @@ class SessionManager {
     return now.isBefore(expiresAt);
   }
 
-  bool isSessionHealthy() {
+  /// 🔒 Vérifie la santé globale avec tokens stockés
+  Future<bool> isSessionHealthy() async {
     try {
       final user = Supabase.instance.client.auth.currentUser;
       final session = Supabase.instance.client.auth.currentSession;
@@ -246,15 +369,35 @@ class SessionManager {
       );
       final marginBeforeExpiry = const Duration(minutes: 5);
 
-      return now.isBefore(expiresAt.subtract(marginBeforeExpiry));
+      // 🔒 Vérifier aussi les tokens stockés
+      final isStoredTokenExpired = await SecureConfig.isTokenExpired();
+      
+      return now.isBefore(expiresAt.subtract(marginBeforeExpiry)) && !isStoredTokenExpired;
     } catch (e) {
       LogConfig.logError('❌ Erreur vérification santé session: $e');
       return false;
     }
   }
 
-  // 🆕 AJOUT : Amélioration de la vérification de session
-  void _checkSessionHealth() async {
+  /// 🔒 Forcer une rotation des tokens (méthode publique)
+  Future<bool> forceTokenRotation() async {
+    if (_currentStatus != SessionStatus.authenticated) {
+      LogConfig.logWarning('⚠️ Impossible de forcer rotation: session non authentifiée');
+      return false;
+    }
+
+    try {
+      await _performTokenRotation();
+      return true;
+    } catch (e) {
+      LogConfig.logError('❌ Erreur rotation forcée: $e');
+      return false;
+    }
+  }
+
+  // Amélioration de la vérification de session
+  /// 🔒 Validation JWT améliorée
+  Future<void> _checkSessionHealth() async {
     try {
       final user = Supabase.instance.client.auth.currentUser;
       final session = Supabase.instance.client.auth.currentSession;
@@ -262,6 +405,27 @@ class SessionManager {
       if (user == null || session == null) {
         _updateStatus(SessionStatus.unauthenticated, 'Aucune session active');
         return;
+      }
+
+      // 🔒 Validation du JWT stocké
+      final storedToken = await SecureConfig.getStoredAccessToken();
+      if (storedToken != null) {
+        if (!SecureConfig.isValidJWT(storedToken)) {
+          LogConfig.logWarning('⚠️ Token JWT stocké invalide');
+          await _attemptRefresh();
+          return;
+        }
+
+        // Vérifier l'expiration depuis le JWT lui-même
+        final jwtExpiry = SecureConfig.getJWTExpiration(storedToken);
+        if (jwtExpiry != null) {
+          final now = DateTime.now();
+          if (now.isAfter(jwtExpiry)) {
+            LogConfig.logWarning('⚠️ Token JWT expiré selon payload');
+            await _attemptRefresh();
+            return;
+          }
+        }
       }
 
       // Vérifier l'expiration du token avec plus de détails
@@ -277,7 +441,15 @@ class SessionManager {
         return;
       }
 
-      // 🆕 AMÉLIORATION : Log plus détaillé du statut de la session
+      // 🔒 Vérification du stockage sécurisé
+      final isTokenExpired = await SecureConfig.isTokenExpired();
+      if (isTokenExpired) {
+        LogConfig.logInfo('🔒 Token proche expiration selon stockage sécurisé');
+        await _attemptRefresh();
+        return;
+      }
+
+      // Amélioration : Log plus détaillé du statut de la session
       if (timeUntilExpiry <= _refreshWarningThreshold) {
         debugPrint(
           '⚠️ Session proche de l\'expiration: ${timeUntilExpiry.inMinutes} minutes restantes',
@@ -316,9 +488,10 @@ class SessionManager {
     _checkSessionHealth();
   }
 
-  /// Dispose des ressources
+  /// 🔒 Dispose des ressources avec nettoyage complet
   void dispose() {
     stopSessionMonitoring();
+    _cleanup();
     _eventController?.close();
     _eventController = null;
   }

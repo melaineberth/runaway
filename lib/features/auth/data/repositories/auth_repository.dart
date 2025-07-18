@@ -27,6 +27,107 @@ class AuthRepository {
   // ---------- stream Auth (session) ----------
   Stream<AuthState> get authChangesStream => _supabase.auth.onAuthStateChange;
 
+  /// 🔒 Stocke les tokens d'une session de façon sécurisée
+  Future<void> _storeSessionTokensSecurely(Session session) async {
+    try {
+      // 🆕 FORCER l'affichage avec print pour diagnostic
+      print('🔒 DEBUT STOCKAGE TOKENS SESSION');
+      
+      // Vérifier d'abord l'état du stockage sécurisé
+      final isStorageHealthy = await SecureConfig.checkSecureStorageHealth();
+      print('🔒 SANTE STOCKAGE SECURISE: $isStorageHealthy');
+      
+      await SecureConfig.storeAccessToken(session.accessToken);
+      print('🔒 ACCESS TOKEN TRAITE');
+      
+      if (session.refreshToken != null) {
+        await SecureConfig.storeRefreshToken(session.refreshToken!);
+        print('🔒 REFRESH TOKEN TRAITE');
+      }
+      
+      print('🔒 TOKENS SESSION STOCKES AVEC SUCCES');
+      LogConfig.logInfo('🔒 Tokens session stockés de façon sécurisée');
+    } catch (e) {
+      print('⚠️ ERREUR STOCKAGE SECURISE: $e');
+      LogConfig.logWarning('⚠️ Stockage sécurisé échoué (continuons): $e');
+      // Ne pas faire échouer l'auth si le stockage sécurisé échoue
+    }
+  }
+
+  /// 🔒 Valide un token JWT avant utilisation
+  bool _validateTokenBeforeUse(String token) {
+    try {
+      if (!SecureConfig.isValidJWT(token)) {
+        LogConfig.logWarning('⚠️ Token JWT invalide détecté');
+        return false;
+      }
+
+      final expiry = SecureConfig.getJWTExpiration(token);
+      if (expiry != null && DateTime.now().isAfter(expiry)) {
+        LogConfig.logWarning('⚠️ Token JWT expiré détecté');
+        return false;
+      }
+
+      return true;
+    } catch (e) {
+      LogConfig.logWarning('⚠️ Erreur validation token: $e');
+      return true; // En cas d'erreur, laisser passer
+    }
+  }
+
+  /// 🔒 Vérifie et refresh automatiquement si nécessaire
+  Future<bool> _ensureValidSession() async {
+    try {
+      final session = _supabase.auth.currentSession;
+      if (session == null) return false;
+
+      // Vérifier le token stocké si disponible
+      try {
+        final storedToken = await SecureConfig.getStoredAccessToken();
+        if (storedToken != null && !_validateTokenBeforeUse(storedToken)) {
+          LogConfig.logInfo('🔄 Token invalide, tentative de refresh...');
+          
+          try {
+            await _supabase.auth.refreshSession();
+            final newSession = _supabase.auth.currentSession;
+            if (newSession != null) {
+              await _storeSessionTokensSecurely(newSession);
+              return true;
+            }
+          } catch (refreshError) {
+            LogConfig.logWarning('⚠️ Refresh automatique échoué: $refreshError');
+            // Continuer même si le refresh échoue
+          }
+        }
+
+        // Vérifier l'expiration du stockage sécurisé
+        final isExpired = await SecureConfig.isTokenExpired();
+        if (isExpired) {
+          LogConfig.logInfo('🔄 Token proche expiration, refresh préventif...');
+          
+          try {
+            await _supabase.auth.refreshSession();
+            final newSession = _supabase.auth.currentSession;
+            if (newSession != null) {
+              await _storeSessionTokensSecurely(newSession);
+            }
+          } catch (refreshError) {
+            LogConfig.logWarning('⚠️ Refresh préventif échoué: $refreshError');
+            // Continuer même si le refresh échoue
+          }
+        }
+      } catch (storageError) {
+        LogConfig.logWarning('⚠️ Erreur stockage sécurisé: $storageError');
+        // Continuer même si le stockage sécurisé ne fonctionne pas
+      }
+
+      return true;
+    } catch (e) {
+      LogConfig.logWarning('⚠️ Erreur validation session: $e');
+      return true; // Continuer même en cas d'erreur
+    }
+  }
+
   /* ───────── 1) CRÉATION DE COMPTE (ÉTAPE 1) ───────── */
   Future<User?> signUpBasic({
     required String email,
@@ -50,6 +151,11 @@ class AuthRepository {
       
       if (resp.user != null) {
         LogConfig.logInfo('Inscription réussie pour: ${resp.user!.email}');
+
+        // 🔒 Stocker les tokens si session créée
+        if (resp.session != null) {
+          await _storeSessionTokensSecurely(resp.session!);
+        }
 
         MonitoringService.instance.finishApiRequest(
           operationId,
@@ -125,6 +231,11 @@ class AuthRepository {
       if (idToken == null) {
         throw 'No ID Token found.';
       }
+
+      // 🔒 Valider les tokens Google avant usage
+      if (!_validateTokenBeforeUse(idToken)) {
+        throw AuthException('Token Google invalide');
+      }
       
       LogConfig.logInfo('Utilisateur Google obtenu: ${googleUser.email}');
 
@@ -149,6 +260,11 @@ class AuthRepository {
       
       if (response.user == null) {
         throw AuthException('Échec de la connexion avec Supabase');
+      }
+
+      // 🔒 Stocker les tokens Supabase de façon sécurisée
+      if (response.session != null) {
+        await _storeSessionTokensSecurely(response.session!);
       }
       
       LogConfig.logInfo('Connexion Supabase réussie: ${response.user!.email}');
@@ -261,6 +377,12 @@ class AuthRepository {
         ],
         nonce: nonce,
       );
+
+      // 🔒 Valider le token Apple
+      if (credential.identityToken != null && 
+          !_validateTokenBeforeUse(credential.identityToken!)) {
+        throw AuthException('Token Apple invalide');
+      }
       
       LogConfig.logInfo('Credentials Apple obtenus');
 
@@ -287,6 +409,11 @@ class AuthRepository {
       
       if (response.user == null) {
         throw AuthException('Échec de la connexion avec Supabase');
+      }
+
+      // 🔒 Stocker les tokens Supabase de façon sécurisée
+      if (response.session != null) {
+        await _storeSessionTokensSecurely(response.session!);
       }
       
       LogConfig.logInfo('Connexion Supabase réussie: ${response.user!.email}');
@@ -398,6 +525,12 @@ class AuthRepository {
     );
 
     try {
+      // 🔒 Vérifier que la session est valide avant de continuer
+      final isSessionValid = await _ensureValidSession();
+      if (!isSessionValid) {
+        throw AuthException('Session invalide, reconnexion requise');
+      }
+
       LogConfig.logInfo('👤 Complétion du profil pour: $userId');
 
       // 1. Vérifier si le nom d'utilisateur est disponible
@@ -554,16 +687,16 @@ class AuthRepository {
         LogConfig.logError('❌ Connexion échouée: aucun utilisateur retourné');
         throw LoginException('Connexion échouée');
       }
-      
-      LogConfig.logInfo('Connexion réussie: ${user.email}');
-      
-      // Récupérer le profil
-      final profile = await getProfile(user.id);
-      if (profile == null) {
-        LogConfig.logInfo('Connexion réussie mais profil incomplet');
-      } else {
-        LogConfig.logInfo('Profil récupéré: ${profile.username}');
+
+      // 🔒 Stocker les tokens de façon sécurisée
+      if (resp.session != null) {
+        await _storeSessionTokensSecurely(resp.session!);
       }
+      
+      LogConfig.logInfo('Connexion réussie: ${resp.user!.email}');
+
+      // Vérifier si un profil existe
+      final existingProfile = await getProfile(resp.user!.id, skipCleanup: true);
 
       MonitoringService.instance.finishApiRequest(
         operationId,
@@ -571,17 +704,32 @@ class AuthRepository {
         responseSize: resp.toString().length,
       );
 
-      // 🆕 Métrique de succès d'authentification
+      if (existingProfile != null && existingProfile.isComplete) {
+        LogConfig.logInfo('Profil existant trouvé: ${existingProfile.username}');
+
+        MonitoringService.instance.recordMetric(
+          'user_login_success',
+          1,
+          tags: {
+            'method': 'email',
+            'is_returning_user': 'true',
+          },
+        );
+
+        return existingProfile;
+      }
+
+      // Nouveau utilisateur nécessite un profil
       MonitoringService.instance.recordMetric(
-        'auth_repository_success',
+        'user_registration',
         1,
         tags: {
-          'method': 'email',
-          'operation': 'sign_in',
+          'source': 'email',
+          'needs_onboarding': 'true',
         },
       );
-      
-      return profile;
+
+      return null; // Indique qu'il faut compléter le profil
     } catch (e, stackTrace) {
       LogConfig.logError('❌ Erreur connexion: $e');
 
@@ -642,10 +790,16 @@ class AuthRepository {
   Future<void> logOut() async {
     try {
       print('👋 Déconnexion...');
+      // 🔒 Nettoyer tous les tokens stockés
+      await SecureConfig.clearStoredTokens();
+
       await _supabase.auth.signOut();
       LogConfig.logInfo('Déconnexion réussie');
     } catch (e) {
       LogConfig.logError('❌ Erreur déconnexion: $e');
+      // 🔒 Nettoyer quand même les tokens même si la déconnexion échoue
+      await SecureConfig.clearStoredTokens();
+      
       throw AuthExceptionHandler.handleSupabaseError(e);
     }
   }
