@@ -20,6 +20,6 @@ class AppColorsDark {
   static const Color surface = Color(0xFF1E1E1E); // Gris très sombre
   static const Color textPrimary = Color(0xFFECECEC); // Blanc cassé
   static const Color textSecondary = Color.fromARGB(255, 118, 118, 118); // Gris clair
-  static const Color success = Color(0xFF4DD0E1); // Turquoise plus claire
+  static const Color success = Color.fromARGB(255, 92, 225, 77); // Turquoise plus claire
   static const Color danger = Color(0xFFFF5252); // Rouge plus claire
 }

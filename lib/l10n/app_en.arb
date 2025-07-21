@@ -1515,5 +1515,362 @@
   "invalidParameters": "Invalid parameters",
   "@invalidParameters": {
     "description": "Message shown when input parameters are invalid."
+  },
+  "locationInProgress": "Location...",
+  "@locationInProgress": {
+    "description": "Status text displayed when the app is determining the user's location."
+  },
+  "searchingPosition": "Search for your position",
+  "@searchingPosition": {
+    "description": "Prompt shown while searching for the user’s GPS position."
+  },
+  "trackingError": "Tracking error",
+  "@trackingError": {
+    "description": "Error message displayed when there is a failure in location tracking."
+  },
+  "enterAuthDetails": "Enter your details",
+  "@enterAuthDetails": {
+    "description": "Prompt for user to enter their authentication details"
+  },
+  "enterPassword": "Enter a password",
+  "@enterPassword": {
+    "description": "Prompt to enter a password"
+  },
+  "continueWithEmail": "Continue with email",
+  "@continueWithEmail": {
+    "description": "Button to continue authentication with email"
+  },
+  "passwordVeryWeak": "Very weak",
+  "@passwordVeryWeak": {
+    "description": "Indicates a very weak password"
+  },
+  "passwordWeak": "Weak",
+  "@passwordWeak": {
+    "description": "Indicates a weak password"
+  },
+  "passwordFair": "Fair",
+  "@passwordFair": {
+    "description": "Indicates a fair password"
+  },
+  "passwordGood": "Good",
+  "@passwordGood": {
+    "description": "Indicates a good password"
+  },
+  "passwordStrong": "Strong",
+  "@passwordStrong": {
+    "description": "Indicates a strong password"
+  },
+  "resetEmail": "Reset email sent to {email}",
+  "@resetEmail": {
+    "description": "Confirmation that reset email was sent",
+    "placeholders": {
+      "email": {
+        "type": "String"
+      }
+    }
+  },
+  "requiredPassword": "Required password",
+  "@requiredPassword": {
+    "description": "Error message for missing password"
+  },
+  "requiredCountCharacters": "At least {count} characters required",
+  "@requiredCountCharacters": {
+    "description": "Message stating the minimum number of characters",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "requiredCapitalLetter": "At least one capital letter required",
+  "@requiredCapitalLetter": {
+    "description": "Message that at least one uppercase letter is required"
+  },
+  "requiredMinusculeLetter": "At least one minuscule required",
+  "@requiredMinusculeLetter": {
+    "description": "Message that at least one lowercase letter is required"
+  },
+  "requiredDigit": "At least one required digit",
+  "@requiredDigit": {
+    "description": "Message that at least one digit is required"
+  },
+  "requiredSymbol": "At least one required symbol",
+  "@requiredSymbol": {
+    "description": "Message that at least one symbol is required"
+  },
+  "minimumCountCharacters": "Minimum {count} characters",
+  "@minimumCountCharacters": {
+    "description": "Minimum number of characters required",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "oneCapitalLetter": "One capital letter",
+  "@oneCapitalLetter": {
+    "description": "Requirement for one uppercase letter"
+  },
+  "oneMinusculeLetter": "One minuscule letter",
+  "@oneMinusculeLetter": {
+    "description": "Requirement for one lowercase letter"
+  },
+  "oneDigit": "One digit",
+  "@oneDigit": {
+    "description": "Requirement for one digit"
+  },
+  "oneSymbol": "One symbol",
+  "@oneSymbol": {
+    "description": "Requirement for one symbol"
+  },
+  "successEmailSentBack": "Confirmation email sent back successfully",
+  "@successEmailSentBack": {
+    "description": "Success message for email confirmation sent"
+  },
+  "checkEmail": "Check your email",
+  "@checkEmail": {
+    "description": "Prompt to check email"
+  },
+  "successSentConfirmationLink": "We have sent a confirmation link to {email}. Click on the link in the email to activate your account.",
+  "@successSentConfirmationLink": {
+    "description": "Message confirming confirmation link sent",
+    "placeholders": {
+      "email": {
+        "type": "String"
+      }
+    }
+  },
+  "resendCode": "Resend the code",
+  "@resendCode": {
+    "description": "Action to resend the code"
+  },
+  "resendCodeInDelay": "Resend in {count}s",
+  "@resendCodeInDelay": {
+    "description": "Message to resend code with delay",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "loginBack": "Back to login",
+  "@loginBack": {
+    "description": "Navigate back to login"
+  },
+  "requiredEmail": "Required email",
+  "@requiredEmail": {
+    "description": "Error message for missing email"
+  },
+  "receiveResetLink": "Enter your email address to receive a reset link",
+  "@receiveResetLink": {
+    "description": "Instruction to enter email for reset link"
+  },
+  "send": "Send",
+  "@send": {
+    "description": "Action to send"
+  },
+  "byDefault": "By default",
+  "@byDefault": {
+    "description": "Indicates default value"
+  },
+  "changePhoto": "Change photo",
+  "@changePhoto": {
+    "description": "Action to change user photo"
+  },
+  "desiredSelectionMode": "Before continuing, please choose the desired selection mode",
+  "@desiredSelectionMode": {
+    "description": "Prompt to choose selection mode"
+  },
+  "cameraMode": "Camera",
+  "@cameraMode": {
+    "description": "Camera mode option"
+  },
+  "galleryMode": "Gallery",
+  "@galleryMode": {
+    "description": "Gallery mode option"
+  },
+  "successUpdatedProfile": "Successfully updated profile",
+  "@successUpdatedProfile": {
+    "description": "Success message when profile is updated"
+  },
+  "couldNotLaunchUrl": "Could not launch {url}",
+  "@couldNotLaunchUrl": {
+    "description": "Error message when URL cannot be launched",
+    "placeholders": {
+      "url": {
+        "type": "String"
+      }
+    }
+  },
+  "couldNotLaunchEmailApp": "Could not launch email app",
+  "@couldNotLaunchEmailApp": {
+    "description": "Error message when email app cannot be launched"
+  },
+  "userBalance": "Your balance",
+  "@userBalance": {
+    "description": "Label for user balance"
+  },
+  "purchasedCredits": "Purchased",
+  "@purchasedCredits": {
+    "description": "Label for purchased credits"
+  },
+  "usedCredits": "Used",
+  "@usedCredits": {
+    "description": "Label for used credits"
+  },
+  "purchaseCreditsTitle": "Purchased credits",
+  "@purchaseCreditsTitle": {
+    "description": "Title for purchased credits section"
+  },
+  "usageCreditsTitle": "Credit to generate a route",
+  "@usageCreditsTitle": {
+    "description": "Title for credit usage to generate route"
+  },
+  "bonusCreditsTitle": "Free welcome credits",
+  "@bonusCreditsTitle": {
+    "description": "Title for free welcome credits"
+  },
+  "refundCreditsTitle": "Restored credits",
+  "@refundCreditsTitle": {
+    "description": "Title for restored credits"
+  },
+  "notAvailablePlans": "Plans not available",
+  "@notAvailablePlans": {
+    "description": "Message when plans are not available"
+  },
+  "missingTransactionID": "Missing transaction ID",
+  "@missingTransactionID": {
+    "description": "Error when transaction ID is missing"
+  },
+  "purchaseCanceled": "Purchase canceled",
+  "@purchaseCanceled": {
+    "description": "Message when purchase is canceled"
+  },
+  "unknownError": "Unknown error",
+  "@unknownError": {
+    "description": "Generic unknown error message"
+  },
+  "duringPaymentError": "Error during payment",
+  "@duringPaymentError": {
+    "description": "Error message for payment failure"
+  },
+  "networkException": "Connection problem. Please try again.",
+  "@networkException": {
+    "description": "Error message for network exception"
+  },
+  "retryNotAvailablePlans": "Selected plan not available. Please try again.",
+  "@retryNotAvailablePlans": {
+    "description": "Error message when retrying unavailable plan"
+  },
+  "systemIssueDetectedTitle": "System issue detected",
+  "@systemIssueDetectedTitle": {
+    "description": "Title for system issue detection"
+  },
+  "systemIssueDetectedSubtitle": "A system issue has been detected. This may happen if previous purchases did not complete correctly.",
+  "@systemIssueDetectedSubtitle": {
+    "description": "Subtitle for system issue detection"
+  },
+  "systemIssueDetectedDesc": "Restart the application and try again",
+  "@systemIssueDetectedDesc": {
+    "description": "Instruction to restart app for system issue"
+  },
+  "close": "Close",
+  "@close": {
+    "description": "Action to close"
+  },
+  "cleaningDone": "Cleaning done. Try again now.",
+  "@cleaningDone": {
+    "description": "Message when cleaning is done"
+  },
+  "cleaningError": "Error while cleaning: {error}",
+  "@cleaningError": {
+    "description": "Error message when cleaning fails",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "cleaning": "Cleaning",
+  "@cleaning": {
+    "description": "Label for cleaning process"
+  },
+  "creditPlanModalTitle": "Stock up on credits to live new adventures!",
+  "@creditPlanModalTitle": {
+    "description": "Title for credit plan modal"
+  },
+  "creditPlanModalSubtitle": "Choose your favorite package, then click here to start exploring!",
+  "@creditPlanModalSubtitle": {
+    "description": "Subtitle for credit plan modal"
+  },
+  "creditPlanModalWarning": "Payment debited upon confirmation of purchase. Credits are non-refundable and valid only in the application.",
+  "@creditPlanModalWarning": {
+    "description": "Warning for credit plan modal"
+  },
+  "refresh": "Refresh",
+  "@refresh": {
+    "description": "Action to refresh"
+  },
+  "successRouteDeleted": "Route successfully deleted",
+  "@successRouteDeleted": {
+    "description": "Success message for route deletion"
+  },
+  "errorRouteDeleted": "Error while deleting",
+  "@errorRouteDeleted": {
+    "description": "Error message for route deletion failure"
+  },
+  "displayRouteError": "Error during the display of the course",
+  "@displayRouteError": {
+    "description": "Error message for display route"
+  },
+  "routeNameUpdateException": "The name cannot be empty",
+  "@routeNameUpdateException": {
+    "description": "Error for empty route name"
+  },
+  "routeNameUpdateExceptionMinCharacters": "The name must contain at least 2 characters",
+  "@routeNameUpdateExceptionMinCharacters": {
+    "description": "Error for minimum characters in route name"
+  },
+  "routeNameUpdateExceptionCountCharacters": "The name cannot exceed 50 characters",
+  "@routeNameUpdateExceptionCountCharacters": {
+    "description": "Error for exceeding characters in route name"
+  },
+  "routeNameUpdateExceptionForbiddenCharacters": "The name contains forbidden characters",
+  "@routeNameUpdateExceptionForbiddenCharacters": {
+    "description": "Error for forbidden characters in route name"
+  },
+  "routeNameUpdateDone": "Update done",
+  "@routeNameUpdateDone": {
+    "description": "Confirmation that route name was updated"
+  },
+  "formatRouteExport": "Route exported in {format}",
+  "@formatRouteExport": {
+    "description": "Message for route export format",
+    "placeholders": {
+      "format": {
+        "type": "String"
+      }
+    }
+  },
+  "routeExportError": "Error during export: {error}",
+  "@routeExportError": {
+    "description": "Error message for route export",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "updateRouteNameTitle": "Update",
+  "@updateRouteNameTitle": {
+    "description": "Title for updating route name"
+  },
+  "updateRouteNameSubtitle": "Choose a new name",
+  "@updateRouteNameSubtitle": {
+    "description": "Subtitle for updating route name"
+  },
+  "updateRouteNameHint": "Digestive process after eating",
+  "@updateRouteNameHint": {
+    "description": "Hint text for updating route name"
   }
 }

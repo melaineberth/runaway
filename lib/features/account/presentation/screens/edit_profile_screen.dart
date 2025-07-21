@@ -141,10 +141,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> with TickerProvid
       context: context,
       backgroundColor: Colors.transparent,
       child: ModalDialog(
-        title: "Changer de photo", 
-        subtitle: "Avant de continuer, veuillez choisir le mode de selection souhaité", 
-        validLabel: "Camera",
-        cancelLabel: "Gallery",
+        title: context.l10n.changePhoto, 
+        subtitle: context.l10n.desiredSelectionMode, 
+        validLabel: context.l10n.cameraMode,
+        cancelLabel:context.l10n.galleryMode,
         onValid: () {
           Navigator.pop(context);
           _pickAvatar(ImageSource.camera);
@@ -163,7 +163,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> with TickerProvid
     showTopSnackBar(
       Overlay.of(context),
       TopSnackBar(
-        title: 'Profil mis à jour avec succès',
+        title: context.l10n.successUpdatedProfile,
       ),
     );
 

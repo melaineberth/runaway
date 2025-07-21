@@ -64,7 +64,7 @@ class _CreditPlanModalState extends State<CreditPlanModal> {
       final appDataState = context.appDataBloc.state;
       
       if (!appDataState.hasCreditData) {
-        _showErrorSnackBar('Plans non disponibles');
+        _showErrorSnackBar(context.l10n.notAvailablePlans);
         return;
       }
       
@@ -108,41 +108,49 @@ class _CreditPlanModalState extends State<CreditPlanModal> {
           );
 
         } else {
-          _showErrorSnackBar('Erreur: ID de transaction manquant');
+          if (mounted) {
+            _showErrorSnackBar(context.l10n.missingTransactionID);
+          }
         }
       } else if (purchaseResult.isCanceled) {
         // 🚫 Achat annulé par l'utilisateur
         LogConfig.logInfo('🚫 Achat annulé par l\'utilisateur');
-        _showErrorSnackBar('Achat annulé');
+        if (mounted) {
+          _showErrorSnackBar(context.l10n.purchaseCanceled);
+        }
       } else {
         // ❌ Erreur lors de l'achat
-        final errorMessage = purchaseResult.errorMessage ?? 'Erreur inconnue';
-        LogConfig.logError('❌ Erreur achat: $errorMessage');
-        
-        // Gestion spéciale pour les problèmes de restauration/finalisation
-        if (errorMessage.contains('restauré au lieu de nouveau')) {
-          _showSystemErrorDialog();
-        } else {
-          _showErrorSnackBar(errorMessage);
+        if (mounted) {
+          final errorMessage = purchaseResult.errorMessage ?? context.l10n.unknownError;
+          LogConfig.logError('❌ Erreur achat: $errorMessage');
+          
+          // Gestion spéciale pour les problèmes de restauration/finalisation
+          if (errorMessage.contains('restauré au lieu de nouveau')) {
+            _showSystemErrorDialog();
+          } else {
+            _showErrorSnackBar(errorMessage);
+          }
         }
       }
       
     } catch (e, stackTrace) {
       LogConfig.logError('❌ Erreur processus achat: $e');
       
-      String errorMessage = 'Erreur lors du paiement';
-      if (e is PaymentException) {
-        errorMessage = e.message;
-      } else if (e is NetworkException) {
-        errorMessage = 'Problème de connexion. Veuillez réessayer.';
-      } else if (e.toString().contains('Plan non trouvé')) {
-        errorMessage = 'Plan sélectionné non disponible. Veuillez réessayer.';
-        if (mounted) {
-          context.refreshCreditData();
-        }
-      }
-      
       if (mounted) {
+        
+        String errorMessage = context.l10n.duringPaymentError;
+
+        if (e is PaymentException) {
+          errorMessage = e.message;
+        } else if (e is NetworkException) {
+          errorMessage = context.l10n.networkException;
+        } else if (e.toString().contains('Plan non trouvé')) {
+          errorMessage = context.l10n.retryNotAvailablePlans;
+          if (mounted) {
+            context.refreshCreditData();
+          }
+        }
+      
         _showErrorSnackBar(errorMessage);
 
         context.captureError(e, stackTrace, extra: {
@@ -161,7 +169,7 @@ class _CreditPlanModalState extends State<CreditPlanModal> {
     }
   }
 
-  // AJOUTER cette méthode pour gérer les erreurs système
+  // Méthode pour gérer les erreurs système
   void _showSystemErrorDialog() {
     showDialog(
       context: context,
@@ -174,17 +182,17 @@ class _CreditPlanModalState extends State<CreditPlanModal> {
               size: 24,
             ),
             8.w,
-            Text('Problème système détecté'),
+            Text(context.l10n.systemIssueDetectedTitle),
           ],
         ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Un problème système a été détecté. Cela peut arriver si des achats précédents ne se sont pas finalisés correctement.'),
+            Text(context.l10n.systemIssueDetectedSubtitle),
             16.h,
             Text(
-              'Recommandation: Redémarrez l\'application et réessayez.',
+              context.l10n.systemIssueDetectedDesc,
               style: TextStyle(fontSize: 14, color: Colors.grey[600], fontWeight: FontWeight.w600),
             ),
           ],
@@ -192,7 +200,7 @@ class _CreditPlanModalState extends State<CreditPlanModal> {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: Text('Fermer'),
+            child: Text(context.l10n.close),
           ),
           ElevatedButton(
             onPressed: () async {
@@ -200,12 +208,12 @@ class _CreditPlanModalState extends State<CreditPlanModal> {
               try {
                 // Forcer un nettoyage complet
                 await IAPService.cleanupPendingTransactions();
-                _showErrorSnackBar('Nettoyage effectué. Réessayez maintenant.');
+                if (context.mounted) _showErrorSnackBar(context.l10n.cleaningDone);
               } catch (e) {
-                _showErrorSnackBar('Erreur lors du nettoyage: $e');
+                if (context.mounted) _showErrorSnackBar(context.l10n.cleaningError(e.toString()));
               }
             },
-            child: Text('Nettoyer'),
+            child: Text(context.l10n.cleaning),
           ),
         ],
       ),
@@ -288,7 +296,7 @@ class _CreditPlanModalState extends State<CreditPlanModal> {
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [    
           Text(
-            "Faites le plein de crédits pour vivre de nouvelles aventures !",
+            context.l10n.creditPlanModalTitle,
             style: context.bodyMedium?.copyWith(
               color: context.adaptiveTextPrimary,
               height: 1.3,
@@ -333,7 +341,7 @@ class _CreditPlanModalState extends State<CreditPlanModal> {
                   ),
                   12.h,
                   Text(
-                    'Aucun plan disponible pour le moment',
+                    context.l10n.notAvailablePlans,
                     style: context.bodyMedium?.copyWith(
                       color: context.adaptiveTextSecondary,
                     ),
@@ -347,7 +355,7 @@ class _CreditPlanModalState extends State<CreditPlanModal> {
           30.h,
 
           Text(
-            "Choisissez votre formule favorite, puis appuyez ici pour commencer l’exploration !",
+            context.l10n.creditPlanModalSubtitle,
             style: context.bodySmall?.copyWith(
               color: context.adaptiveTextSecondary,
               fontSize: 15,
@@ -364,7 +372,7 @@ class _CreditPlanModalState extends State<CreditPlanModal> {
               // Récupérer le plan sélectionné depuis appDataState
               final selectedPlan = appDataState.activePlans.firstWhere(
                 (plan) => plan.id == selectedPlanId,
-                orElse: () => throw Exception('Plan non trouvé'),
+                orElse: () => throw Exception(context.l10n.notAvailablePlans),
               );
               
               // Appeler _handlePurchase avec les bons paramètres
@@ -388,14 +396,14 @@ class _CreditPlanModalState extends State<CreditPlanModal> {
                 LogConfig.logInfo('🔄 Rafraîchissement des plans demandé');
                 context.refreshCreditData();
               },
-              label: 'Actualiser',
+              label: context.l10n.refresh,
             ),
           ],
 
           12.h,
 
           Text(
-            "Paiement débité à la confirmation de l’achat. Les crédits sont non remboursables et valables uniquement dans l’application.",
+            context.l10n.creditPlanModalWarning,
             style: context.bodySmall?.copyWith(
               color: context.adaptiveTextSecondary,
               fontSize: 10,

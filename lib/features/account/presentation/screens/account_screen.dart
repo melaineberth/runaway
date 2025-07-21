@@ -94,7 +94,9 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
   void launchURL() async {
     final Uri url = Uri.parse('https://x.com/elonmusk');
     if (!await launchUrl(url)) {
-      throw Exception('Could not launch $url');
+      if (mounted) {
+        throw Exception(context.l10n.couldNotLaunchUrl(url.toString()));
+      }
     }
   }
 
@@ -129,7 +131,7 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
           Overlay.of(context),
           TopSnackBar(
             isError: true,
-            title: 'Could not launch email app',
+            title: context.l10n.couldNotLaunchEmailApp,
           ),
         );
       }
@@ -351,6 +353,21 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
                   icon: HugeIcons.strokeRoundedNotification02,
                   child: BlocBuilder<NotificationBloc, NotificationState>(
                     builder: (context, notificationState) {
+                      Color getColor(Set<WidgetState> states) {
+                        // Vérifier si le switch est désactivé
+                        if (states.contains(WidgetState.disabled)) {
+                          return context.adaptiveDisabled.withValues(alpha: 0.5);
+                        }
+                        
+                        // Vérifier si le switch est activé (ON)
+                        if (states.contains(WidgetState.selected)) {
+                          return context.adaptivePrimary; // Couleur quand activé
+                        }
+                        
+                        // État par défaut (OFF)
+                        return context.adaptiveDisabled; // Couleur quand désactivé
+                      }
+
                       // Afficher un indicateur de chargement si en cours d'initialisation
                       if (notificationState.isLoading &&
                           !notificationState.isInitialized) {
@@ -369,20 +386,21 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
                       return Switch(
                         value: notificationState.notificationsEnabled,
                         inactiveThumbColor: context.adaptiveDisabled,
+                        // inactiveTrackColor: Colors.red,
+                        trackOutlineColor: WidgetStateProperty.resolveWith(getColor),
                         activeColor: context.adaptivePrimary,
-                        onChanged:
-                            notificationState.isLoading
-                                ? null
-                                : (value) {
-                                  HapticFeedback.mediumImpact();
-  
-                                  // Déclencher l'événement pour basculer les notifications
-                                  context.notificationBloc.add(
-                                    NotificationToggleRequested(
-                                      enabled: value,
-                                    ),
-                                  );
-                                },
+                        onChanged: notificationState.isLoading
+                          ? null
+                          : (value) {
+                            HapticFeedback.mediumImpact();
+
+                            // Déclencher l'événement pour basculer les notifications
+                            context.notificationBloc.add(
+                              NotificationToggleRequested(
+                                enabled: value,
+                              ),
+                            );
+                          },
                       );
                     },
                   ),

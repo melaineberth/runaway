@@ -1,3 +1,6 @@
+import 'package:flutter/material.dart';
+import 'package:runaway/core/helper/extensions/extensions.dart';
+
 class PasswordValidator {
   static const int minLength = 8;
   
@@ -36,43 +39,43 @@ class PasswordValidator {
   }
   
   /// Retourne la première exigence non respectée
-  static String? getFirstMissingRequirement(String password) {
+  static String? getFirstMissingRequirement(BuildContext context, String password) {
     if (!hasMinLength(password)) {
-      return 'Au moins $minLength caractères requis';
+      return context.l10n.requiredCountCharacters(minLength);
     }
     if (!hasUppercase(password)) {
-      return 'Au moins une majuscule requise';
+      return context.l10n.requiredCapitalLetter;
     }
     if (!hasLowercase(password)) {
-      return 'Au moins une minuscule requise';
+      return context.l10n.requiredMinusculeLetter;
     }
     if (!hasDigit(password)) {
-      return 'Au moins un chiffre requis';
+      return context.l10n.requiredDigit;
     }
     if (!hasSymbol(password)) {
-      return 'Au moins un symbole requis';
+      return context.l10n.requiredSymbol;
     }
     return null;
   }
   
   /// Retourne toutes les exigences non respectées
-  static List<String> getMissingRequirements(String password) {
+  static List<String> getMissingRequirements(BuildContext context, String password) {
     final missing = <String>[];
     
     if (!hasMinLength(password)) {
-      missing.add('Minimum $minLength caractères');
+      missing.add(context.l10n.minimumCountCharacters(minLength));
     }
     if (!hasUppercase(password)) {
-      missing.add('Une majuscule');
+      missing.add(context.l10n.oneCapitalLetter);
     }
     if (!hasLowercase(password)) {
-      missing.add('Une minuscule');
+      missing.add(context.l10n.oneMinusculeLetter);
     }
     if (!hasDigit(password)) {
-      missing.add('Un chiffre');
+      missing.add(context.l10n.oneDigit);
     }
     if (!hasSymbol(password)) {
-      missing.add('Un symbole');
+      missing.add(context.l10n.oneSymbol);
     }
     
     return missing;

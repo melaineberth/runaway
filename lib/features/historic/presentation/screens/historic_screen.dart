@@ -157,7 +157,7 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
         showTopSnackBar(
           Overlay.of(context),
           TopSnackBar(
-            title: 'Parcours supprimé avec succès',
+            title: context.l10n.successRouteDeleted,
           ),
         );
       }
@@ -170,7 +170,7 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
           Overlay.of(context),
           TopSnackBar(
             isError: true,
-            title: 'Erreur lors de la suppression',
+            title: context.l10n.errorRouteDeleted,
           ),
         );
       }
@@ -200,7 +200,7 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
           Overlay.of(context),
           TopSnackBar(
             isError: true,
-            title: 'Erreur lors de l\'affichage du parcours',
+            title: context.l10n.displayRouteError,
           ),
         );
       }
@@ -213,7 +213,7 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
       
       // Validation côté écran également
       if (newName.trim().isEmpty) {
-        throw Exception('Le nom ne peut pas être vide');
+        throw Exception(context.l10n.routeNameUpdateException);
       }
       
       // Déclencher l'événement de renommage via AppDataBloc
@@ -231,7 +231,7 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
       showTopSnackBar(
         Overlay.of(context),
         TopSnackBar(
-          title: 'Mise à jour effectuée',
+          title: context.l10n.routeNameUpdateDone,
         ),
       );
     }
@@ -241,16 +241,8 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
       
       // Feedback haptique d'erreur
       HapticFeedback.mediumImpact();
-      
-      if (mounted) {
-        showTopSnackBar(
-          Overlay.of(context),
-          TopSnackBar(
-            isError: true,
-            title: 'Erreur: ${e.toString().replaceFirst('Exception: ', '')}',
-          ),
-        );
-      }
+
+      print(e.toString().replaceFirst('Exception: ', ''));      
     }
   }
 

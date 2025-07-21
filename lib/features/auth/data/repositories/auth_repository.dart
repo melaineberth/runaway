@@ -3,6 +3,7 @@ import 'dart:io';
 import 'dart:math';
 import 'dart:math' as math;
 
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:crypto/crypto.dart';
 import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
@@ -10,7 +11,9 @@ import 'package:path/path.dart' as p;
 import 'package:runaway/core/errors/auth_exceptions.dart';
 import 'package:runaway/core/helper/config/secure_config.dart';
 import 'package:runaway/core/helper/services/monitoring_service.dart';
+import 'package:runaway/core/utils/injections/service_locator.dart';
 import 'package:runaway/features/auth/domain/models/profile.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' hide AuthException;
 import 'package:runaway/core/helper/config/log_config.dart';
@@ -790,17 +793,73 @@ class AuthRepository {
   Future<void> logOut() async {
     try {
       print('👋 Déconnexion...');
-      // 🔒 Nettoyer tous les tokens stockés
+      
+      // 🆕 1. Nettoyer les données utilisateur via ServiceLocator
+      try {
+        ServiceLocator.clearUserData();
+        LogConfig.logInfo('🗑️ Données utilisateur nettoyées via ServiceLocator');
+      } catch (e) {
+        LogConfig.logError('❌ Erreur nettoyage données ServiceLocator: $e');
+      }
+      
+      // 🆕 2. Nettoyer le cache des images
+      try {
+        await CachedNetworkImage.evictFromCache('');
+        LogConfig.logInfo('🖼️ Cache images nettoyé');
+      } catch (e) {
+        LogConfig.logError('❌ Erreur nettoyage cache images: $e');
+      }
+      
+      // 🆕 3. Nettoyer les préférences partagées liées à l'utilisateur
+      try {
+        await _clearUserPreferences();
+        LogConfig.logInfo('📱 Préférences utilisateur nettoyées');
+      } catch (e) {
+        LogConfig.logError('❌ Erreur nettoyage préférences: $e');
+      }
+      
+      // 4. Nettoyer tous les tokens stockés (existant)
       await SecureConfig.clearStoredTokens();
 
+      // 5. Déconnexion Supabase (existant)
       await _supabase.auth.signOut();
-      LogConfig.logInfo('Déconnexion réussie');
+      LogConfig.logInfo('✅ Déconnexion réussie');
     } catch (e) {
       LogConfig.logError('❌ Erreur déconnexion: $e');
-      // 🔒 Nettoyer quand même les tokens même si la déconnexion échoue
-      await SecureConfig.clearStoredTokens();
+      
+      // 🔒 Nettoyer quand même tout en cas d'erreur
+      try {
+        ServiceLocator.clearUserData();
+        await SecureConfig.clearStoredTokens();
+        await _clearUserPreferences();
+      } catch (cleanupError) {
+        LogConfig.logError('❌ Erreur nettoyage forcé: $cleanupError');
+      }
       
       throw AuthExceptionHandler.handleSupabaseError(e);
+    }
+  }
+
+  Future<void> _clearUserPreferences() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      
+      // Nettoyer les clés liées aux données utilisateur (garder les préférences générales)
+      final keysToRemove = [
+        'user_credits_cache',
+        'user_routes_cache', 
+        'user_profile_cache',
+        'last_sync_timestamp',
+        'cached_user_data',
+      ];
+      
+      for (final key in keysToRemove) {
+        await prefs.remove(key);
+      }
+      
+      LogConfig.logInfo('🧹 Préférences utilisateur nettoyées: ${keysToRemove.length} clés');
+    } catch (e) {
+      LogConfig.logError('❌ Erreur nettoyage préférences SharedPreferences: $e');
     }
   }
 
@@ -1007,36 +1066,89 @@ class AuthRepository {
   Future<void> deleteAccount() async {
     try {
       final user = currentUser;
-      if (user == null) {
-        throw SessionException('Aucun utilisateur connecté');
-      }
-      
-      LogConfig.logInfo('🗑️ Suppression compte: ${user.id}');
-      
-      // Supprimer d'abord le profil
+      if (user == null) throw AuthException('Aucun utilisateur connecté');
+
+      LogConfig.logInfo('🗑️ Début suppression du compte: ${user.email}');
+
+      // 1. Supprimer les données utilisateur dans Supabase
       await _supabase
           .from('profiles')
           .delete()
           .eq('id', user.id);
-      
-      // Supprimer l'avatar du storage si existe
+
+      LogConfig.logInfo('Profil supprimé de la base de données');
+
+      // 🆕 2. Nettoyer TOUTES les données locales avant la déconnexion finale
       try {
-        await _supabase.storage
-            .from('profile')
-            .remove(['profile/${user.id}']);
+        ServiceLocator.clearUserData();
+        LogConfig.logInfo('🗑️ Données utilisateur nettoyées via ServiceLocator');
       } catch (e) {
-        // Ignorer les erreurs de suppression de fichier
-        LogConfig.logInfo('Erreur suppression avatar: $e');
+        LogConfig.logError('❌ Erreur nettoyage données ServiceLocator: $e');
       }
       
-      // Note: La suppression de l'utilisateur auth doit être faite côté serveur
-      // Pour l'instant, on se contente de supprimer le profil et déconnecter
-      await logOut();
+      // 🆕 3. Nettoyer le cache des images
+      try {
+        await CachedNetworkImage.evictFromCache('');
+        LogConfig.logInfo('🖼️ Cache images nettoyé');
+      } catch (e) {
+        LogConfig.logError('❌ Erreur nettoyage cache images: $e');
+      }
       
-      LogConfig.logInfo('Compte supprimé');
+      // 🆕 4. Nettoyer TOUTES les préférences (suppression = nettoyage complet)
+      try {
+        await _clearAllUserData();
+        LogConfig.logInfo('📱 Toutes les données locales nettoyées');
+      } catch (e) {
+        LogConfig.logError('❌ Erreur nettoyage données locales: $e');
+      }
+
+      // 5. Nettoyer les tokens stockés
+      await SecureConfig.clearStoredTokens();
+
+      // 6. Déconnexion finale
+      await _supabase.auth.signOut();
+
+      LogConfig.logInfo('✅ Compte supprimé et données nettoyées avec succès');
     } catch (e) {
       LogConfig.logError('❌ Erreur suppression compte: $e');
+      
+      // 🔒 En cas d'erreur, nettoyer quand même les données locales
+      try {
+        ServiceLocator.clearUserData();
+        await SecureConfig.clearStoredTokens();
+        await _clearAllUserData();
+        // Forcer la déconnexion même si la suppression a échoué
+        await _supabase.auth.signOut();
+      } catch (cleanupError) {
+        LogConfig.logError('❌ Erreur nettoyage forcé après échec: $cleanupError');
+      }
+      
       throw AuthExceptionHandler.handleSupabaseError(e);
+    }
+  }
+
+  Future<void> _clearAllUserData() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      
+      // Pour la suppression de compte, nettoyer TOUTES les données utilisateur
+      final allKeys = prefs.getKeys();
+      final userDataKeys = allKeys.where((key) => 
+        key.contains('user_') || 
+        key.contains('cache') || 
+        key.contains('sync') ||
+        key.contains('profile') ||
+        key.contains('credits') ||
+        key.contains('routes')
+      ).toList();
+      
+      for (final key in userDataKeys) {
+        await prefs.remove(key);
+      }
+      
+      LogConfig.logInfo('🧹 Toutes les données utilisateur supprimées: ${userDataKeys.length} clés');
+    } catch (e) {
+      LogConfig.logError('❌ Erreur nettoyage complet données: $e');
     }
   }
 

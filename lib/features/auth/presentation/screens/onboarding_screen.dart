@@ -47,7 +47,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     super.dispose();
   }
 
-  /* ───────── CHARGEMENT DES SUGGESTIONS SOCIALES ───────── */
+  // Suggestions sociales
   Future<void> _loadSocialSuggestions() async {
     setState(() {
       _isLoadingSuggestions = true;

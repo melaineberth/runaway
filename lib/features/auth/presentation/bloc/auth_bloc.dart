@@ -7,6 +7,7 @@ import 'package:runaway/core/helper/services/monitoring_service.dart';
 import 'package:runaway/features/auth/data/repositories/auth_repository.dart';
 import 'package:runaway/features/auth/domain/models/profile.dart';
 import 'package:runaway/features/credits/presentation/blocs/credits_bloc.dart';
+import 'package:runaway/features/credits/presentation/blocs/credits_event.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' as supabase;
 import 'package:runaway/core/helper/config/log_config.dart';
 import 'auth_event.dart';
@@ -180,17 +181,39 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     
     try {
       LogConfig.logInfo('🗑️ Suppression du compte demandée...');
+
+      // 🆕 1. Nettoyer explicitement TOUS les blocs avant la suppression
+      try {
+        _creditsBloc?.add(const CreditsReset());
+        LogConfig.logInfo('💳 CreditsBloc reseté avant suppression');
+      } catch (e) {
+        LogConfig.logError('❌ Erreur reset CreditsBloc avant suppression: $e');
+      }
+
+      // 🆕 2. Nettoyer le monitoring
+      try {
+        MonitoringService.instance.clearUser();
+        LogConfig.logInfo('📊 Données monitoring nettoyées avant suppression');
+      } catch (e) {
+        LogConfig.logError('❌ Erreur nettoyage monitoring avant suppression: $e');
+      }
       
       // Utiliser la méthode existante du repository
       await _repo.deleteAccount();
       
       LogConfig.logInfo('Compte supprimé avec succès');
-      
-      // L'utilisateur sera automatiquement déconnecté par le stream listener
-      // qui détectera que la session n'existe plus
-      
+            
     } catch (e) {
       LogConfig.logError('❌ Erreur suppression compte: $e');
+
+      // 🆕 En cas d'erreur, forcer le nettoyage quand même
+      try {
+        _creditsBloc?.add(const CreditsReset());
+        MonitoringService.instance.clearUser();
+        LogConfig.logInfo('🔒 Nettoyage forcé après erreur suppression');
+      } catch (cleanupError) {
+        LogConfig.logError('❌ Erreur nettoyage forcé après suppression: $cleanupError');
+      }
       
       // Retourner à l'état précédent en cas d'erreur
       final currentState = state;
@@ -464,14 +487,29 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     try {
       emit(AuthLoading());
 
+      // 🆕 1. Nettoyer explicitement les données via le CreditsBloc si disponible
+      try {
+        _creditsBloc?.add(const CreditsReset());
+        LogConfig.logInfo('💳 CreditsBloc reseté');
+      } catch (e) {
+        LogConfig.logError('❌ Erreur reset CreditsBloc: $e');
+      }
+
+      // 🆕 2. Nettoyer les données de monitoring avant déconnexion
+      try {
+        MonitoringService.instance.clearUser();
+        LogConfig.logInfo('📊 Données monitoring nettoyées');
+      } catch (e) {
+        LogConfig.logError('❌ Erreur nettoyage monitoring: $e');
+      }
+
       await _repo.logOut();
 
       emit(Unauthenticated());
 
       MonitoringService.instance.finishOperation(operationId, success: true);
       
-      // Nettoyer l'utilisateur du monitoring
-      MonitoringService.instance.clearUser();
+      LogConfig.logInfo('✅ Déconnexion complète réussie');
     } catch (err, stackTrace) {
       captureError(err, stackTrace, event: e, state: state);
       
@@ -480,6 +518,20 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         success: false,
         errorMessage: err.toString(),
       );
+
+      // 🆕 En cas d'erreur, forcer le nettoyage et l'état déconnecté
+      try {
+        _creditsBloc?.add(const CreditsReset());
+        MonitoringService.instance.clearUser();
+        LogConfig.logInfo('🔒 Nettoyage forcé en cas d\'erreur de déconnexion');
+      } catch (cleanupError) {
+        LogConfig.logError('❌ Erreur nettoyage forcé: $cleanupError');
+      }
+      
+      // Forcer l'état déconnecté même en cas d'erreur
+      emit(Unauthenticated());
+      
+      LogConfig.logError('❌ Erreur déconnexion mais état forcé à déconnecté: $err');
     }
   }
 

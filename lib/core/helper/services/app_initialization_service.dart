@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:runaway/core/helper/services/lottie_preload_service.dart';
 import 'package:runaway/features/route_generator/data/services/reverse_geocoding_service.dart';
 import 'package:runaway/core/helper/services/location_preload_service.dart';
 import 'package:runaway/core/helper/config/log_config.dart';
@@ -11,13 +12,15 @@ class AppInitializationService {
   static Future<void> initialize() async {
     LogConfig.logInfo('🚀 === INITIALISATION RAPIDE DE L\'APPLICATION ===');
       
-    // 🌍 PRIORITÉ ABSOLUE: Démarrer la géolocalisation en premier
+    // Démarrer la géolocalisation en premier
     final locationFuture = _initializeLocationServiceImmediate();
+
+    // Précharger les animations Lottie en parallèle
+    final lottieFuture = _initializeLottiePreloading();
     
     // Autres services en parallèle (non bloquants)
     final otherServicesFutures = [
       _cleanupReverseGeocodingCache(),
-      _initializeOtherServices(),
     ];
     
     // Attendre les services non critiques
@@ -25,6 +28,9 @@ class AppInitializationService {
     
     // Vérifier l'état de la géolocalisation (sans bloquer)
     _checkLocationInitializationStatus(locationFuture);
+
+    // Vérifier l'état du préchargement Lottie (sans bloquer)
+    _checkLottiePreloadingStatus(lottieFuture);
     
     LogConfig.logInfo('Initialisation de l\'application terminée');
   }
@@ -39,6 +45,19 @@ class AppInitializationService {
     }).catchError((e) {
       LogConfig.logInfo('Pré-chargement géolocalisation échoué (non bloquant): $e');
       // Ne pas bloquer l'app, l'utilisateur aura juste un loader un peu plus long
+    });
+  }
+
+  /// Précharge les animations Lottie immédiatement
+  static Future<void> _initializeLottiePreloading() async {
+    print('🎬 Démarrage IMMÉDIAT du pré-chargement animations Lottie...');
+    
+    // Fire-and-forget: démarrer le processus immédiatement
+    LottiePreloadService.instance.preloadAuthModalLottie().then((_) {
+      LogConfig.logInfo('🎯 Animation Lottie auth modal pré-chargée avec succès');
+    }).catchError((e) {
+      LogConfig.logInfo('Pré-chargement animation Lottie échoué (non bloquant): $e');
+      // Ne pas bloquer l'app, fallback vers le réseau
     });
   }
 
@@ -75,16 +94,15 @@ class AppInitializationService {
     }
   }
 
-  /// Initialise d'autres services nécessaires (non bloquants)
-  static Future<void> _initializeOtherServices() async {
-    // Placeholder pour d'autres initialisations futures
-    // Ex: services de notification, analytics, etc.
-    
-    // Exemple d'initialisation non bloquante:
-    // await AnalyticsService.initialize().catchError((e) {
-    //   LogConfig.logInfo('Analytics init failed: $e');
-    // });
-    
-    LogConfig.logInfo('Autres services initialisés');
+  /// Vérifie l'état du préchargement Lottie sans bloquer
+  static void _checkLottiePreloadingStatus(Future<void> lottieFuture) {
+    // Vérification après 2 secondes pour voir si c'est prêt
+    Timer(Duration(seconds: 2), () {
+      if (LottiePreloadService.instance.isAuthModalLottieLoaded) {
+        print('🎉 Animation Lottie prête en 2s - UX optimale !');
+      } else {
+        LogConfig.logInfo('⏳ Préchargement Lottie encore en cours après 2s');
+      }
+    });
   }
 }

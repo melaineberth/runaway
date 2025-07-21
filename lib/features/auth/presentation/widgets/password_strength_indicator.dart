@@ -33,17 +33,17 @@ class PasswordStrengthIndicator extends StatelessWidget {
     this.isVisible = true,
   });
 
-  PasswordStrengthData _calculateStrength(String password) {
+  PasswordStrengthData _calculateStrength(BuildContext context, String password) {
     if (password.isEmpty) {
       return PasswordStrengthData(
         strength: PasswordStrength.weak,
         score: 0.0,
-        missingRequirements: PasswordValidator.getMissingRequirements(''),
-        message: 'Entrez un mot de passe',
+        missingRequirements: PasswordValidator.getMissingRequirements(context, ''),
+        message: context.l10n.enterPassword,
       );
     }
 
-    final missingRequirements = PasswordValidator.getMissingRequirements(password);
+    final missingRequirements = PasswordValidator.getMissingRequirements(context, password);
     final validRequirements = 5 - missingRequirements.length;
     
     // Calcul du score final
@@ -53,19 +53,19 @@ class PasswordStrengthIndicator extends StatelessWidget {
 
     if (validRequirements <= 1) {
       strength = PasswordStrength.weak;
-      message = 'Très faible';
+      message = context.l10n.passwordVeryWeak;
     } else if (validRequirements <= 2) {
       strength = PasswordStrength.weak;
-      message = 'Faible';
+      message = context.l10n.passwordWeak;
     } else if (validRequirements <= 3) {
       strength = PasswordStrength.fair;
-      message = 'Moyen';
+      message = context.l10n.passwordFair;
     } else if (validRequirements <= 4) {
       strength = PasswordStrength.good;
-      message = 'Bon';
+      message = context.l10n.passwordGood;
     } else {
       strength = PasswordStrength.strong;
-      message = 'Très bon';
+      message = context.l10n.passwordStrong;
     }
 
     return PasswordStrengthData(
@@ -93,7 +93,7 @@ class PasswordStrengthIndicator extends StatelessWidget {
   Widget build(BuildContext context) {
     if (!isVisible) return const SizedBox.shrink();
 
-    final strengthData = _calculateStrength(password);
+    final strengthData = _calculateStrength(context, password);
     final strengthColor = _getStrengthColor(strengthData.strength, context);
 
     return AnimatedOpacity(

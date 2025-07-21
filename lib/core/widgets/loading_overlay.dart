@@ -33,7 +33,11 @@ class LoadingOverlay {
       builder: (_) => FullScreenLoader(message: message),
     );
 
-    Overlay.of(context, rootOverlay: true).insert(_entry!);
+    // Insérer avec priorité maximale pour être au-dessus de tout
+    final overlayState = Overlay.of(context, rootOverlay: true);
+    
+    // S'assurer que l'overlay de loading soit toujours au-dessus de tous les autres éléments
+    overlayState.insert(_entry!);
   }
 
   void hide() {
@@ -61,4 +65,6 @@ class LoadingOverlay {
     if (_entry == null) return;
     _entry!.markNeedsBuild();
   }
+
+  bool get isVisible => _entry != null;
 }

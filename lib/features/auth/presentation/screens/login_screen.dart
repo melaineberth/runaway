@@ -10,20 +10,10 @@ import 'package:runaway/features/auth/presentation/widgets/forgot_password_dialo
 
 class LoginScreen extends StatefulWidget {
   final bool isLoading;
-  final GlobalKey<FormState> formKey;
-  final TextEditingController emailController;
-  final TextEditingController passwordController;
-  final String? Function(String?)? emailValidator;
-  final String? Function(String?)? passwordValidator;
 
   const LoginScreen({
     super.key,
     required this.isLoading,
-    required this.formKey,
-    required this.emailController,
-    required this.passwordController,
-    required this.emailValidator,
-    required this.passwordValidator,
   });
 
   @override
@@ -31,6 +21,16 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
+  final _formKey = GlobalKey<FormState>();
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
 
   void _showForgotPasswordDialog() {
     showModalSheet(
@@ -39,52 +39,103 @@ class _LoginScreenState extends State<LoginScreen> {
       child: ForgotPasswordDialog(),
     );
   }
+
+  String? emailValidator(String? v) => v != null && v.contains('@') ? null : context.l10n.emailInvalid;
+
+  // 🆕 Modifier la validation du mot de passe pour inclure toutes les exigences
+  String? passwordValidator(String? v) {
+    if (v == null || v.isEmpty) {
+      return context.l10n.requiredPassword;
+    }
+    
+    if (v.length < 8) {
+      return context.l10n.requiredCountCharacters(8);
+    }
+    
+    if (!v.contains(RegExp(r'[A-Z]'))) {
+      return context.l10n.requiredCapitalLetter;
+    }
+    
+    if (!v.contains(RegExp(r'[a-z]'))) {
+      return context.l10n.requiredMinusculeLetter;
+    }
+    
+    if (!v.contains(RegExp(r'[0-9]'))) {
+      return context.l10n.requiredDigit;
+    }
+    
+    if (!v.contains(RegExp(r'[!@#$%^&*(),.?":{}|<>]'))) {
+      return context.l10n.requiredSymbol;
+    }
+    
+    return null;
+  }
   
   @override
   Widget build(BuildContext context) {
     return ModalSheet(
       child: Padding(
         padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Column(
+        child: Form(
+          key: _formKey,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
               children: [
-                AuthTextField(
-                  hint: context.l10n.emailHint,
-                  validator: widget.emailValidator,
-                  controller: widget.emailController,
-                  enabled: !widget.isLoading,
+              Text(
+                context.l10n.logIn,
+                style: context.bodySmall?.copyWith(
+                  color: context.adaptiveTextPrimary,
                 ),
-                10.h,
-                AuthTextField(
-                  hint: context.l10n.passwordHint,
-                  obscureText: true,
-                  validator: widget.passwordValidator,
-                  controller: widget.passwordController,
-                  enabled: !widget.isLoading,
+              ),
+              2.h,
+              Text(
+                context.l10n.enterAuthDetails,
+                style: context.bodySmall?.copyWith(
+                  color: context.adaptiveTextSecondary,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w500
                 ),
-                10.h,
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: GestureDetector(
-                    onTap: widget.isLoading ? null : _showForgotPasswordDialog,
-                    child: Text(
-                      context.l10n.forgotPassword,
-                      style: context.bodySmall?.copyWith(
-                        fontSize: 14,
-                        color: context.adaptiveTextPrimary,
-                        fontWeight: FontWeight.w600,
+              ),
+              20.h,
+              Column(
+                children: [
+                  AuthTextField(
+                    hint: context.l10n.emailHint,
+                    validator: emailValidator,
+                    controller: _emailController,
+                    enabled: !widget.isLoading,
+                  ),
+                  10.h,
+                  AuthTextField(
+                    hint: context.l10n.passwordHint,
+                    obscureText: true,
+                    validator: passwordValidator,
+                    controller: _passwordController,
+                    enabled: !widget.isLoading,
+                  ),
+                  10.h,
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: GestureDetector(
+                      onTap: widget.isLoading ? null : _showForgotPasswordDialog,
+                      child: Text(
+                        context.l10n.forgotPassword,
+                        style: context.bodySmall?.copyWith(
+                          fontSize: 14,
+                          color: context.adaptiveTextPrimary,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ),
                   ),
-                ),
-              ],
-            ),
-            10.h,
-        
-            _buildSignInButton(isLoading: widget.isLoading),
-          ],
+                ],
+              ),
+              20.h,
+          
+              _buildSignInButton(isLoading: widget.isLoading),
+            ],
+          ),
         ),
       ),
     );
@@ -100,11 +151,11 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   void _handleSignIn() {
-    if (widget.formKey.currentState!.validate()) {
+    if (_formKey.currentState!.validate()) {
       context.authBloc.add(
         LogInRequested(
-          email: widget.emailController.text.trim(),
-          password: widget.passwordController.text,
+          email: _emailController.text.trim(),
+          password: _passwordController.text,
         ),
       );
     }

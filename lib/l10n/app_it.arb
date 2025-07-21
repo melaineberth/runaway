@@ -1114,42 +1114,34 @@
   "@download": {
     "description": "Label for a button or link that lets the user download a file or data."
   },
-
   "save": "Salva",
   "@save": {
     "description": "Label for a button that saves the current item, form, or changes."
   },
-
   "saving": "Salvataggio in corso…",
   "@saving": {
     "description": "Status text shown while the save operation is in progress."
   },
-
   "alreadySaved": "Già salvato",
   "@alreadySaved": {
     "description": "Status text indicating the item has previously been saved."
   },
-
   "home": "Home",
   "@home": {
     "description": "Tab or section title that opens the home view."
   },
-
   "resources": "Risorse",
   "@resources": {
     "description": "Label for a screen, menu item, or tab that lists helpful resources such as documentation, tutorials, or FAQs."
   },
-
   "contactSupport": "Contatta il supporto",
   "@contactSupport": {
     "description": "Button or link that opens a channel (e-mail, chat, form) for the user to reach technical support."
   },
-
   "rateInStore": "Valuta nello store",
   "@rateInStore": {
     "description": "Call-to-action inviting the user to leave a rating or review in the app store."
   },
-
   "followOnX": "Segui @Trailix",
   "@followOnX": {
     "description": "Button or link encouraging the user to follow the official @Trailix account on the X (formerly Twitter) social network."
@@ -1162,7 +1154,6 @@
   "@supportEmailBody": {
     "description": "Corpo dell'email di supporto."
   },
-
   "insufficientCreditsTitle": "Crediti insufficienti",
   "@insufficientCreditsTitle": {
     "description": "Titre affiché quand l'utilisateur n'a pas assez de crédits"
@@ -1171,79 +1162,112 @@
   "@insufficientCreditsDescription": {
     "description": "Description expliquant le manque de crédits",
     "placeholders": {
-      "requiredCredits": { "type": "int", "example": "1" },
-      "action":       { "type": "String", "example": "generare un percorso" },
-      "availableCredits": { "type": "int", "example": "0" }
+      "requiredCredits": {
+        "type": "int",
+        "example": "1"
+      },
+      "action": {
+        "type": "String",
+        "example": "generare un percorso"
+      },
+      "availableCredits": {
+        "type": "int",
+        "example": "0"
+      }
     }
   },
   "buyCredits": "Acquista crediti",
-  "@buyCredits": { "description": "Bouton pour acheter des crédits" },
-
+  "@buyCredits": {
+    "description": "Bouton pour acheter des crédits"
+  },
   "currentCredits": "Crediti attuali",
-  "@currentCredits": { "description": "Label pour afficher les crédits actuels" },
-
+  "@currentCredits": {
+    "description": "Label pour afficher les crédits actuels"
+  },
   "availableCredits": "Crediti disponibili",
-  "@availableCredits": { "description": "Label pour les crédits disponibles" },
-
+  "@availableCredits": {
+    "description": "Label pour les crédits disponibles"
+  },
   "totalUsed": "Totale utilizzato",
-  "@totalUsed": { "description": "Label pour le total de crédits utilisés" },
-
+  "@totalUsed": {
+    "description": "Label pour le total de crédits utilisés"
+  },
   "popular": "Popolare",
-  "@popular": { "description": "Badge pour le plan le plus populaire" },
-
+  "@popular": {
+    "description": "Badge pour le plan le plus populaire"
+  },
   "buySelectedPlan": "Acquista questo piano",
-  "@buySelectedPlan": { "description": "Bouton pour acheter le plan sélectionné" },
-
+  "@buySelectedPlan": {
+    "description": "Bouton pour acheter le plan sélectionné"
+  },
   "selectPlan": "Seleziona un piano",
-  "@selectPlan": { "description": "Message quand aucun plan n'est sélectionné" },
-
+  "@selectPlan": {
+    "description": "Message quand aucun plan n'est sélectionné"
+  },
   "purchaseSimulated": "Acquisto simulato",
-  "@purchaseSimulated": { "description": "Titre pour la simulation d'achat" },
-
+  "@purchaseSimulated": {
+    "description": "Titre pour la simulation d'achat"
+  },
   "purchaseSimulatedDescription": "In modalità sviluppo, gli acquisti sono simulati. Vuoi simulare questo acquisto?",
-  "@purchaseSimulatedDescription": { "description": "Description pour la simulation d'achat" },
-
+  "@purchaseSimulatedDescription": {
+    "description": "Description pour la simulation d'achat"
+  },
   "simulatePurchase": "Simula acquisto",
-  "@simulatePurchase": { "description": "Bouton pour simuler un achat" },
-
+  "@simulatePurchase": {
+    "description": "Bouton pour simuler un achat"
+  },
   "purchaseSuccess": "Acquisto riuscito!",
-  "@purchaseSuccess": { "description": "Titre de succès d'achat" },
-
+  "@purchaseSuccess": {
+    "description": "Titre de succès d'achat"
+  },
   "transactionHistory": "Storico delle transazioni",
-  "@transactionHistory": { "description": "Titre de l'écran d'historique" },
-
+  "@transactionHistory": {
+    "description": "Titre de l'écran d'historique"
+  },
   "noTransactions": "Nessuna transazione al momento",
-  "@noTransactions": { "description": "Message quand il n'y a pas de transactions" },
-
+  "@noTransactions": {
+    "description": "Message quand il n'y a pas de transactions"
+  },
   "yesterday": "Ieri",
-  "@yesterday": { "description": "Libellé pour hier dans les dates" },
-
+  "@yesterday": {
+    "description": "Libellé pour hier dans les dates"
+  },
   "daysAgo": "giorni",
-  "@daysAgo": { "description": "Suffixe pour les jours passés" },
-
+  "@daysAgo": {
+    "description": "Suffixe pour les jours passés"
+  },
   "ok": "OK",
-  "@ok": { "description": "Bouton OK générique" },
-
+  "@ok": {
+    "description": "Bouton OK générique"
+  },
   "creditUsageSuccess": "Crediti utilizzati con successo",
-  "@creditUsageSuccess": { "description": "Message de succès d'utilisation de crédits" },
-
+  "@creditUsageSuccess": {
+    "description": "Message de succès d'utilisation de crédits"
+  },
   "routeGenerationWithCredits": "Verrà utilizzato 1 credito per generare questo percorso",
-  "@routeGenerationWithCredits": { "description": "Information sur l'utilisation de crédits pour la génération" },
-
+  "@routeGenerationWithCredits": {
+    "description": "Information sur l'utilisation de crédits pour la génération"
+  },
   "creditsRequiredForGeneration": "Generazione percorso (1 credito)",
-  "@creditsRequiredForGeneration": { "description": "Description de l'action qui consomme des crédits" },
-
+  "@creditsRequiredForGeneration": {
+    "description": "Description de l'action qui consomme des crédits"
+  },
   "manageCredits": "Gestisci i miei crediti",
-  "@manageCredits": { "description": "Lien pour gérer les crédits" },
-
+  "@manageCredits": {
+    "description": "Lien pour gérer les crédits"
+  },
   "freeCreditsWelcome": "🎉 Benvenuto! Hai ricevuto 3 crediti gratuiti per iniziare",
-  "@freeCreditsWelcome": { "description": "Message de bienvenue avec crédits gratuits" },
-
+  "@freeCreditsWelcome": {
+    "description": "Message de bienvenue avec crédits gratuits"
+  },
   "creditsLeft": "{count} credito/i rimanente/i",
   "@creditsLeft": {
     "description": "Affichage du nombre de crédits restants",
     "placeholders": {
-      "count": { "type": "int", "example": "5" }
+      "count": {
+        "type": "int",
+        "example": "5"
+      }
     }
   },
   "elevationRange": "Intervallo di dislivello",
@@ -1338,87 +1362,70 @@
   "@easyDifficultyLevel": {
     "description": "Etichetta per il livello di difficoltà facile di un percorso o attività."
   },
-
   "moderateDifficultyLevel": "Moderato",
   "@moderateDifficultyLevel": {
     "description": "Etichetta per il livello di difficoltà moderato di un percorso o attività."
   },
-
   "hardDifficultyLevel": "Difficile",
   "@hardDifficultyLevel": {
     "description": "Etichetta per il livello di difficoltà difficile di un percorso o attività."
   },
-
   "expertDifficultyLevel": "Esperto",
   "@expertDifficultyLevel": {
     "description": "Etichetta per il livello di difficoltà esperto di un percorso o attività."
   },
-
   "asphaltSurfaceTitle": "Asfalto",
   "@asphaltSurfaceTitle": {
     "description": "Titolo per un tipo di superficie asfaltata (strade e marciapiedi)."
   },
-
   "asphaltSurfaceDesc": "Privilegia strade e marciapiedi asfaltati",
   "@asphaltSurfaceDesc": {
     "description": "Descrizione per la superficie asfaltata, privilegia strade e marciapiedi."
   },
-
   "mixedSurfaceTitle": "Misto",
   "@mixedSurfaceTitle": {
     "description": "Titolo per un tipo di superficie mista (strade e sentieri)."
   },
-
   "mixedSurfaceDesc": "Mix di strade e sentieri a seconda del percorso",
   "@mixedSurfaceDesc": {
     "description": "Descrizione per superficie mista, combinazione di strade e sentieri."
   },
-
   "naturalSurfaceTitle": "Naturale",
   "@naturalSurfaceTitle": {
     "description": "Titolo per un tipo di superficie con sentieri naturali."
   },
-
   "naturalSurfaceDesc": "Privilegia sentieri naturali",
   "@naturalSurfaceDesc": {
     "description": "Descrizione per superficie naturale, privilegia sentieri naturali."
   },
-
   "searchAdress": "Cerca un indirizzo...",
   "@searchAdress": {
     "description": "Testo di segnaposto per la ricerca di un indirizzo."
   },
-
   "chooseName": "Scegli un nome",
   "@chooseName": {
     "description": "Invita l'utente a scegliere un nome per il percorso."
   },
-
   "canModifyLater": "Puoi modificarlo in seguito",
   "@canModifyLater": {
     "description": "Indica che il nome può essere modificato più tardi."
   },
-
   "routeName": "Nome del percorso",
   "@routeName": {
     "description": "Etichetta per il campo nome del percorso."
   },
-
   "limitReachedGenerations": "Limite raggiunto",
   "@limitReachedGenerations": {
     "description": "Messaggio visualizzato quando si raggiunge il limite di generazioni."
   },
-
   "exhaustedGenerations": "Generazioni esaurite",
   "@exhaustedGenerations": {
     "description": "Messaggio che indica che tutte le generazioni disponibili sono state esaurite."
   },
-
   "remainingLimitGenerations": "Limite rimanente",
   "@remainingLimitGenerations": {
     "description": "Indica quante generazioni restano disponibili."
   },
-
   "remainingGenerationsLabel": "{remainingGenerations} generazione gratuita{remainingGenerations, plural, =1 {} other {i}}",
   "@remainingGenerationsLabel": {
     "description": "Etichetta che mostra quante generazioni gratuite restano, con il plurale corretto.",
@@ -1429,104 +1436,450 @@
       }
     }
   },
-
   "freeGenerations": "Generazioni gratuite",
   "@freeGenerations": {
     "description": "Etichetta per il numero di generazioni gratuite."
   },
-
   "exhaustedFreeGenerations": "Generazioni gratuite esaurite",
   "@exhaustedFreeGenerations": {
     "description": "Messaggio quando si esauriscono le generazioni gratuite."
   },
-
   "exhaustedCredits": "Crediti esauriti",
   "@exhaustedCredits": {
     "description": "Messaggio che indica che tutti i crediti sono stati usati."
   },
-
   "authForMoreGenerations": "Crea un account gratuito per altre generazioni",
   "@authForMoreGenerations": {
     "description": "Invita a creare un account per avere più generazioni."
   },
-
   "createFreeAccount": "Crea account gratuito",
   "@createFreeAccount": {
     "description": "Etichetta per il pulsante o link per creare un account gratuito."
   },
-
   "exportRouteTitle": "Esporta il percorso",
   "@exportRouteTitle": {
     "description": "Titolo per esportare un percorso."
   },
-
   "exportRouteDesc": "Scegli il formato di esportazione",
   "@exportRouteDesc": {
     "description": "Testo che spiega come scegliere il formato di esportazione."
   },
-
   "generateInProgress": "Generazione del percorso in corso...",
   "@generateInProgress": {
     "description": "Messaggio visualizzato durante la generazione del percorso."
   },
-
   "emptyRouteForSave": "Nessun percorso da salvare",
   "@emptyRouteForSave": {
     "description": "Messaggio quando non c'è alcun percorso da salvare."
   },
-
   "connectionError": "Errore di connessione",
   "@connectionError": {
     "description": "Messaggio in caso di errore di connessione."
   },
-
   "notAvailableMap": "Mappa non disponibile",
   "@notAvailableMap": {
     "description": "Messaggio quando la mappa non è disponibile."
   },
-
   "missingRouteSettings": "Impostazioni del percorso mancanti",
   "@missingRouteSettings": {
     "description": "Messaggio quando mancano le impostazioni del percorso."
   },
-
   "savedRoute": "Percorso salvato",
   "@savedRoute": {
     "description": "Conferma che il percorso è stato salvato."
   },
-
   "loginRequiredTitle": "Accesso richiesto",
   "@loginRequiredTitle": {
     "description": "Titolo di una finestra di dialogo che indica che è necessario effettuare l'accesso."
   },
-
   "loginRequiredDesc": "Devi effettuare l'accesso per salvare i tuoi percorsi",
   "@loginRequiredDesc": {
     "description": "Descrizione che spiega perché è richiesto l'accesso."
   },
-
   "reallyContinueTitle": "Vuoi davvero continuare?",
   "@reallyContinueTitle": {
     "description": "Titolo per confermare se l'utente vuole davvero continuare."
   },
-
   "reallyContinueDesc": "Questa azione eliminerà il percorso generato in precedenza, sarà irrecuperabile!",
   "@reallyContinueDesc": {
     "description": "Avviso che continuare eliminerà il percorso attuale."
   },
-
   "generationEmptyLocation": "Nessuna posizione disponibile per la generazione",
   "@generationEmptyLocation": {
     "description": "Messaggio che indica che non c'è alcuna posizione disponibile per generare."
   },
-
   "unableLaunchGeneration": "Impossibile avviare la generazione",
   "@unableLaunchGeneration": {
     "description": "Messaggio quando non è possibile avviare la generazione."
   },
-
   "invalidParameters": "Parametri non validi",
   "@invalidParameters": {
     "description": "Messaggio quando i parametri non sono validi."
+  },
+  "locationInProgress": "Localizzazione...",
+  "@locationInProgress": {
+    "description": "Testo visualizzato mentre l'app sta determinando la posizione dell'utente."
+  },
+  "searchingPosition": "Ricerca della tua posizione",
+  "@searchingPosition": {
+    "description": "Messaggio visualizzato mentre si cerca la posizione GPS dell'utente."
+  },
+  "trackingError": "Errore di tracciamento",
+  "@trackingError": {
+    "description": "Messaggio di errore mostrato quando il tracciamento della posizione fallisce."
+  },
+  "enterAuthDetails": "Inserisci i tuoi dati",
+  "@enterAuthDetails": {
+    "description": "Testo che richiede all'utente di inserire i dettagli di autenticazione"
+  },
+  "enterPassword": "Inserisci una password",
+  "@enterPassword": {
+    "description": "Testo che richiede all'utente di inserire una password"
+  },
+  "continueWithEmail": "Continua con email",
+  "@continueWithEmail": {
+    "description": "Opzione per continuare il processo usando l'email"
+  },
+  "passwordVeryWeak": "Molto debole",
+  "@passwordVeryWeak": {
+    "description": "Indicatore di forza della password - molto debole"
+  },
+  "passwordWeak": "Debole",
+  "@passwordWeak": {
+    "description": "Indicatore di forza della password - debole"
+  },
+  "passwordFair": "Sufficiente",
+  "@passwordFair": {
+    "description": "Indicatore di forza della password - sufficiente"
+  },
+  "passwordGood": "Buona",
+  "@passwordGood": {
+    "description": "Indicatore di forza della password - buona"
+  },
+  "passwordStrong": "Forte",
+  "@passwordStrong": {
+    "description": "Indicatore di forza della password - forte"
+  },
+  "resetEmail": "Email di ripristino inviata a {email}",
+  "@resetEmail": {
+    "description": "Messaggio di conferma quando viene inviata un'email di ripristino",
+    "placeholders": {
+      "email": {
+        "type": "String",
+        "description": "Indirizzo email dell'utente"
+      }
+    }
+  },
+  "requiredPassword": "Password richiesta",
+  "@requiredPassword": {
+    "description": "Messaggio di errore quando la password è obbligatoria ma non è stata fornita"
+  },
+  "requiredCountCharacters": "Sono richiesti almeno {count} caratteri",
+  "@requiredCountCharacters": {
+    "description": "Messaggio che indica il numero minimo di caratteri richiesti",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "description": "Numero minimo di caratteri richiesti"
+      }
+    }
+  },
+  "requiredCapitalLetter": "È richiesta almeno una lettera maiuscola",
+  "@requiredCapitalLetter": {
+    "description": "Requisito della password - lettera maiuscola obbligatoria"
+  },
+  "requiredMinusculeLetter": "È richiesta almeno una lettera minuscola",
+  "@requiredMinusculeLetter": {
+    "description": "Requisito della password - lettera minuscola obbligatoria"
+  },
+  "requiredDigit": "È richiesta almeno una cifra",
+  "@requiredDigit": {
+    "description": "Requisito della password - cifra obbligatoria"
+  },
+  "requiredSymbol": "È richiesto almeno un simbolo",
+  "@requiredSymbol": {
+    "description": "Requisito della password - simbolo obbligatorio"
+  },
+  "minimumCountCharacters": "Minimo {count} caratteri",
+  "@minimumCountCharacters": {
+    "description": "Indicatore del numero minimo di caratteri",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "description": "Numero minimo di caratteri"
+      }
+    }
+  },
+  "oneCapitalLetter": "Una lettera maiuscola",
+  "@oneCapitalLetter": {
+    "description": "Requisito della password - una lettera maiuscola"
+  },
+  "oneMinusculeLetter": "Una lettera minuscola",
+  "@oneMinusculeLetter": {
+    "description": "Requisito della password - una lettera minuscola"
+  },
+  "oneDigit": "Una cifra",
+  "@oneDigit": {
+    "description": "Requisito della password - una cifra"
+  },
+  "oneSymbol": "Un simbolo",
+  "@oneSymbol": {
+    "description": "Requisito della password - un simbolo"
+  },
+  "successEmailSentBack": "Email di conferma inviata con successo",
+  "@successEmailSentBack": {
+    "description": "Messaggio di successo quando l'email di conferma viene inviata correttamente"
+  },
+  "checkEmail": "Controlla la tua email",
+  "@checkEmail": {
+    "description": "Istruzione per l'utente di controllare la propria email"
+  },
+  "successSentConfirmationLink": "Abbiamo inviato un link di conferma a {email}. Clicca sul link nell'email per attivare il tuo account.",
+  "@successSentConfirmationLink": {
+    "description": "Messaggio che informa che è stato inviato un link di conferma all'email dell'utente",
+    "placeholders": {
+      "email": {
+        "type": "String",
+        "description": "Indirizzo email dell'utente"
+      }
+    }
+  },
+  "resendCode": "Reinvia il codice",
+  "@resendCode": {
+    "description": "Opzione per reinviare un codice di verifica"
+  },
+  "resendCodeInDelay": "Reinvia tra {count}s",
+  "@resendCodeInDelay": {
+    "description": "Messaggio che indica quando sarà possibile reinviare il codice",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "description": "Tempo in secondi prima di poter reinviare"
+      }
+    }
+  },
+  "loginBack": "Torna al login",
+  "@loginBack": {
+    "description": "Link per tornare alla schermata di login"
+  },
+  "requiredEmail": "Email richiesta",
+  "@requiredEmail": {
+    "description": "Messaggio di errore quando l'email è obbligatoria ma non è stata fornita"
+  },
+  "receiveResetLink": "Inserisci il tuo indirizzo email per ricevere un link di ripristino",
+  "@receiveResetLink": {
+    "description": "Istruzione per inserire l'email per ricevere il link di ripristino password"
+  },
+  "send": "Invia",
+  "@send": {
+    "description": "Pulsante per inviare informazioni o modulo"
+  },
+  "byDefault": "Per impostazione predefinita",
+  "@byDefault": {
+    "description": "Indicatore di configurazione predefinita"
+  },
+  "changePhoto": "Cambia foto",
+  "@changePhoto": {
+    "description": "Opzione per cambiare la foto del profilo"
+  },
+  "desiredSelectionMode": "Prima di continuare, scegli la modalità di selezione desiderata",
+  "@desiredSelectionMode": {
+    "description": "Istruzione per scegliere una modalità di selezione prima di procedere"
+  },
+  "cameraMode": "Fotocamera",
+  "@cameraMode": {
+    "description": "Opzione per usare la fotocamera del dispositivo"
+  },
+  "galleryMode": "Galleria",
+  "@galleryMode": {
+    "description": "Opzione per selezionare dalla galleria foto"
+  },
+  "successUpdatedProfile": "Profilo aggiornato con successo",
+  "@successUpdatedProfile": {
+    "description": "Messaggio di conferma quando il profilo viene aggiornato correttamente"
+  },
+  "couldNotLaunchUrl": "Impossibile aprire {url}",
+  "@couldNotLaunchUrl": {
+    "description": "Messaggio di errore quando non è possibile aprire un URL",
+    "placeholders": {
+      "url": {
+        "type": "String",
+        "description": "URL che non è stato possibile aprire"
+      }
+    }
+  },
+  "couldNotLaunchEmailApp": "Impossibile aprire l'applicazione email",
+  "@couldNotLaunchEmailApp": {
+    "description": "Messaggio di errore quando non è possibile aprire l'applicazione email"
+  },
+  "userBalance": "Il tuo saldo",
+  "@userBalance": {
+    "description": "Etichetta che mostra il saldo dell'utente"
+  },
+  "purchasedCredits": "Acquistati",
+  "@purchasedCredits": {
+    "description": "Etichetta per i crediti che sono stati acquistati"
+  },
+  "usedCredits": "Utilizzati",
+  "@usedCredits": {
+    "description": "Etichetta per i crediti che sono stati utilizzati"
+  },
+  "purchaseCreditsTitle": "Crediti acquistati",
+  "@purchaseCreditsTitle": {
+    "description": "Titolo per la sezione dei crediti acquistati"
+  },
+  "usageCreditsTitle": "Credito per generare un percorso",
+  "@usageCreditsTitle": {
+    "description": "Titolo che descrive l'uso dei crediti per generare percorsi"
+  },
+  "bonusCreditsTitle": "Crediti di benvenuto gratuiti",
+  "@bonusCreditsTitle": {
+    "description": "Titolo per i crediti bonus gratuiti di benvenuto"
+  },
+  "refundCreditsTitle": "Crediti ripristinati",
+  "@refundCreditsTitle": {
+    "description": "Titolo per i crediti che sono stati rimborsati o ripristinati"
+  },
+  "notAvailablePlans": "Piani non disponibili",
+  "@notAvailablePlans": {
+    "description": "Messaggio quando non ci sono piani di pagamento disponibili"
+  },
+  "missingTransactionID": "ID transazione mancante",
+  "@missingTransactionID": {
+    "description": "Errore quando manca l'identificativo della transazione"
+  },
+  "purchaseCanceled": "Acquisto annullato",
+  "@purchaseCanceled": {
+    "description": "Messaggio quando un acquisto è stato annullato"
+  },
+  "unknownError": "Errore sconosciuto",
+  "@unknownError": {
+    "description": "Messaggio di errore generico per errori non identificati"
+  },
+  "duringPaymentError": "Errore durante il pagamento",
+  "@duringPaymentError": {
+    "description": "Messaggio di errore che si verifica durante il processo di pagamento"
+  },
+  "networkException": "Problema di connessione. Riprova di nuovo.",
+  "@networkException": {
+    "description": "Messaggio di errore per problemi di connettività di rete"
+  },
+  "retryNotAvailablePlans": "Piano selezionato non disponibile. Riprova di nuovo.",
+  "@retryNotAvailablePlans": {
+    "description": "Errore quando il piano selezionato non è disponibile"
+  },
+  "systemIssueDetectedTitle": "Problema di sistema rilevato",
+  "@systemIssueDetectedTitle": {
+    "description": "Titolo del dialogo quando viene rilevato un problema di sistema"
+  },
+  "systemIssueDetectedSubtitle": "È stato rilevato un problema di sistema. Questo può accadere se acquisti precedenti non sono stati completati correttamente.",
+  "@systemIssueDetectedSubtitle": {
+    "description": "Sottotitolo che spiega il problema di sistema rilevato"
+  },
+  "systemIssueDetectedDesc": "Riavvia l'applicazione e riprova",
+  "@systemIssueDetectedDesc": {
+    "description": "Istruzione per risolvere il problema di sistema"
+  },
+  "close": "Chiudi",
+  "@close": {
+    "description": "Pulsante per chiudere un dialogo o finestra"
+  },
+  "cleaningDone": "Pulizia completata. Riprova ora.",
+  "@cleaningDone": {
+    "description": "Messaggio di conferma quando viene completato un processo di pulizia"
+  },
+  "cleaningError": "Errore durante la pulizia: {error}",
+  "@cleaningError": {
+    "description": "Messaggio di errore durante il processo di pulizia",
+    "placeholders": {
+      "error": {
+        "type": "String",
+        "description": "Descrizione specifica dell'errore verificatosi"
+      }
+    }
+  },
+  "cleaning": "Pulizia in corso",
+  "@cleaning": {
+    "description": "Indicatore che è in esecuzione un processo di pulizia"
+  },
+  "creditPlanModalTitle": "Fai scorta di crediti per vivere nuove avventure!",
+  "@creditPlanModalTitle": {
+    "description": "Titolo del modale per i piani di credito"
+  },
+  "creditPlanModalSubtitle": "Scegli il tuo pacchetto preferito, poi clicca qui per iniziare ad esplorare!",
+  "@creditPlanModalSubtitle": {
+    "description": "Sottotitolo del modale per i piani di credito"
+  },
+  "creditPlanModalWarning": "Il pagamento viene addebitato alla conferma dell'acquisto. I crediti non sono rimborsabili e validi solo nell'applicazione.",
+  "@creditPlanModalWarning": {
+    "description": "Avviso sui termini e condizioni dei crediti"
+  },
+  "refresh": "Aggiorna",
+  "@refresh": {
+    "description": "Pulsante per aggiornare o ricaricare il contenuto"
+  },
+  "successRouteDeleted": "Percorso eliminato con successo",
+  "@successRouteDeleted": {
+    "description": "Messaggio di conferma quando un percorso viene eliminato correttamente"
+  },
+  "errorRouteDeleted": "Errore durante l'eliminazione",
+  "@errorRouteDeleted": {
+    "description": "Messaggio di errore quando fallisce l'eliminazione di un percorso"
+  },
+  "displayRouteError": "Errore durante la visualizzazione del percorso",
+  "@displayRouteError": {
+    "description": "Errore che si verifica nel visualizzare un percorso"
+  },
+  "routeNameUpdateException": "Il nome non può essere vuoto",
+  "@routeNameUpdateException": {
+    "description": "Errore di validazione quando il nome del percorso è vuoto"
+  },
+  "routeNameUpdateExceptionMinCharacters": "Il nome deve contenere almeno 2 caratteri",
+  "@routeNameUpdateExceptionMinCharacters": {
+    "description": "Errore di validazione per lunghezza minima del nome percorso"
+  },
+  "routeNameUpdateExceptionCountCharacters": "Il nome non può superare i 50 caratteri",
+  "@routeNameUpdateExceptionCountCharacters": {
+    "description": "Errore di validazione per lunghezza massima del nome percorso"
+  },
+  "routeNameUpdateExceptionForbiddenCharacters": "Il nome contiene caratteri non consentiti",
+  "@routeNameUpdateExceptionForbiddenCharacters": {
+    "description": "Errore di validazione quando il nome contiene caratteri non permessi"
+  },
+  "routeNameUpdateDone": "Aggiornamento completato",
+  "@routeNameUpdateDone": {
+    "description": "Messaggio di conferma quando viene aggiornato il nome del percorso"
+  },
+  "formatRouteExport": "Percorso esportato in formato {format}",
+  "@formatRouteExport": {
+    "description": "Messaggio di conferma quando viene esportato un percorso",
+    "placeholders": {
+      "format": {
+        "type": "String",
+        "description": "Formato del file in cui è stato esportato il percorso"
+      }
+    }
+  },
+  "routeExportError": "Errore durante l'esportazione: {error}",
+  "@routeExportError": {
+    "description": "Messaggio di errore durante l'esportazione dei percorsi",
+    "placeholders": {
+      "error": {
+        "type": "String",
+        "description": "Descrizione specifica dell'errore di esportazione"
+      }
+    }
+  },
+  "updateRouteNameTitle": "Aggiorna",
+  "@updateRouteNameTitle": {
+    "description": "Titolo del dialogo per aggiornare il nome del percorso"
+  },
+  "updateRouteNameSubtitle": "Scegli un nuovo nome",
+  "@updateRouteNameSubtitle": {
+    "description": "Sottotitolo che chiede all'utente di scegliere un nuovo nome"
+  },
+  "updateRouteNameHint": "Processo digestivo dopo aver mangiato",
+  "@updateRouteNameHint": {
+    "description": "Testo di aiuto o suggerimento per il campo nome percorso"
   }
 }

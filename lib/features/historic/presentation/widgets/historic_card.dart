@@ -106,7 +106,7 @@ class _HistoricCardState extends State<HistoricCard> {
     
     // Validation basique
     if (newName.isEmpty) {
-      _showError('Le nom ne peut pas être vide');
+      _showError(context.l10n.routeNameUpdateException);
       return;
     }
     
@@ -116,19 +116,19 @@ class _HistoricCardState extends State<HistoricCard> {
     }
     
     if (newName.length > 50) {
-      _showError('Le nom ne peut pas dépasser 50 caractères');
+      _showError(context.l10n.routeNameUpdateExceptionCountCharacters);
       return;
     }
 
     // 🆕 Validation des caractères interdits
     if (newName.contains(RegExp(r'[<>:"/\\|?*]'))) {
-      _showError('Le nom contient des caractères interdits');
+      _showError(context.l10n.routeNameUpdateExceptionForbiddenCharacters);
       return;
     }
 
     // 🆕 Validation de la longueur minimale
     if (newName.length < 2) {
-      _showError('Le nom doit contenir au moins 2 caractères');
+      _showError(context.l10n.routeNameUpdateExceptionMinCharacters);
       return;
     }
 
@@ -224,7 +224,7 @@ class _HistoricCardState extends State<HistoricCard> {
         showTopSnackBar(
           Overlay.of(context),
           TopSnackBar(
-            title: 'Parcours exporté en ${format.displayName}',
+            title: context.l10n.formatRouteExport(format.displayName),
           ),
         );
       }
@@ -236,7 +236,7 @@ class _HistoricCardState extends State<HistoricCard> {
           Overlay.of(context),
           TopSnackBar(
             isError: true,
-            title: 'Erreur lors de l\'export: $e',
+            title: context.l10n.routeExportError(e.toString()),
           ),
         );
       }
@@ -690,7 +690,7 @@ class _HistoricCardState extends State<HistoricCard> {
 
   /// 🆕 Retourne le nom de la localisation (implémentation complète)
   String _getLocationName() {
-    return _locationName ?? 'Localisation';
+    return _locationName ?? 'Mars';
   }
 
   /// Crée un chip de détail
@@ -762,14 +762,14 @@ class _RenameRouteSheetState extends State<RenameRouteSheet> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              "Mise à jour",
+              context.l10n.updateRouteNameTitle,
               style: context.bodySmall?.copyWith(
                 color: context.adaptiveTextPrimary,
               ),
             ),
             2.h,
             Text(
-              "Choisissez un nouveau nom",
+              context.l10n.updateRouteNameSubtitle,
               style: context.bodySmall?.copyWith(
                 color: context.adaptiveTextSecondary,
                 fontSize: 15,
@@ -779,7 +779,7 @@ class _RenameRouteSheetState extends State<RenameRouteSheet> {
             20.h,
             AuthTextField(
               controller: _ctl,
-              hint: 'Nom du parcours',
+              hint: context.l10n.updateRouteNameHint,
               textCapitalization: TextCapitalization.sentences,
               maxLines: 1,
             ),

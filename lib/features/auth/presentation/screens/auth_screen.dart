@@ -27,20 +27,12 @@ class AuthScreen extends StatefulWidget {
 }
 
 class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateMixin {
-  final _formKey = GlobalKey<FormState>();
-  final TextEditingController _emailController = TextEditingController();
-  final TextEditingController _passwordController = TextEditingController();
-  final TextEditingController _confirmPasswordController = TextEditingController();
   late String _screenLoadId;
   int initialIndex = 0;
-
-  // 🆕 Ajouter ces variables pour l'indicateur de force
-  bool _showPasswordStrength = false;
 
   @override
   void initState() {
     super.initState();
-    _passwordController.addListener(_onPasswordChanged);
     _screenLoadId = context.trackScreenLoad('auth_screen');
 
     initialIndex = widget.initialIndex;
@@ -50,63 +42,13 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
     });
   }
 
-  // 🆕 Ajouter cette méthode
-  void _onPasswordChanged() {
-    setState(() {
-      _showPasswordStrength = _passwordController.text.isNotEmpty;
-    });
-  }
-
-  @override
-  void dispose() {
-    _emailController.dispose();
-    _passwordController.dispose();
-    _confirmPasswordController.dispose();
-    super.dispose();
-  }
-
-  String? emailValidator(String? v) => v != null && v.contains('@') ? null : context.l10n.emailInvalid;
-
-  // 🆕 Modifier la validation du mot de passe pour inclure toutes les exigences
-  String? passwordValidator(String? v) {
-    if (v == null || v.isEmpty) {
-      return 'Mot de passe requis';
-    }
-    
-    if (v.length < 8) {
-      return 'Au moins 8 caractères requis';
-    }
-    
-    if (!v.contains(RegExp(r'[A-Z]'))) {
-      return 'Au moins une majuscule requise';
-    }
-    
-    if (!v.contains(RegExp(r'[a-z]'))) {
-      return 'Au moins une minuscule requise';
-    }
-    
-    if (!v.contains(RegExp(r'[0-9]'))) {
-      return 'Au moins un chiffre requis';
-    }
-    
-    if (!v.contains(RegExp(r'[!@#$%^&*(),.?":{}|<>]'))) {
-      return 'Au moins un symbole requis';
-    }
-    
-    return null;
-  }
-
   void showEmailSignIn({required bool isLoading}) {
     showModalSheet(
       context: context, 
       backgroundColor: Colors.transparent,
       child: LoginScreen(
-        formKey: _formKey, 
         isLoading: isLoading, 
-        emailController: _emailController, 
-        passwordController: _passwordController, 
-        emailValidator: emailValidator, 
-        passwordValidator: passwordValidator)
+      )
     );
   }
 
@@ -115,14 +57,7 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
       context: context, 
       backgroundColor: Colors.transparent,
       child: SignupScreen(
-        formKey: _formKey, 
         isLoading: isLoading, 
-        emailController: _emailController, 
-        passwordController: _passwordController, 
-        confirmPasswordController: _confirmPasswordController,
-        passwordStrength: _showPasswordStrength, 
-        emailValidator: emailValidator, 
-        passwordValidator: passwordValidator, 
       ),
     );
   }
@@ -155,7 +90,7 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
             showTopSnackBar(
               Overlay.of(context),
               TopSnackBar(
-                title: 'Email de réinitialisation envoyé à ${authState.email}',
+                title: context.l10n.resetEmail(authState.email),
               ),
             );
           } else if (authState is AuthError) {
@@ -173,97 +108,90 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
           extendBodyBehindAppBar: true,
           resizeToAvoidBottomInset: false,
           appBar: AppBar(
+            automaticallyImplyLeading: false,
             backgroundColor: Colors.transparent,
-            leading: IconButton(
-              onPressed: () => context.pop(), 
-              icon: Icon(HugeIcons.strokeStandardArrowLeft02),
-            ),
+            actions: [
+              IconButton(
+                onPressed: () => context.pop(), 
+                icon: Icon(
+                  HugeIcons.solidRoundedCancelCircle,
+                  color: context.adaptiveDisabled.withValues(alpha: 0.2),
+                  size: 28,
+                ),
+              ),
+            ],
           ),
           body: BlocBuilder<AuthBloc, AuthState>(
             builder: (context, authState) {
               final isLoading = authState is AuthLoading;
               
-              return Form(
-                key: _formKey,
-                child: Column(
-                  children: [
-                    Expanded(
-                      child: Container(
-                        color: Colors.green,
-                        // padding: EdgeInsets.fromLTRB(
-                        //   20,
-                        //   kToolbarHeight*1.5,
-                        //   20,
-                        //   20,
-                        // ),
-                        // child: Lottie.network(
-                        //   repeat: false,
-                        //   fit: BoxFit.cover,
-                        //   "https://cdn.lottielab.com/l/5UJtt4UM1f3xY4.json",
-                        //   filterQuality: FilterQuality.high,
-                        // ),
-                      ),
+              return Column(
+                children: [
+                  Expanded(
+                    child: Image.asset(
+                      "assets/img/onboard.png",
+                      fit: BoxFit.cover,
                     ),
-                    Padding(
-                      padding: const EdgeInsets.all(20.0),
-                      child: SquircleContainer(
-                        gradient: false,
-                        padding: EdgeInsets.all(20.0),
-                        color: context.adaptiveDisabled.withValues(alpha: 0.05),
-                        radius: 100.0,
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            _buildAuthInfo(),
-
-                            40.h,
-
-                            _buildSocialButtons(isLoading: isLoading),          
-                  
-                            50.h,
-                            
-                            Text.rich(
-                              TextSpan(
-                                children: [
-                                  TextSpan(
-                                    text: initialIndex == 0 
-                                      ? context.l10n.haveAccount 
-                                      : context.l10n.createAccountQuestion,
-                                    style: context.bodySmall?.copyWith(
-                                      fontSize: 15,
-                                      color: context.adaptiveTextPrimary,
-                                      fontWeight: FontWeight.w500,
-                                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.all(20.0),
+                    child: SquircleContainer(
+                      gradient: false,
+                      padding: EdgeInsets.all(20.0),
+                      color: context.adaptiveDisabled.withValues(alpha: 0.05),
+                      radius: 100.0,
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          _buildAuthInfo(),
+              
+                          40.h,
+              
+                          _buildSocialButtons(isLoading: isLoading),          
+                
+                          50.h,
+                          
+                          Text.rich(
+                            TextSpan(
+                              children: [
+                                TextSpan(
+                                  text: initialIndex == 0 
+                                    ? context.l10n.haveAccount 
+                                    : context.l10n.createAccountQuestion,
+                                  style: context.bodySmall?.copyWith(
+                                    fontSize: 15,
+                                    color: context.adaptiveTextPrimary,
+                                    fontWeight: FontWeight.w500,
                                   ),
-                                  TextSpan(
-                                    text: initialIndex == 0  
-                                      ? ' ${context.l10n.logIn}'
-                                      : ' ${context.l10n.signUp}',
-                                    style: context.bodySmall?.copyWith(
-                                      fontSize: 15,
-                                      color: context.adaptivePrimary,
-                                      fontWeight: FontWeight.w700,
-                                    ),
-                                    recognizer: TapGestureRecognizer()
-                                    ..onTap = () {
-                                      setState(() {
-                                        if (initialIndex == 1) {
-                                          initialIndex = 0; // <= CORRECT
-                                        } else {
-                                          initialIndex = 1; // <= CORRECT
-                                        }
-                                      });
-                                    },
+                                ),
+                                TextSpan(
+                                  text: initialIndex == 0  
+                                    ? ' ${context.l10n.logIn}'
+                                    : ' ${context.l10n.signUp}',
+                                  style: context.bodySmall?.copyWith(
+                                    fontSize: 15,
+                                    color: context.adaptivePrimary,
+                                    fontWeight: FontWeight.w700,
                                   ),
-                                ],
-                              ),
+                                  recognizer: TapGestureRecognizer()
+                                  ..onTap = () {
+                                    setState(() {
+                                      if (initialIndex == 1) {
+                                        initialIndex = 0; // <= CORRECT
+                                      } else {
+                                        initialIndex = 1; // <= CORRECT
+                                      }
+                                    });
+                                  },
+                                ),
+                              ],
                             ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
                     ),
-                  ],
-                ),
+                  ),
+                ],
               );              
             },
           ),
@@ -319,7 +247,7 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
               ),
               5.w,
               Text(
-                "Continue with email",
+                context.l10n.continueWithEmail,
                 style: context.bodySmall?.copyWith(
                   color: Colors.white,
                 ),

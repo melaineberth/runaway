@@ -30,10 +30,10 @@ class _ForgotPasswordDialogState extends State<ForgotPasswordDialog> {
 
   String? emailValidator(String? value) {
     if (value == null || value.trim().isEmpty) {
-      return 'Email requis';
+      return context.l10n.requiredEmail;
     }
     if (!value.contains('@')) {
-      return 'Format d\'email invalide';
+      return context.l10n.emailInvalid;
     }
     return null;
   }
@@ -53,7 +53,7 @@ class _ForgotPasswordDialogState extends State<ForgotPasswordDialog> {
           showTopSnackBar(
             Overlay.of(context),
             TopSnackBar(
-              title: 'Email de réinitialisation envoyé à ${state.email}',
+              title: context.l10n.resetEmail(state.email),
             ),
           );
         } else if (state is AuthError) {
@@ -76,7 +76,7 @@ class _ForgotPasswordDialogState extends State<ForgotPasswordDialog> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Text(
-                  'Mot de passe oublié',
+                  context.l10n.forgotPassword,
                   style: context.bodyMedium?.copyWith(
                     fontSize: 20,
                     fontWeight: FontWeight.w600,
@@ -86,7 +86,7 @@ class _ForgotPasswordDialogState extends State<ForgotPasswordDialog> {
                 ),
                 16.h,
                 Text(
-                  'Entrez votre adresse email pour recevoir un lien de réinitialisation',
+                  context.l10n.receiveResetLink,
                   style: context.bodySmall?.copyWith(
                     color: context.adaptiveTextSecondary,
                     fontWeight: FontWeight.w400,
@@ -110,7 +110,7 @@ class _ForgotPasswordDialogState extends State<ForgotPasswordDialog> {
                           child: SquircleBtn(
                             isPrimary: false,
                             onTap: isLoading ? null : () => Navigator.of(context).pop(),
-                            label: 'Annuler',
+                            label: context.l10n.cancel,
                           ),
                         ),
                         8.w,
@@ -119,7 +119,7 @@ class _ForgotPasswordDialogState extends State<ForgotPasswordDialog> {
                             isPrimary: true,
                             isLoading: isLoading,
                             onTap: isLoading ? null : _handleSubmit,
-                            label: 'Envoyer',
+                            label: context.l10n.send,
                           ),
                         ),
                       ],

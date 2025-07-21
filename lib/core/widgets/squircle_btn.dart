@@ -14,6 +14,8 @@ class SquircleBtn extends StatelessWidget {
   final bool isLoading;
   final bool isDisabled;
   final EdgeInsetsGeometry? padding;
+  final Color? backgroundColor;
+  final Color? labelColor;
 
   const SquircleBtn({
     super.key, 
@@ -26,6 +28,8 @@ class SquircleBtn extends StatelessWidget {
     this.isLoading = false,
     this.isDisabled = false,
     this.padding,
+    this.backgroundColor,
+    this.labelColor,
   });
 
   @override
@@ -38,7 +42,7 @@ class SquircleBtn extends StatelessWidget {
         height: 60,
         padding: padding,
         gradient: isGradient,
-        color: isDisabled ? context.adaptiveDisabled.withValues(alpha: 0.05) : isLoading ? context.adaptivePrimary.withValues(alpha: 0.5) : isPrimary ? isDestructive ? Colors.red : context.adaptivePrimary : context.adaptiveDisabled.withValues(alpha: 0.1),
+        color: backgroundColor ?? (isDisabled ? context.adaptiveDisabled.withValues(alpha: 0.05) : isLoading ? context.adaptivePrimary.withValues(alpha: 0.5) : isPrimary ? isDestructive ? Colors.red : context.adaptivePrimary : context.adaptiveDisabled.withValues(alpha: 0.1)),
         radius: 50.0,
         child: AnimatedSwitcher(
           duration: Duration(milliseconds: 300),
@@ -60,7 +64,7 @@ class SquircleBtn extends StatelessWidget {
               label!,
               style: context.bodySmall?.copyWith(
                 fontSize: 18,
-                color: isDisabled ? context.adaptiveTextPrimary.withValues(alpha: 0.25) : isPrimary ? Colors.white : context.adaptiveTextPrimary,
+                color: labelColor ?? (isDisabled ? context.adaptiveTextPrimary.withValues(alpha: 0.25) : isPrimary ? Colors.white : context.adaptiveTextPrimary),
                 fontWeight: FontWeight.w600,
               ),
             ),

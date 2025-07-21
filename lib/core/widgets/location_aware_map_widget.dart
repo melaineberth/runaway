@@ -1,23 +1,24 @@
+import 'package:avatar_glow/avatar_glow.dart';
 import 'package:flutter/material.dart';
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart' as mp;
 import 'package:geolocator/geolocator.dart' as gl;
 import 'package:hugeicons/hugeicons.dart';
 import 'package:runaway/core/helper/config/log_config.dart';
+import 'package:runaway/core/helper/extensions/extensions.dart';
 import 'package:runaway/core/helper/services/location_preload_service.dart';
+import 'package:runaway/core/widgets/squircle_btn.dart';
 
 /// Widget qui charge la géolocalisation AVANT d'afficher la carte
 /// pour un démarrage fluide comme Apple Plans
 class LocationAwareMapWidget extends StatefulWidget {
   final String styleUri;
   final Function(mp.MapboxMap) onMapCreated;
-  final ValueKey mapKey;
   final bool restoreFromCache;
 
   const LocationAwareMapWidget({
     super.key,
     required this.styleUri,
     required this.onMapCreated,
-    required this.mapKey,
     this.restoreFromCache = false,
   });
 
@@ -25,8 +26,10 @@ class LocationAwareMapWidget extends StatefulWidget {
   State<LocationAwareMapWidget> createState() => _LocationAwareMapWidgetState();
 }
 
-class _LocationAwareMapWidgetState extends State<LocationAwareMapWidget>
-    with TickerProviderStateMixin {
+class _LocationAwareMapWidgetState extends State<LocationAwareMapWidget> with TickerProviderStateMixin {
+  // Génération d'une clé unique pour éviter les conflits de platform view
+  static int _mapInstanceCounter = 0;
+  late final ValueKey _uniqueMapKey;
   
   // États de chargement
   bool _isLoadingLocation = true;
@@ -43,6 +46,10 @@ class _LocationAwareMapWidgetState extends State<LocationAwareMapWidget>
   @override
   void initState() {
     super.initState();
+
+    // Générer une clé unique pour cette instance
+    _uniqueMapKey = ValueKey("mapWidget_${++_mapInstanceCounter}_${DateTime.now().millisecondsSinceEpoch}");
+
     _initializeAnimations();
     _initializeLocation();
   }
@@ -147,7 +154,7 @@ class _LocationAwareMapWidgetState extends State<LocationAwareMapWidget>
           FadeTransition(
             opacity: _fadeAnimation,
             child: mp.MapWidget(
-              key: widget.mapKey,
+              key: _uniqueMapKey,
               styleUri: widget.styleUri,
               cameraOptions: mp.CameraOptions(
                 center: mp.Point(
@@ -164,9 +171,9 @@ class _LocationAwareMapWidgetState extends State<LocationAwareMapWidget>
             ),
           ),
 
-        // 🔄 LOADER DE GÉOLOCALISATION (style Apple Maps)
+        // 🔄 LOADER DE GÉOLOCALISATION
         if (_isLoadingLocation)
-          _buildAppleMapsLoader(),
+          _buildMapsLoader(),
 
         // ❌ ÉCRAN D'ERREUR
         if (_locationError)
@@ -175,8 +182,10 @@ class _LocationAwareMapWidgetState extends State<LocationAwareMapWidget>
     );
   }
 
-  /// 🔄 Loader élégant style Apple Maps
-  Widget _buildAppleMapsLoader() {
+  /// 🔄 Loader élégant
+  Widget _buildMapsLoader() {
+    final double circleSize = 120.0;
+
     return Container(
       width: double.infinity,
       height: double.infinity,
@@ -198,21 +207,13 @@ class _LocationAwareMapWidgetState extends State<LocationAwareMapWidget>
             AnimatedBuilder(
               animation: _pulseAnimation,
               builder: (context, child) {
-                return Container(
-                  width: 80,
-                  height: 80,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: Colors.blue.withValues(alpha: 0.2),
-                    border: Border.all(
-                      color: Colors.blue.withValues(alpha: _pulseAnimation.value),
-                      width: 2,
-                    ),
-                  ),
+                return AvatarGlow(
+                  glowCount: 2,
+                  glowColor: Colors.blue,
                   child: Center(
                     child: Container(
-                      width: 40,
-                      height: 40,
+                      width: circleSize,
+                      height: circleSize,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         color: Colors.blue,
@@ -225,9 +226,9 @@ class _LocationAwareMapWidgetState extends State<LocationAwareMapWidget>
                         ],
                       ),
                       child: Icon(
-                        HugeIcons.strokeRoundedLocation01,
+                        HugeIcons.solidRoundedMapsGlobal01,
                         color: Colors.white,
-                        size: 20,
+                        size: 30,
                       ),
                     ),
                   ),
@@ -235,25 +236,22 @@ class _LocationAwareMapWidgetState extends State<LocationAwareMapWidget>
               },
             ),
             
-            SizedBox(height: 24),
+            30.h,
             
             // Texte de chargement
             Text(
-              'Localisation...',
-              style: TextStyle(
+              context.l10n.locationInProgress,
+              style: context.bodyMedium?.copyWith(
                 color: Colors.white.withValues(alpha: 0.8),
-                fontSize: 16,
                 fontWeight: FontWeight.w500,
               ),
             ),
-            
-            SizedBox(height: 8),
-            
+                        
             Text(
-              'Recherche de votre position',
-              style: TextStyle(
+              context.l10n.searchingPosition,
+              style: context.bodySmall?.copyWith(
                 color: Colors.white.withValues(alpha: 0.5),
-                fontSize: 13,
+                fontSize: 16,
               ),
             ),
           ],
@@ -264,6 +262,8 @@ class _LocationAwareMapWidgetState extends State<LocationAwareMapWidget>
 
   /// ❌ État d'erreur avec possibilité de retry
   Widget _buildErrorState() {
+    final double circleSize = 120.0;
+    
     return Container(
       width: double.infinity,
       height: double.infinity,
@@ -272,8 +272,8 @@ class _LocationAwareMapWidgetState extends State<LocationAwareMapWidget>
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
           colors: [
-            Color(0xFF1a1a1a),
-            Color(0xFF2d2d2d),
+            Color(0xFF1a1a1a), // Sombre en haut
+            Color(0xFF2d2d2d), // Légèrement plus clair en bas
           ],
         ),
       ),
@@ -281,43 +281,68 @@ class _LocationAwareMapWidgetState extends State<LocationAwareMapWidget>
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              HugeIcons.solidSharpLocation01,
-              color: Colors.red,
-              size: 48,
+            AnimatedBuilder(
+              animation: _pulseAnimation,
+              builder: (context, child) {
+                return AvatarGlow(
+                  glowCount: 2,
+                  glowColor: Colors.red,
+                  child: Center(
+                    child: Container(
+                      width: circleSize,
+                      height: circleSize,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: Colors.red,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.red.withValues(alpha: 0.3),
+                            blurRadius: 10,
+                            spreadRadius: 2,
+                          ),
+                        ],
+                      ),
+                      child: Icon(
+                        HugeIcons.solidRoundedMapsGlobal01,
+                        color: Colors.white,
+                        size: 30,
+                      ),
+                    ),
+                  ),
+                );
+              },
             ),
+
+            30.h,
             
-            SizedBox(height: 16),
-            
+            // Texte de chargement
             Text(
-              _errorMessage ?? 'Erreur de localisation',
-              style: TextStyle(
+              _errorMessage ?? context.l10n.trackingError,
+              style: context.bodyMedium?.copyWith(
                 color: Colors.white.withValues(alpha: 0.8),
-                fontSize: 16,
                 fontWeight: FontWeight.w500,
               ),
             ),
             
-            SizedBox(height: 24),
-            
-            ElevatedButton(
-              onPressed: () {
-                setState(() {
-                  _locationError = false;
-                  _isLoadingLocation = true;
-                });
-                _initializeLocation();
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.blue,
-                foregroundColor: Colors.white,
-                padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
+            24.h,       
+
+            Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 40.0,
               ),
-              child: Text('Réessayer'),
-            ),
+              child: SquircleBtn(
+                label: context.l10n.retry,
+                backgroundColor: Colors.red,
+                labelColor: Colors.white,
+                onTap: () {
+                  setState(() {
+                    _locationError = false;
+                    _isLoadingLocation = true;
+                  });
+                  _initializeLocation();
+                },
+              ),
+            ),     
           ],
         ),
       ),

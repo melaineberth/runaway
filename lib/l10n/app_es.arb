@@ -1154,7 +1154,6 @@
   "@supportEmailBody": {
     "description": "Cuerpo del correo de soporte."
   },
-
   "insufficientCreditsTitle": "Créditos insuficientes",
   "@insufficientCreditsTitle": {
     "description": "Titre affiché quand l'utilisateur n'a pas assez de crédits"
@@ -1163,79 +1162,112 @@
   "@insufficientCreditsDescription": {
     "description": "Description expliquant le manque de crédits",
     "placeholders": {
-      "requiredCredits": { "type": "int", "example": "1" },
-      "action":       { "type": "String", "example": "generar una ruta" },
-      "availableCredits": { "type": "int", "example": "0" }
+      "requiredCredits": {
+        "type": "int",
+        "example": "1"
+      },
+      "action": {
+        "type": "String",
+        "example": "generar una ruta"
+      },
+      "availableCredits": {
+        "type": "int",
+        "example": "0"
+      }
     }
   },
   "buyCredits": "Comprar créditos",
-  "@buyCredits": { "description": "Bouton pour acheter des crédits" },
-
+  "@buyCredits": {
+    "description": "Bouton pour acheter des crédits"
+  },
   "currentCredits": "Créditos actuales",
-  "@currentCredits": { "description": "Label pour afficher les crédits actuels" },
-
+  "@currentCredits": {
+    "description": "Label pour afficher les crédits actuels"
+  },
   "availableCredits": "Créditos disponibles",
-  "@availableCredits": { "description": "Label pour les crédits disponibles" },
-
+  "@availableCredits": {
+    "description": "Label pour les crédits disponibles"
+  },
   "totalUsed": "Total utilizado",
-  "@totalUsed": { "description": "Label pour le total de crédits utilisés" },
-
+  "@totalUsed": {
+    "description": "Label pour le total de crédits utilisés"
+  },
   "popular": "Popular",
-  "@popular": { "description": "Badge pour le plan le plus populaire" },
-
+  "@popular": {
+    "description": "Badge pour le plan le plus populaire"
+  },
   "buySelectedPlan": "Comprar este plan",
-  "@buySelectedPlan": { "description": "Bouton pour acheter le plan sélectionné" },
-
+  "@buySelectedPlan": {
+    "description": "Bouton pour acheter le plan sélectionné"
+  },
   "selectPlan": "Selecciona un plan",
-  "@selectPlan": { "description": "Message quand aucun plan n'est sélectionné" },
-
+  "@selectPlan": {
+    "description": "Message quand aucun plan n'est sélectionné"
+  },
   "purchaseSimulated": "Compra simulada",
-  "@purchaseSimulated": { "description": "Titre pour la simulation d'achat" },
-
+  "@purchaseSimulated": {
+    "description": "Titre pour la simulation d'achat"
+  },
   "purchaseSimulatedDescription": "En modo de desarrollo, las compras se simulan. ¿Deseas simular esta compra?",
-  "@purchaseSimulatedDescription": { "description": "Description pour la simulation d'achat" },
-
+  "@purchaseSimulatedDescription": {
+    "description": "Description pour la simulation d'achat"
+  },
   "simulatePurchase": "Simular compra",
-  "@simulatePurchase": { "description": "Bouton pour simuler un achat" },
-
+  "@simulatePurchase": {
+    "description": "Bouton pour simuler un achat"
+  },
   "purchaseSuccess": "¡Compra exitosa!",
-  "@purchaseSuccess": { "description": "Titre de succès d'achat" },
-
+  "@purchaseSuccess": {
+    "description": "Titre de succès d'achat"
+  },
   "transactionHistory": "Historial de transacciones",
-  "@transactionHistory": { "description": "Titre de l'écran d'historique" },
-
+  "@transactionHistory": {
+    "description": "Titre de l'écran d'historique"
+  },
   "noTransactions": "Aún no hay transacciones",
-  "@noTransactions": { "description": "Message quand il n'y a pas de transactions" },
-
+  "@noTransactions": {
+    "description": "Message quand il n'y a pas de transactions"
+  },
   "yesterday": "Ayer",
-  "@yesterday": { "description": "Libellé pour hier dans les dates" },
-
+  "@yesterday": {
+    "description": "Libellé pour hier dans les dates"
+  },
   "daysAgo": "días",
-  "@daysAgo": { "description": "Suffixe pour les jours passés" },
-
+  "@daysAgo": {
+    "description": "Suffixe pour les jours passés"
+  },
   "ok": "OK",
-  "@ok": { "description": "Bouton OK générique" },
-
+  "@ok": {
+    "description": "Bouton OK générique"
+  },
   "creditUsageSuccess": "Créditos usados con éxito",
-  "@creditUsageSuccess": { "description": "Message de succès d'utilisation de crédits" },
-
+  "@creditUsageSuccess": {
+    "description": "Message de succès d'utilisation de crédits"
+  },
   "routeGenerationWithCredits": "Se usará 1 crédito para generar esta ruta",
-  "@routeGenerationWithCredits": { "description": "Information sur l'utilisation de crédits pour la génération" },
-
+  "@routeGenerationWithCredits": {
+    "description": "Information sur l'utilisation de crédits pour la génération"
+  },
   "creditsRequiredForGeneration": "Generación de ruta (1 crédito)",
-  "@creditsRequiredForGeneration": { "description": "Description de l'action qui consomme des crédits" },
-
+  "@creditsRequiredForGeneration": {
+    "description": "Description de l'action qui consomme des crédits"
+  },
   "manageCredits": "Gestionar mis créditos",
-  "@manageCredits": { "description": "Lien pour gérer les crédits" },
-
+  "@manageCredits": {
+    "description": "Lien pour gérer les crédits"
+  },
   "freeCreditsWelcome": "🎉 ¡Bienvenido! Has recibido 3 créditos gratis para empezar",
-  "@freeCreditsWelcome": { "description": "Message de bienvenue avec crédits gratuits" },
-
+  "@freeCreditsWelcome": {
+    "description": "Message de bienvenue avec crédits gratuits"
+  },
   "creditsLeft": "{count} crédito(s) restante(s)",
   "@creditsLeft": {
     "description": "Affichage du nombre de crédits restants",
     "placeholders": {
-      "count": { "type": "int", "example": "5" }
+      "count": {
+        "type": "int",
+        "example": "5"
+      }
     }
   },
   "elevationRange": "Rango de desnivel",
@@ -1330,87 +1362,70 @@
   "@easyDifficultyLevel": {
     "description": "Etiqueta para el nivel de dificultad fácil de una ruta o actividad."
   },
-
   "moderateDifficultyLevel": "Moderado",
   "@moderateDifficultyLevel": {
     "description": "Etiqueta para el nivel de dificultad moderado de una ruta o actividad."
   },
-
   "hardDifficultyLevel": "Difícil",
   "@hardDifficultyLevel": {
     "description": "Etiqueta para el nivel de dificultad difícil de una ruta o actividad."
   },
-
   "expertDifficultyLevel": "Experto",
   "@expertDifficultyLevel": {
     "description": "Etiqueta para el nivel de dificultad experto de una ruta o actividad."
   },
-
   "asphaltSurfaceTitle": "Asfalto",
   "@asphaltSurfaceTitle": {
     "description": "Título para un tipo de superficie de carreteras o aceras pavimentadas."
   },
-
   "asphaltSurfaceDesc": "Prioriza carreteras y aceras pavimentadas",
   "@asphaltSurfaceDesc": {
     "description": "Descripción para la superficie asfaltada, prioriza carreteras y aceras."
   },
-
   "mixedSurfaceTitle": "Mixto",
   "@mixedSurfaceTitle": {
     "description": "Título para un tipo de superficie que mezcla carreteras y senderos."
   },
-
   "mixedSurfaceDesc": "Mezcla de carreteras y senderos según la ruta",
   "@mixedSurfaceDesc": {
     "description": "Descripción para la superficie mixta, combinación de carreteras y senderos."
   },
-
   "naturalSurfaceTitle": "Natural",
   "@naturalSurfaceTitle": {
     "description": "Título para un tipo de superficie con senderos naturales."
   },
-
   "naturalSurfaceDesc": "Prioriza senderos naturales",
   "@naturalSurfaceDesc": {
     "description": "Descripción para la superficie natural, prioriza senderos naturales."
   },
-
   "searchAdress": "Buscar una dirección...",
   "@searchAdress": {
     "description": "Texto de marcador para la búsqueda de una dirección."
   },
-
   "chooseName": "Elegir un nombre",
   "@chooseName": {
     "description": "Invita al usuario a elegir un nombre para la ruta."
   },
-
   "canModifyLater": "Podrás modificarlo más tarde",
   "@canModifyLater": {
     "description": "Indica que el nombre se puede modificar después."
   },
-
   "routeName": "Nombre de la ruta",
   "@routeName": {
     "description": "Etiqueta para el campo del nombre de la ruta."
   },
-
   "limitReachedGenerations": "Límite alcanzado",
   "@limitReachedGenerations": {
     "description": "Mensaje mostrado cuando se alcanza el límite de generaciones."
   },
-
   "exhaustedGenerations": "Generaciones agotadas",
   "@exhaustedGenerations": {
     "description": "Mensaje que indica que todas las generaciones permitidas se han agotado."
   },
-
   "remainingLimitGenerations": "Límite restante",
   "@remainingLimitGenerations": {
     "description": "Indica cuántas generaciones quedan disponibles."
   },
-
   "remainingGenerationsLabel": "{remainingGenerations} generación gratuita{remainingGenerations, plural, =1 {} other {es}}",
   "@remainingGenerationsLabel": {
     "description": "Etiqueta que muestra cuántas generaciones gratuitas quedan, con plural correcto.",
@@ -1421,104 +1436,450 @@
       }
     }
   },
-
   "freeGenerations": "Generaciones gratuitas",
   "@freeGenerations": {
     "description": "Etiqueta para el cupo de generaciones gratuitas."
   },
-
   "exhaustedFreeGenerations": "Generaciones gratuitas agotadas",
   "@exhaustedFreeGenerations": {
     "description": "Mensaje cuando se agota el cupo de generaciones gratuitas."
   },
-
   "exhaustedCredits": "Créditos agotados",
   "@exhaustedCredits": {
     "description": "Mensaje que indica que todos los créditos se han utilizado."
   },
-
   "authForMoreGenerations": "Crea una cuenta gratuita para más generaciones",
   "@authForMoreGenerations": {
     "description": "Invita a crear una cuenta para obtener más generaciones."
   },
-
   "createFreeAccount": "Crear cuenta gratuita",
   "@createFreeAccount": {
     "description": "Etiqueta para el botón o enlace para crear una cuenta gratuita."
   },
-
   "exportRouteTitle": "Exportar la ruta",
   "@exportRouteTitle": {
     "description": "Título para exportar una ruta."
   },
-
   "exportRouteDesc": "Elige el formato de exportación",
   "@exportRouteDesc": {
     "description": "Texto que explica cómo elegir el formato de exportación."
   },
-
   "generateInProgress": "Generando la ruta...",
   "@generateInProgress": {
     "description": "Mensaje mostrado mientras se genera la ruta."
   },
-
   "emptyRouteForSave": "No hay ruta para guardar",
   "@emptyRouteForSave": {
     "description": "Mensaje cuando no hay ninguna ruta para guardar."
   },
-
   "connectionError": "Error de conexión",
   "@connectionError": {
     "description": "Mensaje en caso de error de conexión."
   },
-
   "notAvailableMap": "Mapa no disponible",
   "@notAvailableMap": {
     "description": "Mensaje cuando el mapa no está disponible."
   },
-
   "missingRouteSettings": "Faltan configuraciones de la ruta",
   "@missingRouteSettings": {
     "description": "Mensaje cuando faltan configuraciones de la ruta."
   },
-
   "savedRoute": "Ruta guardada",
   "@savedRoute": {
     "description": "Confirmación de que la ruta se ha guardado."
   },
-
   "loginRequiredTitle": "Inicio de sesión requerido",
   "@loginRequiredTitle": {
     "description": "Título de un cuadro de diálogo que indica que es necesario iniciar sesión."
   },
-
   "loginRequiredDesc": "Debes iniciar sesión para guardar tus rutas",
   "@loginRequiredDesc": {
     "description": "Descripción que explica por qué es necesario iniciar sesión."
   },
-
   "reallyContinueTitle": "¿Realmente quieres continuar?",
   "@reallyContinueTitle": {
     "description": "Título para confirmar si el usuario realmente quiere continuar."
   },
-
   "reallyContinueDesc": "Esta acción eliminará la ruta generada previamente, ¡será irrecuperable!",
   "@reallyContinueDesc": {
     "description": "Advertencia de que continuar eliminará la ruta actual."
   },
-
   "generationEmptyLocation": "No hay ubicación disponible para la generación",
   "@generationEmptyLocation": {
     "description": "Mensaje que indica que no hay ubicación disponible para la generación."
   },
-
   "unableLaunchGeneration": "No se puede iniciar la generación",
   "@unableLaunchGeneration": {
     "description": "Mensaje cuando no se puede iniciar la generación."
   },
-
   "invalidParameters": "Parámetros inválidos",
   "@invalidParameters": {
     "description": "Mensaje cuando los parámetros son inválidos."
+  },
+  "locationInProgress": "Localizando...",
+  "@locationInProgress": {
+    "description": "Texto mostrado mientras la aplicación determina la ubicación del usuario."
+  },
+  "searchingPosition": "Buscando tu posición",
+  "@searchingPosition": {
+    "description": "Mensaje mostrado mientras se busca la posición GPS del usuario."
+  },
+  "trackingError": "Error de seguimiento",
+  "@trackingError": {
+    "description": "Mensaje de error mostrado cuando falla el seguimiento de la ubicación."
+  },
+  "enterAuthDetails": "Ingresa tus datos",
+  "@enterAuthDetails": {
+    "description": "Texto que solicita al usuario ingresar sus detalles de autenticación"
+  },
+  "enterPassword": "Ingresa una contraseña",
+  "@enterPassword": {
+    "description": "Texto que solicita al usuario ingresar una contraseña"
+  },
+  "continueWithEmail": "Continuar con email",
+  "@continueWithEmail": {
+    "description": "Opción para continuar el proceso usando email"
+  },
+  "passwordVeryWeak": "Muy débil",
+  "@passwordVeryWeak": {
+    "description": "Indicador de fuerza de contraseña - muy débil"
+  },
+  "passwordWeak": "Débil",
+  "@passwordWeak": {
+    "description": "Indicador de fuerza de contraseña - débil"
+  },
+  "passwordFair": "Regular",
+  "@passwordFair": {
+    "description": "Indicador de fuerza de contraseña - regular"
+  },
+  "passwordGood": "Buena",
+  "@passwordGood": {
+    "description": "Indicador de fuerza de contraseña - buena"
+  },
+  "passwordStrong": "Fuerte",
+  "@passwordStrong": {
+    "description": "Indicador de fuerza de contraseña - fuerte"
+  },
+  "resetEmail": "Email de restablecimiento enviado a {email}",
+  "@resetEmail": {
+    "description": "Mensaje de confirmación cuando se envía un email de restablecimiento",
+    "placeholders": {
+      "email": {
+        "type": "String",
+        "description": "Dirección de email del usuario"
+      }
+    }
+  },
+  "requiredPassword": "Contraseña requerida",
+  "@requiredPassword": {
+    "description": "Mensaje de error cuando la contraseña es obligatoria pero no se proporcionó"
+  },
+  "requiredCountCharacters": "Se requieren al menos {count} caracteres",
+  "@requiredCountCharacters": {
+    "description": "Mensaje que indica el número mínimo de caracteres requeridos",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "description": "Número mínimo de caracteres requeridos"
+      }
+    }
+  },
+  "requiredCapitalLetter": "Se requiere al menos una letra mayúscula",
+  "@requiredCapitalLetter": {
+    "description": "Requisito de contraseña - letra mayúscula obligatoria"
+  },
+  "requiredMinusculeLetter": "Se requiere al menos una letra minúscula",
+  "@requiredMinusculeLetter": {
+    "description": "Requisito de contraseña - letra minúscula obligatoria"
+  },
+  "requiredDigit": "Se requiere al menos un dígito",
+  "@requiredDigit": {
+    "description": "Requisito de contraseña - dígito obligatorio"
+  },
+  "requiredSymbol": "Se requiere al menos un símbolo",
+  "@requiredSymbol": {
+    "description": "Requisito de contraseña - símbolo obligatorio"
+  },
+  "minimumCountCharacters": "Mínimo {count} caracteres",
+  "@minimumCountCharacters": {
+    "description": "Indicador del número mínimo de caracteres",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "description": "Número mínimo de caracteres"
+      }
+    }
+  },
+  "oneCapitalLetter": "Una letra mayúscula",
+  "@oneCapitalLetter": {
+    "description": "Requisito de contraseña - una letra mayúscula"
+  },
+  "oneMinusculeLetter": "Una letra minúscula",
+  "@oneMinusculeLetter": {
+    "description": "Requisito de contraseña - una letra minúscula"
+  },
+  "oneDigit": "Un dígito",
+  "@oneDigit": {
+    "description": "Requisito de contraseña - un dígito"
+  },
+  "oneSymbol": "Un símbolo",
+  "@oneSymbol": {
+    "description": "Requisito de contraseña - un símbolo"
+  },
+  "successEmailSentBack": "Email de confirmación enviado exitosamente",
+  "@successEmailSentBack": {
+    "description": "Mensaje de éxito cuando el email de confirmación se envía correctamente"
+  },
+  "checkEmail": "Verifica tu email",
+  "@checkEmail": {
+    "description": "Instrucción para que el usuario revise su correo electrónico"
+  },
+  "successSentConfirmationLink": "Hemos enviado un enlace de confirmación a {email}. Haz clic en el enlace del email para activar tu cuenta.",
+  "@successSentConfirmationLink": {
+    "description": "Mensaje informando que se envió un enlace de confirmación al email del usuario",
+    "placeholders": {
+      "email": {
+        "type": "String",
+        "description": "Dirección de email del usuario"
+      }
+    }
+  },
+  "resendCode": "Reenviar el código",
+  "@resendCode": {
+    "description": "Opción para reenviar un código de verificación"
+  },
+  "resendCodeInDelay": "Reenviar en {count}s",
+  "@resendCodeInDelay": {
+    "description": "Mensaje que indica cuándo se podrá reenviar el código nuevamente",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "description": "Tiempo en segundos antes de poder reenviar"
+      }
+    }
+  },
+  "loginBack": "Volver al inicio de sesión",
+  "@loginBack": {
+    "description": "Enlace para regresar a la pantalla de inicio de sesión"
+  },
+  "requiredEmail": "Email requerido",
+  "@requiredEmail": {
+    "description": "Mensaje de error cuando el email es obligatorio pero no se proporcionó"
+  },
+  "receiveResetLink": "Ingresa tu dirección de email para recibir un enlace de restablecimiento",
+  "@receiveResetLink": {
+    "description": "Instrucción para ingresar email para recibir enlace de restablecimiento de contraseña"
+  },
+  "send": "Enviar",
+  "@send": {
+    "description": "Botón para enviar información o formulario"
+  },
+  "byDefault": "Por defecto",
+  "@byDefault": {
+    "description": "Indicador de configuración predeterminada"
+  },
+  "changePhoto": "Cambiar foto",
+  "@changePhoto": {
+    "description": "Opción para cambiar la foto de perfil"
+  },
+  "desiredSelectionMode": "Antes de continuar, por favor elige el modo de selección deseado",
+  "@desiredSelectionMode": {
+    "description": "Instrucción para elegir un modo de selección antes de proceder"
+  },
+  "cameraMode": "Cámara",
+  "@cameraMode": {
+    "description": "Opción para usar la cámara del dispositivo"
+  },
+  "galleryMode": "Galería",
+  "@galleryMode": {
+    "description": "Opción para seleccionar desde la galería de fotos"
+  },
+  "successUpdatedProfile": "Perfil actualizado exitosamente",
+  "@successUpdatedProfile": {
+    "description": "Mensaje de confirmación cuando el perfil se actualiza correctamente"
+  },
+  "couldNotLaunchUrl": "No se pudo abrir {url}",
+  "@couldNotLaunchUrl": {
+    "description": "Mensaje de error cuando no se puede abrir una URL",
+    "placeholders": {
+      "url": {
+        "type": "String",
+        "description": "URL que no se pudo abrir"
+      }
+    }
+  },
+  "couldNotLaunchEmailApp": "No se pudo abrir la aplicación de email",
+  "@couldNotLaunchEmailApp": {
+    "description": "Mensaje de error cuando no se puede abrir la aplicación de correo electrónico"
+  },
+  "userBalance": "Tu saldo",
+  "@userBalance": {
+    "description": "Etiqueta que muestra el saldo del usuario"
+  },
+  "purchasedCredits": "Comprados",
+  "@purchasedCredits": {
+    "description": "Etiqueta para créditos que han sido comprados"
+  },
+  "usedCredits": "Usados",
+  "@usedCredits": {
+    "description": "Etiqueta para créditos que han sido utilizados"
+  },
+  "purchaseCreditsTitle": "Créditos comprados",
+  "@purchaseCreditsTitle": {
+    "description": "Título para la sección de créditos comprados"
+  },
+  "usageCreditsTitle": "Crédito para generar una ruta",
+  "@usageCreditsTitle": {
+    "description": "Título que describe el uso de créditos para generar rutas"
+  },
+  "bonusCreditsTitle": "Créditos de bienvenida gratuitos",
+  "@bonusCreditsTitle": {
+    "description": "Título para créditos bonus gratuitos de bienvenida"
+  },
+  "refundCreditsTitle": "Créditos restaurados",
+  "@refundCreditsTitle": {
+    "description": "Título para créditos que han sido reembolsados o restaurados"
+  },
+  "notAvailablePlans": "Planes no disponibles",
+  "@notAvailablePlans": {
+    "description": "Mensaje cuando no hay planes de pago disponibles"
+  },
+  "missingTransactionID": "ID de transacción faltante",
+  "@missingTransactionID": {
+    "description": "Error cuando falta el identificador de la transacción"
+  },
+  "purchaseCanceled": "Compra cancelada",
+  "@purchaseCanceled": {
+    "description": "Mensaje cuando una compra ha sido cancelada"
+  },
+  "unknownError": "Error desconocido",
+  "@unknownError": {
+    "description": "Mensaje de error genérico para errores no identificados"
+  },
+  "duringPaymentError": "Error durante el pago",
+  "@duringPaymentError": {
+    "description": "Mensaje de error que ocurre durante el proceso de pago"
+  },
+  "networkException": "Problema de conexión. Por favor intenta de nuevo.",
+  "@networkException": {
+    "description": "Mensaje de error para problemas de conectividad de red"
+  },
+  "retryNotAvailablePlans": "Plan seleccionado no disponible. Por favor intenta de nuevo.",
+  "@retryNotAvailablePlans": {
+    "description": "Error cuando el plan seleccionado no está disponible"
+  },
+  "systemIssueDetectedTitle": "Problema del sistema detectado",
+  "@systemIssueDetectedTitle": {
+    "description": "Título del diálogo cuando se detecta un problema del sistema"
+  },
+  "systemIssueDetectedSubtitle": "Se ha detectado un problema del sistema. Esto puede ocurrir si las compras anteriores no se completaron correctamente.",
+  "@systemIssueDetectedSubtitle": {
+    "description": "Subtítulo explicando el problema del sistema detectado"
+  },
+  "systemIssueDetectedDesc": "Reinicia la aplicación e intenta de nuevo",
+  "@systemIssueDetectedDesc": {
+    "description": "Instrucción para resolver el problema del sistema"
+  },
+  "close": "Cerrar",
+  "@close": {
+    "description": "Botón para cerrar un diálogo o ventana"
+  },
+  "cleaningDone": "Limpieza completada. Intenta de nuevo ahora.",
+  "@cleaningDone": {
+    "description": "Mensaje de confirmación cuando se completa un proceso de limpieza"
+  },
+  "cleaningError": "Error durante la limpieza: {error}",
+  "@cleaningError": {
+    "description": "Mensaje de error durante el proceso de limpieza",
+    "placeholders": {
+      "error": {
+        "type": "String",
+        "description": "Descripción específica del error ocurrido"
+      }
+    }
+  },
+  "cleaning": "Limpiando",
+  "@cleaning": {
+    "description": "Indicador de que se está ejecutando un proceso de limpieza"
+  },
+  "creditPlanModalTitle": "¡Abastécete de créditos para vivir nuevas aventuras!",
+  "@creditPlanModalTitle": {
+    "description": "Título del modal para planes de créditos"
+  },
+  "creditPlanModalSubtitle": "Elige tu paquete favorito, luego haz clic aquí para comenzar a explorar!",
+  "@creditPlanModalSubtitle": {
+    "description": "Subtítulo del modal para planes de créditos"
+  },
+  "creditPlanModalWarning": "El pago se debita al confirmar la compra. Los créditos no son reembolsables y solo son válidos en la aplicación.",
+  "@creditPlanModalWarning": {
+    "description": "Advertencia sobre términos y condiciones de los créditos"
+  },
+  "refresh": "Actualizar",
+  "@refresh": {
+    "description": "Botón para actualizar o refrescar contenido"
+  },
+  "successRouteDeleted": "Ruta eliminada exitosamente",
+  "@successRouteDeleted": {
+    "description": "Mensaje de confirmación cuando una ruta se elimina correctamente"
+  },
+  "errorRouteDeleted": "Error al eliminar",
+  "@errorRouteDeleted": {
+    "description": "Mensaje de error cuando falla la eliminación de una ruta"
+  },
+  "displayRouteError": "Error durante la visualización del recorrido",
+  "@displayRouteError": {
+    "description": "Error que ocurre al mostrar una ruta o recorrido"
+  },
+  "routeNameUpdateException": "El nombre no puede estar vacío",
+  "@routeNameUpdateException": {
+    "description": "Error de validación cuando el nombre de la ruta está vacío"
+  },
+  "routeNameUpdateExceptionMinCharacters": "El nombre debe contener al menos 2 caracteres",
+  "@routeNameUpdateExceptionMinCharacters": {
+    "description": "Error de validación para longitud mínima del nombre de ruta"
+  },
+  "routeNameUpdateExceptionCountCharacters": "El nombre no puede exceder 50 caracteres",
+  "@routeNameUpdateExceptionCountCharacters": {
+    "description": "Error de validación para longitud máxima del nombre de ruta"
+  },
+  "routeNameUpdateExceptionForbiddenCharacters": "El nombre contiene caracteres prohibidos",
+  "@routeNameUpdateExceptionForbiddenCharacters": {
+    "description": "Error de validación cuando el nombre contiene caracteres no permitidos"
+  },
+  "routeNameUpdateDone": "Actualización completada",
+  "@routeNameUpdateDone": {
+    "description": "Mensaje de confirmación cuando se actualiza el nombre de la ruta"
+  },
+  "formatRouteExport": "Ruta exportada en formato {format}",
+  "@formatRouteExport": {
+    "description": "Mensaje de confirmación cuando se exporta una ruta",
+    "placeholders": {
+      "format": {
+        "type": "String",
+        "description": "Formato de archivo en el que se exportó la ruta"
+      }
+    }
+  },
+  "routeExportError": "Error durante la exportación: {error}",
+  "@routeExportError": {
+    "description": "Mensaje de error durante la exportación de rutas",
+    "placeholders": {
+      "error": {
+        "type": "String",
+        "description": "Descripción específica del error de exportación"
+      }
+    }
+  },
+  "updateRouteNameTitle": "Actualizar",
+  "@updateRouteNameTitle": {
+    "description": "Título del diálogo para actualizar el nombre de la ruta"
+  },
+  "updateRouteNameSubtitle": "Elige un nuevo nombre",
+  "@updateRouteNameSubtitle": {
+    "description": "Subtítulo que pide al usuario elegir un nuevo nombre"
+  },
+  "updateRouteNameHint": "Proceso digestivo después de comer",
+  "@updateRouteNameHint": {
+    "description": "Texto de ayuda o pista para el campo de nombre de ruta"
   }
 }

@@ -2252,6 +2252,474 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Invalid parameters'**
   String get invalidParameters;
+
+  /// Status text displayed when the app is determining the user's location.
+  ///
+  /// In en, this message translates to:
+  /// **'Location...'**
+  String get locationInProgress;
+
+  /// Prompt shown while searching for the user’s GPS position.
+  ///
+  /// In en, this message translates to:
+  /// **'Search for your position'**
+  String get searchingPosition;
+
+  /// Error message displayed when there is a failure in location tracking.
+  ///
+  /// In en, this message translates to:
+  /// **'Tracking error'**
+  String get trackingError;
+
+  /// Prompt for user to enter their authentication details
+  ///
+  /// In en, this message translates to:
+  /// **'Enter your details'**
+  String get enterAuthDetails;
+
+  /// Prompt to enter a password
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a password'**
+  String get enterPassword;
+
+  /// Button to continue authentication with email
+  ///
+  /// In en, this message translates to:
+  /// **'Continue with email'**
+  String get continueWithEmail;
+
+  /// Indicates a very weak password
+  ///
+  /// In en, this message translates to:
+  /// **'Very weak'**
+  String get passwordVeryWeak;
+
+  /// Indicates a weak password
+  ///
+  /// In en, this message translates to:
+  /// **'Weak'**
+  String get passwordWeak;
+
+  /// Indicates a fair password
+  ///
+  /// In en, this message translates to:
+  /// **'Fair'**
+  String get passwordFair;
+
+  /// Indicates a good password
+  ///
+  /// In en, this message translates to:
+  /// **'Good'**
+  String get passwordGood;
+
+  /// Indicates a strong password
+  ///
+  /// In en, this message translates to:
+  /// **'Strong'**
+  String get passwordStrong;
+
+  /// Confirmation that reset email was sent
+  ///
+  /// In en, this message translates to:
+  /// **'Reset email sent to {email}'**
+  String resetEmail(String email);
+
+  /// Error message for missing password
+  ///
+  /// In en, this message translates to:
+  /// **'Required password'**
+  String get requiredPassword;
+
+  /// Message stating the minimum number of characters
+  ///
+  /// In en, this message translates to:
+  /// **'At least {count} characters required'**
+  String requiredCountCharacters(int count);
+
+  /// Message that at least one uppercase letter is required
+  ///
+  /// In en, this message translates to:
+  /// **'At least one capital letter required'**
+  String get requiredCapitalLetter;
+
+  /// Message that at least one lowercase letter is required
+  ///
+  /// In en, this message translates to:
+  /// **'At least one minuscule required'**
+  String get requiredMinusculeLetter;
+
+  /// Message that at least one digit is required
+  ///
+  /// In en, this message translates to:
+  /// **'At least one required digit'**
+  String get requiredDigit;
+
+  /// Message that at least one symbol is required
+  ///
+  /// In en, this message translates to:
+  /// **'At least one required symbol'**
+  String get requiredSymbol;
+
+  /// Minimum number of characters required
+  ///
+  /// In en, this message translates to:
+  /// **'Minimum {count} characters'**
+  String minimumCountCharacters(int count);
+
+  /// Requirement for one uppercase letter
+  ///
+  /// In en, this message translates to:
+  /// **'One capital letter'**
+  String get oneCapitalLetter;
+
+  /// Requirement for one lowercase letter
+  ///
+  /// In en, this message translates to:
+  /// **'One minuscule letter'**
+  String get oneMinusculeLetter;
+
+  /// Requirement for one digit
+  ///
+  /// In en, this message translates to:
+  /// **'One digit'**
+  String get oneDigit;
+
+  /// Requirement for one symbol
+  ///
+  /// In en, this message translates to:
+  /// **'One symbol'**
+  String get oneSymbol;
+
+  /// Success message for email confirmation sent
+  ///
+  /// In en, this message translates to:
+  /// **'Confirmation email sent back successfully'**
+  String get successEmailSentBack;
+
+  /// Prompt to check email
+  ///
+  /// In en, this message translates to:
+  /// **'Check your email'**
+  String get checkEmail;
+
+  /// Message confirming confirmation link sent
+  ///
+  /// In en, this message translates to:
+  /// **'We have sent a confirmation link to {email}. Click on the link in the email to activate your account.'**
+  String successSentConfirmationLink(String email);
+
+  /// Action to resend the code
+  ///
+  /// In en, this message translates to:
+  /// **'Resend the code'**
+  String get resendCode;
+
+  /// Message to resend code with delay
+  ///
+  /// In en, this message translates to:
+  /// **'Resend in {count}s'**
+  String resendCodeInDelay(int count);
+
+  /// Navigate back to login
+  ///
+  /// In en, this message translates to:
+  /// **'Back to login'**
+  String get loginBack;
+
+  /// Error message for missing email
+  ///
+  /// In en, this message translates to:
+  /// **'Required email'**
+  String get requiredEmail;
+
+  /// Instruction to enter email for reset link
+  ///
+  /// In en, this message translates to:
+  /// **'Enter your email address to receive a reset link'**
+  String get receiveResetLink;
+
+  /// Action to send
+  ///
+  /// In en, this message translates to:
+  /// **'Send'**
+  String get send;
+
+  /// Indicates default value
+  ///
+  /// In en, this message translates to:
+  /// **'By default'**
+  String get byDefault;
+
+  /// Action to change user photo
+  ///
+  /// In en, this message translates to:
+  /// **'Change photo'**
+  String get changePhoto;
+
+  /// Prompt to choose selection mode
+  ///
+  /// In en, this message translates to:
+  /// **'Before continuing, please choose the desired selection mode'**
+  String get desiredSelectionMode;
+
+  /// Camera mode option
+  ///
+  /// In en, this message translates to:
+  /// **'Camera'**
+  String get cameraMode;
+
+  /// Gallery mode option
+  ///
+  /// In en, this message translates to:
+  /// **'Gallery'**
+  String get galleryMode;
+
+  /// Success message when profile is updated
+  ///
+  /// In en, this message translates to:
+  /// **'Successfully updated profile'**
+  String get successUpdatedProfile;
+
+  /// Error message when URL cannot be launched
+  ///
+  /// In en, this message translates to:
+  /// **'Could not launch {url}'**
+  String couldNotLaunchUrl(String url);
+
+  /// Error message when email app cannot be launched
+  ///
+  /// In en, this message translates to:
+  /// **'Could not launch email app'**
+  String get couldNotLaunchEmailApp;
+
+  /// Label for user balance
+  ///
+  /// In en, this message translates to:
+  /// **'Your balance'**
+  String get userBalance;
+
+  /// Label for purchased credits
+  ///
+  /// In en, this message translates to:
+  /// **'Purchased'**
+  String get purchasedCredits;
+
+  /// Label for used credits
+  ///
+  /// In en, this message translates to:
+  /// **'Used'**
+  String get usedCredits;
+
+  /// Title for purchased credits section
+  ///
+  /// In en, this message translates to:
+  /// **'Purchased credits'**
+  String get purchaseCreditsTitle;
+
+  /// Title for credit usage to generate route
+  ///
+  /// In en, this message translates to:
+  /// **'Credit to generate a route'**
+  String get usageCreditsTitle;
+
+  /// Title for free welcome credits
+  ///
+  /// In en, this message translates to:
+  /// **'Free welcome credits'**
+  String get bonusCreditsTitle;
+
+  /// Title for restored credits
+  ///
+  /// In en, this message translates to:
+  /// **'Restored credits'**
+  String get refundCreditsTitle;
+
+  /// Message when plans are not available
+  ///
+  /// In en, this message translates to:
+  /// **'Plans not available'**
+  String get notAvailablePlans;
+
+  /// Error when transaction ID is missing
+  ///
+  /// In en, this message translates to:
+  /// **'Missing transaction ID'**
+  String get missingTransactionID;
+
+  /// Message when purchase is canceled
+  ///
+  /// In en, this message translates to:
+  /// **'Purchase canceled'**
+  String get purchaseCanceled;
+
+  /// Generic unknown error message
+  ///
+  /// In en, this message translates to:
+  /// **'Unknown error'**
+  String get unknownError;
+
+  /// Error message for payment failure
+  ///
+  /// In en, this message translates to:
+  /// **'Error during payment'**
+  String get duringPaymentError;
+
+  /// Error message for network exception
+  ///
+  /// In en, this message translates to:
+  /// **'Connection problem. Please try again.'**
+  String get networkException;
+
+  /// Error message when retrying unavailable plan
+  ///
+  /// In en, this message translates to:
+  /// **'Selected plan not available. Please try again.'**
+  String get retryNotAvailablePlans;
+
+  /// Title for system issue detection
+  ///
+  /// In en, this message translates to:
+  /// **'System issue detected'**
+  String get systemIssueDetectedTitle;
+
+  /// Subtitle for system issue detection
+  ///
+  /// In en, this message translates to:
+  /// **'A system issue has been detected. This may happen if previous purchases did not complete correctly.'**
+  String get systemIssueDetectedSubtitle;
+
+  /// Instruction to restart app for system issue
+  ///
+  /// In en, this message translates to:
+  /// **'Restart the application and try again'**
+  String get systemIssueDetectedDesc;
+
+  /// Action to close
+  ///
+  /// In en, this message translates to:
+  /// **'Close'**
+  String get close;
+
+  /// Message when cleaning is done
+  ///
+  /// In en, this message translates to:
+  /// **'Cleaning done. Try again now.'**
+  String get cleaningDone;
+
+  /// Error message when cleaning fails
+  ///
+  /// In en, this message translates to:
+  /// **'Error while cleaning: {error}'**
+  String cleaningError(String error);
+
+  /// Label for cleaning process
+  ///
+  /// In en, this message translates to:
+  /// **'Cleaning'**
+  String get cleaning;
+
+  /// Title for credit plan modal
+  ///
+  /// In en, this message translates to:
+  /// **'Stock up on credits to live new adventures!'**
+  String get creditPlanModalTitle;
+
+  /// Subtitle for credit plan modal
+  ///
+  /// In en, this message translates to:
+  /// **'Choose your favorite package, then click here to start exploring!'**
+  String get creditPlanModalSubtitle;
+
+  /// Warning for credit plan modal
+  ///
+  /// In en, this message translates to:
+  /// **'Payment debited upon confirmation of purchase. Credits are non-refundable and valid only in the application.'**
+  String get creditPlanModalWarning;
+
+  /// Action to refresh
+  ///
+  /// In en, this message translates to:
+  /// **'Refresh'**
+  String get refresh;
+
+  /// Success message for route deletion
+  ///
+  /// In en, this message translates to:
+  /// **'Route successfully deleted'**
+  String get successRouteDeleted;
+
+  /// Error message for route deletion failure
+  ///
+  /// In en, this message translates to:
+  /// **'Error while deleting'**
+  String get errorRouteDeleted;
+
+  /// Error message for display route
+  ///
+  /// In en, this message translates to:
+  /// **'Error during the display of the course'**
+  String get displayRouteError;
+
+  /// Error for empty route name
+  ///
+  /// In en, this message translates to:
+  /// **'The name cannot be empty'**
+  String get routeNameUpdateException;
+
+  /// Error for minimum characters in route name
+  ///
+  /// In en, this message translates to:
+  /// **'The name must contain at least 2 characters'**
+  String get routeNameUpdateExceptionMinCharacters;
+
+  /// Error for exceeding characters in route name
+  ///
+  /// In en, this message translates to:
+  /// **'The name cannot exceed 50 characters'**
+  String get routeNameUpdateExceptionCountCharacters;
+
+  /// Error for forbidden characters in route name
+  ///
+  /// In en, this message translates to:
+  /// **'The name contains forbidden characters'**
+  String get routeNameUpdateExceptionForbiddenCharacters;
+
+  /// Confirmation that route name was updated
+  ///
+  /// In en, this message translates to:
+  /// **'Update done'**
+  String get routeNameUpdateDone;
+
+  /// Message for route export format
+  ///
+  /// In en, this message translates to:
+  /// **'Route exported in {format}'**
+  String formatRouteExport(String format);
+
+  /// Error message for route export
+  ///
+  /// In en, this message translates to:
+  /// **'Error during export: {error}'**
+  String routeExportError(String error);
+
+  /// Title for updating route name
+  ///
+  /// In en, this message translates to:
+  /// **'Update'**
+  String get updateRouteNameTitle;
+
+  /// Subtitle for updating route name
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a new name'**
+  String get updateRouteNameSubtitle;
+
+  /// Hint text for updating route name
+  ///
+  /// In en, this message translates to:
+  /// **'Digestive process after eating'**
+  String get updateRouteNameHint;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

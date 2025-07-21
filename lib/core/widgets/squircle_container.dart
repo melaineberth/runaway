@@ -13,6 +13,8 @@ class SquircleContainer extends StatelessWidget {
   final bool isGlow;
   final bool isBorder;
   final bool gradient;
+  final Color? borderColor;
+  final double? borderWidth;
 
   const SquircleContainer({
     super.key,
@@ -28,6 +30,8 @@ class SquircleContainer extends StatelessWidget {
     this.isBorder = false,
     this.isGlow = false,
     this.gradient = true,
+    this.borderColor,
+    this.borderWidth,
   });
 
   @override
@@ -43,34 +47,89 @@ class SquircleContainer extends StatelessWidget {
           ),
         ],
       ) : null,
-      child: ClipPath(
-        clipper: ShapeBorderClipper(
-          shape: ContinuousRectangleBorder(
-            borderRadius: BorderRadius.all(
-              Radius.circular(radius ?? 60)),
+      child: isBorder ? _buildWithBorder() : _buildWithoutBorder(),
+    );
+  }
+
+  Widget _buildWithBorder() {
+    return ClipPath(
+      clipper: ShapeBorderClipper(
+        shape: ContinuousRectangleBorder(
+          borderRadius: BorderRadius.all(
+            Radius.circular(radius ?? 60),
           ),
         ),
-        child: GestureDetector(
-          onTap: onTap,
-          child: Container(
-            width: width,
-            height: height,
-            margin: margin,
-            padding: padding ?? EdgeInsets.zero,
-            decoration: BoxDecoration(
-              color: color,
-              boxShadow: boxShadow,
-              gradient: gradient ? LinearGradient(
-                colors: [
-                  color!,
-                  color!.withValues(alpha: 0.7),
-                ],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ) : null,
-            ),
-            child: child,
+      ),
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          width: width,
+          height: height,
+          margin: margin,
+          decoration: BoxDecoration(
+            color: borderColor ?? Colors.grey,
           ),
+          child: Container(
+            margin: EdgeInsets.all(borderWidth ?? 2.0),
+            child: ClipPath(
+              clipper: ShapeBorderClipper(
+                shape: ContinuousRectangleBorder(
+                  borderRadius: BorderRadius.all(
+                    Radius.circular((radius ?? 60) - (borderWidth ?? 2.0)),
+                  ),
+                ),
+              ),
+              child: Container(
+                padding: padding ?? EdgeInsets.zero,
+                decoration: BoxDecoration(
+                  color: color,
+                  boxShadow: boxShadow,
+                  gradient: gradient ? LinearGradient(
+                    colors: [
+                      color!,
+                      color!.withValues(alpha: 0.7),
+                    ],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ) : null,
+                ),
+                child: child,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildWithoutBorder() {
+    return ClipPath(
+      clipper: ShapeBorderClipper(
+        shape: ContinuousRectangleBorder(
+          borderRadius: BorderRadius.all(
+            Radius.circular(radius ?? 60)),
+        ),
+      ),
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          width: width,
+          height: height,
+          margin: margin,
+          padding: padding ?? EdgeInsets.zero,
+          decoration: BoxDecoration(
+            color: color,
+            boxShadow: boxShadow,
+            gradient: gradient ? LinearGradient(
+              colors: [
+                color!,
+                color!.withValues(alpha: 0.7),
+              ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ) : null,
+          ),
+          child: child,
         ),
       ),
     );

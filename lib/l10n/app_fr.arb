@@ -1154,9 +1154,6 @@
   "@supportEmailBody": {
     "description": "Corps du mail de support."
   },
-
-
-
   "insufficientCreditsTitle": "Crédits insuffisants",
   "@insufficientCreditsTitle": {
     "description": "Titre affiché quand l'utilisateur n'a pas assez de crédits"
@@ -1365,87 +1362,70 @@
   "@easyDifficultyLevel": {
     "description": "Label pour le niveau de difficulté facile d'un itinéraire ou d'une activité."
   },
-
   "moderateDifficultyLevel": "Modéré",
   "@moderateDifficultyLevel": {
     "description": "Label pour le niveau de difficulté modéré d'un itinéraire ou d'une activité."
   },
-
   "hardDifficultyLevel": "Difficile",
   "@hardDifficultyLevel": {
     "description": "Label pour le niveau de difficulté difficile d'un itinéraire ou d'une activité."
   },
-
   "expertDifficultyLevel": "Expert",
   "@expertDifficultyLevel": {
     "description": "Label pour le niveau de difficulté expert d'un itinéraire ou d'une activité."
   },
-
   "asphaltSurfaceTitle": "Bitume",
   "@asphaltSurfaceTitle": {
     "description": "Titre pour un type de surface en routes ou trottoirs asphaltés."
   },
-
   "asphaltSurfaceDesc": "Privilégie les routes et trottoirs pavés",
   "@asphaltSurfaceDesc": {
     "description": "Description pour la surface bitumée, privilégie routes et trottoirs pavés."
   },
-
   "mixedSurfaceTitle": "Mixte",
   "@mixedSurfaceTitle": {
     "description": "Titre pour un type de surface mélangeant routes et sentiers."
   },
-
   "mixedSurfaceDesc": "Mélange de routes et chemins selon l'itinéraire",
   "@mixedSurfaceDesc": {
     "description": "Description pour la surface mixte, combinaison de routes et sentiers."
   },
-
   "naturalSurfaceTitle": "Naturel",
   "@naturalSurfaceTitle": {
     "description": "Titre pour un type de surface avec sentiers naturels."
   },
-
   "naturalSurfaceDesc": "Privilégie les sentiers naturels",
   "@naturalSurfaceDesc": {
     "description": "Description pour surface naturelle, privilégie sentiers naturels."
   },
-
   "searchAdress": "Rechercher une adresse...",
   "@searchAdress": {
     "description": "Texte indicatif pour la recherche d'une adresse."
   },
-
   "chooseName": "Choisir un nom",
   "@chooseName": {
     "description": "Invite l'utilisateur à choisir un nom pour l'itinéraire."
   },
-
   "canModifyLater": "Vous pourrez le modifier plus tard",
   "@canModifyLater": {
     "description": "Indique que le nom pourra être modifié plus tard."
   },
-
   "routeName": "Nom de l'itinéraire",
   "@routeName": {
     "description": "Label pour le champ de nom de l'itinéraire."
   },
-
   "limitReachedGenerations": "Limite atteinte",
   "@limitReachedGenerations": {
     "description": "Message affiché lorsque la limite de générations est atteinte."
   },
-
   "exhaustedGenerations": "Générations épuisées",
   "@exhaustedGenerations": {
     "description": "Message indiquant que toutes les générations autorisées sont épuisées."
   },
-
   "remainingLimitGenerations": "Limite restante",
   "@remainingLimitGenerations": {
     "description": "Indique combien de générations sont encore possibles."
   },
-
   "remainingGenerationsLabel": "{remainingGenerations} génération gratuite{remainingGenerations, plural, =1 {} other {s}}",
   "@remainingGenerationsLabel": {
     "description": "Indique combien de générations gratuites restent, avec le pluriel correct pour 'génération'.",
@@ -1456,104 +1436,441 @@
       }
     }
   },
-
   "freeGenerations": "Générations gratuites",
   "@freeGenerations": {
     "description": "Label pour le quota de générations gratuites."
   },
-
   "exhaustedFreeGenerations": "Générations gratuites épuisées",
   "@exhaustedFreeGenerations": {
     "description": "Message lorsque le quota de générations gratuites est épuisé."
   },
-
   "exhaustedCredits": "Crédits épuisés",
   "@exhaustedCredits": {
     "description": "Message indiquant que tous les crédits sont utilisés."
   },
-
   "authForMoreGenerations": "Créez un compte gratuit pour plus de générations",
   "@authForMoreGenerations": {
     "description": "Invite à créer un compte pour obtenir plus de générations."
   },
-
   "createFreeAccount": "Créer un compte gratuit",
   "@createFreeAccount": {
     "description": "Label pour le bouton ou lien pour créer un compte gratuit."
   },
-
   "exportRouteTitle": "Exporter l'itinéraire",
   "@exportRouteTitle": {
     "description": "Titre pour l'export d'un itinéraire."
   },
-
   "exportRouteDesc": "Choisissez le format d'export",
   "@exportRouteDesc": {
     "description": "Texte expliquant comment choisir le format d'export."
   },
-
   "generateInProgress": "Génération de l'itinéraire...",
   "@generateInProgress": {
     "description": "Message affiché pendant la génération de l'itinéraire."
   },
-
   "emptyRouteForSave": "Aucun itinéraire à sauvegarder",
   "@emptyRouteForSave": {
     "description": "Message lorsqu'il n'y a aucun itinéraire à sauvegarder."
   },
-
   "connectionError": "Erreur de connexion",
   "@connectionError": {
     "description": "Message en cas d'erreur de connexion."
   },
-
   "notAvailableMap": "Carte non disponible",
   "@notAvailableMap": {
     "description": "Message lorsque la carte n'est pas disponible."
   },
-
   "missingRouteSettings": "Paramètres d'itinéraire manquants",
   "@missingRouteSettings": {
     "description": "Message lorsque les paramètres d'itinéraire sont manquants."
   },
-
   "savedRoute": "Itinéraire sauvegardé",
   "@savedRoute": {
     "description": "Confirmation que l'itinéraire a été sauvegardé."
   },
-
   "loginRequiredTitle": "Connexion requise",
   "@loginRequiredTitle": {
     "description": "Titre d'une boîte de dialogue indiquant qu'une connexion est requise."
   },
-
   "loginRequiredDesc": "Vous devez être connecté pour sauvegarder vos parcours",
   "@loginRequiredDesc": {
     "description": "Description expliquant pourquoi une connexion est requise."
   },
-
   "reallyContinueTitle": "Voulez-vous vraiment continuer ?",
   "@reallyContinueTitle": {
     "description": "Titre pour confirmer si l'utilisateur veut vraiment continuer."
   },
-
   "reallyContinueDesc": "Cette action supprimera l'itinéraire généré précédemment, il sera alors irrécupérable !",
   "@reallyContinueDesc": {
     "description": "Avertissement que continuer supprimera l'itinéraire actuel."
   },
-
   "generationEmptyLocation": "Aucune position disponible pour la génération",
   "@generationEmptyLocation": {
     "description": "Message indiquant qu'aucune position n'est disponible pour la génération."
   },
-
   "unableLaunchGeneration": "Impossible de lancer la génération",
   "@unableLaunchGeneration": {
     "description": "Message lorsque la génération ne peut pas être lancée."
   },
-
   "invalidParameters": "Paramètres invalides",
   "@invalidParameters": {
     "description": "Message lorsque les paramètres sont invalides."
+  },
+  "locationInProgress": "Localisation...",
+  "@locationInProgress": {
+    "description": "Texte affiché pendant que l'application détermine la position de l'utilisateur."
+  },
+  "searchingPosition": "Recherche de votre position",
+  "@searchingPosition": {
+    "description": "Message affiché pendant la recherche de la position GPS de l'utilisateur."
+  },
+  "trackingError": "Erreur de suivi",
+  "@trackingError": {
+    "description": "Message d'erreur affiché lorsqu'il y a un échec de suivi de localisation."
+  },
+  "enterAuthDetails": "Entrez vos informations",
+  "@enterAuthDetails": {
+    "description": "Invite l'utilisateur à entrer ses informations d'authentification"
+  },
+  "enterPassword": "Entrez un mot de passe",
+  "@enterPassword": {
+    "description": "Invite l'utilisateur à saisir un mot de passe"
+  },
+  "continueWithEmail": "Continuer avec l'e-mail",
+  "@continueWithEmail": {
+    "description": "Bouton pour continuer avec l'e-mail"
+  },
+  "passwordVeryWeak": "Très faible",
+  "@passwordVeryWeak": {
+    "description": "Indique que le mot de passe est très faible"
+  },
+  "passwordWeak": "Faible",
+  "@passwordWeak": {
+    "description": "Indique que le mot de passe est faible"
+  },
+  "passwordFair": "Moyen",
+  "@passwordFair": {
+    "description": "Indique que le mot de passe est moyen"
+  },
+  "passwordGood": "Bon",
+  "@passwordGood": {
+    "description": "Indique que le mot de passe est bon"
+  },
+  "passwordStrong": "Fort",
+  "@passwordStrong": {
+    "description": "Indique que le mot de passe est fort"
+  },
+  "resetEmail": "E-mail de réinitialisation envoyé à {email}",
+  "@resetEmail": {
+    "placeholders": {
+      "email": {
+        "type": "String"
+      }
+    },
+    "description": "Message de confirmation de l'envoi d'e-mail de réinitialisation"
+  },
+  "requiredPassword": "Mot de passe requis",
+  "@requiredPassword": {
+    "description": "Message d'erreur pour un mot de passe manquant"
+  },
+  "requiredCountCharacters": "Au moins {count} caractères requis",
+  "@requiredCountCharacters": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    },
+    "description": "Erreur si le mot de passe n'atteint pas le nombre minimum de caractères"
+  },
+  "requiredCapitalLetter": "Au moins une majuscule requise",
+  "@requiredCapitalLetter": {
+    "description": "Erreur si aucune majuscule"
+  },
+  "requiredMinusculeLetter": "Au moins une minuscule requise",
+  "@requiredMinusculeLetter": {
+    "description": "Erreur si aucune minuscule"
+  },
+  "requiredDigit": "Au moins un chiffre requis",
+  "@requiredDigit": {
+    "description": "Erreur si aucun chiffre"
+  },
+  "requiredSymbol": "Au moins un symbole requis",
+  "@requiredSymbol": {
+    "description": "Erreur si aucun symbole spécial"
+  },
+  "minimumCountCharacters": "Minimum {count} caractères",
+  "@minimumCountCharacters": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    },
+    "description": "Texte indiquant le nombre minimum de caractères"
+  },
+  "oneCapitalLetter": "Une majuscule",
+  "@oneCapitalLetter": {
+    "description": "Indique qu'une majuscule est présente"
+  },
+  "oneMinusculeLetter": "Une minuscule",
+  "@oneMinusculeLetter": {
+    "description": "Indique qu'une minuscule est présente"
+  },
+  "oneDigit": "Un chiffre",
+  "@oneDigit": {
+    "description": "Indique qu'un chiffre est présent"
+  },
+  "oneSymbol": "Un symbole",
+  "@oneSymbol": {
+    "description": "Indique qu'un symbole est présent"
+  },
+  "successEmailSentBack": "E-mail de confirmation renvoyé avec succès",
+  "@successEmailSentBack": {
+    "description": "Confirmation de renvoi d'e-mail"
+  },
+  "checkEmail": "Vérifiez votre e-mail",
+  "@checkEmail": {
+    "description": "Invite à vérifier la boîte mail"
+  },
+  "successSentConfirmationLink": "Nous avons envoyé un lien de confirmation à {email}. Cliquez sur le lien pour activer votre compte.",
+  "@successSentConfirmationLink": {
+    "placeholders": {
+      "email": {
+        "type": "String"
+      }
+    },
+    "description": "Message après l'envoi d'un lien de confirmation"
+  },
+  "resendCode": "Renvoyer le code",
+  "@resendCode": {
+    "description": "Bouton pour renvoyer un code"
+  },
+  "resendCodeInDelay": "Renvoyer dans {count}s",
+  "@resendCodeInDelay": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    },
+    "description": "Indique le délai avant renvoi"
+  },
+  "loginBack": "Retour à la connexion",
+  "@loginBack": {
+    "description": "Lien pour revenir à l'écran de connexion"
+  },
+  "requiredEmail": "E-mail requis",
+  "@requiredEmail": {
+    "description": "Erreur pour e-mail manquant"
+  },
+  "receiveResetLink": "Entrez votre adresse e-mail pour recevoir un lien de réinitialisation",
+  "@receiveResetLink": {
+    "description": "Invite à saisir un e-mail pour réinitialisation"
+  },
+  "send": "Envoyer",
+  "@send": {
+    "description": "Bouton envoyer"
+  },
+  "byDefault": "Par défaut",
+  "@byDefault": {
+    "description": "Texte indiquant un paramètre par défaut"
+  },
+  "changePhoto": "Changer la photo",
+  "@changePhoto": {
+    "description": "Bouton pour changer la photo de profil"
+  },
+  "desiredSelectionMode": "Avant de continuer, veuillez choisir le mode de sélection souhaité",
+  "@desiredSelectionMode": {
+    "description": "Invite à choisir un mode : appareil photo ou galerie"
+  },
+  "cameraMode": "Appareil photo",
+  "@cameraMode": {
+    "description": "Option mode appareil photo"
+  },
+  "galleryMode": "Galerie",
+  "@galleryMode": {
+    "description": "Option mode galerie"
+  },
+  "successUpdatedProfile": "Profil mis à jour avec succès",
+  "@successUpdatedProfile": {
+    "description": "Confirmation mise à jour profil"
+  },
+  "couldNotLaunchUrl": "Impossible d'ouvrir {url}",
+  "@couldNotLaunchUrl": {
+    "placeholders": {
+      "url": {
+        "type": "String"
+      }
+    },
+    "description": "Erreur ouverture URL"
+  },
+  "couldNotLaunchEmailApp": "Impossible d'ouvrir l'application e-mail",
+  "@couldNotLaunchEmailApp": {
+    "description": "Erreur ouverture app e-mail"
+  },
+  "userBalance": "Votre solde",
+  "@userBalance": {
+    "description": "Affiche le solde d'utilisateur"
+  },
+  "purchasedCredits": "Crédits achetés",
+  "@purchasedCredits": {
+    "description": "Crédits achetés"
+  },
+  "usedCredits": "Utilisés",
+  "@usedCredits": {
+    "description": "Crédits utilisés"
+  },
+  "purchaseCreditsTitle": "Crédits achetés",
+  "@purchaseCreditsTitle": {
+    "description": "Titre section crédits achetés"
+  },
+  "usageCreditsTitle": "Crédit pour générer un parcours",
+  "@usageCreditsTitle": {
+    "description": "Titre section crédits utilisés"
+  },
+  "bonusCreditsTitle": "Crédits de bienvenue gratuits",
+  "@bonusCreditsTitle": {
+    "description": "Crédits bonus"
+  },
+  "refundCreditsTitle": "Crédits rétablis",
+  "@refundCreditsTitle": {
+    "description": "Crédits remboursés"
+  },
+  "notAvailablePlans": "Plans non disponibles",
+  "@notAvailablePlans": {
+    "description": "Erreur plans indisponibles"
+  },
+  "missingTransactionID": "ID de transaction manquant",
+  "@missingTransactionID": {
+    "description": "Erreur ID manquant"
+  },
+  "purchaseCanceled": "Achat annulé",
+  "@purchaseCanceled": {
+    "description": "Erreur achat annulé"
+  },
+  "unknownError": "Erreur inconnue",
+  "@unknownError": {
+    "description": "Erreur inconnue"
+  },
+  "duringPaymentError": "Erreur lors du paiement",
+  "@duringPaymentError": {
+    "description": "Erreur durant le paiement"
+  },
+  "networkException": "Problème de connexion. Veuillez réessayer.",
+  "@networkException": {
+    "description": "Problème réseau"
+  },
+  "retryNotAvailablePlans": "Le plan sélectionné est indisponible. Veuillez réessayer.",
+  "@retryNotAvailablePlans": {
+    "description": "Relancer plan indisponible"
+  },
+  "systemIssueDetectedTitle": "Problème système détecté",
+  "@systemIssueDetectedTitle": {
+    "description": "Titre problème système"
+  },
+  "systemIssueDetectedSubtitle": "Un problème système a été détecté. Cela peut arriver si des achats précédents ne se sont pas terminés correctement.",
+  "@systemIssueDetectedSubtitle": {
+    "description": "Sous-titre problème système"
+  },
+  "systemIssueDetectedDesc": "Redémarrez l'application et réessayez",
+  "@systemIssueDetectedDesc": {
+    "description": "Description problème système"
+  },
+  "close": "Fermer",
+  "@close": {
+    "description": "Bouton fermer"
+  },
+  "cleaningDone": "Nettoyage terminé. Réessayez maintenant.",
+  "@cleaningDone": {
+    "description": "Nettoyage terminé"
+  },
+  "cleaningError": "Erreur lors du nettoyage : {error}",
+  "@cleaningError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    },
+    "description": "Erreur nettoyage"
+  },
+  "cleaning": "Nettoyage",
+  "@cleaning": {
+    "description": "Indication nettoyage"
+  },
+  "creditPlanModalTitle": "Faites le plein de crédits pour vivre de nouvelles aventures !",
+  "@creditPlanModalTitle": {
+    "description": "Titre modal crédits"
+  },
+  "creditPlanModalSubtitle": "Choisissez votre pack préféré puis cliquez ici pour commencer à explorer !",
+  "@creditPlanModalSubtitle": {
+    "description": "Sous-titre modal crédits"
+  },
+  "creditPlanModalWarning": "Paiement débité lors de la confirmation d'achat. Crédits non remboursables et valables uniquement dans l'application.",
+  "@creditPlanModalWarning": {
+    "description": "Avertissement modal crédits"
+  },
+  "refresh": "Rafraîchir",
+  "@refresh": {
+    "description": "Bouton rafraîchir"
+  },
+  "successRouteDeleted": "Parcours supprimé avec succès",
+  "@successRouteDeleted": {
+    "description": "Succès suppression parcours"
+  },
+  "errorRouteDeleted": "Erreur lors de la suppression",
+  "@errorRouteDeleted": {
+    "description": "Erreur suppression parcours"
+  },
+  "displayRouteError": "Erreur lors de l'affichage du parcours",
+  "@displayRouteError": {
+    "description": "Erreur affichage parcours"
+  },
+  "routeNameUpdateException": "Le nom ne peut pas être vide",
+  "@routeNameUpdateException": {
+    "description": "Erreur nom vide"
+  },
+  "routeNameUpdateExceptionMinCharacters": "Le nom doit contenir au moins 2 caractères",
+  "@routeNameUpdateExceptionMinCharacters": {
+    "description": "Erreur nom trop court"
+  },
+  "routeNameUpdateExceptionCountCharacters": "Le nom ne peut pas dépasser 50 caractères",
+  "@routeNameUpdateExceptionCountCharacters": {
+    "description": "Erreur nom trop long"
+  },
+  "routeNameUpdateExceptionForbiddenCharacters": "Le nom contient des caractères interdits",
+  "@routeNameUpdateExceptionForbiddenCharacters": {
+    "description": "Erreur caractères interdits"
+  },
+  "routeNameUpdateDone": "Mise à jour effectuée",
+  "@routeNameUpdateDone": {
+    "description": "Succès mise à jour nom"
+  },
+  "formatRouteExport": "Parcours exporté au format {format}",
+  "@formatRouteExport": {
+    "placeholders": {
+      "format": {
+        "type": "String"
+      }
+    },
+    "description": "Format export parcours"
+  },
+  "routeExportError": "Erreur lors de l'export : {error}",
+  "@routeExportError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    },
+    "description": "Erreur export parcours"
+  },
+  "updateRouteNameTitle": "Mettre à jour",
+  "@updateRouteNameTitle": {
+    "description": "Titre mise à jour nom parcours"
+  },
+  "updateRouteNameSubtitle": "Choisissez un nouveau nom",
+  "@updateRouteNameSubtitle": {
+    "description": "Sous-titre mise à jour nom"
+  },
+  "updateRouteNameHint": "Processus digestif après avoir mangé",
+  "@updateRouteNameHint": {
+    "description": "Indice mise à jour nom"
   }
 }

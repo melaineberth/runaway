@@ -6,6 +6,7 @@ import 'package:runaway/core/blocs/connectivity/connectivity_cubit.dart';
 import 'package:runaway/core/helper/config/log_config.dart';
 import 'package:runaway/core/helper/extensions/extensions.dart';
 import 'package:runaway/core/helper/services/connectivity_service.dart';
+import 'package:runaway/core/widgets/squircle_btn.dart';
 
 /// Widget pour indiquer l'état offline avec gestion écran blanc
 class OfflineIndicator extends StatefulWidget {
@@ -139,49 +140,49 @@ class _OfflineIndicatorState extends State<OfflineIndicator> {
 
   /// 🆕 Écran de fallback pour éviter l'écran blanc
   Widget _buildOfflineFallbackScreen() {
-    return Container(
-      color: Colors.grey[50],
-      child: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              HugeIcons.solidRoundedWifiDisconnected01,
-              size: 64,
-              color: Colors.orange[600],
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'Mode hors ligne',
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.w600,
-                color: Colors.grey[800],
+    return Material(
+      child: Container(
+        color: Colors.grey[50],
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                HugeIcons.solidRoundedWifiDisconnected01,
+                size: 64,
+                color: Colors.orange[600],
               ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Fonctionnalités limitées disponibles',
-              style: TextStyle(
-                fontSize: 16,
-                color: Colors.grey[600],
-              ),
-            ),
-            const SizedBox(height: 24),
-            ElevatedButton.icon(
-              onPressed: _forceConnectivityCheck,
-              icon: const Icon(Icons.refresh),
-              label: const Text('Vérifier la connexion'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.orange[600],
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 24, 
-                  vertical: 12
+              16.h,
+              Text(
+                'Mode hors ligne',
+                style: context.bodyMedium?.copyWith(
+                  fontSize: 24,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.grey[800],
                 ),
               ),
-            ),
-          ],
+              3.h,
+              Text(
+                'Fonctionnalités limitées disponibles',
+                style: context.bodySmall?.copyWith(
+                  fontSize: 16,
+                  color: Colors.grey[600],
+                ),
+              ),
+              24.h,
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20.0,
+                ),
+                child: SquircleBtn(
+                  label: 'Vérifier la connexion',
+                  onTap: _forceConnectivityCheck,
+                  labelColor: Colors.white,
+                  backgroundColor: Colors.orange[600],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

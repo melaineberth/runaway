@@ -1118,4 +1118,256 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get invalidParameters => 'Parámetros inválidos';
+
+  @override
+  String get locationInProgress => 'Localizando...';
+
+  @override
+  String get searchingPosition => 'Buscando tu posición';
+
+  @override
+  String get trackingError => 'Error de seguimiento';
+
+  @override
+  String get enterAuthDetails => 'Ingresa tus datos';
+
+  @override
+  String get enterPassword => 'Ingresa una contraseña';
+
+  @override
+  String get continueWithEmail => 'Continuar con email';
+
+  @override
+  String get passwordVeryWeak => 'Muy débil';
+
+  @override
+  String get passwordWeak => 'Débil';
+
+  @override
+  String get passwordFair => 'Regular';
+
+  @override
+  String get passwordGood => 'Buena';
+
+  @override
+  String get passwordStrong => 'Fuerte';
+
+  @override
+  String resetEmail(String email) {
+    return 'Email de restablecimiento enviado a $email';
+  }
+
+  @override
+  String get requiredPassword => 'Contraseña requerida';
+
+  @override
+  String requiredCountCharacters(int count) {
+    return 'Se requieren al menos $count caracteres';
+  }
+
+  @override
+  String get requiredCapitalLetter => 'Se requiere al menos una letra mayúscula';
+
+  @override
+  String get requiredMinusculeLetter => 'Se requiere al menos una letra minúscula';
+
+  @override
+  String get requiredDigit => 'Se requiere al menos un dígito';
+
+  @override
+  String get requiredSymbol => 'Se requiere al menos un símbolo';
+
+  @override
+  String minimumCountCharacters(int count) {
+    return 'Mínimo $count caracteres';
+  }
+
+  @override
+  String get oneCapitalLetter => 'Una letra mayúscula';
+
+  @override
+  String get oneMinusculeLetter => 'Una letra minúscula';
+
+  @override
+  String get oneDigit => 'Un dígito';
+
+  @override
+  String get oneSymbol => 'Un símbolo';
+
+  @override
+  String get successEmailSentBack => 'Email de confirmación enviado exitosamente';
+
+  @override
+  String get checkEmail => 'Verifica tu email';
+
+  @override
+  String successSentConfirmationLink(String email) {
+    return 'Hemos enviado un enlace de confirmación a $email. Haz clic en el enlace del email para activar tu cuenta.';
+  }
+
+  @override
+  String get resendCode => 'Reenviar el código';
+
+  @override
+  String resendCodeInDelay(int count) {
+    return 'Reenviar en ${count}s';
+  }
+
+  @override
+  String get loginBack => 'Volver al inicio de sesión';
+
+  @override
+  String get requiredEmail => 'Email requerido';
+
+  @override
+  String get receiveResetLink => 'Ingresa tu dirección de email para recibir un enlace de restablecimiento';
+
+  @override
+  String get send => 'Enviar';
+
+  @override
+  String get byDefault => 'Por defecto';
+
+  @override
+  String get changePhoto => 'Cambiar foto';
+
+  @override
+  String get desiredSelectionMode => 'Antes de continuar, por favor elige el modo de selección deseado';
+
+  @override
+  String get cameraMode => 'Cámara';
+
+  @override
+  String get galleryMode => 'Galería';
+
+  @override
+  String get successUpdatedProfile => 'Perfil actualizado exitosamente';
+
+  @override
+  String couldNotLaunchUrl(String url) {
+    return 'No se pudo abrir $url';
+  }
+
+  @override
+  String get couldNotLaunchEmailApp => 'No se pudo abrir la aplicación de email';
+
+  @override
+  String get userBalance => 'Tu saldo';
+
+  @override
+  String get purchasedCredits => 'Comprados';
+
+  @override
+  String get usedCredits => 'Usados';
+
+  @override
+  String get purchaseCreditsTitle => 'Créditos comprados';
+
+  @override
+  String get usageCreditsTitle => 'Crédito para generar una ruta';
+
+  @override
+  String get bonusCreditsTitle => 'Créditos de bienvenida gratuitos';
+
+  @override
+  String get refundCreditsTitle => 'Créditos restaurados';
+
+  @override
+  String get notAvailablePlans => 'Planes no disponibles';
+
+  @override
+  String get missingTransactionID => 'ID de transacción faltante';
+
+  @override
+  String get purchaseCanceled => 'Compra cancelada';
+
+  @override
+  String get unknownError => 'Error desconocido';
+
+  @override
+  String get duringPaymentError => 'Error durante el pago';
+
+  @override
+  String get networkException => 'Problema de conexión. Por favor intenta de nuevo.';
+
+  @override
+  String get retryNotAvailablePlans => 'Plan seleccionado no disponible. Por favor intenta de nuevo.';
+
+  @override
+  String get systemIssueDetectedTitle => 'Problema del sistema detectado';
+
+  @override
+  String get systemIssueDetectedSubtitle => 'Se ha detectado un problema del sistema. Esto puede ocurrir si las compras anteriores no se completaron correctamente.';
+
+  @override
+  String get systemIssueDetectedDesc => 'Reinicia la aplicación e intenta de nuevo';
+
+  @override
+  String get close => 'Cerrar';
+
+  @override
+  String get cleaningDone => 'Limpieza completada. Intenta de nuevo ahora.';
+
+  @override
+  String cleaningError(String error) {
+    return 'Error durante la limpieza: $error';
+  }
+
+  @override
+  String get cleaning => 'Limpiando';
+
+  @override
+  String get creditPlanModalTitle => '¡Abastécete de créditos para vivir nuevas aventuras!';
+
+  @override
+  String get creditPlanModalSubtitle => 'Elige tu paquete favorito, luego haz clic aquí para comenzar a explorar!';
+
+  @override
+  String get creditPlanModalWarning => 'El pago se debita al confirmar la compra. Los créditos no son reembolsables y solo son válidos en la aplicación.';
+
+  @override
+  String get refresh => 'Actualizar';
+
+  @override
+  String get successRouteDeleted => 'Ruta eliminada exitosamente';
+
+  @override
+  String get errorRouteDeleted => 'Error al eliminar';
+
+  @override
+  String get displayRouteError => 'Error durante la visualización del recorrido';
+
+  @override
+  String get routeNameUpdateException => 'El nombre no puede estar vacío';
+
+  @override
+  String get routeNameUpdateExceptionMinCharacters => 'El nombre debe contener al menos 2 caracteres';
+
+  @override
+  String get routeNameUpdateExceptionCountCharacters => 'El nombre no puede exceder 50 caracteres';
+
+  @override
+  String get routeNameUpdateExceptionForbiddenCharacters => 'El nombre contiene caracteres prohibidos';
+
+  @override
+  String get routeNameUpdateDone => 'Actualización completada';
+
+  @override
+  String formatRouteExport(String format) {
+    return 'Ruta exportada en formato $format';
+  }
+
+  @override
+  String routeExportError(String error) {
+    return 'Error durante la exportación: $error';
+  }
+
+  @override
+  String get updateRouteNameTitle => 'Actualizar';
+
+  @override
+  String get updateRouteNameSubtitle => 'Elige un nuevo nombre';
+
+  @override
+  String get updateRouteNameHint => 'Proceso digestivo después de comer';
 }

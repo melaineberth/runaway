@@ -92,7 +92,7 @@ class _EmailConfirmationScreenState extends State<EmailConfirmationScreen> {
             showTopSnackBar(
               Overlay.of(context),
               TopSnackBar(
-                title: 'Email de confirmation renvoyé avec succès',
+                title: context.l10n.successEmailSentBack,
               ),
             );
             
@@ -167,7 +167,7 @@ class _EmailConfirmationScreenState extends State<EmailConfirmationScreen> {
 
   Widget _buildTitle() {
     return Text(
-      'Vérifiez votre email',
+      context.l10n.checkEmail,
       style: context.bodyMedium?.copyWith(
         fontSize: 24,
         fontWeight: FontWeight.w600,
@@ -179,7 +179,7 @@ class _EmailConfirmationScreenState extends State<EmailConfirmationScreen> {
 
   Widget _buildSubtitle() {
     return Text(
-      'Nous avons envoyé un lien de confirmation à\n${widget.email}\n\nCliquez sur le lien dans l\'email pour activer votre compte.',
+      context.l10n.successSentConfirmationLink(widget.email),
       style: context.bodySmall?.copyWith(
         color: context.adaptiveTextSecondary,
         fontWeight: FontWeight.w400,
@@ -199,8 +199,8 @@ class _EmailConfirmationScreenState extends State<EmailConfirmationScreen> {
           isLoading: isLoading,
           onTap: (_canResend && !isLoading) ? _resendEmail : null,
           label: _canResend 
-              ? 'Renvoyer l\'email' 
-              : 'Renvoyer dans ${_cooldownSeconds}s',
+            ? context.l10n.resendCode
+            : context.l10n.resendCodeInDelay(_cooldownSeconds),
         );
       },
     );
@@ -210,7 +210,7 @@ class _EmailConfirmationScreenState extends State<EmailConfirmationScreen> {
     return SquircleBtn(
       isPrimary: false,
       onTap: () => context.go('/login'),
-      label: 'Retour à la connexion',
+      label: context.l10n.loginBack,
     );
   }
 }

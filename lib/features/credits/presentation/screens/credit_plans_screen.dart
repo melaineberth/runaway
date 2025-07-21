@@ -163,7 +163,7 @@ class _CreditPlansScreenState extends State<CreditPlansScreen> {
             _buildEmptyState()
           else ...[
             Text(
-              "Historique des transactions",
+              context.l10n.transactionHistory,
               style: context.bodyMedium?.copyWith(
                 fontSize: 18,
                 color: context.adaptiveTextSecondary,
@@ -194,7 +194,7 @@ class _CreditPlansScreenState extends State<CreditPlansScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          "Votre solde",
+          context.l10n.userBalance,
           style: context.bodyMedium?.copyWith(
             fontSize: 18,
             color: context.adaptiveTextSecondary,
@@ -206,7 +206,7 @@ class _CreditPlansScreenState extends State<CreditPlansScreen> {
           Row(
             children: [
               _buildStatItem(
-                'Disponible',
+                context.l10n.availableCredits,
                 '${userCredits.availableCredits}',
                 Colors.blue,
               ),
@@ -220,13 +220,13 @@ class _CreditPlansScreenState extends State<CreditPlansScreen> {
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
                 _buildStatItem(
-                  'Achetés',
+                  context.l10n.purchasedCredits,
                   '${userCredits.totalCreditsPurchased}',
                   Colors.green,
                 ),
                 8.w,
                 _buildStatItem(
-                  'Utilisés',
+                  context.l10n.usedCredits,
                   '${userCredits.totalCreditsUsed}',
                   Colors.orange,
                 ),
@@ -248,7 +248,7 @@ class _CreditPlansScreenState extends State<CreditPlansScreen> {
               ),
               8.w,
               Text(
-                'Chargement...',
+                context.l10n.loading,
                 style: context.bodyMedium?.copyWith(
                   color: context.adaptiveTextSecondary,
                 ),
@@ -415,7 +415,7 @@ class _CreditPlansScreenState extends State<CreditPlansScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  transaction.description ?? transaction.typeDisplayName,
+                  _getTransactionDisplay(transaction.type),
                   style: context.bodySmall?.copyWith(
                     color: context.adaptiveTextPrimary,
                     fontSize: 16,
@@ -516,6 +516,19 @@ class _CreditPlansScreenState extends State<CreditPlansScreen> {
         ],
       ),
     );
+  }
+
+  String _getTransactionDisplay(CreditTransactionType type) {
+    switch (type) {
+      case CreditTransactionType.purchase:
+        return context.l10n.purchaseCreditsTitle;
+      case CreditTransactionType.usage:
+        return context.l10n.usageCreditsTitle;
+      case CreditTransactionType.bonus:
+        return context.l10n.bonusCreditsTitle;
+      case CreditTransactionType.refund:
+        return context.l10n.refundCreditsTitle;
+    }
   }
 
   void _showErrorSnackBar(String message) {

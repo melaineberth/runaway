@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:lottie/lottie.dart';
 import 'package:runaway/core/helper/extensions/extensions.dart';
+import 'package:runaway/core/helper/services/lottie_preload_service.dart';
 import 'package:runaway/core/widgets/icon_btn.dart';
 import 'package:runaway/core/widgets/modal_sheet.dart';
 import 'package:runaway/core/widgets/squircle_btn.dart';
@@ -34,6 +35,34 @@ class ModalDialog extends StatelessWidget {
     this.onCancel,
   });
 
+  /// Construit le widget Lottie avec préchargement optimisé
+  Widget _buildLottieAnimation() {
+    if (imgPath == null) return const SizedBox.shrink();
+    
+    // Vérifier si c'est l'animation auth modal et si elle est préchargée
+    final isAuthModalAnimation = imgPath == LottiePreloadService.instance.authModalLottieUrl;
+    
+    if (isAuthModalAnimation && LottiePreloadService.instance.isAuthModalLottieLoaded) {
+      // Utiliser l'animation préchargée pour un affichage instantané
+      return Lottie.memory(
+        LottiePreloadService.instance.cachedAuthModalLottie!,
+        width: 100,
+        repeat: false,
+        fit: BoxFit.fill,
+        filterQuality: FilterQuality.high,
+      );
+    } else {
+      // Fallback vers le réseau pour les autres animations ou si le préchargement a échoué
+      return Lottie.network(
+        width: 100,
+        repeat: false,
+        fit: BoxFit.fill,
+        imgPath!,
+        filterQuality: FilterQuality.high,
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Stack(
@@ -43,13 +72,7 @@ class ModalDialog extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               if (imgPath != null) ...[
-                Lottie.network(
-                  width: 100,
-                  repeat: false,
-                  fit: BoxFit.fill,
-                  imgPath!,
-                  filterQuality: FilterQuality.high,
-                ),
+                _buildLottieAnimation(),
                 20.h,
               ],
               Text( 

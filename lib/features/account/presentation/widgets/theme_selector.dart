@@ -173,7 +173,7 @@ class ThemeSelector extends StatelessWidget {
                     borderRadius: BorderRadius.circular(50),
                   ),
                   child: Text(
-                    "Par défaut",        // ex. « Par défaut »
+                    context.l10n.byDefault,        // ex. « Par défaut »
                     style: context.bodySmall?.copyWith(
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
