@@ -2030,5 +2030,48 @@
   "savingProfileError": "Error while saving the profile",
   "@savingProfileError": {
     "description": "Error message when profile saving fails."
+  },
+
+  "timeAgoAtMoment": "at the moment",
+  "timeAgoFallback": "recent",
+  "timaAgoSecondes": "there are {difference} s",
+  "@timaAgoSecondes": {
+    "description": "Label showing the difference of save a route in secondes.",
+    "placeholders": {
+      "difference": {
+        "type": "int",
+        "example": "12"
+      }
+    }
+  },
+  "timaAgoMinutes": "there are {difference} min",
+  "@timaAgoMinutes": {
+    "description": "Label showing the difference of save a route in minutes.",
+    "placeholders": {
+      "difference": {
+        "type": "int",
+        "example": "12"
+      }
+    }
+  },
+  "timaAgoHours": "there are {difference} h",
+  "@timaAgoHours": {
+    "description": "Label showing the difference of save a route in hours.",
+    "placeholders": {
+      "difference": {
+        "type": "int",
+        "example": "12"
+      }
+    }
+  },
+  "daysAgoLabel": "there are {days} day{days, plural, =1 {} other {s}}",
+  "@daysAgoLabel": {
+    "description": "Indicates how many days have passed, with plural handling for 'day'.",
+    "placeholders": {
+      "days": {
+        "type": "int",
+        "example": "1"
+      }
+    }
   }
 }

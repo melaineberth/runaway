@@ -2924,6 +2924,42 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Error while saving the profile'**
   String get savingProfileError;
+
+  /// No description provided for @timeAgoAtMoment.
+  ///
+  /// In en, this message translates to:
+  /// **'at the moment'**
+  String get timeAgoAtMoment;
+
+  /// No description provided for @timeAgoFallback.
+  ///
+  /// In en, this message translates to:
+  /// **'recent'**
+  String get timeAgoFallback;
+
+  /// Label showing the difference of save a route in secondes.
+  ///
+  /// In en, this message translates to:
+  /// **'there are {difference} s'**
+  String timaAgoSecondes(int difference);
+
+  /// Label showing the difference of save a route in minutes.
+  ///
+  /// In en, this message translates to:
+  /// **'there are {difference} min'**
+  String timaAgoMinutes(int difference);
+
+  /// Label showing the difference of save a route in hours.
+  ///
+  /// In en, this message translates to:
+  /// **'there are {difference} h'**
+  String timaAgoHours(int difference);
+
+  /// Indicates how many days have passed, with plural handling for 'day'.
+  ///
+  /// In en, this message translates to:
+  /// **'there are {days} day{days, plural, =1 {} other {s}}'**
+  String daysAgoLabel(int days);
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

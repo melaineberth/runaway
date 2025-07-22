@@ -1478,4 +1478,36 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get savingProfileError => 'Errore durante il salvataggio del profilo';
+
+  @override
+  String get timeAgoAtMoment => 'at the moment';
+
+  @override
+  String get timeAgoFallback => 'recent';
+
+  @override
+  String timaAgoSecondes(int difference) {
+    return 'there are $difference s';
+  }
+
+  @override
+  String timaAgoMinutes(int difference) {
+    return 'there are $difference min';
+  }
+
+  @override
+  String timaAgoHours(int difference) {
+    return 'there are $difference h';
+  }
+
+  @override
+  String daysAgoLabel(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: 's',
+      one: '',
+    );
+    return 'there are $days day$_temp0';
+  }
 }

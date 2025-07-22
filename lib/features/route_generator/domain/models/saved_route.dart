@@ -1,5 +1,7 @@
 import 'dart:math' as math;
 import 'package:equatable/equatable.dart';
+import 'package:runaway/core/helper/extensions/extensions.dart';
+import 'package:runaway/core/router/router.dart';
 import 'route_parameters.dart';
 import 'activity_type.dart';
 import 'package:runaway/core/helper/config/log_config.dart';
@@ -172,6 +174,7 @@ class SavedRoute extends Equatable {
 
   /// Temps écoulé depuis la création
   String get timeAgo {
+    final context = rootNavigatorKey.currentContext!;
     try {
       final now = DateTime.now();
       
@@ -186,26 +189,26 @@ class SavedRoute extends Equatable {
         LogConfig.logInfo('Différence négative: ${difference.inMinutes}min - Probablement un problème de timezone');
         // Si c'est une petite différence négative, considérer comme "à l'instant"  
         if (difference.inMinutes.abs() < 60) {
-          return 'à l\'instant';
+          return context.l10n.timeAgoAtMoment;
         } else {
-          return 'récent'; // Fallback pour des erreurs plus importantes
+          return context.l10n.timeAgoFallback; // Fallback pour des erreurs plus importantes
         }
       }
       
       if (difference.inDays > 0) {
-        return 'il y a ${difference.inDays} jour${difference.inDays > 1 ? 's' : ''}';
+        return context.l10n.daysAgoLabel(difference.inDays);
       } else if (difference.inHours > 0) {
-        return 'il y a ${difference.inHours}h';
+        return context.l10n.timaAgoHours(difference.inHours);
       } else if (difference.inMinutes > 0) {
-        return 'il y a ${difference.inMinutes}min';
+        return context.l10n.timaAgoMinutes(difference.inMinutes);
       } else if (difference.inSeconds > 10) {
-        return 'il y a ${difference.inSeconds}s';
+        return context.l10n.timaAgoSecondes(difference.inSeconds);
       } else {
-        return 'à l\'instant';
+        return context.l10n.timeAgoAtMoment;
       }
     } catch (e) {
       LogConfig.logError('❌ Erreur calcul timeAgo: $e');
-      return 'récent';
+      return context.l10n.timeAgoFallback;
     }
   }
 
