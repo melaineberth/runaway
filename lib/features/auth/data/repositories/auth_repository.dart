@@ -10,6 +10,7 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'package:path/path.dart' as p;
 import 'package:runaway/core/errors/auth_exceptions.dart';
 import 'package:runaway/core/helper/config/secure_config.dart';
+import 'package:runaway/core/helper/services/device_fingerprint_service.dart';
 import 'package:runaway/core/helper/services/monitoring_service.dart';
 import 'package:runaway/core/utils/injections/service_locator.dart';
 import 'package:runaway/features/auth/domain/models/profile.dart';
@@ -132,7 +133,7 @@ class AuthRepository {
   }
 
   /* ───────── 1) CRÉATION DE COMPTE (ÉTAPE 1) ───────── */
-  Future<User?> signUpBasic({
+  Future<User?> signUpWithEmail({
     required String email,
     required String password,
   }) async {
@@ -145,11 +146,29 @@ class AuthRepository {
     );
 
     try {
-      print('🔑 Tentative d\'inscription: $email');
+      LogConfig.logInfo('📧 Début inscription email: $email');
+
+      // 🆕 Générer l'empreinte de l'appareil AVANT l'inscription
+      Map<String, String> deviceFingerprint = {};
+      try {
+        deviceFingerprint = await DeviceFingerprintService.instance.generateDeviceFingerprint();
+        LogConfig.logInfo('📱 Empreinte appareil générée pour inscription');
+      } catch (e) {
+        LogConfig.logError('⚠️ Erreur génération empreinte: $e');
+        // Continue quand même l'inscription sans l'empreinte
+      }
       
       final resp = await _supabase.auth.signUp(
         email: email.trim(),
         password: password,
+        data: deviceFingerprint.isNotEmpty ? {
+          // 🆕 Envoyer les données d'appareil dans les métadonnées utilisateur
+          'device_fingerprint': deviceFingerprint['device_fingerprint'],
+          'device_model': deviceFingerprint['device_model'],
+          'device_manufacturer': deviceFingerprint['device_manufacturer'],
+          'platform': deviceFingerprint['platform'],
+          'signup_timestamp': DateTime.now().toIso8601String(),
+        } : null,
       );
       
       if (resp.user != null) {
@@ -166,12 +185,14 @@ class AuthRepository {
           responseSize: resp.toString().length,
         );
 
-        // 🆕 Métrique business - nouveau compte créé
+        // Métrique business - nouveau compte créé
         MonitoringService.instance.recordMetric(
           'user_registration',
           1,
           tags: {
             'source': 'email',
+            'has_device_fingerprint': deviceFingerprint.isNotEmpty.toString(),
+            'platform': deviceFingerprint['platform'] ?? 'unknown',
           },
         );
 
@@ -212,12 +233,25 @@ class AuthRepository {
     );
 
     try {
-      print('🔑 Tentative de connexion Google');
+      LogConfig.logInfo('🌐 Début connexion Google');
 
       final webClientId = SecureConfig.googleWebClientId;
       final iosClientId = SecureConfig.googleIosClientId;
+
+      // 🆕 Générer l'empreinte de l'appareil AVANT la connexion Google
+      Map<String, String> deviceFingerprint = {};
+      try {
+        deviceFingerprint = await DeviceFingerprintService.instance.generateDeviceFingerprint();
+        LogConfig.logInfo('📱 Empreinte appareil générée pour Google Sign-In');
+      } catch (e) {
+        LogConfig.logError('⚠️ Erreur génération empreinte Google: $e');
+        // Continue quand même la connexion sans l'empreinte
+      }
+
+      // 1. Configuration Google Sign-In
+      await GoogleSignIn().signOut(); // Nettoyer session précédente
       
-      // 1. Initier la connexion Google
+      // 2. Initier la connexion Google
       final GoogleSignIn googleSignIn = GoogleSignIn(
         clientId: iosClientId,
         serverClientId: webClientId,
@@ -242,7 +276,7 @@ class AuthRepository {
       
       LogConfig.logInfo('Utilisateur Google obtenu: ${googleUser.email}');
 
-      // 2. Stocker temporairement les informations Google
+      // 3. Stocker temporairement les informations Google
       _tempGoogleFullName = googleUser.displayName;
       if (_tempGoogleFullName != null) {
         LogConfig.logInfo('📝 Nom Google stocké temporairement: $_tempGoogleFullName');
@@ -254,7 +288,7 @@ class AuthRepository {
       
       LogConfig.logInfo('Tokens Google obtenus');
       
-      // 3. Connexion avec Supabase
+      // 4. Connexion avec Supabase
       final AuthResponse response = await _supabase.auth.signInWithIdToken(
         provider: OAuthProvider.google,
         idToken: googleAuth.idToken!,
@@ -265,6 +299,41 @@ class AuthRepository {
         throw AuthException('Échec de la connexion avec Supabase');
       }
 
+      final user = response.user!;
+      LogConfig.logInfo('Connexion Google réussie: ${user.email}');
+
+      // 🆕 4. Mettre à jour les métadonnées utilisateur avec l'empreinte d'appareil si c'est un nouveau compte
+      if (deviceFingerprint.isNotEmpty) {
+        try {
+          // Vérifier si c'est un nouvel utilisateur (créé maintenant)
+          final userCreatedAt = DateTime.parse(user.createdAt);
+          final now = DateTime.now();
+          final isNewUser = userCreatedAt.isAfter(now.subtract(Duration(seconds: 10)));
+          
+          if (isNewUser) {
+            LogConfig.logInfo('📱 Nouveau compte Google - ajout empreinte appareil');
+            
+            await _supabase.auth.updateUser(
+              UserAttributes(
+                data: {
+                  'device_fingerprint': deviceFingerprint['device_fingerprint'],
+                  'device_model': deviceFingerprint['device_model'],
+                  'device_manufacturer': deviceFingerprint['device_manufacturer'],
+                  'platform': deviceFingerprint['platform'],
+                  'signup_timestamp': DateTime.now().toIso8601String(),
+                  'signup_method': 'google',
+                },
+              ),
+            );
+            
+            LogConfig.logInfo('Métadonnées appareil ajoutées au profil Google');
+          }
+        } catch (e) {
+          LogConfig.logError('⚠️ Erreur ajout métadonnées appareil Google: $e');
+          // Continue quand même car la connexion a réussi
+        }
+      }
+
       // 🔒 Stocker les tokens Supabase de façon sécurisée
       if (response.session != null) {
         await _storeSessionTokensSecurely(response.session!);
@@ -272,7 +341,7 @@ class AuthRepository {
       
       LogConfig.logInfo('Connexion Supabase réussie: ${response.user!.email}');
       
-      // 4. Vérifier si un profil existe déjà (nouveau comportement)
+      // 5. Vérifier si un profil existe déjà (nouveau comportement)
       final existingProfile = await getProfile(response.user!.id, skipCleanup: true);
 
       // 🆕 Monitoring de succès
@@ -287,11 +356,12 @@ class AuthRepository {
 
         // 🆕 Métrique business - utilisateur existant
         MonitoringService.instance.recordMetric(
-          'user_login_success',
+          'user_google_signin',
           1,
           tags: {
-            'method': 'google',
-            'is_returning_user': 'true',
+            'success': 'true',
+            'has_device_fingerprint': deviceFingerprint.isNotEmpty.toString(),
+            'platform': deviceFingerprint['platform'] ?? 'unknown',
           },
         );
 
@@ -310,7 +380,7 @@ class AuthRepository {
         },
       );
       
-      // 5. Pour les nouveaux utilisateurs, retourner null pour forcer l'onboarding
+      // 6. Pour les nouveaux utilisateurs, retourner null pour forcer l'onboarding
       LogConfig.logInfo('📝 Nouveau compte Google - sera dirigé vers l\'onboarding');
       return null;
       
@@ -361,18 +431,28 @@ class AuthRepository {
     );
 
     try {
-      print('🔑 Tentative de connexion Apple');
+      LogConfig.logInfo('🍎 Début connexion Apple');
       
       // 1. Vérifier la disponibilité d'Apple Sign-In
       if (!await SignInWithApple.isAvailable()) {
         throw AuthException('Apple Sign-In non disponible sur cet appareil');
       }
+
+      // 🆕 2. Générer l'empreinte de l'appareil AVANT la connexion Apple
+      Map<String, String> deviceFingerprint = {};
+      try {
+        deviceFingerprint = await DeviceFingerprintService.instance.generateDeviceFingerprint();
+        LogConfig.logInfo('📱 Empreinte appareil générée pour Apple Sign-In');
+      } catch (e) {
+        LogConfig.logError('⚠️ Erreur génération empreinte Apple: $e');
+        // Continue quand même la connexion sans l'empreinte
+      }
       
-      // 2. Générer un nonce sécurisé
+      // 3. Générer un nonce sécurisé
       final rawNonce = _generateNonce();
       final nonce = sha256.convert(utf8.encode(rawNonce)).toString();
       
-      // 3. Initier la connexion Apple
+      // 4. Initier la connexion Apple
       final credential = await SignInWithApple.getAppleIDCredential(
         scopes: [
           AppleIDAuthorizationScopes.email,
@@ -414,6 +494,41 @@ class AuthRepository {
         throw AuthException('Échec de la connexion avec Supabase');
       }
 
+      final user = response.user!;
+      LogConfig.logInfo('Connexion Apple réussie: ${user.email}');
+
+      // 🆕 7. Mettre à jour les métadonnées utilisateur avec l'empreinte d'appareil si c'est un nouveau compte
+      if (deviceFingerprint.isNotEmpty) {
+        try {
+          // Vérifier si c'est un nouvel utilisateur (créé maintenant)
+          final userCreatedAt = DateTime.parse(user.createdAt);
+          final now = DateTime.now();
+          final isNewUser = userCreatedAt.isAfter(now.subtract(Duration(seconds: 10)));
+          
+          if (isNewUser) {
+            LogConfig.logInfo('📱 Nouveau compte Apple - ajout empreinte appareil');
+            
+            await _supabase.auth.updateUser(
+              UserAttributes(
+                data: {
+                  'device_fingerprint': deviceFingerprint['device_fingerprint'],
+                  'device_model': deviceFingerprint['device_model'],
+                  'device_manufacturer': deviceFingerprint['device_manufacturer'],
+                  'platform': deviceFingerprint['platform'],
+                  'signup_timestamp': DateTime.now().toIso8601String(),
+                  'signup_method': 'apple',
+                },
+              ),
+            );
+            
+            LogConfig.logInfo('Métadonnées appareil ajoutées au profil Apple');
+          }
+        } catch (e) {
+          LogConfig.logError('⚠️ Erreur ajout métadonnées appareil Apple: $e');
+          // Continue quand même car la connexion a réussi
+        }
+      }
+
       // 🔒 Stocker les tokens Supabase de façon sécurisée
       if (response.session != null) {
         await _storeSessionTokensSecurely(response.session!);
@@ -434,13 +549,15 @@ class AuthRepository {
       if (existingProfile != null && existingProfile.isComplete) {
         LogConfig.logInfo('Profil Apple existant trouvé: ${existingProfile.username}');
 
-        // 🆕 Métrique business - utilisateur existant
+        // 🆕 Métrique business - utilisateur existant avec info appareil
         MonitoringService.instance.recordMetric(
           'user_login_success',
           1,
           tags: {
             'method': 'apple',
             'is_returning_user': 'true',
+            'has_device_fingerprint': deviceFingerprint.isNotEmpty.toString(),
+            'platform': deviceFingerprint['platform'] ?? 'unknown',
           },
         );
 
@@ -457,6 +574,8 @@ class AuthRepository {
           'source': 'apple',
           'needs_onboarding': 'true',
           'has_name': (_tempAppleFullName != null).toString(),
+          'has_device_fingerprint': deviceFingerprint.isNotEmpty.toString(),
+          'platform': deviceFingerprint['platform'] ?? 'unknown',
         },
       );
       

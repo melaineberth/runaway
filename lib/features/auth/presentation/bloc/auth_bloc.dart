@@ -288,7 +288,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   Future<void> _onSignUpBasic(SignUpBasicRequested e, Emitter<AuthState> emit) async {
     emit(AuthLoading());
     try {
-      final user = await _repo.signUpBasic(email: e.email, password: e.password);
+      final user = await _repo.signUpWithEmail(email: e.email, password: e.password);
       if (user == null) {
         return emit(AuthError('Échec de création de compte'));
       }
