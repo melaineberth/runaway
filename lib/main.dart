@@ -8,6 +8,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:runaway/core/blocs/connectivity/connectivity_cubit.dart';
 import 'package:runaway/core/helper/config/log_config.dart';
+import 'package:runaway/core/helper/extensions/extensions.dart';
 import 'package:runaway/core/helper/services/connectivity_service.dart';
 import 'package:runaway/core/helper/services/logging_service.dart';
 import 'package:runaway/core/router/router.dart';
@@ -532,7 +533,7 @@ class ErrorApp extends StatelessWidget {
             children: [
               const Icon(Icons.error, size: 64, color: Colors.red),
               const SizedBox(height: 16),
-              const Text('Erreur d\'initialisation'),
+              Text(context.l10n.initializationError),
               const SizedBox(height: 8),
               Text(error, textAlign: TextAlign.center),
             ],

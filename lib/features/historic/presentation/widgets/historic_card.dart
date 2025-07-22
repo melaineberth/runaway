@@ -218,17 +218,6 @@ class _HistoricCardState extends State<HistoricCard> {
         format: format,
         customName: cleanName,
       );
-
-      // Afficher un message de succès
-      if (mounted) {
-        showTopSnackBar(
-          Overlay.of(context),
-          TopSnackBar(
-            title: context.l10n.formatRouteExport(format.displayName),
-          ),
-        );
-      }
-
     } catch (e) {
       // Afficher un message d'erreur
       if (mounted) {

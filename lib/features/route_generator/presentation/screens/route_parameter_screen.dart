@@ -508,6 +508,21 @@ class _RouteParameterScreenState extends State<RouteParameterScreen> with Ticker
   }
 
   Widget _buildAdvancedOptions(RouteParametersState state) {
+    Color getColor(Set<WidgetState> states) {
+      // Vérifier si le switch est désactivé
+      if (states.contains(WidgetState.disabled)) {
+        return context.adaptiveDisabled.withValues(alpha: 0.5);
+      }
+      
+      // Vérifier si le switch est activé (ON)
+      if (states.contains(WidgetState.selected)) {
+        return context.adaptivePrimary; // Couleur quand activé
+      }
+      
+      // État par défaut (OFF)
+      return context.adaptiveDisabled; // Couleur quand désactivé
+    }
+
     return Column(
       children: [
         ParameterSlider(
@@ -539,9 +554,10 @@ class _RouteParameterScreenState extends State<RouteParameterScreen> with Ticker
         30.h,
         
         SwitchListTile(
-          inactiveTrackColor: context.adaptiveBorder.withValues(alpha: 0.08),
+          inactiveThumbColor: context.adaptiveDisabled,
           activeColor: context.adaptivePrimary,
           contentPadding: EdgeInsets.zero,
+          trackOutlineColor: WidgetStateProperty.resolveWith(getColor),
           title: Text(
             context.l10n.prioritizeParks,
             style: context.bodySmall?.copyWith(color: context.adaptiveTextPrimary),
@@ -564,8 +580,9 @@ class _RouteParameterScreenState extends State<RouteParameterScreen> with Ticker
         15.h,
 
         SwitchListTile(
-          inactiveTrackColor: context.adaptiveBorder.withValues(alpha: 0.08),
+          inactiveThumbColor: context.adaptiveDisabled,
           activeColor: context.adaptivePrimary,
+          trackOutlineColor: WidgetStateProperty.resolveWith(getColor),
           contentPadding: EdgeInsets.zero,
           title: Text(context.l10n.loopCourse, style: context.bodySmall?.copyWith(color: context.adaptiveTextPrimary)),
           subtitle: Text(
@@ -585,8 +602,9 @@ class _RouteParameterScreenState extends State<RouteParameterScreen> with Ticker
         15.h,
 
         SwitchListTile(
-          inactiveTrackColor: context.adaptiveBorder.withValues(alpha: 0.08),
+          inactiveThumbColor: context.adaptiveDisabled,
           activeColor: context.adaptivePrimary,
+          trackOutlineColor: WidgetStateProperty.resolveWith(getColor),
           contentPadding: EdgeInsets.zero,
           title: Text(context.l10n.avoidTraffic, style: context.bodySmall?.copyWith(color: context.adaptiveTextPrimary)),
           subtitle: Text(
@@ -606,8 +624,9 @@ class _RouteParameterScreenState extends State<RouteParameterScreen> with Ticker
         15.h,
 
         SwitchListTile(
-          inactiveTrackColor: context.adaptiveBorder.withValues(alpha: 0.08),
+          inactiveThumbColor: context.adaptiveDisabled,
           activeColor: context.adaptivePrimary,
+          trackOutlineColor: WidgetStateProperty.resolveWith(getColor),
           contentPadding: EdgeInsets.zero,
           title: Text(context.l10n.scenicRoute, style: context.bodySmall?.copyWith(color: context.adaptiveTextPrimary)),
           subtitle: Text(

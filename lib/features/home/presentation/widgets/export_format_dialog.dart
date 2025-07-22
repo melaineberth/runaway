@@ -113,14 +113,14 @@ class ExportFormatDialog extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  format.displayName,
+                  format.title(context),
                   style: context.bodyMedium?.copyWith(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
                 Text(
-                  format.description,
+                  format.desc(context),
                   style: context.bodySmall?.copyWith(
                     fontSize: 14,
                     color: context.adaptiveTextSecondary,

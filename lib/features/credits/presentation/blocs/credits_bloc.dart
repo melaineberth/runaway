@@ -2,6 +2,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:runaway/core/blocs/app_data/app_data_bloc.dart';
 import 'package:runaway/core/blocs/app_data/app_data_event.dart';
 import 'package:runaway/core/errors/api_exceptions.dart';
+import 'package:runaway/core/helper/extensions/extensions.dart';
+import 'package:runaway/core/router/router.dart';
 import 'package:runaway/features/credits/data/repositories/credits_repository.dart';
 import 'package:runaway/features/credits/data/services/iap_service.dart';
 import 'package:runaway/features/credits/domain/models/credit_plan.dart';
@@ -317,14 +319,15 @@ class CreditsBloc extends Bloc<CreditsEvent, CreditsState> {
 
   /// Helper pour extraire le message d'erreur approprié
   String _getErrorMessage(dynamic error) {
+    final context = rootNavigatorKey.currentContext!;
     if (error is NetworkException) {
-      return 'Problème de connexion. Veuillez réessayer.';
+      return context.l10n.networkException;
     } else if (error is ServerException) {
-      return 'Erreur serveur. Veuillez réessayer plus tard.';
+      return context.l10n.serverErrorRetry;
     } else if (error is PaymentException) {
       return error.message;
     } else {
-      return 'Une erreur est survenue. Veuillez réessayer.';
+      return context.l10n.genericErrorRetry;
     }
   }
 

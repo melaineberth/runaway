@@ -1370,4 +1370,112 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get updateRouteNameHint => 'Processus digestif après avoir mangé';
+
+  @override
+  String get initializationError => 'Erreur d\'initialisation';
+
+  @override
+  String get gpxFormatName => 'Garmin / Komoot...';
+
+  @override
+  String get gpxFormatDescription => 'Pour exporter en fichier GPX';
+
+  @override
+  String get kmlFormatName => 'Google Maps / Earth...';
+
+  @override
+  String get kmlFormatDescription => 'Pour exporter en fichier KML';
+
+  @override
+  String get routeExportedFrom => 'Parcours exporté depuis Trailix';
+
+  @override
+  String routeDescription(String activityType, String distance) {
+    return 'Parcours $activityType de ${distance}km généré par Trailix';
+  }
+
+  @override
+  String routeDistanceLabel(String distance) {
+    return 'Parcours de ${distance}km';
+  }
+
+  @override
+  String get endPoint => 'Arrivée';
+
+  @override
+  String get emptyRouteForExport => 'Aucun parcours à exporter';
+
+  @override
+  String get serverErrorRetry => 'Erreur serveur. Veuillez réessayer plus tard.';
+
+  @override
+  String get genericErrorRetry => 'Une erreur s\'est produite. Veuillez réessayer.';
+
+  @override
+  String get invalidRequest => 'Requête invalide';
+
+  @override
+  String get serviceUnavailable => 'Service temporairement indisponible. Réessayez dans quelques minutes.';
+
+  @override
+  String get timeoutError => 'Délai d\'attente dépassé. Vérifiez votre connexion.';
+
+  @override
+  String get unexpectedServerError => 'Erreur serveur inattendue';
+
+  @override
+  String serverErrorCode(int statusCode) {
+    return 'Erreur serveur ($statusCode)';
+  }
+
+  @override
+  String get noInternetConnection => 'Pas de connexion internet. Vérifiez votre réseau.';
+
+  @override
+  String get timeoutRetry => 'Délai d\'attente dépassé. Réessayez.';
+
+  @override
+  String get invalidServerResponse => 'Réponse serveur invalide';
+
+  @override
+  String get invalidCredentials => 'Email ou mot de passe incorrect';
+
+  @override
+  String get userCanceledConnection => 'Connexion annulée par l\'utilisateur';
+
+  @override
+  String get pleaseReconnect => 'Veuillez vous reconnecter';
+
+  @override
+  String get profileManagementError => 'Erreur lors de la gestion du profil utilisateur';
+
+  @override
+  String get connectionProblem => 'Problème de connexion. Vérifiez votre connexion internet';
+
+  @override
+  String get authenticationError => 'Une erreur d\'authentification s\'est produite';
+
+  @override
+  String get passwordMustRequired => 'Le mot de passe doit contenir au moins 8 caractères avec majuscule, minuscule, chiffre et symbole';
+
+  @override
+  String get passwordTooShort => 'Le mot de passe doit contenir au moins 8 caractères';
+
+  @override
+  String get notConfirmedEmail => 'Email non confirmé. Vérifiez votre boîte mail.';
+
+  @override
+  String get confirmEmailBeforeLogin => 'Veuillez confirmer votre email avant de vous connecter';
+
+  @override
+  String get emailAlreadyUsed => 'Un compte existe déjà avec cet email';
+
+  @override
+  String get passwordTooSimple => 'Le mot de passe ne respecte pas les exigences de sécurité';
+
+  @override
+  String get expiredSession => 'Session expirée. Veuillez vous reconnecter';
+
+  @override
+  String get savingProfileError => 'Erreur lors de la sauvegarde du profil';
 }

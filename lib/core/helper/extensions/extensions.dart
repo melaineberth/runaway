@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:runaway/core/styles/colors.dart';
 import 'package:runaway/core/helper/services/session_manager.dart';
+import 'package:runaway/features/route_generator/data/services/route_export_service.dart';
 import 'package:runaway/features/route_generator/domain/models/route_parameters.dart';
 import 'package:runaway/l10n/app_localizations.dart';
 
@@ -137,6 +138,32 @@ extension DifficultyLevelL10n on DifficultyLevel {
         return l10n.hardDifficultyLevel;
       case DifficultyLevel.expert:
         return l10n.expertDifficultyLevel;
+    }
+  }
+}
+
+extension RouteFormatTitleL10n on RouteExportFormat {
+  /// Renvoie la chaîne localisée pour *cette* valeur de enum.
+  String title(BuildContext context) {
+    final l10n = context.l10n; // ou `content.l10n` dans ton widget
+    switch (this) {
+      case RouteExportFormat.gpx:
+        return l10n.gpxFormatName; // clé ARB : "statusPending"
+      case RouteExportFormat.kml:
+        return l10n.kmlFormatName;
+    }
+  }
+}
+
+extension RouteFormatDescL10n on RouteExportFormat {
+  /// Renvoie la chaîne localisée pour *cette* valeur de enum.
+  String desc(BuildContext context) {
+    final l10n = context.l10n; // ou `content.l10n` dans ton widget
+    switch (this) {
+      case RouteExportFormat.gpx:
+        return l10n.gpxFormatDescription; // clé ARB : "statusPending"
+      case RouteExportFormat.kml:
+        return l10n.kmlFormatDescription;
     }
   }
 }

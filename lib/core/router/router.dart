@@ -19,11 +19,11 @@ import 'package:top_snackbar_flutter/top_snack_bar.dart';
 import '../../features/home/presentation/screens/home_screen.dart';
 
 // Clé globale pour accéder au contexte du router
-final GlobalKey<NavigatorState> _rootNavigatorKey = GlobalKey<NavigatorState>();
+final GlobalKey<NavigatorState> rootNavigatorKey = GlobalKey<NavigatorState>();
 final GlobalKey<NavigatorState> _shellNavigatorKey = GlobalKey<NavigatorState>();
 
 final GoRouter router = GoRouter(
-  navigatorKey: _rootNavigatorKey,
+  navigatorKey: rootNavigatorKey,
   initialLocation: '/home',
   
   // Redirection globale basée sur l'état d'authentification

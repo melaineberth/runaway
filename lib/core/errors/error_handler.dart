@@ -3,9 +3,13 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:runaway/core/errors/api_exceptions.dart';
+import 'package:runaway/core/helper/extensions/extensions.dart';
+import 'package:runaway/core/router/router.dart';
 
 class ErrorHandler {
   static AppException handleHttpError(http.Response response) {
+    final context = rootNavigatorKey.currentContext!;
+    
     try {
       final data = jsonDecode(response.body);
       
@@ -16,56 +20,58 @@ class ErrorHandler {
             final errors = (data['details'] as List)
                 .map((e) => ValidationError(
                     field: e['field'] ?? 'unknown',
-                    message: e['message'] ?? 'Erreur inconnue'))
+                    message: e['message'] ?? context.l10n.unknownError))
                 .toList();
             return ValidationException(errors);
           }
           return ValidationException([ValidationError(
               field: 'general', 
-              message: data['error'] ?? 'Requête invalide')]);
+              message: data['error'] ?? context.l10n.invalidRequest)]);
               
         case 503:
           return RouteGenerationException(
-              'Service temporairement indisponible. Réessayez dans quelques minutes.',
+              context.l10n.serviceUnavailable,
               code: 'SERVICE_UNAVAILABLE');
               
         case 408:
           return NetworkException(
-              'Délai d\'attente dépassé. Vérifiez votre connexion.',
+              context.l10n.timeoutError,
               code: 'TIMEOUT');
               
         default:
           return ServerException(
-              data['error'] ?? 'Erreur serveur inattendue', 
+              data['error'] ?? context.l10n.unexpectedServerError, 
               response.statusCode);
       }
     } catch (e) {
       return ServerException(
-          'Erreur serveur (${response.statusCode})', 
-          response.statusCode);
+        context.l10n.serverErrorCode(response.statusCode),
+        response.statusCode);
     }
   }
   
   static AppException handleNetworkError(dynamic error) {
+    final context = rootNavigatorKey.currentContext!;
+
     if (error is SocketException) {
       return NetworkException(
-          'Pas de connexion internet. Vérifiez votre réseau.',
+          context.l10n.networkException,
           code: 'NO_INTERNET');
     }
     
     if (error is TimeoutException) {
       return NetworkException(
-          'Délai d\'attente dépassé. Réessayez.',
+          context.l10n.timeoutError,
           code: 'TIMEOUT');
     }
     
     if (error is FormatException) {
       return ServerException(
-          'Réponse serveur invalide', 500);
+          context.l10n.invalidServerResponse, 500);
     }
     
     return NetworkException(
-        'Erreur de connexion: ${error.toString()}',
+        context.l10n.connectionError,
         originalError: error);
   }
 }

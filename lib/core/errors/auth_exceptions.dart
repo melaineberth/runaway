@@ -1,4 +1,6 @@
 import 'package:runaway/core/errors/auth_exceptions.dart';
+import 'package:runaway/core/helper/extensions/extensions.dart';
+import 'package:runaway/core/router/router.dart';
 
 export 'package:runaway/core/errors/api_exceptions.dart';
 
@@ -45,13 +47,14 @@ class PermissionException extends AuthException {
 /// Helper pour convertir les erreurs Supabase en exceptions typées
 class AuthExceptionHandler {
   static AppException handleSupabaseError(dynamic error) {
+    final context = rootNavigatorKey.currentContext!;
     final errorMessage = error.toString().toLowerCase();
     
     // Erreurs de connexion
     if (errorMessage.contains('invalid login credentials') ||
         errorMessage.contains('invalid email or password')) {
       return LoginException(
-        'Email ou mot de passe incorrect',
+       context.l10n.invalidCredentials,
         code: 'INVALID_CREDENTIALS',
         originalError: error,
       );
@@ -64,7 +67,7 @@ class AuthExceptionHandler {
         errorMessage.contains('connexion google annulée') ||
         errorMessage.contains('authorizationerrorcode.canceled')) {
       return UserCanceledException(
-        'Connexion annulée par l\'utilisateur',
+        context.l10n.userCanceledConnection,
         code: 'USER_CANCELED',
         originalError: error,
       );
@@ -76,7 +79,7 @@ class AuthExceptionHandler {
         errorMessage.contains('password does not meet') ||
         errorMessage.contains('password must contain')) {
       return SignUpException(
-        'Le mot de passe doit contenir au moins 8 caractères avec majuscule, minuscule, chiffre et symbole',
+        context.l10n.passwordMustRequired,
         code: 'WEAK_PASSWORD',
         originalError: error,
       );
@@ -86,7 +89,7 @@ class AuthExceptionHandler {
     if (errorMessage.contains('password should be at least') ||
         errorMessage.contains('password is too short')) {
       return SignUpException(
-        'Le mot de passe doit contenir au moins 8 caractères',
+        context.l10n.passwordTooShort,
         code: 'PASSWORD_TOO_SHORT',
         originalError: error,
       );
@@ -96,7 +99,7 @@ class AuthExceptionHandler {
         errorMessage.contains('email address not confirmed') ||
         errorMessage.contains('confirm your email')) {
       return AuthException(
-        'Email non confirmé. Vérifiez votre boîte mail.',
+        context.l10n.notConfirmedEmail,
         code: 'EMAIL_NOT_CONFIRMED',
         originalError: error,
       );
@@ -105,7 +108,7 @@ class AuthExceptionHandler {
     // 🆕 Gestion des null checks pour Google
     if (errorMessage.contains('null check operator used on a null value')) {
       return UserCanceledException(
-        'Connexion annulée par l\'utilisateur',
+        context.l10n.userCanceledConnection,
         code: 'USER_CANCELED_NULL',
         originalError: error,
       );
@@ -115,7 +118,7 @@ class AuthExceptionHandler {
     if (errorMessage.contains('invalid login credentials') ||
         errorMessage.contains('invalid email or password')) {
       return LoginException(
-        'Email ou mot de passe incorrect',
+        context.l10n.invalidCredentials,
         code: 'INVALID_CREDENTIALS',
         originalError: error,
       );
@@ -123,7 +126,7 @@ class AuthExceptionHandler {
     
     if (errorMessage.contains('email not confirmed')) {
       return LoginException(
-        'Veuillez confirmer votre email avant de vous connecter',
+        context.l10n.confirmEmailBeforeLogin,
         code: 'EMAIL_NOT_CONFIRMED',
         originalError: error,
       );
@@ -132,7 +135,7 @@ class AuthExceptionHandler {
     // Erreurs d'inscription
     if (errorMessage.contains('user already registered')) {
       return SignUpException(
-        'Un compte existe déjà avec cet email',
+        context.l10n.emailAlreadyUsed,
         code: 'USER_ALREADY_EXISTS',
         originalError: error,
       );
@@ -140,7 +143,7 @@ class AuthExceptionHandler {
     
     if (errorMessage.contains('password')) {
       return SignUpException(
-        'Le mot de passe ne respecte pas les exigences de sécurité',
+        context.l10n.passwordTooSimple,
         code: 'WEAK_PASSWORD',
         originalError: error,
       );
@@ -148,7 +151,7 @@ class AuthExceptionHandler {
     
     if (errorMessage.contains('email')) {
       return SignUpException(
-        'Format d\'email invalide',
+        context.l10n.emailInvalid,
         code: 'INVALID_EMAIL',
         originalError: error,
       );
@@ -159,7 +162,7 @@ class AuthExceptionHandler {
         errorMessage.contains('token') ||
         errorMessage.contains('session')) {
       return SessionException(
-        'Session expirée. Veuillez vous reconnecter',
+        context.l10n.pleaseReconnect,
         code: 'SESSION_EXPIRED',
         originalError: error,
       );
@@ -169,7 +172,7 @@ class AuthExceptionHandler {
     if (errorMessage.contains('profile') ||
         errorMessage.contains('user not found')) {
       return ProfileException(
-        'Erreur lors de la gestion du profil utilisateur',
+        context.l10n.profileManagementError,
         code: 'PROFILE_ERROR',
         originalError: error,
       );
@@ -180,7 +183,7 @@ class AuthExceptionHandler {
         errorMessage.contains('connection') ||
         errorMessage.contains('timeout')) {
       return NetworkException(
-        'Problème de connexion. Vérifiez votre connexion internet',
+        context.l10n.connectionProblem,
         code: 'NETWORK_ERROR',
         originalError: error,
       );
@@ -188,7 +191,7 @@ class AuthExceptionHandler {
     
     // Erreur générique - OBLIGATOIRE
     return AuthException(
-      'Une erreur d\'authentification s\'est produite',
+      context.l10n.authenticationError,
       code: 'UNKNOWN_AUTH_ERROR',
       originalError: error,
     );
@@ -196,25 +199,26 @@ class AuthExceptionHandler {
   
   /// Convertit une exception en message utilisateur friendly
   static String getErrorMessage(AppException exception) {
+    final context = rootNavigatorKey.currentContext!;
     switch (exception.code) {
       case 'INVALID_CREDENTIALS':
-        return 'Email ou mot de passe incorrect';
+        return context.l10n.invalidCredentials;
       case 'EMAIL_NOT_CONFIRMED':
-        return 'Veuillez confirmer votre email avant de vous connecter';
+        return context.l10n.confirmEmailBeforeLogin;
       case 'USER_ALREADY_EXISTS':
-        return 'Un compte existe déjà avec cet email';
+        return context.l10n.emailAlreadyUsed;
       case 'WEAK_PASSWORD':
-        return 'Le mot de passe doit contenir majuscule, minuscule, chiffre et symbole';
+        return context.l10n.passwordMustRequired;
       case 'INVALID_EMAIL':
-        return 'Format d\'email invalide';
+        return context.l10n.emailInvalid;
       case 'SESSION_EXPIRED':
-        return 'Session expirée. Veuillez vous reconnecter';
+        return context.l10n.expiredSession;
       case 'PROFILE_ERROR':
-        return 'Erreur lors de la sauvegarde du profil';
+        return context.l10n.savingProfileError;
       case 'NETWORK_ERROR':
-        return 'Problème de connexion internet';
+        return context.l10n.connectionProblem;
       case 'PASSWORD_TOO_SHORT':
-        return 'Le mot de passe doit contenir au moins 8 caractères';
+        return context.l10n.requiredCountCharacters(8);
       default:
         return exception.message;
     }

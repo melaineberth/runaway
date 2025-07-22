@@ -1881,5 +1881,163 @@
   "updateRouteNameHint": "Proceso digestivo después de comer",
   "@updateRouteNameHint": {
     "description": "Texto de ayuda o pista para el campo de nombre de ruta"
+  },
+  "initializationError": "Error de inicialización",
+  "@initializationError": {
+    "description": "Mensaje de error mostrado cuando la aplicación falla al inicializarse correctamente."
+  },
+  "gpxFormatName": "Garmin / Komoot...",
+  "@gpxFormatName": {
+    "description": "Nombre de la opción de formato de exportación GPX."
+  },
+  "gpxFormatDescription": "Para exportar en archivo GPX",
+  "@gpxFormatDescription": {
+    "description": "Descripción del uso del formato GPX."
+  },
+  "kmlFormatName": "Google Maps / Earth...",
+  "@kmlFormatName": {
+    "description": "Nombre de la opción de formato de exportación KML."
+  },
+  "kmlFormatDescription": "Para exportar en archivo KML",
+  "@kmlFormatDescription": {
+    "description": "Descripción del uso del formato KML."
+  },
+  "routeExportedFrom": "Ruta exportada desde Trailix",
+  "@routeExportedFrom": {
+    "description": "Texto mostrado al compartir una exportación de ruta, indicando la aplicación fuente."
+  },
+  "routeDescription": "Ruta de {activityType} de {distance}km generada por Trailix",
+  "@routeDescription": {
+    "description": "Texto de descripción para archivos de rutas exportadas.",
+    "placeholders": {
+      "activityType": {
+        "type": "String",
+        "example": "Carrera"
+      },
+      "distance": {
+        "type": "String",
+        "example": "5.2"
+      }
+    }
+  },
+  "routeDistanceLabel": "Ruta de {distance}km",
+  "@routeDistanceLabel": {
+    "description": "Etiqueta que muestra la distancia de una ruta.",
+    "placeholders": {
+      "distance": {
+        "type": "String",
+        "example": "5.2"
+      }
+    }
+  },
+  "endPoint": "Llegada",
+  "@endPoint": {
+    "description": "Etiqueta para el marcador de punto de llegada de una ruta."
+  },
+  "emptyRouteForExport": "No hay ruta para exportar",
+  "@emptyRouteForExport": {
+    "description": "Mensaje mostrado cuando no hay ruta para exportar."
+  },
+  "serverErrorRetry": "Error del servidor. Por favor intenta de nuevo más tarde.",
+  "@serverErrorRetry": {
+    "description": "Mensaje de error mostrado cuando ocurre un error del servidor y el usuario debe intentar más tarde."
+  },
+  "genericErrorRetry": "Ha ocurrido un error. Por favor intenta de nuevo.",
+  "@genericErrorRetry": {
+    "description": "Mensaje de error genérico pidiendo al usuario que intente de nuevo."
+  },
+  "invalidRequest": "Solicitud inválida",
+  "@invalidRequest": {
+    "description": "Mensaje de error para solicitudes API inválidas."
+  },
+  "serviceUnavailable": "Servicio temporalmente no disponible. Intenta de nuevo en unos minutos.",
+  "@serviceUnavailable": {
+    "description": "Mensaje de error cuando el servicio está temporalmente no disponible."
+  },
+  "timeoutError": "Tiempo de espera agotado. Verifica tu conexión.",
+  "@timeoutError": {
+    "description": "Mensaje de error cuando una solicitud se agota."
+  },
+  "unexpectedServerError": "Error inesperado del servidor",
+  "@unexpectedServerError": {
+    "description": "Mensaje de error para errores inesperados del servidor."
+  },
+  "serverErrorCode": "Error del servidor ({statusCode})",
+  "@serverErrorCode": {
+    "description": "Mensaje de error para errores del servidor con código de estado.",
+    "placeholders": {
+      "statusCode": {
+        "type": "int",
+        "example": "500"
+      }
+    }
+  },
+  "noInternetConnection": "Sin conexión a internet. Verifica tu red.",
+  "@noInternetConnection": {
+    "description": "Mensaje de error cuando no hay conexión a internet."
+  },
+  "timeoutRetry": "Tiempo de espera agotado. Intenta de nuevo.",
+  "@timeoutRetry": {
+    "description": "Mensaje de error por tiempo agotado con instrucción de reintentar."
+  },
+  "invalidServerResponse": "Respuesta del servidor inválida",
+  "@invalidServerResponse": {
+    "description": "Mensaje de error cuando la respuesta del servidor está mal formada o es inválida."
+  },
+  "invalidCredentials": "Email o contraseña incorrectos",
+  "@invalidCredentials": {
+    "description": "Mensaje de error para credenciales de inicio de sesión incorrectas."
+  },
+  "userCanceledConnection": "Conexión cancelada por el usuario",
+  "@userCanceledConnection": {
+    "description": "Mensaje cuando el usuario cancela el proceso de autenticación."
+  },
+  "pleaseReconnect": "Por favor reconéctate",
+  "@pleaseReconnect": {
+    "description": "Mensaje pidiendo al usuario que se reconecte cuando la sesión ha expirado."
+  },
+  "profileManagementError": "Error al gestionar el perfil de usuario",
+  "@profileManagementError": {
+    "description": "Mensaje de error para operaciones de gestión de perfil."
+  },
+  "connectionProblem": "Problema de conexión. Verifica tu conexión a internet",
+  "@connectionProblem": {
+    "description": "Mensaje de error para problemas generales de conexión."
+  },
+  "authenticationError": "Ha ocurrido un error de autenticación",
+  "@authenticationError": {
+    "description": "Mensaje de error genérico de autenticación."
+  },
+  "passwordMustRequired": "La contraseña debe contener al menos 8 caracteres con mayúscula, minúscula, dígito y símbolo",
+  "@passwordMustRequired": {
+    "description": "Mensaje de requisito de complejidad de contraseña."
+  },
+  "passwordTooShort": "La contraseña debe contener al menos 8 caracteres",
+  "@passwordTooShort": {
+    "description": "Mensaje de error cuando la contraseña es muy corta."
+  },
+  "notConfirmedEmail": "Email no confirmado. Verifica tu bandeja de entrada.",
+  "@notConfirmedEmail": {
+    "description": "Mensaje de error cuando el email del usuario no está confirmado."
+  },
+  "confirmEmailBeforeLogin": "Por favor confirma tu email antes de iniciar sesión",
+  "@confirmEmailBeforeLogin": {
+    "description": "Mensaje pidiendo al usuario que confirme su email antes del inicio de sesión."
+  },
+  "emailAlreadyUsed": "Ya existe una cuenta con este email",
+  "@emailAlreadyUsed": {
+    "description": "Mensaje de error al intentar registrarse con un email existente."
+  },
+  "passwordTooSimple": "La contraseña no cumple con los requisitos de seguridad",
+  "@passwordTooSimple": {
+    "description": "Mensaje de error cuando la contraseña es demasiado simple."
+  },
+  "expiredSession": "Sesión expirada. Por favor reconéctate",
+  "@expiredSession": {
+    "description": "Mensaje cuando la sesión del usuario ha expirado."
+  },
+  "savingProfileError": "Error al guardar el perfil",
+  "@savingProfileError": {
+    "description": "Mensaje de error cuando falla el guardado del perfil."
   }
 }

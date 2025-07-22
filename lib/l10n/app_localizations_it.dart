@@ -1370,4 +1370,112 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get updateRouteNameHint => 'Processo digestivo dopo aver mangiato';
+
+  @override
+  String get initializationError => 'Errore di inizializzazione';
+
+  @override
+  String get gpxFormatName => 'Garmin / Komoot...';
+
+  @override
+  String get gpxFormatDescription => 'Per esportare in file GPX';
+
+  @override
+  String get kmlFormatName => 'Google Maps / Earth...';
+
+  @override
+  String get kmlFormatDescription => 'Per esportare in file KML';
+
+  @override
+  String get routeExportedFrom => 'Percorso esportato da Trailix';
+
+  @override
+  String routeDescription(String activityType, String distance) {
+    return 'Percorso $activityType di ${distance}km generato da Trailix';
+  }
+
+  @override
+  String routeDistanceLabel(String distance) {
+    return 'Percorso di ${distance}km';
+  }
+
+  @override
+  String get endPoint => 'Arrivo';
+
+  @override
+  String get emptyRouteForExport => 'Nessun percorso da esportare';
+
+  @override
+  String get serverErrorRetry => 'Errore del server. Riprovare più tardi.';
+
+  @override
+  String get genericErrorRetry => 'Si è verificato un errore. Riprova.';
+
+  @override
+  String get invalidRequest => 'Richiesta non valida';
+
+  @override
+  String get serviceUnavailable => 'Servizio temporaneamente non disponibile. Riprova tra qualche minuto.';
+
+  @override
+  String get timeoutError => 'Timeout superato. Controlla la tua connessione.';
+
+  @override
+  String get unexpectedServerError => 'Errore del server inaspettato';
+
+  @override
+  String serverErrorCode(int statusCode) {
+    return 'Errore del server ($statusCode)';
+  }
+
+  @override
+  String get noInternetConnection => 'Nessuna connessione internet. Controlla la tua rete.';
+
+  @override
+  String get timeoutRetry => 'Timeout superato. Riprova.';
+
+  @override
+  String get invalidServerResponse => 'Risposta del server non valida';
+
+  @override
+  String get invalidCredentials => 'Email o password non corretti';
+
+  @override
+  String get userCanceledConnection => 'Connessione annullata dall\'utente';
+
+  @override
+  String get pleaseReconnect => 'Si prega di riconnettersi';
+
+  @override
+  String get profileManagementError => 'Errore nella gestione del profilo utente';
+
+  @override
+  String get connectionProblem => 'Problema di connessione. Controlla la tua connessione internet';
+
+  @override
+  String get authenticationError => 'Si è verificato un errore di autenticazione';
+
+  @override
+  String get passwordMustRequired => 'La password deve contenere almeno 8 caratteri con maiuscola, minuscola, cifra e simbolo';
+
+  @override
+  String get passwordTooShort => 'La password deve contenere almeno 8 caratteri';
+
+  @override
+  String get notConfirmedEmail => 'Email non confermata. Controlla la tua casella di posta.';
+
+  @override
+  String get confirmEmailBeforeLogin => 'Si prega di confermare la tua email prima di accedere';
+
+  @override
+  String get emailAlreadyUsed => 'Un account esiste già con questa email';
+
+  @override
+  String get passwordTooSimple => 'La password non rispetta i requisiti di sicurezza';
+
+  @override
+  String get expiredSession => 'Sessione scaduta. Si prega di riconnettersi';
+
+  @override
+  String get savingProfileError => 'Errore durante il salvataggio del profilo';
 }

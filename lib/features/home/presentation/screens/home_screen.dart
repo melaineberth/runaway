@@ -1980,10 +1980,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
       context: context,
       backgroundColor: Colors.transparent,
       child: ModalDialog(
-        title: 'Crédits épuisés',
-        subtitle: "Vous avez $availableCredits crédit${availableCredits > 1 ? 's' : ''} disponible${availableCredits > 1 ? 's' : ''}. Il vous en faut au moins $requiredCredits pour générer un nouveau parcours.",
-        validLabel: "Acheter des crédits",
-        cancelLabel: "Plus tard",
+        title: context.l10n.insufficientCreditsTitle,
+        subtitle: context.l10n.insufficientCreditsDescription(requiredCredits, context.l10n.generateRoute.toLowerCase(), availableCredits),
+        validLabel: context.l10n.buyCredits,
+        cancelLabel:context.l10n.later,
         onValid: () {
           context.pop();
           context.push('/manage-credits');
@@ -1996,7 +1996,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
     if (generatedRouteCoordinates == null || routeMetadata == null) {
       showTopSnackBar(
         Overlay.of(context),
-        TopSnackBar(isError: true, title: 'Aucun parcours à exporter'),
+        TopSnackBar(isError: true, title: context.l10n.emptyRouteForExport),
       );
       return;
     }
@@ -2025,20 +2025,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
 
       // Succès
       completer.complete();
-
-      if (mounted) {
-        showTopSnackBar(
-          Overlay.of(context),
-          TopSnackBar(title: 'Parcours exporté en ${format.displayName}'),
-        );
-      }
     } catch (e) {
       completer.completeError(e);
 
       if (mounted) {
         showTopSnackBar(
           Overlay.of(context),
-          TopSnackBar(isError: true, title: 'Erreur d\'export: $e'),
+          TopSnackBar(isError: true, title: context.l10n.routeExportError(e.toString())),
         );
       }
     }

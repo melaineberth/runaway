@@ -2,9 +2,12 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:runaway/core/helper/extensions/extensions.dart';
+import 'package:runaway/core/widgets/top_snackbar.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:path/path.dart' as p;   // pour basename
 import 'package:intl/intl.dart';
+import 'package:top_snackbar_flutter/top_snack_bar.dart';
 
 class RouteExportService {
   
@@ -18,18 +21,21 @@ class RouteExportService {
   }) async {
     try {
       final routeName = customName ?? _generateRouteName(metadata);
-      final content = _generateContent(coordinates, metadata, format, routeName);
+      final content = _generateContent(context, coordinates, metadata, format, routeName);
       final fileName = '$routeName.${format.extension}';
       
       await _saveAndShareFile(context, content, fileName, format);
       
     } catch (e) {
-      throw RouteExportException('Erreur lors de l\'export: $e');
+      if (context.mounted) {
+        throw RouteExportException(context.l10n.routeExportError(e.toString()));
+      }
     }
   }
 
   /// Génère le contenu du fichier selon le format
   static String _generateContent(
+    BuildContext context,
     List<List<double>> coordinates,
     Map<String, dynamic> metadata,
     RouteExportFormat format,
@@ -37,14 +43,15 @@ class RouteExportService {
   ) {
     switch (format) {
       case RouteExportFormat.gpx:
-        return _generateGPX(coordinates, metadata, routeName);
+        return _generateGPX(context, coordinates, metadata, routeName);
       case RouteExportFormat.kml:
-        return _generateKML(coordinates, metadata, routeName);
+        return _generateKML(context, coordinates, metadata, routeName);
     }
   }
 
   /// Génère un fichier GPX (GPS Exchange Format)
   static String _generateGPX(
+    BuildContext context,
     List<List<double>> coordinates,
     Map<String, dynamic> metadata,
     String routeName,
@@ -63,14 +70,14 @@ class RouteExportService {
     // Métadonnées
     buffer.writeln('  <metadata>');
     buffer.writeln('    <name>$routeName</name>');
-    buffer.writeln('    <desc>Parcours $activityType de ${distanceKm.toStringAsFixed(1)}km généré par Runaway</desc>');
+    buffer.writeln('    <desc>${context.l10n.routeDescription(activityType, distanceKm.toStringAsFixed(1))}</desc>');
     buffer.writeln('    <time>${dateFormat.format(now)}</time>');
     buffer.writeln('  </metadata>');
     
     // Route (pour la navigation)
     buffer.writeln('  <rte>');
     buffer.writeln('    <name>$routeName</name>');
-    buffer.writeln('    <desc>Route de ${distanceKm.toStringAsFixed(1)}km</desc>');
+    buffer.writeln('    <desc>${context.l10n.routeDistanceLabel(distanceKm.toStringAsFixed(1))}</desc>');
     
     for (int i = 0; i < coordinates.length; i++) {
       final coord = coordinates[i];
@@ -111,6 +118,7 @@ class RouteExportService {
 
   /// Génère un fichier KML (Google Earth/Maps)
   static String _generateKML(
+    BuildContext context,
     List<List<double>> coordinates,
     Map<String, dynamic> metadata,
     String routeName,
@@ -125,7 +133,7 @@ class RouteExportService {
     buffer.writeln('<kml xmlns="http://www.opengis.net/kml/2.2">');
     buffer.writeln('  <Document>');
     buffer.writeln('    <name>$routeName</name>');
-    buffer.writeln('    <description>Parcours $activityType de ${distanceKm.toStringAsFixed(1)}km</description>');
+    buffer.writeln('    <description>${context.l10n.routeDescription(activityType, distanceKm.toStringAsFixed(1))}</description>');
     
     // Style de la ligne
     buffer.writeln('    <Style id="routeStyle">');
@@ -138,7 +146,7 @@ class RouteExportService {
     // Placemark pour la route
     buffer.writeln('    <Placemark>');
     buffer.writeln('      <name>$routeName</name>');
-    buffer.writeln('      <description>Distance: ${distanceKm.toStringAsFixed(1)}km</description>');
+    buffer.writeln('      <description>${context.l10n.routeDistanceLabel(distanceKm.toStringAsFixed(1))}</description>');
     buffer.writeln('      <styleUrl>#routeStyle</styleUrl>');
     buffer.writeln('      <LineString>');
     buffer.writeln('        <tessellate>1</tessellate>');
@@ -163,7 +171,7 @@ class RouteExportService {
       
       // Point de départ
       buffer.writeln('    <Placemark>');
-      buffer.writeln('      <name>Départ</name>');
+      buffer.writeln('      <name>${context.l10n.start}</name>');
       buffer.writeln('      <Point>');
       buffer.writeln('        <coordinates>${start[0]},${start[1]},${start.length > 2 ? start[2] : 0}</coordinates>');
       buffer.writeln('      </Point>');
@@ -172,7 +180,7 @@ class RouteExportService {
       // Point d'arrivée (si différent)
       if (coordinates.length > 1 && (start[0] != end[0] || start[1] != end[1])) {
         buffer.writeln('    <Placemark>');
-        buffer.writeln('      <name>Arrivée</name>');
+        buffer.writeln('      <name>${context.l10n.endPoint}</name>');
         buffer.writeln('      <Point>');
         buffer.writeln('        <coordinates>${end[0]},${end[1]},${end.length > 2 ? end[2] : 0}</coordinates>');
         buffer.writeln('      </Point>');
@@ -198,7 +206,7 @@ class RouteExportService {
 
   /// Sauvegarde et partage le fichier
   static Future<void> _saveAndShareFile(
-    BuildContext context,               // 🆕
+    BuildContext context,
     String content,
     String fileName,
     RouteExportFormat format,
@@ -216,7 +224,7 @@ class RouteExportService {
 
       // 3. Partage
       final params = ShareParams(
-        text: 'Parcours exporté depuis Runaway',
+        text: context.l10n.routeExportedFrom,
         files: [XFile(path, mimeType: _mimeFromFormat(format))], 
         sharePositionOrigin: origin
       );
@@ -224,7 +232,14 @@ class RouteExportService {
       final result = await SharePlus.instance.share(params);
 
       if (result.status == ShareResultStatus.success) {
-          print('Thank you for sharing the picture!');
+        if (context.mounted) {
+          showTopSnackBar(
+            Overlay.of(context),
+            TopSnackBar(
+              title: context.l10n.formatRouteExport(format.displayName),
+            ),
+          );
+        }
       }
     }
   }
