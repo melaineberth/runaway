@@ -1510,4 +1510,14 @@ class AppLocalizationsIt extends AppLocalizations {
     );
     return 'there are $days day$_temp0';
   }
+
+  @override
+  String routeGenerateName(int count) {
+    return 'Route n°$count';
+  }
+
+  @override
+  String routeGenerateDesc(String date) {
+    return 'Generated on the $date';
+  }
 }

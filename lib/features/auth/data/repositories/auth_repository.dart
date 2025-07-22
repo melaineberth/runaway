@@ -8,8 +8,11 @@ import 'package:crypto/crypto.dart';
 import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:path/path.dart' as p;
+import 'package:runaway/core/blocs/app_data/app_data_bloc.dart';
+import 'package:runaway/core/blocs/app_data/app_data_event.dart';
 import 'package:runaway/core/errors/auth_exceptions.dart';
 import 'package:runaway/core/helper/config/secure_config.dart';
+import 'package:runaway/core/helper/services/cache_service.dart';
 import 'package:runaway/core/helper/services/device_fingerprint_service.dart';
 import 'package:runaway/core/helper/services/monitoring_service.dart';
 import 'package:runaway/core/utils/injections/service_locator.dart';
@@ -801,7 +804,7 @@ class AuthRepository {
   }
 
   // ---------- connexion ----------
-  Future<Profile?> logIn({
+  Future<Profile?> signInWithEmail({
     required String email,
     required String password,
   }) async {
@@ -926,76 +929,88 @@ class AuthRepository {
   }
 
   // ---------- déconnexion ----------
-  Future<void> logOut() async {
+  Future<void> signOut() async {
     try {
-      print('👋 Déconnexion...');
+      LogConfig.logInfo('🚪 Début déconnexion...');
       
-      // 🆕 1. Nettoyer les données utilisateur via ServiceLocator
-      try {
-        ServiceLocator.clearUserData();
-        LogConfig.logInfo('🗑️ Données utilisateur nettoyées via ServiceLocator');
-      } catch (e) {
-        LogConfig.logError('❌ Erreur nettoyage données ServiceLocator: $e');
-      }
-      
-      // 🆕 2. Nettoyer le cache des images
-      try {
-        await CachedNetworkImage.evictFromCache('');
-        LogConfig.logInfo('🖼️ Cache images nettoyé');
-      } catch (e) {
-        LogConfig.logError('❌ Erreur nettoyage cache images: $e');
-      }
-      
-      // 🆕 3. Nettoyer les préférences partagées liées à l'utilisateur
-      try {
-        await _clearUserPreferences();
-        LogConfig.logInfo('📱 Préférences utilisateur nettoyées');
-      } catch (e) {
-        LogConfig.logError('❌ Erreur nettoyage préférences: $e');
-      }
-      
-      // 4. Nettoyer tous les tokens stockés (existant)
-      await SecureConfig.clearStoredTokens();
+      // 1. Nettoyage complet du cache AVANT la déconnexion
+      await _clearAllUserData();
 
-      // 5. Déconnexion Supabase (existant)
+      // 2. Déconnexion Supabase
       await _supabase.auth.signOut();
+
+      // 3. Nettoyage supplémentaire APRÈS la déconnexion
+      await _clearAllUserData();
+      
       LogConfig.logInfo('✅ Déconnexion réussie');
     } catch (e) {
       LogConfig.logError('❌ Erreur déconnexion: $e');
       
-      // 🔒 Nettoyer quand même tout en cas d'erreur
-      try {
-        ServiceLocator.clearUserData();
-        await SecureConfig.clearStoredTokens();
-        await _clearUserPreferences();
-      } catch (cleanupError) {
-        LogConfig.logError('❌ Erreur nettoyage forcé: $cleanupError');
-      }
+      // En cas d'erreur, forcer quand même le nettoyage
+      await _clearAllUserData();
       
       throw AuthExceptionHandler.handleSupabaseError(e);
     }
   }
 
-  Future<void> _clearUserPreferences() async {
+  /// 🆕 Nettoyage complet de toutes les données utilisateur
+  Future<void> _clearAllUserData() async {
+    try {
+      LogConfig.logInfo('🧹 Nettoyage complet des données utilisateur...');
+      
+      // 1. Vider le cache complet des crédits
+      await _invalidateCreditsCache();
+      
+      // 2. Vider le cache général via CacheService
+      try {
+        final cacheService = CacheService.instance;
+        await cacheService.clear();
+        LogConfig.logInfo('🧹 Cache général vidé');
+      } catch (e) {
+        LogConfig.logError('❌ Erreur vidage cache général: $e');
+      }
+      
+      // 3. Nettoyer les données AppDataBloc
+      try {
+        final appDataBloc = sl.get<AppDataBloc>();
+        appDataBloc.add(const AppDataClearRequested());
+        LogConfig.logInfo('🧹 AppDataBloc nettoyé');
+      } catch (e) {
+        LogConfig.logError('❌ Erreur nettoyage AppDataBloc: $e');
+      }
+      
+      // 4. Nettoyer SharedPreferences des données sensibles
+      await _clearSharedPreferences();
+      
+      LogConfig.logInfo('✅ Nettoyage complet terminé');
+    } catch (e) {
+      LogConfig.logError('❌ Erreur nettoyage données: $e');
+    }
+  }
+
+  Future<void> _clearSharedPreferences() async {
     try {
       final prefs = await SharedPreferences.getInstance();
       
-      // Nettoyer les clés liées aux données utilisateur (garder les préférences générales)
+      // Supprimer toutes les clés liées aux données utilisateur
       final keysToRemove = [
+        'cache_user_credits',
         'user_credits_cache',
-        'user_routes_cache', 
-        'user_profile_cache',
-        'last_sync_timestamp',
-        'cached_user_data',
+        'cached_credits_data',
+        'last_credits_sync',
+        'last_cache_validation',
+        'cache_credit_plans',
+        'cache_credit_transactions',
+        'last_user_id', // 🆕 Ajouter pour tracker le changement d'utilisateur
       ];
       
       for (final key in keysToRemove) {
         await prefs.remove(key);
       }
       
-      LogConfig.logInfo('🧹 Préférences utilisateur nettoyées: ${keysToRemove.length} clés');
+      LogConfig.logInfo('🧹 SharedPreferences nettoyées (${keysToRemove.length} clés)');
     } catch (e) {
-      LogConfig.logError('❌ Erreur nettoyage préférences SharedPreferences: $e');
+      LogConfig.logError('❌ Erreur nettoyage SharedPreferences: $e');
     }
   }
 
@@ -1156,14 +1171,14 @@ class AuthRepository {
           .eq('id', user.id);
       
       // Déconnecter l'utilisateur
-      await logOut();
+      await signOut();
       
       LogConfig.logInfo('Compte corrompu nettoyé');
     } catch (e) {
       LogConfig.logError('❌ Erreur nettoyage compte: $e');
       // Forcer la déconnexion même en cas d'erreur
       try {
-        await logOut();
+        await signOut();
       } catch (logoutError) {
         LogConfig.logError('❌ Erreur déconnexion forcée: $logoutError');
       }
@@ -1260,31 +1275,6 @@ class AuthRepository {
       }
       
       throw AuthExceptionHandler.handleSupabaseError(e);
-    }
-  }
-
-  Future<void> _clearAllUserData() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      
-      // Pour la suppression de compte, nettoyer TOUTES les données utilisateur
-      final allKeys = prefs.getKeys();
-      final userDataKeys = allKeys.where((key) => 
-        key.contains('user_') || 
-        key.contains('cache') || 
-        key.contains('sync') ||
-        key.contains('profile') ||
-        key.contains('credits') ||
-        key.contains('routes')
-      ).toList();
-      
-      for (final key in userDataKeys) {
-        await prefs.remove(key);
-      }
-      
-      LogConfig.logInfo('🧹 Toutes les données utilisateur supprimées: ${userDataKeys.length} clés');
-    } catch (e) {
-      LogConfig.logError('❌ Erreur nettoyage complet données: $e');
     }
   }
 

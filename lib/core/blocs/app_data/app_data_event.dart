@@ -124,6 +124,16 @@ class RouteDeletedDataSync extends AppDataEvent {
 
 // ===== 🆕 ÉVÉNEMENTS CRÉDITS =====
 
+/// 🆕 Événement pour forcer une synchronisation complète des crédits
+class CreditsForceSyncRequested extends AppDataEvent {
+  final String reason;
+  
+  const CreditsForceSyncRequested({this.reason = 'manual'});
+  
+  @override
+  List<Object?> get props => [reason];
+}
+
 /// Demande le rafraîchissement des données de crédits uniquement
 class CreditDataRefreshRequested extends AppDataEvent {
   const CreditDataRefreshRequested();
@@ -132,6 +142,15 @@ class CreditDataRefreshRequested extends AppDataEvent {
 /// Demande le chargement initial des crédits (plans + solde + transactions)
 class CreditDataPreloadRequested extends AppDataEvent {
   const CreditDataPreloadRequested();
+}
+
+class UserSessionChangedInAppData extends AppDataEvent {
+  final String newUserId;
+  
+  const UserSessionChangedInAppData({required this.newUserId});
+  
+  @override
+  List<Object?> get props => [newUserId];
 }
 
 /// Synchronisation après utilisation de crédits

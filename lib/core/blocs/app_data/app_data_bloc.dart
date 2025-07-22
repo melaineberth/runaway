@@ -66,6 +66,78 @@ class AppDataBloc extends Bloc<AppDataEvent, AppDataState> {
     on<CreditPurchaseCompletedInAppData>(_onCreditPurchaseCompleted);
     on<CreditBalanceUpdatedInAppData>(_onCreditBalanceUpdated);
     on<CreditDataClearRequested>(_onCreditDataClear);
+    on<CreditsForceSyncRequested>(_onCreditsForceSyncRequested);
+
+    on<UserSessionChangedInAppData>(_onUserSessionChangedHandler);
+  }
+
+  /// Handler pour le changement de session
+  Future<void> _onUserSessionChangedHandler(
+    UserSessionChangedInAppData event,
+    Emitter<AppDataState> emit,
+  ) async {
+    await _onUserSessionChanged(event.newUserId, emit);
+  }
+
+  /// 🆕 Nettoyage complet lors d'un changement d'utilisateur
+  Future<void> _onUserSessionChanged(
+    String newUserId,
+    Emitter<AppDataState> emit,
+  ) async {
+    LogConfig.logInfo('👤 Changement de session utilisateur: $newUserId');
+    
+    // Reset complet de l'état
+    emit(const AppDataState()); // État initial vide
+    
+    // Nettoyer toutes les variables internes
+    _lastCacheUpdate = null;
+    _lastHistoricUpdate = null;
+    _lastCreditUpdate = null;
+    _lastHistoricSync = null;
+    _lastCreditSync = null;
+    _lastFullSync = null;
+    
+    // Reset des flags de synchronisation
+    _isHistoricSyncInProgress = false;
+    _isCreditSyncInProgress = false;
+    _isFullSyncInProgress = false;
+    
+    LogConfig.logInfo('✅ État AppDataBloc réinitialisé pour nouveau utilisateur');
+  }
+
+  /// 🆕 Handler pour la synchronisation forcée
+  Future<void> _onCreditsForceSyncRequested(
+    CreditsForceSyncRequested event,
+    Emitter<AppDataState> emit,
+  ) async {
+    LogConfig.logInfo('🔄 Synchronisation forcée des crédits - raison: ${event.reason}');
+    
+    // Nettoyer complètement l'état
+    emit(state.copyWith(
+      userCredits: null,
+      creditPlans: [],
+      creditTransactions: [],
+      isCreditDataLoaded: false,
+      lastError: null,
+    ));
+    
+    // Invalider le cache
+    try {
+      await _creditsRepository.invalidateCreditsCache();
+    } catch (e) {
+      LogConfig.logError('❌ Erreur invalidation cache: $e');
+    }
+    
+    // Forcer le rechargement complet
+    try {
+      await _onCreditDataPreload(CreditDataPreloadRequested(), emit);
+      LogConfig.logInfo('✅ Synchronisation forcée terminée');
+    } catch (e) {
+      LogConfig.logError('❌ Erreur synchronisation forcée: $e');
+      emit(state.copyWith(
+        lastError: 'Erreur lors de la synchronisation: $e',
+      ));
+    }
   }
 
   /// Chargement initial des données de crédits

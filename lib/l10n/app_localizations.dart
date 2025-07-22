@@ -2960,6 +2960,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'there are {days} day{days, plural, =1 {} other {s}}'**
   String daysAgoLabel(int days);
+
+  /// Indicates how many days have passed, with plural handling for 'day'.
+  ///
+  /// In en, this message translates to:
+  /// **'Route n°{count}'**
+  String routeGenerateName(int count);
+
+  /// Indicates how many days have passed, with plural handling for 'day'.
+  ///
+  /// In en, this message translates to:
+  /// **'Generated on the {date}'**
+  String routeGenerateDesc(String date);
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

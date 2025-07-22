@@ -6,6 +6,7 @@ import 'package:runaway/core/widgets/blurry_page.dart';
 import 'package:runaway/core/widgets/icon_btn.dart';
 import 'package:runaway/core/widgets/squircle_btn.dart';
 import 'package:runaway/features/home/domain/models/route_metrics.dart';
+import 'package:runaway/features/route_generator/domain/models/activity_type.dart';
 import 'package:runaway/features/route_generator/domain/models/route_parameters.dart';
 import 'package:runaway/features/route_generator/domain/models/terrain_type.dart';
 import 'package:runaway/features/route_generator/domain/models/urban_density.dart';
@@ -13,6 +14,7 @@ import 'package:runaway/features/route_generator/domain/models/urban_density.dar
 /// Widget pour afficher les informations de la route générée
 class RouteInfoCard extends StatelessWidget {
   final String routeName;
+  final String routeDesc;
   final RouteParameters parameters;
   final RouteMetrics metrics;
   final bool isLoop;
@@ -25,6 +27,7 @@ class RouteInfoCard extends StatelessWidget {
   const RouteInfoCard({
     super.key,
     required this.routeName,
+    required this.routeDesc,
     required this.parameters,
     required this.metrics,
     required this.isLoop,
@@ -49,9 +52,25 @@ class RouteInfoCard extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.start,
             children: [
               Expanded(
-                child: Text(
-                  routeName,
-                  style: context.bodyMedium,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      routeName,
+                      style: context.bodySmall?.copyWith(
+                        fontSize: 19,
+                        color: context.adaptiveTextPrimary,
+                      ),
+                    ),
+                    Text(
+                      routeDesc,
+                      style: context.bodySmall?.copyWith(
+                        fontSize: 17,
+                        color: context.adaptiveTextSecondary,
+                        fontWeight: FontWeight.w500
+                      ),
+                    ),
+                  ],
                 ),
               ),
               // Bouton fermer
@@ -66,10 +85,10 @@ class RouteInfoCard extends StatelessWidget {
           ),
         ),
 
-        10.h,
+        12.h,
         _buildDetailChips(context),
         
-        20.h,
+        30.h,
     
         // Boutons d'action
         Padding(
@@ -97,7 +116,16 @@ class RouteInfoCard extends StatelessWidget {
   }
 
   Widget _buildDetailChips(BuildContext context) {
-    // Nouveau format avec plus d'informations
+    // Calculer le temps estimé selon l'activité
+    final int estimatedMinutes = calculateEstimatedDuration(
+      parameters.distanceKm, 
+      parameters.activityType, 
+      parameters.elevationGain,
+    );
+
+    // Formater le temps
+    final String timeString = formatDuration(estimatedMinutes);
+
     return SizedBox(
       height: 40,
       child: BlurryPage(
@@ -106,16 +134,37 @@ class RouteInfoCard extends StatelessWidget {
         physics: const BouncingScrollPhysics(),
         contentPadding: const EdgeInsets.symmetric(horizontal: 30),
         children: [
+          // Distance
+          _InfoChip(
+            icon: HugeIcons.solidRoundedRouteBlock,
+            label: "${parameters.distanceKm.toStringAsFixed(0)}km",
+          ),
+          10.w,
+
+          // Type d'activité
+          _InfoChip(
+            icon: getActivityIcon(parameters.activityType.id),
+            label: parameters.activityType.label(context),
+          ),
+          10.w,
+
+          // Temps estimé
+          _InfoChip(
+            icon: HugeIcons.solidRoundedTimeQuarter02,
+            label: timeString,
+          ),
+          10.w,
+
           // Type de terrain
           _InfoChip(
-            icon: getTerrainIcon(parameters.terrainType.id),
+            icon: HugeIcons.solidRoundedMountain,
             label: parameters.terrainType.label(context),
           ),
           10.w,
           
           // Densité urbaine
           _InfoChip(
-            icon: getUrbanDensityIcon(parameters.urbanDensity.id),
+            icon: HugeIcons.solidRoundedPlant01,
             label: parameters.urbanDensity.label(context),
           ),
           10.w,
@@ -124,23 +173,24 @@ class RouteInfoCard extends StatelessWidget {
           _InfoChip(
             icon: isLoop 
                 ? HugeIcons.solidRoundedRepeat
-                : HugeIcons.strokeRoundedArrowRight01,
+                : HugeIcons.strokeRoundedNavigator01,
             label: isLoop ? context.l10n.pathLoop : context.l10n.pathSimple,
           ),
           10.w,
           
           // Score paysage
-          if (metrics.scenicScore > 6)
+          if (metrics.scenicScore > 6) ...[
             _InfoChip(
               icon: HugeIcons.solidRoundedImage01,
               label: '${context.l10n.scenic} ${metrics.scenicScore.toStringAsFixed(1)}/10',
             ),
-          10.w,
+            10.w,
+          ],
           
           // Pente maximale
           if (metrics.maxIncline > 5)
             _InfoChip(
-              icon: HugeIcons.strokeRoundedMountain,
+              icon: HugeIcons.solidRoundedChart03,
               label: '${context.l10n.maxSlope} ${metrics.maxIncline.toStringAsFixed(1)}%',
             ),
         ],

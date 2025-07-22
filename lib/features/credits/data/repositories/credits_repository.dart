@@ -1,8 +1,12 @@
 import 'dart:convert';
+import 'dart:math' as math;
 
+import 'package:runaway/core/blocs/app_data/app_data_bloc.dart';
+import 'package:runaway/core/blocs/app_data/app_data_event.dart';
 import 'package:runaway/core/errors/auth_exceptions.dart';
 import 'package:runaway/core/helper/services/cache_service.dart';
 import 'package:runaway/core/helper/services/monitoring_service.dart';
+import 'package:runaway/core/utils/injections/service_locator.dart';
 import 'package:runaway/features/credits/domain/models/user_credits.dart';
 import 'package:runaway/features/credits/domain/models/credit_plan.dart';
 import 'package:runaway/features/credits/domain/models/credit_transaction.dart';
@@ -22,40 +26,52 @@ class CreditsRepository {
       throw SessionException('Utilisateur non connecté');
     }
 
+    // Vérifier si l'utilisateur a changé
+    final hasUserChanged = await _cache.hasUserChanged(user.id);
+    if (hasUserChanged) {
+      LogConfig.logInfo('👤 Changement d\'utilisateur détecté - nettoyage forcé');
+      await _cache.forceCompleteClearing();
+      forceRefresh = true; // Forcer le refresh pour le nouvel utilisateur
+    }
+
     // TOUJOURS forcer le refresh si l'utilisateur n'a pas encore été vérifié
-    final shouldForceRefresh = forceRefresh || await _shouldForceRefreshForNewUser(user.id);
+    final shouldForceRefresh = forceRefresh || 
+                              await _shouldForceRefreshForNewUser(user.id) ||
+                              await _shouldRandomVerification() ||
+                              hasUserChanged;
 
     // Vérifier le cache d'abord (sauf si forceRefresh)
     if (!shouldForceRefresh) {
-      // ✅ FIX: Récupérer comme Map puis convertir
       final cachedCreditsRaw = await _cache.get<Map>('cache_user_credits');
       if (cachedCreditsRaw != null) {
         try {
           final cachedCredits = UserCredits.fromJson(Map<String, dynamic>.from(cachedCreditsRaw));
+          
+          // Validation périodique du cache
+          if (await _shouldValidateCache(cachedCredits)) {
+            final serverCredits = await _getCreditsFromServer(user.id);
+            if (_areCreditsInconsistent(cachedCredits, serverCredits)) {
+              LogConfig.logInfo('⚠️ Incohérence détectée cache vs serveur - invalidation');
+              await _handleCreditsInconsistency(user.id, cachedCredits, serverCredits);
+              return serverCredits; // Retourner les données serveur
+            }
+          }
+          
           LogConfig.logInfo('📦 Crédits récupérés depuis le cache: ${cachedCredits.availableCredits}');
           return cachedCredits;
         } catch (e) {
           LogConfig.logError('❌ Erreur conversion cache crédits: $e');
-          // Continuer vers l'API si erreur de conversion
+          await _cache.remove('cache_user_credits'); // Nettoyer le cache corrompu
         }
       }
     }
 
     try {
       LogConfig.logInfo('🌐 Récupération des crédits depuis l\'API pour: ${user.id}');
-      
-      final data = await _supabase
-          .from('user_credits')
-          .select()
-          .eq('user_id', user.id)
-          .single();
+      final credits = await _getCreditsFromServer(user.id);
 
-      final credits = UserCredits.fromJson(data);
-
-      // 🆕 Vérification de cohérence pour nouveaux utilisateurs
-      if (await _shouldForceRefreshForNewUser(user.id)) {
-        await _verifyCreditsCoherence(user.id, credits);
-      }
+      // 🆕 Vérification de cohérence renforcée
+      await _verifyCreditsCoherence(user.id, credits);
       
       // Mise en cache avec expiration
       await _cache.set('cache_user_credits', credits);
@@ -555,6 +571,50 @@ class CreditsRepository {
     }
   }
 
+  /// 🆕 Vérification aléatoire pour détecter les incohérences (5% de chance)
+  Future<bool> _shouldRandomVerification() async {
+    final random = math.Random();
+    final shouldVerify = random.nextInt(100) < 5; // 5% de chance
+    if (shouldVerify) {
+      LogConfig.logInfo('🎲 Vérification aléatoire déclenchée');
+    }
+    return shouldVerify;
+  }
+
+  /// 🆕 Détermine si le cache doit être validé (toutes les 5 minutes)
+  Future<bool> _shouldValidateCache(UserCredits cachedCredits) async {
+    try {
+      final lastValidation = await _cache.get<String>('last_cache_validation');
+      if (lastValidation != null) {
+        final lastValidationTime = DateTime.parse(lastValidation);
+        final timeSinceValidation = DateTime.now().difference(lastValidationTime);
+        
+        // Valider le cache toutes les 5 minutes
+        if (timeSinceValidation.inMinutes < 5) {
+          return false;
+        }
+      }
+      
+      // Enregistrer la nouvelle validation
+      await _cache.set('last_cache_validation', DateTime.now().toIso8601String());
+      return true;
+    } catch (e) {
+      LogConfig.logError('❌ Erreur vérification timing cache: $e');
+      return true; // En cas d'erreur, valider par sécurité
+    }
+  }
+
+  /// 🆕 Récupère les crédits directement depuis le serveur
+  Future<UserCredits> _getCreditsFromServer(String userId) async {
+    final data = await _supabase
+      .from('user_credits')
+      .select()
+      .eq('user_id', userId)
+      .single();
+
+    return UserCredits.fromJson(data);
+  }
+
   // Vérifier si on doit forcer le refresh pour un nouvel utilisateur
   Future<bool> _shouldForceRefreshForNewUser(String userId) async {
     try {
@@ -592,23 +652,126 @@ class CreditsRepository {
       
       if (result != null) {
         final shouldHaveCredits = result['should_have_credits'] == true;
-        final currentCredits = result['current_credits'] ?? 0;
+        final serverCredits = result['current_credits'] ?? 0;
         
-        // Si incohérence détectée
-        if (!shouldHaveCredits && currentCredits > 0) {
-          LogConfig.logInfo('⚠️ Incohérence détectée - lancement nettoyage');
+        // 🆕 AMÉLIORATION : Comparaison plus précise
+        final hasInconsistency = (!shouldHaveCredits && credits.availableCredits > 0) || 
+                                (shouldHaveCredits && credits.availableCredits == 0 && serverCredits == 0) ||
+                                (credits.availableCredits != serverCredits);
+        
+        if (hasInconsistency) {
+          LogConfig.logInfo('⚠️ Incohérence majeure détectée:');
+          LogConfig.logInfo('  Devrait avoir crédits: $shouldHaveCredits');
+          LogConfig.logInfo('  Crédits locaux: ${credits.availableCredits}');
+          LogConfig.logInfo('  Crédits serveur: $serverCredits');
           
+          // Nettoyage immédiat
           await _supabase.rpc('cleanup_abusive_credits');
+          await invalidateCreditsCache();
           
-          // Invalider le cache pour forcer le refresh
-          await _cache.invalidateCreditsCache();
+          // 🆕 Forcer le refresh de AppDataBloc
+          try {
+            final appDataBloc = sl.get<AppDataBloc>();
+            appDataBloc.add(CreditDataClearRequested());
+            
+            // Attendre un peu puis recharger
+            Future.delayed(Duration(milliseconds: 500), () {
+              appDataBloc.add(CreditDataPreloadRequested());
+            });
+          } catch (e) {
+            LogConfig.logInfo('⚠️ AppDataBloc non disponible: $e');
+          }
           
-          LogConfig.logInfo('🧹 Nettoyage terminé, cache invalidé');
+          LogConfig.logInfo('🧹 Nettoyage et synchronisation terminés');
         }
       }
     } catch (e) {
       LogConfig.logError('❌ Erreur vérification cohérence: $e');
-      // Continue même en cas d'erreur
+    }
+  }
+
+  /// 🆕 Vérifie si les crédits sont incohérents
+  bool _areCreditsInconsistent(UserCredits cached, UserCredits server) {
+    // Tolérance de 1 crédit pour les mises à jour en cours
+    const tolerance = 1;
+    
+    final availableDiff = (cached.availableCredits - server.availableCredits).abs();
+    final purchasedDiff = (cached.totalCreditsPurchased - server.totalCreditsPurchased).abs();
+    final usedDiff = (cached.totalCreditsUsed - server.totalCreditsUsed).abs();
+    
+    final isInconsistent = availableDiff > tolerance || 
+                          purchasedDiff > tolerance || 
+                          usedDiff > tolerance;
+    
+    if (isInconsistent) {
+      LogConfig.logInfo('⚠️ Incohérence détectée:');
+      LogConfig.logInfo('  Cache: ${cached.availableCredits}/${cached.totalCreditsPurchased}/${cached.totalCreditsUsed}');
+      LogConfig.logInfo('  Serveur: ${server.availableCredits}/${server.totalCreditsPurchased}/${server.totalCreditsUsed}');
+    }
+    
+    return isInconsistent;
+  }
+
+  /// 🆕 Gère les incohérences détectées
+  Future<void> _handleCreditsInconsistency(String userId, UserCredits cached, UserCredits server) async {
+    try {
+      LogConfig.logInfo('🔄 Traitement incohérence crédits pour: $userId');
+      
+      // Invalider tout le cache des crédits
+      await invalidateCreditsCache();
+      
+      // Déclencher une vérification anti-abus
+      await _forceAntiAbuseCheck(userId);
+      
+      // Notifier AppDataBloc de l'incohérence
+      try {
+        final appDataBloc = sl.get<AppDataBloc>();
+        appDataBloc.add(CreditDataClearRequested());
+        appDataBloc.add(CreditDataPreloadRequested());
+      } catch (e) {
+        LogConfig.logInfo('⚠️ AppDataBloc non disponible pour notification: $e');
+      }
+      
+      LogConfig.logInfo('✅ Incohérence traitée, cache nettoyé');
+    } catch (e) {
+      LogConfig.logError('❌ Erreur traitement incohérence: $e');
+    }
+  }
+
+  /// 🆕 Force une vérification anti-abus complète
+  Future<void> _forceAntiAbuseCheck(String userId) async {
+    try {
+      LogConfig.logInfo('🛡️ Vérification anti-abus forcée pour: $userId');
+      
+      final result = await _supabase.rpc('force_check_user_device', params: {
+        'p_user_id': userId,
+      });
+      
+      if (result != null) {
+        final shouldHaveCredits = result['should_have_credits'] == true;
+        final currentCredits = result['current_credits'] ?? 0;
+        
+        LogConfig.logInfo('📊 Résultat vérification anti-abus:');
+        LogConfig.logInfo('  Devrait avoir crédits: $shouldHaveCredits');
+        LogConfig.logInfo('  Crédits actuels: $currentCredits');
+        
+        // Si abus détecté, nettoyer
+        if (!shouldHaveCredits && currentCredits > 0) {
+          LogConfig.logInfo('🧹 Nettoyage abus détecté');
+          await _supabase.rpc('cleanup_abusive_credits');
+        }
+        // Si utilisateur légitime sans crédits, corriger
+        else if (shouldHaveCredits && currentCredits == 0) {
+          LogConfig.logInfo('🔄 Correction utilisateur légitime');
+          await _supabase.rpc('admin_grant_credits', params: {
+            'p_user_email': result['email'],
+            'p_amount': 10,
+            'p_reason': 'Correction automatique suite à vérification d\'incohérence'
+          });
+        }
+      }
+    } catch (e) {
+      LogConfig.logError('❌ Erreur vérification anti-abus: $e');
     }
   }
 }

@@ -1,9 +1,13 @@
 import 'dart:async';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:runaway/core/blocs/app_data/app_data_bloc.dart';
+import 'package:runaway/core/blocs/app_data/app_data_event.dart';
 import 'package:runaway/core/helper/extensions/monitoring_extensions.dart';
 import 'package:runaway/core/helper/services/app_data_initialization_service.dart';
+import 'package:runaway/core/helper/services/cache_service.dart';
 import 'package:runaway/core/helper/services/monitoring_service.dart';
+import 'package:runaway/core/utils/injections/service_locator.dart';
 import 'package:runaway/features/auth/data/repositories/auth_repository.dart';
 import 'package:runaway/features/auth/domain/models/profile.dart';
 import 'package:runaway/features/credits/presentation/blocs/credits_bloc.dart';
@@ -108,10 +112,66 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     });
   }
 
+  /// 🆕 Gère le changement de session utilisateur
+  Future<void> _handleUserSessionChange(String newUserId) async {
+    try {
+      LogConfig.logInfo('👤 Vérification changement utilisateur...');
+      
+      final cacheService = CacheService.instance;
+      final hasUserChanged = await cacheService.hasUserChanged(newUserId);
+      
+      if (hasUserChanged) {
+        LogConfig.logInfo('👤 Changement d\'utilisateur détecté - nettoyage en cours...');
+        
+        // 1. Nettoyer le CreditsBloc si disponible
+        try {
+          _creditsBloc?.add(const CreditsReset());
+          LogConfig.logInfo('💳 CreditsBloc reseté pour nouvel utilisateur');
+        } catch (e) {
+          LogConfig.logError('❌ Erreur reset CreditsBloc: $e');
+        }
+        
+        // 2. Notifier AppDataBloc du changement
+        try {
+          final appDataBloc = sl.get<AppDataBloc>();
+          appDataBloc.add(UserSessionChangedInAppData(newUserId: newUserId));
+          LogConfig.logInfo('📊 AppDataBloc notifié du changement utilisateur');
+        } catch (e) {
+          LogConfig.logError('❌ Erreur notification AppDataBloc: $e');
+        }
+        
+        // 3. Forcer le nettoyage complet du cache
+        await cacheService.forceCompleteClearing();
+        LogConfig.logInfo('🧹 Cache complètement nettoyé pour nouvel utilisateur');
+        
+        // 4. Déclencher immédiatement le pré-chargement pour le nouvel utilisateur
+        try {
+          final appDataBloc = sl.get<AppDataBloc>();
+          // Attendre un petit délai pour que le nettoyage soit terminé
+          Future.delayed(Duration(milliseconds: 300), () {
+            appDataBloc.add(const AppDataPreloadRequested());
+          });
+          LogConfig.logInfo('🚀 Pré-chargement programmé pour nouvel utilisateur');
+        } catch (e) {
+          LogConfig.logError('❌ Erreur programmation pré-chargement: $e');
+        }
+      } else {
+        LogConfig.logInfo('👤 Même utilisateur - pas de nettoyage nécessaire');
+      }
+    } catch (e) {
+      LogConfig.logError('❌ Erreur gestion changement utilisateur: $e');
+      // Continuer même en cas d'erreur pour ne pas bloquer l'authentification
+    }
+  }
+
   Future<void> _onInternalProfileLoaded(
     _InternalProfileLoaded event,
     Emitter<AuthState> emit,
   ) async {
+
+    // 🆕 ÉTAPE 6 : Vérifier le changement d'utilisateur AVANT d'émettre l'état
+    await _handleUserSessionChange(event.profile.id);
+    
     emit(Authenticated(event.profile));
     
     // 🆕 Déclencher le pré-chargement des données (qui inclut maintenant les crédits)
@@ -327,7 +387,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     try {
       emit(AuthLoading());
       
-      final p = await _repo.logIn(email: e.email, password: e.password);
+      final p = await _repo.signInWithEmail(email: e.email, password: e.password);
       
       if (p == null) {
         // Connexion réussie mais pas de profil - vérifier si corrompu
@@ -503,7 +563,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         LogConfig.logError('❌ Erreur nettoyage monitoring: $e');
       }
 
-      await _repo.logOut();
+      await _repo.signOut();
 
       emit(Unauthenticated());
 

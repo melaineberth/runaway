@@ -2,6 +2,9 @@ import 'dart:math' as math;
 import 'package:equatable/equatable.dart';
 import 'package:runaway/core/helper/extensions/extensions.dart';
 import 'package:runaway/core/router/router.dart';
+import 'package:runaway/features/home/domain/models/route_metrics.dart';
+import 'package:runaway/features/route_generator/domain/models/terrain_type.dart';
+import 'package:runaway/features/route_generator/domain/models/urban_density.dart';
 import 'route_parameters.dart';
 import 'activity_type.dart';
 import 'package:runaway/core/helper/config/log_config.dart';
@@ -230,6 +233,89 @@ class SavedRoute extends Equatable {
 
   /// 🆕 Vérifie si le parcours a une image
   bool get hasImage => imageUrl != null && imageUrl!.isNotEmpty;
+
+  RouteMetrics get metrics {
+    // Construire les métadonnées de base
+    final Map<String, dynamic> routeMetadata = {
+      'distance_km': actualDistance ?? parameters.distanceKm,
+      'elevation_gain': parameters.elevationGain,
+      'elevation_loss': parameters.elevationGain * 0.8, // Estimation
+      'max_elevation': parameters.elevationGain,
+      'min_elevation': 0.0,
+      'average_incline': _calculateAverageIncline(),
+      'max_incline': _calculateMaxIncline(),
+      'waypoint_count': coordinates.length,
+      'scenic_score': _calculateScenicScore(),
+      'surface_types': ['Mixte'],
+      'highlights': [],
+    };
+
+    return RouteMetrics.fromRouteData(
+      routeMetadata: routeMetadata,
+      coordinates: coordinates,
+      parameters: parameters,
+    );
+  }
+
+  /// Calcule la pente moyenne estimée
+  double _calculateAverageIncline() {
+    if (parameters.elevationGain <= 0 || (actualDistance ?? parameters.distanceKm) <= 0) {
+      return 0.0;
+    }
+    
+    final distance = actualDistance ?? parameters.distanceKm;
+    return (parameters.elevationGain / (distance * 1000)) * 100; // Pourcentage
+  }
+
+  /// Calcule la pente maximale estimée selon le type de terrain
+  double _calculateMaxIncline() {
+    switch (parameters.terrainType) {
+      case TerrainType.flat:
+        return 3.0; // Terrain plat
+      case TerrainType.mixed:
+        return 8.0; // Terrain mixte
+      case TerrainType.hilly:
+        return 15.0; // Terrain vallonné
+    }
+  }
+
+  /// Calcule un score paysage basé sur la densité urbaine et le terrain
+  double _calculateScenicScore() {
+    double score = 5.0; // Score de base
+    
+    // Bonus selon la densité urbaine
+    switch (parameters.urbanDensity) {
+      case UrbanDensity.nature:
+        score += 3.0; // Nature = plus beau
+        break;
+      case UrbanDensity.mixed:
+        score += 1.0; // Mixte = moyennement beau
+        break;
+      case UrbanDensity.urban:
+        score += 0.0; // Urbain = score de base
+        break;
+    }
+    
+    // Bonus selon le terrain
+    switch (parameters.terrainType) {
+      case TerrainType.hilly:
+        score += 1.5; // Vallonné = plus de points de vue
+        break;
+      case TerrainType.mixed:
+        score += 0.5; // Mixte = un peu plus varié
+        break;
+      case TerrainType.flat:
+        score += 0.0; // Plat = pas de bonus
+        break;
+    }
+    
+    // Bonus si on privilégie le paysage
+    if (parameters.preferScenic) {
+      score += 0.5;
+    }
+    
+    return score.clamp(1.0, 10.0); // Garder entre 1 et 10
+  }
 
   @override
   List<Object?> get props => [

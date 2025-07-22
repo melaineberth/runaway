@@ -121,8 +121,7 @@ class _SignupScreenState extends State<SignupScreen> {
                     validator: passwordValidator,
                     controller: _passwordController,
                     enabled: !widget.isLoading,
-                  ),
-                  AnimatedSwitcher(
+                    bottom: AnimatedSwitcher(
                     duration: const Duration(milliseconds: 300),
                     child: (_passwordController.text.isNotEmpty)
                       ? PasswordStrengthIndicator(
@@ -130,6 +129,7 @@ class _SignupScreenState extends State<SignupScreen> {
                           isVisible: _showPasswordStrength,
                         )
                       : null
+                  ),
                   ),
                   10.h,
                   AuthTextField(

@@ -8,6 +8,7 @@ import 'package:runaway/features/route_generator/domain/models/urban_density.dar
 
 class FloatingRouteInfoPanel extends StatefulWidget {
   final String routeName;
+  final String routeDesc;
   final RouteParameters parameters;
   final double distance;
   final bool isLoop;
@@ -24,6 +25,7 @@ class FloatingRouteInfoPanel extends StatefulWidget {
   const FloatingRouteInfoPanel({
     super.key,
     required this.routeName,
+    required this.routeDesc,
     required this.parameters,
     required this.distance,
     required this.isLoop,
@@ -125,6 +127,7 @@ class _FloatingRouteInfoPanelState extends State<FloatingRouteInfoPanel>
 
     return RouteInfoCard(
       routeName: widget.routeName,
+      routeDesc: widget.routeDesc,
       parameters: widget.parameters,
       metrics: metrics,
       isLoop: widget.isLoop,

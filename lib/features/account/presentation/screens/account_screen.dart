@@ -58,12 +58,19 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
     _initializeAnimations();
     _screenLoadId = context.trackScreenLoad('account_screen');
 
-    // Déclencher le pré-chargement uniquement si les données ne sont pas disponibles
+    // Vérifier la cohérence des données utilisateur
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
-        LogConfig.logInfo('💳 Pré-chargement des données de crédits depuis AccountScreen');
-        context.refreshCreditData();
-        context.finishScreenLoad(_screenLoadId);
+        LogConfig.logInfo('💳 Vérification cohérence utilisateur depuis AccountScreen');
+        
+        // Vérifier et corriger si nécessaire
+        context.ensureUserDataConsistency().then((_) {
+          // Puis déclencher le refresh normal
+          if (mounted) {
+            context.refreshCreditData();
+            context.finishScreenLoad(_screenLoadId);
+          }
+        });
       }
     });
   }

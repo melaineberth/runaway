@@ -89,6 +89,52 @@ class RouteMetrics {
     );
   }
 
+  /// Convertit l'instance en Map pour la sérialisation JSON
+  Map<String, dynamic> toJson() {
+    return {
+      'distanceKm': distanceKm,
+      'estimatedDurationMinutes': estimatedDuration.inMinutes,
+      'elevationGain': elevationGain,
+      'elevationLoss': elevationLoss,
+      'maxElevation': maxElevation,
+      'minElevation': minElevation,
+      'averageIncline': averageIncline,
+      'maxIncline': maxIncline,
+      'waypointCount': waypointCount,
+      'calories': calories,
+      'surfaceTypes': surfaceTypes,
+      'highlights': highlights,
+      'difficulty': difficulty,
+      'scenicScore': scenicScore,
+    };
+  }
+
+  /// Crée une instance à partir d'un Map JSON
+  factory RouteMetrics.fromJson(Map<String, dynamic> json) {
+    return RouteMetrics(
+      distanceKm: (json['distanceKm'] as num?)?.toDouble() ?? 0.0,
+      estimatedDuration: Duration(
+        minutes: (json['estimatedDurationMinutes'] as int?) ?? 0,
+      ),
+      elevationGain: (json['elevationGain'] as num?)?.toDouble() ?? 0.0,
+      elevationLoss: (json['elevationLoss'] as num?)?.toDouble() ?? 0.0,
+      maxElevation: (json['maxElevation'] as num?)?.toDouble() ?? 0.0,
+      minElevation: (json['minElevation'] as num?)?.toDouble() ?? 0.0,
+      averageIncline: (json['averageIncline'] as num?)?.toDouble() ?? 0.0,
+      maxIncline: (json['maxIncline'] as num?)?.toDouble() ?? 0.0,
+      waypointCount: (json['waypointCount'] as int?) ?? 0,
+      calories: (json['calories'] as num?)?.toDouble() ?? 0.0,
+      surfaceTypes: (json['surfaceTypes'] as List<dynamic>?)
+          ?.map((e) => e.toString())
+          .toList() ?? [],
+      highlights: (json['highlights'] as List<dynamic>?)
+          ?.map((e) => e.toString())
+          .toList() ?? [],
+      difficulty: json['difficulty'] as String? ?? '',
+      scenicScore: (json['scenicScore'] as num?)?.toDouble() ?? 0.0,
+    );
+  }
+
   static Duration _calculateDuration(double distance, double elevation, RouteParameters params) {
     final baseSpeed = params.activityType.defaultSpeed;
     final terrainFactor = switch (params.terrainType) {

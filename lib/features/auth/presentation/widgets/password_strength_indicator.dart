@@ -99,72 +99,75 @@ class PasswordStrengthIndicator extends StatelessWidget {
     return AnimatedOpacity(
       duration: const Duration(milliseconds: 200),
       opacity: password.isEmpty ? 0.0 : 1.0,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          8.h,
-          // Barre de force
-          Row(
-            children: [
-              Expanded(
-                child: Container(
-                  height: 4,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(2),
-                    color: context.adaptiveDisabled.withValues(alpha: 0.2),
-                  ),
-                  child: FractionallySizedBox(
-                    alignment: Alignment.centerLeft,
-                    widthFactor: strengthData.score,
-                    child: Container(
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(2),
-                        color: strengthColor,
+      child: Padding(
+        padding: const EdgeInsets.all(8.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            8.h,
+            // Barre de force
+            Row(
+              children: [
+                Expanded(
+                  child: Container(
+                    height: 4,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(2),
+                      color: context.adaptiveDisabled.withValues(alpha: 0.2),
+                    ),
+                    child: FractionallySizedBox(
+                      alignment: Alignment.centerLeft,
+                      widthFactor: strengthData.score,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(2),
+                          color: strengthColor,
+                        ),
                       ),
                     ),
                   ),
                 ),
-              ),
-              8.w,
-              Text(
-                strengthData.message,
-                style: context.bodySmall?.copyWith(
-                  fontSize: 12,
-                  color: strengthColor,
-                  fontWeight: FontWeight.w500,
+                8.w,
+                Text(
+                  strengthData.message,
+                  style: context.bodySmall?.copyWith(
+                    fontSize: 12,
+                    color: strengthColor,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+            
+            // Exigences manquantes
+            if (strengthData.missingRequirements.isNotEmpty) ...[
+              6.h,
+              ...strengthData.missingRequirements.map(
+                (requirement) => Padding(
+                  padding: const EdgeInsets.only(bottom: 2),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.circle,
+                        size: 4,
+                        color: context.adaptiveTextSecondary,
+                      ),
+                      6.w,
+                      Text(
+                        requirement,
+                        style: context.bodySmall?.copyWith(
+                          fontSize: 11,
+                          color: context.adaptiveTextSecondary,
+                          fontWeight: FontWeight.w400,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ],
-          ),
-          
-          // Exigences manquantes
-          if (strengthData.missingRequirements.isNotEmpty) ...[
-            6.h,
-            ...strengthData.missingRequirements.map(
-              (requirement) => Padding(
-                padding: const EdgeInsets.only(bottom: 2),
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.circle,
-                      size: 4,
-                      color: context.adaptiveTextSecondary,
-                    ),
-                    6.w,
-                    Text(
-                      requirement,
-                      style: context.bodySmall?.copyWith(
-                        fontSize: 11,
-                        color: context.adaptiveTextSecondary,
-                        fontWeight: FontWeight.w400,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
           ],
-        ],
+        ),
       ),
     );
   }

@@ -6,7 +6,10 @@ import 'package:runaway/core/blocs/locale/locale_bloc.dart';
 import 'package:runaway/core/blocs/notification/notification_bloc.dart';
 import 'package:runaway/core/blocs/theme_bloc/theme_bloc.dart';
 import 'package:runaway/core/helper/config/log_config.dart';
+import 'package:runaway/core/helper/services/cache_service.dart';
 import 'package:runaway/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:runaway/features/auth/presentation/bloc/auth_state.dart';
+import 'package:runaway/features/credits/data/repositories/credits_repository.dart';
 import 'package:runaway/features/credits/data/services/credit_verification_service.dart';
 import 'package:runaway/features/credits/domain/models/credit_plan.dart';
 import 'package:runaway/features/credits/domain/models/credit_transaction.dart';
@@ -81,6 +84,71 @@ extension BlocAccess on BuildContext {
     } catch (e) {
       LogConfig.logError('❌ Erreur récupération crédits async: $e');
       return 0;
+    }
+  }
+
+  /// 🆕 Force un nettoyage complet lors d'un changement d'utilisateur
+  void clearUserSession() {
+    LogConfig.logInfo('🧹 Nettoyage session utilisateur demandé');
+    
+    try {
+      // Nettoyer AppDataBloc
+      appDataBloc.add(const AppDataClearRequested());
+      
+      // Nettoyer le cache
+      CacheService.instance.forceCompleteClearing();
+      
+      LogConfig.logInfo('✅ Nettoyage session terminé');
+    } catch (e) {
+      LogConfig.logError('❌ Erreur nettoyage session: $e');
+    }
+  }
+
+  /// 🆕 Vérifie et corrige les données si changement d'utilisateur détecté
+  Future<void> ensureUserDataConsistency() async {
+    try {
+      final currentUser = sl.get<AuthBloc>().state;
+      if (currentUser is Authenticated) {
+        final userId = currentUser.profile.id;
+        
+        final cacheService = CacheService.instance;
+        final hasChanged = await cacheService.hasUserChanged(userId);
+        
+        if (hasChanged) {
+          LogConfig.logInfo('🔄 Incohérence utilisateur détectée - correction...');
+          clearUserSession();
+          
+          // Attendre un peu puis recharger
+          await Future.delayed(Duration(milliseconds: 500));
+          preloadCreditData();
+        }
+      }
+    } catch (e) {
+      LogConfig.logError('❌ Erreur vérification cohérence utilisateur: $e');
+    }
+  }
+
+  /// 🆕 Force une synchronisation complète des crédits
+  void forceCreditSync({String reason = 'manual'}) {
+    LogConfig.logInfo('🔄 Demande de synchronisation forcée des crédits');
+    appDataBloc.add(CreditsForceSyncRequested(reason: reason));
+  }
+
+  /// 🆕 Vérifie la cohérence des crédits et corrige si nécessaire
+  Future<void> validateAndFixCredits() async {
+    try {
+      LogConfig.logInfo('🔍 Validation et correction des crédits...');
+      
+      // Forcer un refresh depuis le repository
+      final creditsRepo = sl.get<CreditsRepository>();
+      await creditsRepo.getUserCredits(forceRefresh: true);
+      
+      LogConfig.logInfo('✅ Validation terminée');
+    } catch (e) {
+      LogConfig.logError('❌ Erreur validation crédits: $e');
+      
+      // En cas d'erreur, forcer une synchronisation complète
+      forceCreditSync(reason: 'validation_error');
     }
   }
 

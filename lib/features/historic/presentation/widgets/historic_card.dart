@@ -267,6 +267,16 @@ class _HistoricCardState extends State<HistoricCard> {
     const padding = EdgeInsets.all(paddingValue);
     final outerRadius = padding.calculateOuterRadius(innerRadius);
 
+        // Calculer le temps estimé selon l'activité
+    final int estimatedMinutes = calculateEstimatedDuration(
+      widget.route.parameters.distanceKm, 
+      widget.route.parameters.activityType, 
+      widget.route.parameters.elevationGain,
+    );
+
+    // Formater le temps
+    final String timeString = formatDuration(estimatedMinutes);
+
     return IntrinsicHeight(
       child: SquircleContainer(
         onTap: widget.onShowOnMap,
@@ -325,37 +335,63 @@ class _HistoricCardState extends State<HistoricCard> {
               spacing: 8.0,
               runSpacing: 8.0,
               children: [
+                // Distance
                 _buildDetailChip(
-                  icon: widget.route.parameters.activityType.icon,
+                  icon: HugeIcons.solidRoundedRouteBlock,
+                  text: "${widget.route.parameters.distanceKm.toStringAsFixed(0)}km",
+                ),
+                // Type d'activité
+                _buildDetailChip(
+                  icon: getActivityIcon(widget.route.parameters.activityType.id),
                   text: widget.route.parameters.activityType.label(context),
                 ),
+                // Temps estimé
                 _buildDetailChip(
-                  icon: HugeIcons.solidRoundedNavigator01,
-                  text: widget.route.formattedDistance,
+                  icon: HugeIcons.solidRoundedTimeQuarter02,
+                  text: timeString,
                 ),
+                // Type de terrain
                 _buildDetailChip(
-                  icon: getTerrainIcon(widget.route.parameters.terrainType.title.toLowerCase()),
+                  icon: HugeIcons.solidRoundedMountain,
                   text: widget.route.parameters.terrainType.label(context),
                 ),
+                // Densité urbaine
                 _buildDetailChip(
-                  icon: getUrbanDensityIcon(widget.route.parameters.urbanDensity.title.toLowerCase()),
+                  icon: HugeIcons.solidRoundedPlant01,
                   text: widget.route.parameters.urbanDensity.label(context),
                 ),
                 if (widget.route.parameters.elevationGain > 0)
                   _buildDetailChip(
-                    icon: HugeIcons.solidSharpMountain,
+                    icon: HugeIcons.solidRoundedSine02,
                     text: '${widget.route.parameters.elevationGain.toStringAsFixed(0)}m',
                   ),
                 if (widget.route.parameters.isLoop)
                   _buildDetailChip(
                     icon: HugeIcons.solidRoundedRepeat,
-                    text: widget.route.parameters.isLoop ? context.l10n.pathLoop : context.l10n.pathSimple,
+                    text: context.l10n.pathLoop,
+                  )
+                else 
+                  _buildDetailChip(
+                    icon: HugeIcons.solidRoundedNavigator01,
+                    text: context.l10n.pathSimple,
                   ),
                 if (widget.route.timesUsed > 0)
                   _buildDetailChip(
                     icon: HugeIcons.solidRoundedFavourite,
                     text: '${widget.route.timesUsed}x',
                     color: Colors.orange,
+                  ),
+                // 🆕 AJOUT : Score paysage si supérieur à 6
+                if (widget.route.metrics.scenicScore > 6)
+                  _buildDetailChip(
+                    icon: HugeIcons.solidRoundedImage01,
+                    text: '${context.l10n.scenic} ${widget.route.metrics.scenicScore.toStringAsFixed(1)}/10',
+                  ),
+                // 🆕 AJOUT : Pente maximale si supérieure à 5%
+                if (widget.route.metrics.maxIncline > 5)
+                  _buildDetailChip(
+                    icon: HugeIcons.solidRoundedChart03,
+                    text: '${context.l10n.maxSlope} ${widget.route.metrics.maxIncline.toStringAsFixed(1)}%',
                   ),
               ],
             ),

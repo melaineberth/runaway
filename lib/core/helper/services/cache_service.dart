@@ -208,8 +208,21 @@ class CacheService {
 
   /// Stratégies d'invalidation automatique
   Future<void> invalidateCreditsCache() async {
-    await invalidate(pattern: 'credit');
-    LogConfig.logInfo('💳 Cache crédits invalidé');
+    final keysToRemove = [
+      'cache_user_credits',
+      'user_credits_cache', 
+      'cached_credits_data',
+      'last_credits_sync',
+      'last_cache_validation', // 🆕 Nouveau
+      'credit_plans_cache',
+      'credit_transactions_cache',
+    ];
+    
+    for (final key in keysToRemove) {
+      await remove(key);
+    }
+        
+    LogConfig.logInfo('💳 Cache crédits complètement invalidé (${keysToRemove.length} clés)');
   }
 
   Future<void> invalidateRoutesCache() async {
@@ -256,6 +269,54 @@ class CacheService {
       
       LogConfig.logInfo('🧹 Nettoyage intelligent: ${toRemove.length} anciennes entrées supprimées');
     }
+  }
+
+  /// 🆕 Vide complètement le cache avec confirmation
+  Future<void> forceCompleteClearing() async {
+    await _ensureInitialized();
+    
+    LogConfig.logInfo('🧹 Démarrage nettoyage complet forcé...');
+    
+    // Annuler tous les timers
+    for (final timer in _expirationTimers.values) {
+      timer.cancel();
+    }
+    _expirationTimers.clear();
+    
+    // Fermer tous les listeners
+    for (final controller in _listeners.values) {
+      if (!controller.isClosed) {
+        controller.close();
+      }
+    }
+    _listeners.clear();
+    
+    // Supprimer toutes les clés du cache
+    final allKeys = _prefs!.getKeys().toList();
+    for (final key in allKeys) {
+      if (key.startsWith('cache_') || key.contains('credit') || key.contains('user')) {
+        await _prefs!.remove(key);
+      }
+    }
+    
+    LogConfig.logInfo('🧹 Nettoyage complet forcé terminé (${allKeys.length} clés vérifiées)');
+  }
+
+  /// 🆕 Vérification de changement d'utilisateur
+  Future<bool> hasUserChanged(String newUserId) async {
+    await _ensureInitialized();
+    
+    final lastUserId = _prefs!.getString('last_user_id');
+    final hasChanged = lastUserId != null && lastUserId != newUserId;
+    
+    if (hasChanged) {
+      LogConfig.logInfo('👤 Changement utilisateur détecté: $lastUserId → $newUserId');
+    }
+    
+    // Enregistrer le nouvel utilisateur
+    await _prefs!.setString('last_user_id', newUserId);
+    
+    return hasChanged;
   }
 
   // ===== SÉRIALISATION SIMPLIFIÉE =====
