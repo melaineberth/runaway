@@ -154,36 +154,32 @@ class _CreditPlansScreenState extends State<CreditPlansScreen> {
 
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: 20.0),
-      child: ListView(
+      child: transactions.isEmpty ? _buildEmptyState() : ListView(
         children: [
           20.h,
           _buildCreditsHeader(userCredits),
           30.h,
-          if (transactions.isEmpty)
-            _buildEmptyState()
-          else ...[
-            Text(
-              context.l10n.transactionHistory,
-              style: context.bodyMedium?.copyWith(
-                fontSize: 18,
-                color: context.adaptiveTextSecondary,
-                fontWeight: FontWeight.w600,
-              ),
+          Text(
+            context.l10n.transactionHistory,
+            style: context.bodyMedium?.copyWith(
+              fontSize: 18,
+              color: context.adaptiveTextSecondary,
+              fontWeight: FontWeight.w600,
             ),
+          ),
 
-            15.h,
+          15.h,
 
-            ...transactions.asMap().entries.map((entry) {
-              final i = entry.key;
-              final value = entry.value;
-              return Padding(
-                padding: EdgeInsets.only(bottom: i == transactions.length - 1 ? 0.0 : 12.0),
-                child: _buildTransactionItem(value),
-              );
-            }),
+          ...transactions.asMap().entries.map((entry) {
+            final i = entry.key;
+            final value = entry.value;
+            return Padding(
+              padding: EdgeInsets.only(bottom: i == transactions.length - 1 ? 0.0 : 12.0),
+              child: _buildTransactionItem(value),
+            );
+          }),
 
-            80.h,
-          ],
+          80.h,
         ],
       ),
     );

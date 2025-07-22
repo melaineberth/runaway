@@ -14,6 +14,7 @@ import 'package:runaway/core/helper/services/device_fingerprint_service.dart';
 import 'package:runaway/core/helper/services/monitoring_service.dart';
 import 'package:runaway/core/utils/injections/service_locator.dart';
 import 'package:runaway/features/auth/domain/models/profile.dart';
+import 'package:runaway/features/credits/data/repositories/credits_repository.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' hide AuthException;
@@ -148,27 +149,29 @@ class AuthRepository {
     try {
       LogConfig.logInfo('📧 Début inscription email: $email');
 
-      // 🆕 Générer l'empreinte de l'appareil AVANT l'inscription
+      // Générer l'empreinte de l'appareil AVANT l'inscription
       Map<String, String> deviceFingerprint = {};
       try {
         deviceFingerprint = await DeviceFingerprintService.instance.generateDeviceFingerprint();
-        LogConfig.logInfo('📱 Empreinte appareil générée pour inscription');
+        LogConfig.logInfo('📱 Empreinte appareil générée: ${deviceFingerprint['device_fingerprint']?.substring(0, 8)}...');
       } catch (e) {
         LogConfig.logError('⚠️ Erreur génération empreinte: $e');
-        // Continue quand même l'inscription sans l'empreinte
       }
       
       final resp = await _supabase.auth.signUp(
         email: email.trim(),
         password: password,
         data: deviceFingerprint.isNotEmpty ? {
-          // 🆕 Envoyer les données d'appareil dans les métadonnées utilisateur
           'device_fingerprint': deviceFingerprint['device_fingerprint'],
           'device_model': deviceFingerprint['device_model'],
           'device_manufacturer': deviceFingerprint['device_manufacturer'],
           'platform': deviceFingerprint['platform'],
           'signup_timestamp': DateTime.now().toIso8601String(),
-        } : null,
+          'signup_method': 'email',
+        } : {
+          'signup_timestamp': DateTime.now().toIso8601String(),
+          'signup_method': 'email',
+        },
       );
       
       if (resp.user != null) {
@@ -177,6 +180,13 @@ class AuthRepository {
         // 🔒 Stocker les tokens si session créée
         if (resp.session != null) {
           await _storeSessionTokensSecurely(resp.session!);
+        }
+
+        // 🆕 Vérification immédiate après inscription
+        if (deviceFingerprint.isNotEmpty) {
+          // Attendre un peu pour que les triggers se terminent
+          await Future.delayed(Duration(seconds: 1));
+          await _forceDeviceCheck(resp.user!.id);
         }
 
         MonitoringService.instance.finishApiRequest(
@@ -210,14 +220,7 @@ class AuthRepository {
         errorMessage: e.toString(),
       );
 
-      MonitoringService.instance.captureError(
-        e,
-        stackTrace,
-        context: 'AuthRepository.signUp',
-        extra: {
-          'email': email,
-        },
-      );
+      MonitoringService.instance.captureError(e, stackTrace, context: 'AuthRepository.signUp');
 
       throw AuthExceptionHandler.handleSupabaseError(e);
     }
@@ -305,13 +308,12 @@ class AuthRepository {
       // 🆕 4. Mettre à jour les métadonnées utilisateur avec l'empreinte d'appareil si c'est un nouveau compte
       if (deviceFingerprint.isNotEmpty) {
         try {
-          // Vérifier si c'est un nouvel utilisateur (créé maintenant)
           final userCreatedAt = DateTime.parse(user.createdAt);
           final now = DateTime.now();
           final isNewUser = userCreatedAt.isAfter(now.subtract(Duration(seconds: 10)));
           
           if (isNewUser) {
-            LogConfig.logInfo('📱 Nouveau compte Google - ajout empreinte appareil');
+            LogConfig.logInfo('📱 Nouveau compte Google - ajout empreinte avec vérification');
             
             await _supabase.auth.updateUser(
               UserAttributes(
@@ -326,11 +328,19 @@ class AuthRepository {
               ),
             );
             
-            LogConfig.logInfo('Métadonnées appareil ajoutées au profil Google');
+            LogConfig.logInfo('✅ Métadonnées Google ajoutées');
+            
+            // 🆕 Vérification différée pour laisser le temps aux triggers de s'exécuter
+            Future.delayed(Duration(seconds: 2), () async {
+              try {
+                await _forceDeviceCheck(user.id);
+              } catch (e) {
+                LogConfig.logError('❌ Erreur vérification différée Google: $e');
+              }
+            });
           }
         } catch (e) {
-          LogConfig.logError('⚠️ Erreur ajout métadonnées appareil Google: $e');
-          // Continue quand même car la connexion a réussi
+          LogConfig.logError('⚠️ Erreur ajout métadonnées Google: $e');
         }
       }
 
@@ -500,13 +510,12 @@ class AuthRepository {
       // 🆕 7. Mettre à jour les métadonnées utilisateur avec l'empreinte d'appareil si c'est un nouveau compte
       if (deviceFingerprint.isNotEmpty) {
         try {
-          // Vérifier si c'est un nouvel utilisateur (créé maintenant)
           final userCreatedAt = DateTime.parse(user.createdAt);
           final now = DateTime.now();
           final isNewUser = userCreatedAt.isAfter(now.subtract(Duration(seconds: 10)));
           
           if (isNewUser) {
-            LogConfig.logInfo('📱 Nouveau compte Apple - ajout empreinte appareil');
+            LogConfig.logInfo('📱 Nouveau compte Apple - ajout empreinte avec vérification');
             
             await _supabase.auth.updateUser(
               UserAttributes(
@@ -521,11 +530,19 @@ class AuthRepository {
               ),
             );
             
-            LogConfig.logInfo('Métadonnées appareil ajoutées au profil Apple');
+            LogConfig.logInfo('✅ Métadonnées Apple ajoutées');
+            
+            // 🆕 Vérification différée pour laisser le temps aux triggers de s'exécuter
+            Future.delayed(Duration(seconds: 2), () async {
+              try {
+                await _forceDeviceCheck(user.id);
+              } catch (e) {
+                LogConfig.logError('❌ Erreur vérification différée Apple: $e');
+              }
+            });
           }
         } catch (e) {
-          LogConfig.logError('⚠️ Erreur ajout métadonnées appareil Apple: $e');
-          // Continue quand même car la connexion a réussi
+          LogConfig.logError('⚠️ Erreur ajout métadonnées Apple: $e');
         }
       }
 
@@ -1579,6 +1596,77 @@ class AuthRepository {
       return 'unknown';
     } catch (e) {
       return 'unknown';
+    }
+  }
+
+  /// Force la vérification des crédits après ajout de métadonnées d'appareil
+  Future<void> _forceDeviceCheck(String userId) async {
+    try {
+      LogConfig.logInfo('🔍 Force vérification appareil pour: $userId');
+      
+      final result = await _supabase.rpc('force_check_user_device', params: {
+        'p_user_id': userId,
+      });
+      
+      if (result != null) {
+        LogConfig.logInfo('📊 Résultat vérification: $result');
+        
+        // Si l'utilisateur devrait avoir des crédits mais n'en a pas, relancer le processus
+        if (result['should_have_credits'] == true && result['current_credits'] == 0) {
+          LogConfig.logInfo('🔄 Utilisateur légitime sans crédits, correction...');
+          
+          await _supabase.rpc('admin_grant_credits', params: {
+            'p_user_email': result['email'],
+            'p_amount': 10,
+            'p_reason': 'Correction automatique après vérification appareil'
+          });
+          
+          LogConfig.logInfo('✅ Crédits corrigés automatiquement');
+        }
+        // 🆕 NOUVEAU: Si des crédits abusifs sont détectés, forcer l'invalidation du cache
+        else if (result['should_have_credits'] == false && result['current_credits'] > 0) {
+          LogConfig.logInfo('⚠️ Crédits abusifs détectés, invalidation cache...');
+          
+          // Forcer l'invalidation du cache des crédits
+          await _invalidateCreditsCache();
+          
+          LogConfig.logInfo('🧹 Cache crédits invalidé après détection abus');
+        }
+      }
+    } catch (e) {
+      LogConfig.logError('❌ Erreur force vérification appareil: $e');
+      // Continue même en cas d'erreur
+    }
+  }
+
+  // Invalidation du cache des crédits
+  Future<void> _invalidateCreditsCache() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      
+      // Supprimer toutes les clés liées au cache des crédits
+      final keysToRemove = [
+        'cache_user_credits',
+        'user_credits_cache',
+        'cached_credits_data',
+        'last_credits_sync',
+      ];
+      
+      for (final key in keysToRemove) {
+        await prefs.remove(key);
+        LogConfig.logInfo('🗑️ Cache key supprimée: $key');
+      }
+      
+      // 🆕 Déclencher un refresh forcé des crédits via ServiceLocator si disponible
+      try {
+        sl.get<CreditsRepository>().getUserCredits(forceRefresh: true);
+        LogConfig.logInfo('🔄 Refresh forcé des crédits déclenché');
+      } catch (e) {
+        LogConfig.logInfo('⚠️ ServiceLocator non disponible pour refresh: $e');
+      }
+      
+    } catch (e) {
+      LogConfig.logError('❌ Erreur invalidation cache crédits: $e');
     }
   }
 }

@@ -22,8 +22,11 @@ class CreditsRepository {
       throw SessionException('Utilisateur non connecté');
     }
 
+    // TOUJOURS forcer le refresh si l'utilisateur n'a pas encore été vérifié
+    final shouldForceRefresh = forceRefresh || await _shouldForceRefreshForNewUser(user.id);
+
     // Vérifier le cache d'abord (sauf si forceRefresh)
-    if (!forceRefresh) {
+    if (!shouldForceRefresh) {
       // ✅ FIX: Récupérer comme Map puis convertir
       final cachedCreditsRaw = await _cache.get<Map>('cache_user_credits');
       if (cachedCreditsRaw != null) {
@@ -48,6 +51,11 @@ class CreditsRepository {
           .single();
 
       final credits = UserCredits.fromJson(data);
+
+      // 🆕 Vérification de cohérence pour nouveaux utilisateurs
+      if (await _shouldForceRefreshForNewUser(user.id)) {
+        await _verifyCreditsCoherence(user.id, credits);
+      }
       
       // Mise en cache avec expiration
       await _cache.set('cache_user_credits', credits);
@@ -544,6 +552,63 @@ class CreditsRepository {
     } catch (e) {
       LogConfig.logError('❌ Erreur lecture solde rapide: $e');
       return 0;
+    }
+  }
+
+  // Vérifier si on doit forcer le refresh pour un nouvel utilisateur
+  Future<bool> _shouldForceRefreshForNewUser(String userId) async {
+    try {
+      // Forcer le refresh pour les utilisateurs créés dans les dernières 24h
+      final userCreationResp = await _supabase
+          .from('profiles')
+          .select('id, created_at')
+          .eq('id', userId)
+          .maybeSingle();
+          
+      if (userCreationResp != null) {
+        final createdAt = DateTime.parse(userCreationResp['created_at']);
+        final now = DateTime.now();
+        final accountAge = now.difference(createdAt);
+        
+        // Forcer le refresh pour les comptes de moins de 24h
+        return accountAge.inHours < 24;
+      }
+      
+      return false;
+    } catch (e) {
+      LogConfig.logInfo('⚠️ Erreur vérification âge compte: $e');
+      return false;
+    }
+  }
+
+  // Vérifier la cohérence des crédits avec le système anti-abus
+  Future<void> _verifyCreditsCoherence(String userId, UserCredits credits) async {
+    try {
+      LogConfig.logInfo('🔍 Vérification cohérence crédits pour: $userId');
+      
+      final result = await _supabase.rpc('force_check_user_device', params: {
+        'p_user_id': userId,
+      });
+      
+      if (result != null) {
+        final shouldHaveCredits = result['should_have_credits'] == true;
+        final currentCredits = result['current_credits'] ?? 0;
+        
+        // Si incohérence détectée
+        if (!shouldHaveCredits && currentCredits > 0) {
+          LogConfig.logInfo('⚠️ Incohérence détectée - lancement nettoyage');
+          
+          await _supabase.rpc('cleanup_abusive_credits');
+          
+          // Invalider le cache pour forcer le refresh
+          await _cache.invalidateCreditsCache();
+          
+          LogConfig.logInfo('🧹 Nettoyage terminé, cache invalidé');
+        }
+      }
+    } catch (e) {
+      LogConfig.logError('❌ Erreur vérification cohérence: $e');
+      // Continue même en cas d'erreur
     }
   }
 }
