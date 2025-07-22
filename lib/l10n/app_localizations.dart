@@ -2925,49 +2925,49 @@ abstract class AppLocalizations {
   /// **'Error while saving the profile'**
   String get savingProfileError;
 
-  /// No description provided for @timeAgoAtMoment.
+  /// Label indicating that an event occurred just now.
   ///
   /// In en, this message translates to:
   /// **'at the moment'**
   String get timeAgoAtMoment;
 
-  /// No description provided for @timeAgoFallback.
+  /// Fallback label for a very small or unspecified time difference.
   ///
   /// In en, this message translates to:
   /// **'recent'**
   String get timeAgoFallback;
 
-  /// Label showing the difference of save a route in secondes.
+  /// Label showing the difference of saved routes in seconds.
   ///
   /// In en, this message translates to:
   /// **'there are {difference} s'**
   String timaAgoSecondes(int difference);
 
-  /// Label showing the difference of save a route in minutes.
+  /// Label showing the difference of saved routes in minutes.
   ///
   /// In en, this message translates to:
   /// **'there are {difference} min'**
   String timaAgoMinutes(int difference);
 
-  /// Label showing the difference of save a route in hours.
+  /// Label showing the difference of saved routes in hours.
   ///
   /// In en, this message translates to:
   /// **'there are {difference} h'**
   String timaAgoHours(int difference);
 
-  /// Indicates how many days have passed, with plural handling for 'day'.
+  /// Indicates how many days have passed, with proper pluralization of “day”.
   ///
   /// In en, this message translates to:
   /// **'there are {days} day{days, plural, =1 {} other {s}}'**
   String daysAgoLabel(int days);
 
-  /// Indicates how many days have passed, with plural handling for 'day'.
+  /// Automatically generated route name with its sequence number.
   ///
   /// In en, this message translates to:
   /// **'Route n°{count}'**
   String routeGenerateName(int count);
 
-  /// Indicates how many days have passed, with plural handling for 'day'.
+  /// Description indicating the date on which the route was generated.
   ///
   /// In en, this message translates to:
   /// **'Generated on the {date}'**

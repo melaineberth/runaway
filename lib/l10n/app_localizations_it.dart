@@ -1480,24 +1480,24 @@ class AppLocalizationsIt extends AppLocalizations {
   String get savingProfileError => 'Errore durante il salvataggio del profilo';
 
   @override
-  String get timeAgoAtMoment => 'at the moment';
+  String get timeAgoAtMoment => 'in questo momento';
 
   @override
-  String get timeAgoFallback => 'recent';
+  String get timeAgoFallback => 'recente';
 
   @override
   String timaAgoSecondes(int difference) {
-    return 'there are $difference s';
+    return 'ci sono $difference s';
   }
 
   @override
   String timaAgoMinutes(int difference) {
-    return 'there are $difference min';
+    return 'ci sono $difference min';
   }
 
   @override
   String timaAgoHours(int difference) {
-    return 'there are $difference h';
+    return 'ci sono $difference h';
   }
 
   @override
@@ -1505,19 +1505,19 @@ class AppLocalizationsIt extends AppLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       days,
       locale: localeName,
-      other: 's',
+      other: 'i',
       one: '',
     );
-    return 'there are $days day$_temp0';
+    return 'ci sono $days giorno$_temp0';
   }
 
   @override
   String routeGenerateName(int count) {
-    return 'Route n°$count';
+    return 'Percorso n°$count';
   }
 
   @override
   String routeGenerateDesc(String date) {
-    return 'Generated on the $date';
+    return 'Generato il $date';
   }
 }

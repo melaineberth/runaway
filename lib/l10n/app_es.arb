@@ -2039,5 +2039,73 @@
   "savingProfileError": "Error al guardar el perfil",
   "@savingProfileError": {
     "description": "Mensaje de error cuando falla el guardado del perfil."
+  },
+  "timeAgoAtMoment": "en este momento",
+  "@timeAgoAtMoment": {
+    "description": "Etiqueta que indica que un evento ocurrió justo ahora."
+  },
+  "timeAgoFallback": "reciente",
+  "@timeAgoFallback": {
+    "description": "Etiqueta de respaldo para una diferencia de tiempo muy pequeña o no especificada."
+  },
+  "timaAgoSecondes": "hace {difference} s",
+  "@timaAgoSecondes": {
+    "description": "Etiqueta que muestra la diferencia de guardado de rutas en segundos.",
+    "placeholders": {
+      "difference": {
+        "type": "int",
+        "example": "12"
+      }
+    }
+  },
+  "timaAgoMinutes": "hace {difference} min",
+  "@timaAgoMinutes": {
+    "description": "Etiqueta que muestra la diferencia de guardado de rutas en minutos.",
+    "placeholders": {
+      "difference": {
+        "type": "int",
+        "example": "12"
+      }
+    }
+  },
+  "timaAgoHours": "hace {difference} h",
+  "@timaAgoHours": {
+    "description": "Etiqueta que muestra la diferencia de guardado de rutas en horas.",
+    "placeholders": {
+      "difference": {
+        "type": "int",
+        "example": "12"
+      }
+    }
+  },
+  "daysAgoLabel": "hace {days} día{days, plural, =1 {} other {s}}",
+  "@daysAgoLabel": {
+    "description": "Indica cuántos días han pasado, con pluralización correcta de “día”.",
+    "placeholders": {
+      "days": {
+        "type": "int",
+        "example": "1"
+      }
+    }
+  },
+  "routeGenerateName": "Ruta n.º {count}",
+  "@routeGenerateName": {
+    "description": "Nombre de ruta generado automáticamente con su número de secuencia.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "1"
+      }
+    }
+  },
+  "routeGenerateDesc": "Generado el {date}",
+  "@routeGenerateDesc": {
+    "description": "Descripción que indica la fecha en la que se generó la ruta.",
+    "placeholders": {
+      "date": {
+        "type": "String",
+        "example": "2025-07-22"
+      }
+    }
   }
 }

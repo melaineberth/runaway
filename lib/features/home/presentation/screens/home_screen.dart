@@ -2224,55 +2224,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
       overlayState.insert(_routeInfoEntry!);
     }
   }
-
-  // Récupère le parcours sauvegardé correspondant
-  SavedRoute? _getCurrentSavedRoute() {
-    try {
-      final appDataState = context.appDataBloc.state;
-      if (!appDataState.hasHistoricData) return null;
-
-      final savedRoutes = appDataState.savedRoutes;
-      if (savedRoutes.isEmpty) return null;
-
-      // Chercher le parcours le plus récent qui correspond au parcours affiché
-      final currentCoords = generatedRouteCoordinates;
-      if (currentCoords == null) return null;
-
-      // Récupérer le dernier parcours sauvegardé (le plus récent)
-      final latestRoute = savedRoutes.reduce((a, b) => 
-        a.createdAt.isAfter(b.createdAt) ? a : b
-      );
-
-      // Vérifier que c'est bien le parcours actuel (même coordonnées approximatives)
-      if (_areCoordinatesSimilar(currentCoords, latestRoute.coordinates)) {
-        return latestRoute;
-      }
-
-      return null;
-    } catch (e) {
-      LogConfig.logError('❌ Erreur récupération parcours sauvegardé: $e');
-      return null;
-    }
-  }
-
-  bool _areCoordinatesSimilar(List<List<double>> coords1, List<List<double>> coords2) {
-    if (coords1.length != coords2.length) return false;
-    if (coords1.length < 2) return false;
-
-    // Comparer les points de départ et d'arrivée (tolérance de 10m)
-    const double tolerance = 0.0001; // ~10m
-
-    final start1 = coords1.first;
-    final start2 = coords2.first;
-    final end1 = coords1.last;
-    final end2 = coords2.last;
-
-    return (start1[0] - start2[0]).abs() < tolerance &&
-          (start1[1] - start2[1]).abs() < tolerance &&
-          (end1[0] - end2[0]).abs() < tolerance &&
-          (end1[1] - end2[1]).abs() < tolerance;
-  }
-
+  
   // 🆕 Démarre le timer de temps minimum pour le loading
   void _startMinimumLoadingTimer() {
     _loadingMinimumTimer?.cancel();

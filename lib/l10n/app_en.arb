@@ -2031,16 +2031,17 @@
   "@savingProfileError": {
     "description": "Error message when profile saving fails."
   },
-
-
-
-  
-
   "timeAgoAtMoment": "at the moment",
+  "@timeAgoAtMoment": {
+    "description": "Label indicating that an event occurred just now."
+  },
   "timeAgoFallback": "recent",
+  "@timeAgoFallback": {
+    "description": "Fallback label for a very small or unspecified time difference."
+  },
   "timaAgoSecondes": "there are {difference} s",
   "@timaAgoSecondes": {
-    "description": "Label showing the difference of save a route in secondes.",
+    "description": "Label showing the difference of saved routes in seconds.",
     "placeholders": {
       "difference": {
         "type": "int",
@@ -2050,7 +2051,7 @@
   },
   "timaAgoMinutes": "there are {difference} min",
   "@timaAgoMinutes": {
-    "description": "Label showing the difference of save a route in minutes.",
+    "description": "Label showing the difference of saved routes in minutes.",
     "placeholders": {
       "difference": {
         "type": "int",
@@ -2060,7 +2061,7 @@
   },
   "timaAgoHours": "there are {difference} h",
   "@timaAgoHours": {
-    "description": "Label showing the difference of save a route in hours.",
+    "description": "Label showing the difference of saved routes in hours.",
     "placeholders": {
       "difference": {
         "type": "int",
@@ -2070,7 +2071,7 @@
   },
   "daysAgoLabel": "there are {days} day{days, plural, =1 {} other {s}}",
   "@daysAgoLabel": {
-    "description": "Indicates how many days have passed, with plural handling for 'day'.",
+    "description": "Indicates how many days have passed, with proper pluralization of “day”.",
     "placeholders": {
       "days": {
         "type": "int",
@@ -2080,7 +2081,7 @@
   },
   "routeGenerateName": "Route n°{count}",
   "@routeGenerateName": {
-    "description": "Indicates how many days have passed, with plural handling for 'day'.",
+    "description": "Automatically generated route name with its sequence number.",
     "placeholders": {
       "count": {
         "type": "int",
@@ -2090,11 +2091,11 @@
   },
   "routeGenerateDesc": "Generated on the {date}",
   "@routeGenerateDesc": {
-    "description": "Indicates how many days have passed, with plural handling for 'day'.",
+    "description": "Description indicating the date on which the route was generated.",
     "placeholders": {
       "date": {
         "type": "String",
-        "example": "1"
+        "example": "2025-07-22"
       }
     }
   }

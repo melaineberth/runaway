@@ -2030,5 +2030,73 @@
   "savingProfileError": "Erreur lors de la sauvegarde du profil",
   "@savingProfileError": {
     "description": "Message d'erreur lorsque la sauvegarde du profil échoue."
+  },
+  "timeAgoAtMoment": "à l’instant",
+  "@timeAgoAtMoment": {
+    "description": "Étiquette indiquant qu’un événement vient de se produire à l’instant."
+  },
+  "timeAgoFallback": "récent",
+  "@timeAgoFallback": {
+    "description": "Étiquette de repli pour une très petite différence de temps ou lorsqu’il n’est pas spécifié."
+  },
+  "timaAgoSecondes": "il y a {difference} s",
+  "@timaAgoSecondes": {
+    "description": "Étiquette affichant la différence de temps en secondes.",
+    "placeholders": {
+      "difference": {
+        "type": "int",
+        "example": "12"
+      }
+    }
+  },
+  "timaAgoMinutes": "il y a {difference} min",
+  "@timaAgoMinutes": {
+    "description": "Étiquette affichant la différence de temps en minutes.",
+    "placeholders": {
+      "difference": {
+        "type": "int",
+        "example": "12"
+      }
+    }
+  },
+  "timaAgoHours": "il y a {difference} h",
+  "@timaAgoHours": {
+    "description": "Étiquette affichant la différence de temps en heures.",
+    "placeholders": {
+      "difference": {
+        "type": "int",
+        "example": "12"
+      }
+    }
+  },
+  "daysAgoLabel": "il y a {days} jour{days, plural, =1 {} other {s}}",
+  "@daysAgoLabel": {
+    "description": "Indique le nombre de jours écoulés, avec gestion du pluriel de « jour ».",
+    "placeholders": {
+      "days": {
+        "type": "int",
+        "example": "1"
+      }
+    }
+  },
+  "routeGenerateName": "Itinéraire n°{count}",
+  "@routeGenerateName": {
+    "description": "Nom automatique de l’itinéraire avec son numéro de séquence.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "1"
+      }
+    }
+  },
+  "routeGenerateDesc": "Généré le {date}",
+  "@routeGenerateDesc": {
+    "description": "Indique la date à laquelle l’itinéraire a été généré.",
+    "placeholders": {
+      "date": {
+        "type": "String",
+        "example": "2025-07-22"
+      }
+    }
   }
 }

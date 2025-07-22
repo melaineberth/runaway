@@ -2039,5 +2039,73 @@
   "savingProfileError": "Errore durante il salvataggio del profilo",
   "@savingProfileError": {
     "description": "Messaggio di errore quando il salvataggio del profilo fallisce."
+  },
+  "timeAgoAtMoment": "in questo momento",
+  "@timeAgoAtMoment": {
+    "description": "Etichetta che indica che un evento è avvenuto proprio ora."
+  },
+  "timeAgoFallback": "recente",
+  "@timeAgoFallback": {
+    "description": "Etichetta di fallback per una differenza di tempo molto piccola o non specificata."
+  },
+  "timaAgoSecondes": "ci sono {difference} s",
+  "@timaAgoSecondes": {
+    "description": "Etichetta che mostra la differenza di salvataggio dei percorsi in secondi.",
+    "placeholders": {
+      "difference": {
+        "type": "int",
+        "example": "12"
+      }
+    }
+  },
+  "timaAgoMinutes": "ci sono {difference} min",
+  "@timaAgoMinutes": {
+    "description": "Etichetta che mostra la differenza di salvataggio dei percorsi in minuti.",
+    "placeholders": {
+      "difference": {
+        "type": "int",
+        "example": "12"
+      }
+    }
+  },
+  "timaAgoHours": "ci sono {difference} h",
+  "@timaAgoHours": {
+    "description": "Etichetta che mostra la differenza di salvataggio dei percorsi in ore.",
+    "placeholders": {
+      "difference": {
+        "type": "int",
+        "example": "12"
+      }
+    }
+  },
+  "daysAgoLabel": "ci sono {days} giorno{days, plural, =1 {} other {i}}",
+  "@daysAgoLabel": {
+    "description": "Indica quanti giorni sono passati, con pluralizzazione corretta di 'giorno'.",
+    "placeholders": {
+      "days": {
+        "type": "int",
+        "example": "1"
+      }
+    }
+  },
+  "routeGenerateName": "Percorso n°{count}",
+  "@routeGenerateName": {
+    "description": "Nome del percorso generato automaticamente con il numero progressivo.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "1"
+      }
+    }
+  },
+  "routeGenerateDesc": "Generato il {date}",
+  "@routeGenerateDesc": {
+    "description": "Descrizione che indica la data in cui è stato generato il percorso.",
+    "placeholders": {
+      "date": {
+        "type": "String",
+        "example": "2025-07-22"
+      }
+    }
   }
 }
