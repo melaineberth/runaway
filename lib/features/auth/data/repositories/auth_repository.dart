@@ -65,21 +65,35 @@ class AuthRepository {
   /// 🔒 Valide un token JWT avant utilisation
   bool _validateTokenBeforeUse(String token) {
     try {
+      // Validation du format JWT
       if (!SecureConfig.isValidJWT(token)) {
         LogConfig.logWarning('⚠️ Token JWT invalide détecté');
         return false;
       }
 
+      // Vérification de l'expiration
       final expiry = SecureConfig.getJWTExpiration(token);
-      if (expiry != null && DateTime.now().isAfter(expiry)) {
-        LogConfig.logWarning('⚠️ Token JWT expiré détecté');
-        return false;
+      if (expiry != null) {
+        final now = DateTime.now();
+        if (now.isAfter(expiry)) {
+          LogConfig.logWarning('⚠️ Token JWT expiré détecté (exp: $expiry, now: $now)');
+          return false;
+        }
+        
+        // Log pour debug - temps restant
+        final timeLeft = expiry.difference(now);
+        LogConfig.logInfo('✅ Token valide, expire dans: ${timeLeft.inMinutes} minutes');
+      } else {
+        LogConfig.logInfo('✅ Token valide (pas d\'expiration détectée)');
       }
 
       return true;
     } catch (e) {
       LogConfig.logWarning('⚠️ Erreur validation token: $e');
-      return true; // En cas d'erreur, laisser passer
+      // Pour les tokens Apple, être plus permissif en cas d'erreur de validation
+      // car Apple peut avoir des spécificités non standards
+      LogConfig.logInfo('🍎 Autorisation token Apple malgré erreur validation');
+      return true; // En cas d'erreur, laisser passer (comme avant)
     }
   }
 
@@ -325,7 +339,7 @@ class AuthRepository {
                   'device_manufacturer': deviceFingerprint['device_manufacturer'],
                   'platform': deviceFingerprint['platform'],
                   'signup_timestamp': DateTime.now().toIso8601String(),
-                  'signup_method': 'email',
+                  'signup_method': 'google',
                 } : {
                   'signup_timestamp': DateTime.now().toIso8601String(),
                   'signup_method': 'google',
@@ -336,8 +350,9 @@ class AuthRepository {
             LogConfig.logInfo('✅ Métadonnées Google ajoutées');
             
             // 🆕 Vérification différée pour laisser le temps aux triggers de s'exécuter
-            Future.delayed(Duration(seconds: 2), () async {
+            Future.delayed(Duration(seconds: 3), () async {
               try {
+                LogConfig.logInfo('🌐 Vérification Google différée...');
                 await _forceDeviceCheck(user.id);
               } catch (e) {
                 LogConfig.logError('❌ Erreur vérification différée Google: $e');
@@ -507,7 +522,7 @@ class AuthRepository {
       final AuthResponse response = await _supabase.auth.signInWithIdToken(
         provider: OAuthProvider.apple,
         idToken: credential.identityToken!,
-        nonce: hashedNonce,
+        nonce: rawNonce,
       );
       
       if (response.user == null) {
@@ -535,7 +550,7 @@ class AuthRepository {
                   'device_manufacturer': deviceFingerprint['device_manufacturer'],
                   'platform': deviceFingerprint['platform'],
                   'signup_timestamp': DateTime.now().toIso8601String(),
-                  'signup_method': 'email',
+                  'signup_method': 'apple',
                 } : {
                   'signup_timestamp': DateTime.now().toIso8601String(),
                   'signup_method': 'apple',
@@ -546,8 +561,9 @@ class AuthRepository {
             LogConfig.logInfo('✅ Métadonnées Apple ajoutées');
             
             // 🆕 Vérification différée pour laisser le temps aux triggers de s'exécuter
-            Future.delayed(Duration(seconds: 2), () async {
+            Future.delayed(Duration(seconds: 3), () async {
               try {
+                LogConfig.logInfo('🍎 Vérification Apple différée...');
                 await _forceDeviceCheck(user.id);
               } catch (e) {
                 LogConfig.logError('❌ Erreur vérification différée Apple: $e');
@@ -736,7 +752,7 @@ class AuthRepository {
           .toColor();
 
       // Convertir en format Flutter-friendly (ex: 0xFF2196F3)
-      final colorHex = '0x${userColor.value.toRadixString(16).padLeft(8, '0').toUpperCase()}';
+      final colorHex = '0x${userColor.toARGB32().toRadixString(16).padLeft(8, '0').toUpperCase()}';
 
       // 4. Sauvegarder le profil complet
       final data = await _supabase
@@ -759,6 +775,15 @@ class AuthRepository {
 
       final profile = Profile.fromJson(data);
       LogConfig.logInfo('Profil complété: ${profile.username}');
+
+      // Vérifier et forcer l'enregistrement de l'appareil après création du profil
+      try {
+        LogConfig.logInfo('🔍 Vérification appareil après création profil...');
+        await _forceDeviceCheck(userId);
+      } catch (e) {
+        LogConfig.logWarning('⚠️ Erreur vérification appareil post-profil: $e');
+        // Ne pas faire échouer la création du profil pour ça
+      }
 
       // 🆕 Monitoring de succès
       MonitoringService.instance.finishOperation(
@@ -1610,14 +1635,62 @@ class AuthRepository {
     try {
       LogConfig.logInfo('🔍 Force vérification appareil pour: $userId');
       
+      // Attendre que les métadonnées soient bien enregistrées
+      await Future.delayed(Duration(seconds: 2));
+      
+      // 1. D'abord récupérer les métadonnées utilisateur
+      final user = _supabase.auth.currentUser;
+      if (user?.userMetadata == null) {
+        LogConfig.logWarning('⚠️ Pas de métadonnées utilisateur disponibles');
+        return;
+      }
+      
+      final deviceFingerprint = user!.userMetadata!['device_fingerprint'] as String?;
+      
+      if (deviceFingerprint != null && deviceFingerprint.isNotEmpty) {
+        LogConfig.logInfo('📱 Device fingerprint trouvé: ${deviceFingerprint.substring(0, 8)}...');
+        
+        // 2. Vérifier d'abord si déjà enregistré
+        try {
+          final debugResult = await _supabase.rpc('debug_device_data', params: {
+            'p_user_id': userId,
+          });
+          
+          if (debugResult != null && debugResult.isNotEmpty) {
+            final deviceRegsCount = debugResult.first['device_registrations_count'] ?? 0;
+            LogConfig.logInfo('📊 Enregistrements existants: $deviceRegsCount');
+            
+            // Si pas d'enregistrement, forcer
+            if (deviceRegsCount == 0) {
+              LogConfig.logInfo('🔧 Forcer enregistrement car aucun trouvé...');
+              
+              final registerResult = await _supabase.rpc('register_device_fingerprint', params: {
+                'p_user_id': userId,
+                'p_device_fingerprint': deviceFingerprint,
+                'p_force': true, // ✅ Forcer en cas d'échec du trigger
+              });
+              
+              LogConfig.logInfo('✅ Enregistrement forcé: $registerResult');
+            } else {
+              LogConfig.logInfo('✅ Appareil déjà enregistré');
+            }
+          }
+        } catch (e) {
+          LogConfig.logError('❌ Erreur vérification/enregistrement: $e');
+        }
+      } else {
+        LogConfig.logWarning('⚠️ Aucun device fingerprint dans les métadonnées');
+      }
+      
+      // 3. Vérification finale avec force_check_user_device
       final result = await _supabase.rpc('force_check_user_device', params: {
         'p_user_id': userId,
       });
       
       if (result != null) {
-        LogConfig.logInfo('📊 Résultat vérification: $result');
+        LogConfig.logInfo('📊 Résultat vérification finale: $result');
         
-        // Si l'utilisateur devrait avoir des crédits mais n'en a pas, relancer le processus
+        // Logique existante pour les corrections de crédits
         if (result['should_have_credits'] == true && result['current_credits'] == 0) {
           LogConfig.logInfo('🔄 Utilisateur légitime sans crédits, correction...');
           
@@ -1629,19 +1702,15 @@ class AuthRepository {
           
           LogConfig.logInfo('✅ Crédits corrigés automatiquement');
         }
-        // 🆕 NOUVEAU: Si des crédits abusifs sont détectés, forcer l'invalidation du cache
         else if (result['should_have_credits'] == false && result['current_credits'] > 0) {
           LogConfig.logInfo('⚠️ Crédits abusifs détectés, invalidation cache...');
-          
-          // Forcer l'invalidation du cache des crédits
           await _invalidateCreditsCache();
-          
           LogConfig.logInfo('🧹 Cache crédits invalidé après détection abus');
         }
       }
+      
     } catch (e) {
       LogConfig.logError('❌ Erreur force vérification appareil: $e');
-      // Continue même en cas d'erreur
     }
   }
 

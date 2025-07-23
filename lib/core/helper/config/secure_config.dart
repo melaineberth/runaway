@@ -212,15 +212,44 @@ class SecureConfig {
       final parts = token.split('.');
       if (parts.length != 3) return false;
       
-      // 🆕 Validation plus robuste du header
+      // 🆕 Validation plus robuste du header et payload
       try {
         final header = json.decode(
           utf8.decode(base64Url.decode(base64Url.normalize(parts[0]))),
         );
         
-        // Vérifier qu'il s'agit bien d'un JWT
+        // Le champ 'typ' est optionnel selon RFC 7519
+        // S'il est présent, vérifier qu'il s'agit bien d'un JWT
         final typ = header['typ']?.toString().toLowerCase();
-        return typ == 'jwt';
+        if (typ != null && typ != 'jwt') {
+          LogConfig.logWarning('⚠️ Type JWT invalide: $typ');
+          return false;
+        }
+        
+        // Vérifier que le header contient au minimum un algorithme
+        if (header['alg'] == null) {
+          LogConfig.logWarning('⚠️ Algorithme JWT manquant');
+          return false;
+        }
+        
+        // Valider le payload (doit pouvoir être décodé)
+        try {
+          final payload = json.decode(
+            utf8.decode(base64Url.decode(base64Url.normalize(parts[1]))),
+          );
+          
+          // Vérifier qu'il contient des champs JWT standards
+          if (payload['iss'] == null && payload['sub'] == null && payload['aud'] == null) {
+            LogConfig.logWarning('⚠️ Payload JWT ne contient aucun champ standard');
+            return false;
+          }
+          
+          return true;
+        } catch (payloadError) {
+          LogConfig.logWarning('⚠️ Payload JWT invalide: $payloadError');
+          return false;
+        }
+        
       } catch (headerError) {
         LogConfig.logWarning('⚠️ Header JWT invalide: $headerError');
         return false;
