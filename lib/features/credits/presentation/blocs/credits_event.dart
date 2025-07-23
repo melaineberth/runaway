@@ -30,6 +30,28 @@ class CreditUsageRequested extends CreditsEvent {
   List<Object?> get props => [amount, reason, routeGenerationId, metadata];
 }
 
+class TransactionCreatedEvent extends CreditsEvent {
+  final String transactionId;
+  final int amount;
+  final String type;
+
+  const TransactionCreatedEvent({
+    required this.transactionId,
+    required this.amount,
+    required this.type,
+  });
+
+  @override
+  List<Object?> get props => [transactionId, amount, type];
+}
+
+class TransactionCoherenceCheckRequested extends CreditsEvent {
+  const TransactionCoherenceCheckRequested();
+
+  @override
+  List<Object?> get props => [];
+}
+
 /// Demande d'achat de crédits
 class CreditPurchaseRequested extends CreditsEvent {
   final String planId;
@@ -61,16 +83,18 @@ class CreditPlansRequested extends CreditsEvent {
 
 /// Demande de chargement de l'historique
 class TransactionHistoryRequested extends CreditsEvent {
-  final int limit;
-  final int offset;
+  final int? limit;
+  final int? offset;
+  final bool forceRefresh; // AJOUTÉ
 
   const TransactionHistoryRequested({
-    this.limit = 50,
-    this.offset = 0,
+    this.limit,
+    this.offset,
+    this.forceRefresh = false, // AJOUTÉ avec valeur par défaut
   });
 
   @override
-  List<Object?> get props => [limit, offset];
+  List<Object?> get props => [limit, offset, forceRefresh]; // forceRefresh AJOUTÉ
 }
 
 /// Reset de l'état des crédits

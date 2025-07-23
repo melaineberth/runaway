@@ -26,22 +26,28 @@ class CreditsRepository {
       throw SessionException('Utilisateur non connecté');
     }
 
-    // Vérifier si l'utilisateur a changé
+    // Vérifier si l'utilisateur a changé avec la nouvelle logique
     final hasUserChanged = await _cache.hasUserChanged(user.id);
     if (hasUserChanged) {
       LogConfig.logInfo('👤 Changement d\'utilisateur détecté - nettoyage forcé');
+      
+      // Nettoyage dans le bon ordre
       await _cache.forceCompleteClearing();
+      
+      // Confirmer le changement d'utilisateur APRÈS le nettoyage
+      await _cache.confirmUserChange(user.id);
+      
       forceRefresh = true; // Forcer le refresh pour le nouvel utilisateur
     }
 
-    // TOUJOURS forcer le refresh si l'utilisateur n'a pas encore été vérifié
+    // TOUJOURS forcer le refresh pour un nouvel utilisateur
     final shouldForceRefresh = forceRefresh || 
-                              await _shouldForceRefreshForNewUser(user.id) ||
-                              await _shouldRandomVerification() ||
-                              hasUserChanged;
+                            await _shouldForceRefreshForNewUser(user.id) ||
+                            await _shouldRandomVerification() ||
+                            hasUserChanged;
 
-    // Vérifier le cache d'abord (sauf si forceRefresh)
-    if (!shouldForceRefresh) {
+    // Vérifier le cache seulement si pas de changement d'utilisateur
+    if (!shouldForceRefresh && !hasUserChanged) {
       final cachedCreditsRaw = await _cache.get<Map>('cache_user_credits');
       if (cachedCreditsRaw != null) {
         try {
@@ -70,15 +76,16 @@ class CreditsRepository {
       LogConfig.logInfo('🌐 Récupération des crédits depuis l\'API pour: ${user.id}');
       final credits = await _getCreditsFromServer(user.id);
 
-      // 🆕 Vérification de cohérence renforcée
+      // Vérification de cohérence renforcée
       await _verifyCreditsCoherence(user.id, credits);
       
-      // Mise en cache avec expiration
+      // Mise en cache avec clé spécifique à l'utilisateur
       await _cache.set('cache_user_credits', credits);
+      await _cache.set('user_credits_timestamp', DateTime.now().toIso8601String());
       
       LogConfig.logInfo('Crédits récupérés: ${credits.availableCredits} disponibles');
       
-      // 🆕 Métrique des crédits utilisateur
+      // Métrique des crédits utilisateur
       MonitoringService.instance.recordMetric(
         'user_credits_loaded',
         credits.availableCredits,
@@ -86,6 +93,7 @@ class CreditsRepository {
           'user_id': user.id,
           'has_credits': (credits.availableCredits > 0).toString(),
           'total_purchased': credits.totalCreditsPurchased.toString(),
+          'cache_refresh': shouldForceRefresh.toString(),
         },
       );
 
@@ -100,18 +108,22 @@ class CreditsRepository {
         context: 'CreditsRepository.getUserCredits',
         extra: {
           'user_id': user.id,
+          'has_user_changed': hasUserChanged.toString(),
         },
       );
       
       // Tentative de récupération depuis le cache en cas d'erreur
-      final cachedCreditsRaw = await _cache.get<Map>('cache_user_credits');
-      if (cachedCreditsRaw != null) {
-        try {
-          final cachedCredits = UserCredits.fromJson(Map<String, dynamic>.from(cachedCreditsRaw));
-          LogConfig.logInfo('📦 Crédits récupérés depuis le cache de secours');
-          return cachedCredits;
-        } catch (e) {
-          LogConfig.logError('❌ Erreur conversion cache de secours: $e');
+      // mais seulement si l'utilisateur n'a pas changé
+      if (!hasUserChanged) {
+        final cachedCreditsRaw = await _cache.get<Map>('cache_user_credits');
+        if (cachedCreditsRaw != null) {
+          try {
+            final cachedCredits = UserCredits.fromJson(Map<String, dynamic>.from(cachedCreditsRaw));
+            LogConfig.logInfo('📦 Crédits récupérés depuis le cache de secours');
+            return cachedCredits;
+          } catch (e) {
+            LogConfig.logError('❌ Erreur conversion cache de secours: $e');
+          }
         }
       }
       
@@ -179,7 +191,13 @@ class CreditsRepository {
         // Continue quand même car les crédits ont été débités
       }
 
-      // ✅ ÉTAPE 3: Récupérer les crédits mis à jour
+      // ✅ ÉTAPE 3: CORRECTION - Invalider TOUS les caches liés aux transactions
+      await _invalidateAllTransactionCaches();
+      
+      // ✅ ÉTAPE 4: Invalider le cache des crédits
+      await _cache.invalidateCreditsCache();
+
+      // ✅ ÉTAPE 5: Récupérer les crédits mis à jour
       try {
         final updatedData = await _supabase
             .from('user_credits')
@@ -188,9 +206,6 @@ class CreditsRepository {
             .single();
 
         final updatedCredits = UserCredits.fromJson(updatedData);
-        
-        // Invalider le cache après utilisation
-        await _cache.invalidateCreditsCache();
         
         // Mettre à jour le cache avec les nouvelles données
         await _cache.set('cache_user_credits', updatedCredits);
@@ -206,7 +221,6 @@ class CreditsRepository {
         LogConfig.logError('❌ Erreur récupération crédits mis à jour: $e');
         
         // En cas d'erreur, on retourne quand même un succès car les crédits ont été débités
-        // mais sans les données mises à jour
         return CreditUsageResult.success(
           updatedCredits: UserCredits(
             id: '',
@@ -223,7 +237,7 @@ class CreditsRepository {
       
     } catch (e, stackTrace) {
       LogConfig.logError('❌ Erreur utilisation crédits: $e');
-
+      
       MonitoringService.instance.captureError(
         e,
         stackTrace,
@@ -236,25 +250,43 @@ class CreditsRepository {
       );
       
       if (e is PostgrestException) {
-        // Gérer les erreurs spécifiques de la base de données
-        if (e.message.contains('Insufficient credits')) {
+        if (e.code == '23514') {
           return CreditUsageResult.failure(
-            errorMessage: 'Crédits insuffisants pour cette opération',
-          );
-        } else if (e.message.contains('User credits not found')) {
-          return CreditUsageResult.failure(
-            errorMessage: 'Compte de crédits non trouvé. Veuillez vous reconnecter.',
+            errorMessage: 'Crédits insuffisants',
           );
         }
         
         return CreditUsageResult.failure(
-          errorMessage: 'Erreur lors de l\'utilisation des crédits',
+          errorMessage: 'Erreur serveur lors de l\'utilisation des crédits',
         );
       }
       
       return CreditUsageResult.failure(
-        errorMessage: 'Erreur lors de l\'utilisation des crédits',
+        errorMessage: 'Erreur réseau lors de l\'utilisation des crédits',
       );
+    }
+  }
+
+  /// 🆕 Invalide tous les caches de transactions (toutes les variations de pagination)
+  Future<void> _invalidateAllTransactionCaches() async {
+    try {
+      LogConfig.logInfo('🧹 Invalidation de tous les caches de transactions...');
+      
+      // CORRECTION 1: Invalider toutes les clés de cache de transactions
+      final allKeys = await _cache.getAllKeys();
+      final transactionCacheKeys = allKeys.where((key) => 
+        key.startsWith('cache_credit_transactions_') ||
+        key.contains('credit_transactions') ||
+        key.contains('transaction_history')
+      ).toList();
+      
+      for (final key in transactionCacheKeys) {
+        await _cache.remove(key);
+      }
+      
+      LogConfig.logInfo('🧹 ${transactionCacheKeys.length} caches de transactions invalidés');
+    } catch (e) {
+      LogConfig.logError('❌ Erreur invalidation caches transactions: $e');
     }
   }
 
@@ -335,12 +367,18 @@ class CreditsRepository {
       throw SessionException('Utilisateur non connecté');
     }
 
-    final cacheKey = 'cache_credit_transactions_${offset}_$limit';
+    // CORRECTION 2: Vérifier le changement d'utilisateur pour les transactions aussi
+    final hasUserChanged = await _cache.hasUserChanged(user.id);
+    if (hasUserChanged) {
+      LogConfig.logInfo('👤 Changement utilisateur détecté - forcer refresh transactions');
+      forceRefresh = true;
+    }
+
+    final cacheKey = 'cache_credit_transactions_${user.id}_${offset}_$limit';
     
-    // Vérifier le cache
-    if (!forceRefresh) {
+    // CORRECTION 3: Vérifier le cache seulement si pas de changement d'utilisateur
+    if (!forceRefresh && !hasUserChanged) {
       try {
-        // ✅ FIX: Gestion robuste du cache
         final cachedRaw = await _cache.get<dynamic>(cacheKey);
         if (cachedRaw != null) {
           List<dynamic> cachedList;
@@ -354,12 +392,12 @@ class CreditsRepository {
               final parsed = jsonDecode(cachedRaw);
               cachedList = parsed is List ? parsed : [parsed];
             } catch (e) {
-              LogConfig.logError('❌ Cache corrompu (JSON invalide): $e');
+              LogConfig.logError('❌ Cache transactions corrompu (JSON invalide): $e');
               await _cache.remove(cacheKey);
               cachedList = [];
             }
           } else {
-            LogConfig.logError('❌ Cache format inattendu: ${cachedRaw.runtimeType}');
+            LogConfig.logError('❌ Cache transactions format inattendu: ${cachedRaw.runtimeType}');
             await _cache.remove(cacheKey);
             cachedList = [];
           }
@@ -398,13 +436,13 @@ class CreditsRepository {
 
       final transactions = data.map((item) => CreditTransaction.fromJson(item)).toList();
       
-      // ✅ FIX: Mise en cache sécurisée
+      // CORRECTION 4: Mise en cache sécurisée avec clé incluant l'user_id
       try {
         // Convertir en format sérialisable avant mise en cache
         final serializableData = transactions.map((t) => t.toJson()).toList();
         await _cache.set(cacheKey, serializableData, 
           customExpiration: const Duration(minutes: 5));
-        LogConfig.logInfo('💾 Cache mis à jour: $cacheKey (expire dans 5min)');
+        LogConfig.logInfo('💾 Cache transactions mis à jour: $cacheKey (expire dans 5min)');
       } catch (e) {
         LogConfig.logInfo('Erreur mise en cache transactions: $e');
         // Continuer même si le cache échoue
@@ -424,22 +462,25 @@ class CreditsRepository {
           'user_id': user.id,
           'limit': limit,
           'offset': offset,
+          'has_user_changed': hasUserChanged.toString(),
         },
       );
       
-      // Dernière tentative avec le cache en cas d'erreur réseau
-      try {
-        final cachedRaw = await _cache.get<List>(cacheKey);
-        if (cachedRaw != null) {
-          final cachedTransactions = cachedRaw
-              .cast<Map<String, dynamic>>()
-              .map((item) => CreditTransaction.fromJson(item))
-              .toList();
-          LogConfig.logInfo('📦 Transactions récupérées depuis le cache de secours');
-          return cachedTransactions;
+      // CORRECTION 5: Cache de secours seulement si l'utilisateur n'a pas changé
+      if (!hasUserChanged) {
+        try {
+          final cachedRaw = await _cache.get<List>(cacheKey);
+          if (cachedRaw != null) {
+            final cachedTransactions = cachedRaw
+                .cast<Map<String, dynamic>>()
+                .map((item) => CreditTransaction.fromJson(item))
+                .toList();
+            LogConfig.logInfo('📦 Transactions récupérées depuis le cache de secours');
+            return cachedTransactions;
+          }
+        } catch (cacheError) {
+          LogConfig.logError('❌ Erreur cache de secours: $cacheError');
         }
-      } catch (cacheError) {
-        LogConfig.logError('❌ Erreur cache de secours: $cacheError');
       }
       
       if (e is PostgrestException) {

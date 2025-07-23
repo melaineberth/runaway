@@ -13,7 +13,9 @@ import 'package:runaway/features/credits/data/repositories/credits_repository.da
 import 'package:runaway/features/credits/data/services/credit_verification_service.dart';
 import 'package:runaway/features/credits/domain/models/credit_plan.dart';
 import 'package:runaway/features/credits/domain/models/credit_transaction.dart';
+import 'package:runaway/features/credits/domain/models/user_credits.dart';
 import 'package:runaway/features/credits/presentation/blocs/credits_bloc.dart';
+import 'package:runaway/features/credits/presentation/blocs/credits_event.dart';
 import 'package:runaway/features/home/presentation/blocs/route_parameters_bloc.dart';
 import 'package:runaway/features/route_generator/presentation/blocs/route_generation/route_generation_bloc.dart';
 import 'service_locator.dart';
@@ -89,16 +91,34 @@ extension BlocAccess on BuildContext {
 
   /// 🆕 Force un nettoyage complet lors d'un changement d'utilisateur
   void clearUserSession() {
-    LogConfig.logInfo('🧹 Nettoyage session utilisateur demandé');
-    
     try {
-      // Nettoyer AppDataBloc
-      appDataBloc.add(const AppDataClearRequested());
+      LogConfig.logInfo('🧹 Nettoyage session utilisateur...');
+            
+      // 1. D'abord CreditsBloc
+      try {
+        creditsBloc.add(const CreditsReset());
+        LogConfig.logInfo('💳 CreditsBloc nettoyé');
+      } catch (e) {
+        LogConfig.logError('❌ Erreur nettoyage CreditsBloc: $e');
+      }
       
-      // Nettoyer le cache
-      CacheService.instance.forceCompleteClearing();
+      // 2. Puis AppDataBloc  
+      try {
+        appDataBloc.add(const AppDataClearRequested());
+        LogConfig.logInfo('📊 AppDataBloc nettoyé');
+      } catch (e) {
+        LogConfig.logError('❌ Erreur nettoyage AppDataBloc: $e');
+      }
       
-      LogConfig.logInfo('✅ Nettoyage session terminé');
+      // 3. Invalider le cache
+      try {
+        final cacheService = CacheService.instance;
+        cacheService.invalidateCreditsCache();
+        LogConfig.logInfo('🧹 Cache invalidé');
+      } catch (e) {
+        LogConfig.logError('❌ Erreur invalidation cache: $e');
+      }
+      
     } catch (e) {
       LogConfig.logError('❌ Erreur nettoyage session: $e');
     }
@@ -116,10 +136,17 @@ extension BlocAccess on BuildContext {
         
         if (hasChanged) {
           LogConfig.logInfo('🔄 Incohérence utilisateur détectée - correction...');
+          
+          // Nettoyage dans le bon ordre
           clearUserSession();
           
-          // Attendre un peu puis recharger
-          await Future.delayed(Duration(milliseconds: 500));
+          // Attendre plus longtemps pour que le nettoyage soit complet
+          await Future.delayed(Duration(milliseconds: 800));
+          
+          // Confirmer le changement d'utilisateur
+          await cacheService.confirmUserChange(userId);
+          
+          // Forcer le rechargement des crédits
           preloadCreditData();
         }
       }
@@ -131,13 +158,34 @@ extension BlocAccess on BuildContext {
   /// 🆕 Force une synchronisation complète des crédits
   void forceCreditSync({String reason = 'manual'}) {
     LogConfig.logInfo('🔄 Demande de synchronisation forcée des crédits');
-    appDataBloc.add(CreditsForceSyncRequested(reason: reason));
+    
+    // Ajouter un délai pour éviter les conflits
+    Future.delayed(Duration(milliseconds: 100), () {
+      appDataBloc.add(CreditsForceSyncRequested(reason: reason));
+    });
   }
 
   /// 🆕 Vérifie la cohérence des crédits et corrige si nécessaire
   Future<void> validateAndFixCredits() async {
     try {
       LogConfig.logInfo('🔍 Validation et correction des crédits...');
+      
+      // S'assurer qu'on a un utilisateur connecté
+      final currentUser = sl.get<AuthBloc>().state;
+      if (currentUser is! Authenticated) {
+        LogConfig.logInfo('❌ Pas d\'utilisateur connecté - validation annulée');
+        return;
+      }
+      
+      // Vérifier la cohérence du cache d'abord
+      final cacheService = CacheService.instance;
+      final hasChanged = await cacheService.hasUserChanged(currentUser.profile.id);
+      
+      if (hasChanged) {
+        LogConfig.logInfo('🔄 Changement utilisateur détecté pendant validation - correction...');
+        await ensureUserDataConsistency();
+        return;
+      }
       
       // Forcer un refresh depuis le repository
       final creditsRepo = sl.get<CreditsRepository>();
@@ -147,8 +195,45 @@ extension BlocAccess on BuildContext {
     } catch (e) {
       LogConfig.logError('❌ Erreur validation crédits: $e');
       
-      // En cas d'erreur, forcer une synchronisation complète
-      forceCreditSync(reason: 'validation_error');
+      // En cas d'erreur, forcer un nettoyage minimal
+      try {
+        clearUserSession();
+      } catch (e2) {
+        LogConfig.logError('❌ Erreur nettoyage après validation: $e2');
+      }
+    }
+  }
+
+  Future<void> diagnoseCacheState() async {
+    try {
+      LogConfig.logInfo('🔍 Diagnostic de l\'état du cache...');
+      
+      final currentUser = sl.get<AuthBloc>().state;
+      if (currentUser is Authenticated) {
+        final userId = currentUser.profile.id;
+        LogConfig.logInfo('👤 Utilisateur actuel: $userId');
+        
+        final cacheService = CacheService.instance;
+        final hasChanged = await cacheService.hasUserChanged(userId);
+        LogConfig.logInfo('🔄 Changement utilisateur détecté: $hasChanged');
+        
+        // Vérifier le cache des crédits
+        final cachedCredits = await cacheService.get<Map>('cache_user_credits');
+        LogConfig.logInfo('💳 Cache crédits présent: ${cachedCredits != null}');
+        
+        if (cachedCredits != null) {
+          try {
+            final credits = UserCredits.fromJson(Map<String, dynamic>.from(cachedCredits));
+            LogConfig.logInfo('💰 Crédits en cache: ${credits.availableCredits}');
+          } catch (e) {
+            LogConfig.logError('❌ Cache crédits corrompu: $e');
+          }
+        }
+      } else {
+        LogConfig.logInfo('❌ Aucun utilisateur connecté');
+      }
+    } catch (e) {
+      LogConfig.logError('❌ Erreur diagnostic cache: $e');
     }
   }
 

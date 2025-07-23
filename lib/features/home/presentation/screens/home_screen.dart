@@ -150,11 +150,19 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
     _initializeMapStyle();
 
     // 🆕 Marquer l'écran comme chargé après l'initialisation
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
       context.finishScreenLoad(_screenLoadId);
       
       // 🆕 Métrique d'engagement utilisateur
       context.recordMetric('screen_view', 1, unit: 'count');
+
+      try {
+        await context.ensureUserDataConsistency();
+        LogConfig.logInfo('✅ Vérification cohérence initiale OK');
+      } catch (e) {
+        LogConfig.logError('❌ Erreur vérification initiale: $e');
+      }
+
     });
   }
 

@@ -1,7 +1,6 @@
 import 'dart:io';
 import 'dart:math' as math;
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -9,6 +8,7 @@ import 'package:go_router/go_router.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:intl/intl.dart';
 import 'package:runaway/core/blocs/app_data/app_data_bloc.dart';
+import 'package:runaway/core/helper/config/log_config.dart';
 import 'package:runaway/core/helper/extensions/extensions.dart';
 import 'package:runaway/core/widgets/modal_dialog.dart';
 import 'package:runaway/features/auth/presentation/screens/auth_screen.dart';
@@ -18,33 +18,20 @@ import 'package:runaway/features/route_generator/domain/models/route_parameters.
 final _channel = const MethodChannel('corner_radius');
 
 Future<double> getDeviceCornerRadius() async {
-  if (kDebugMode) debugPrint('[CR] ▶︎ Demande du rayon…');
-
   // 1️⃣ plateforme non prise en charge
   if (!Platform.isAndroid && !Platform.isIOS) {
-    if (kDebugMode) debugPrint('[CR] ⛔️ Desktop / Web – retourne 0');
     return 0;
   }
 
   try {
     final radius = await _channel.invokeMethod<double>('getCornerRadius');
 
-    if (kDebugMode) {
-      debugPrint('[CR] ✔︎ Réponse native = ${radius ?? 'null'}');
-    }
-
     return radius ?? 0;
-  } on PlatformException catch (e, s) {
-    if (kDebugMode) {
-      debugPrint('[CR] 💥 PlatformException : ${e.message}');
-      debugPrint('[CR] Stack :\n$s');
-    }
+  } on PlatformException catch (e) {
+    LogConfig.logError(e.toString());
     return 0;
-  } catch (e, s) {
-    if (kDebugMode) {
-      debugPrint('[CR] 🔥 Erreur inconnue : $e');
-      debugPrint('[CR] Stack :\n$s');
-    }
+  } catch (e) {
+    LogConfig.logError(e.toString());
     return 0;
   }
 }

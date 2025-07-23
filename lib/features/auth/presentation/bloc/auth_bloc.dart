@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:runaway/core/blocs/app_data/app_data_bloc.dart';
 import 'package:runaway/core/blocs/app_data/app_data_event.dart';
@@ -7,6 +8,8 @@ import 'package:runaway/core/helper/extensions/monitoring_extensions.dart';
 import 'package:runaway/core/helper/services/app_data_initialization_service.dart';
 import 'package:runaway/core/helper/services/cache_service.dart';
 import 'package:runaway/core/helper/services/monitoring_service.dart';
+import 'package:runaway/core/router/router.dart';
+import 'package:runaway/core/utils/injections/bloc_provider_extension.dart';
 import 'package:runaway/core/utils/injections/service_locator.dart';
 import 'package:runaway/features/auth/data/repositories/auth_repository.dart';
 import 'package:runaway/features/auth/domain/models/profile.dart';
@@ -123,32 +126,42 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       if (hasUserChanged) {
         LogConfig.logInfo('👤 Changement d\'utilisateur détecté - nettoyage en cours...');
         
-        // 1. Nettoyer le CreditsBloc si disponible
+        // Nettoyer le CreditsBloc AVANT le cache
         try {
           _creditsBloc?.add(const CreditsReset());
           LogConfig.logInfo('💳 CreditsBloc reseté pour nouvel utilisateur');
+          
+          // Attendre un peu pour que le reset soit traité
+          await Future.delayed(Duration(milliseconds: 100));
         } catch (e) {
           LogConfig.logError('❌ Erreur reset CreditsBloc: $e');
         }
         
-        // 2. Notifier AppDataBloc du changement
+        // Notifier AppDataBloc du changement AVANT le nettoyage
         try {
           final appDataBloc = sl.get<AppDataBloc>();
           appDataBloc.add(UserSessionChangedInAppData(newUserId: newUserId));
           LogConfig.logInfo('📊 AppDataBloc notifié du changement utilisateur');
+          
+          // Attendre que AppDataBloc traite l'événement
+          await Future.delayed(Duration(milliseconds: 150));
         } catch (e) {
           LogConfig.logError('❌ Erreur notification AppDataBloc: $e');
         }
         
-        // 3. Forcer le nettoyage complet du cache
+        // Forcer le nettoyage complet du cache
         await cacheService.forceCompleteClearing();
         LogConfig.logInfo('🧹 Cache complètement nettoyé pour nouvel utilisateur');
         
-        // 4. Déclencher immédiatement le pré-chargement pour le nouvel utilisateur
+        // Confirmer le changement d'utilisateur APRÈS le nettoyage
+        await cacheService.confirmUserChange(newUserId);
+        LogConfig.logInfo('✅ Changement d\'utilisateur confirmé');
+        
+        // Déclencher le pré-chargement avec un délai plus long
         try {
           final appDataBloc = sl.get<AppDataBloc>();
-          // Attendre un petit délai pour que le nettoyage soit terminé
-          Future.delayed(Duration(milliseconds: 300), () {
+          // Attendre que le nettoyage soit complètement terminé
+          Future.delayed(Duration(milliseconds: 500), () {
             appDataBloc.add(const AppDataPreloadRequested());
           });
           LogConfig.logInfo('🚀 Pré-chargement programmé pour nouvel utilisateur');
@@ -157,10 +170,26 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         }
       } else {
         LogConfig.logInfo('👤 Même utilisateur - pas de nettoyage nécessaire');
+        
+        // Même utilisateur, mais confirmer quand même (pour les premiers connexions)
+        try {
+          await cacheService.confirmUserChange(newUserId);
+        } catch (e) {
+          LogConfig.logError('❌ Erreur confirmation utilisateur: $e');
+        }
       }
     } catch (e) {
       LogConfig.logError('❌ Erreur gestion changement utilisateur: $e');
-      // Continuer même en cas d'erreur pour ne pas bloquer l'authentification
+      
+      // En cas d'erreur, forcer quand même un nettoyage minimal
+      try {
+        final cacheService = CacheService.instance;
+        await cacheService.invalidateCreditsCache();
+        await cacheService.confirmUserChange(newUserId);
+        LogConfig.logInfo('🆘 Nettoyage minimal effectué après erreur');
+      } catch (e2) {
+        LogConfig.logError('❌ Erreur nettoyage minimal: $e2');
+      }
     }
   }
 
@@ -168,15 +197,35 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     _InternalProfileLoaded event,
     Emitter<AuthState> emit,
   ) async {
-
-    // 🆕 ÉTAPE 6 : Vérifier le changement d'utilisateur AVANT d'émettre l'état
+    // Vérifier le changement d'utilisateur AVANT d'émettre l'état
     await _handleUserSessionChange(event.profile.id);
+    
+    // Attendre un petit délai pour s'assurer que le nettoyage est terminé
+    await Future.delayed(Duration(milliseconds: 200));
     
     emit(Authenticated(event.profile));
     
-    // 🆕 Déclencher le pré-chargement des données (qui inclut maintenant les crédits)
+    // Déclencher le pré-chargement des données
     if (AppDataInitializationService.isInitialized) {
-      AppDataInitializationService.startDataPreloading();
+      // Délai supplémentaire pour le pré-chargement
+      Future.delayed(Duration(milliseconds: 300), () {
+        AppDataInitializationService.startDataPreloading();
+      });
+    }
+
+    // EN MODE DEBUG : Diagnostic automatique après connexion
+    if (kDebugMode) {
+      Future.delayed(Duration(seconds: 2), () async {
+        try {
+          final context = rootNavigatorKey.currentContext!;
+          if (context != null) {
+            await context.diagnoseCacheState();
+            LogConfig.logInfo('🔍 Diagnostic automatique effectué après connexion');
+          }
+        } catch (e) {
+          LogConfig.logError('❌ Erreur diagnostic automatique: $e');
+        }
+      });
     }
     
     LogConfig.logInfo('Utilisateur authentifié: ${event.profile.username}');

@@ -139,6 +139,7 @@ class CacheService {
     List<String>? keys,
     String? pattern,
     Duration? olderThan,
+    bool includeTransactions = true, // NOUVEAU PARAMÈTRE
   }) async {
     await _ensureInitialized();
     
@@ -155,6 +156,14 @@ class CacheService {
       
       // Filtre par pattern
       if (pattern != null && key.contains(pattern)) {
+        shouldRemove = true;
+      }
+      
+      // CORRECTION 4: Pattern spécial pour les transactions
+      if (includeTransactions && (
+          key.contains('credit_transactions') ||
+          key.contains('transaction_history')
+      )) {
         shouldRemove = true;
       }
       
@@ -206,23 +215,82 @@ class CacheService {
     return _listeners[key]!.stream;
   }
 
+  /// 🆕 Obtient toutes les clés du cache - NOUVELLE MÉTHODE
+  Future<List<String>> getAllKeys() async {
+    await _ensureInitialized();
+    return _prefs!.getKeys().where((k) => k.startsWith('cache_')).toList();
+  }
+
   /// Stratégies d'invalidation automatique
   Future<void> invalidateCreditsCache() async {
+    // CORRECTION 1: Liste étendue de clés à supprimer incluant TOUTES les transactions
     final keysToRemove = [
       'cache_user_credits',
       'user_credits_cache', 
       'cached_credits_data',
       'last_credits_sync',
-      'last_cache_validation', // 🆕 Nouveau
+      'last_cache_validation',
       'credit_plans_cache',
       'credit_transactions_cache',
+      'credits_timestamp',
+      'user_credits_timestamp',
+      'last_credits_update',
+      'credits_verification_cache',
+      'transaction_history_cache',
     ];
     
+    // CORRECTION 2: Supprimer aussi toutes les variantes de cache de transactions
+    try {
+      final allKeys = await getAllKeys();
+      final transactionKeys = allKeys.where((key) => 
+        key.contains('credit_transactions_') ||
+        key.contains('transaction_history') ||
+        key.startsWith('cache_credit_transactions_')
+      ).toList();
+      
+      keysToRemove.addAll(transactionKeys);
+      LogConfig.logInfo('🧹 Clés de transactions détectées: ${transactionKeys.length}');
+    } catch (e) {
+      LogConfig.logError('❌ Erreur récupération clés transactions: $e');
+    }
+    
+    int removedCount = 0;
     for (final key in keysToRemove) {
-      await remove(key);
+      try {
+        final existed = _prefs!.containsKey(key);
+        if (existed) {
+          await remove(key);
+          removedCount++;
+        }
+      } catch (e) {
+        LogConfig.logError('❌ Erreur suppression clé $key: $e');
+      }
     }
         
-    LogConfig.logInfo('💳 Cache crédits complètement invalidé (${keysToRemove.length} clés)');
+    LogConfig.logInfo('💳 Cache crédits ET transactions complètement invalidé ($removedCount clés supprimées)');
+  }
+
+  Future<void> invalidateTransactionsCache() async {
+    try {
+      LogConfig.logInfo('🧹 Invalidation cache transactions...');
+      
+      final allKeys = await getAllKeys();
+      final transactionKeys = allKeys.where((key) => 
+        key.contains('credit_transactions_') ||
+        key.contains('transaction_history') ||
+        key.startsWith('cache_credit_transactions_')
+      ).toList();
+      
+      int removedCount = 0;
+      for (final key in transactionKeys) {
+        await remove(key);
+        removedCount++;
+      }
+      
+      LogConfig.logInfo('💳 Cache transactions invalidé ($removedCount clés supprimées)');
+    } catch (e) {
+      LogConfig.logError('❌ Erreur invalidation cache transactions: $e');
+    }
   }
 
   Future<void> invalidateRoutesCache() async {
@@ -291,32 +359,53 @@ class CacheService {
     }
     _listeners.clear();
     
-    // Supprimer toutes les clés du cache
+    // Supprimer TOUTES les clés liées aux données utilisateur
     final allKeys = _prefs!.getKeys().toList();
+    int removedCount = 0;
+    
     for (final key in allKeys) {
-      if (key.startsWith('cache_') || key.contains('credit') || key.contains('user')) {
+      // Supprimer plus de types de clés pour garantir un nettoyage complet
+      if (key.startsWith('cache_') || 
+          key.contains('credit') || 
+          key.contains('user') ||
+          key.contains('route') ||
+          key.contains('activity') ||
+          key.contains('transaction') ||
+          key.contains('plan') ||
+          key.startsWith('last_')) {
         await _prefs!.remove(key);
+        removedCount++;
       }
     }
     
-    LogConfig.logInfo('🧹 Nettoyage complet forcé terminé (${allKeys.length} clés vérifiées)');
+    LogConfig.logInfo('🧹 Nettoyage complet forcé terminé ($removedCount clés supprimées)');
   }
 
-  /// 🆕 Vérification de changement d'utilisateur
+  /// Vérification de changement d'utilisateur
   Future<bool> hasUserChanged(String newUserId) async {
     await _ensureInitialized();
     
     final lastUserId = _prefs!.getString('last_user_id');
+    
+    // Ne pas enregistrer immédiatement le nouvel utilisateur
+    // L'enregistrement se fera seulement après le nettoyage complet
     final hasChanged = lastUserId != null && lastUserId != newUserId;
     
     if (hasChanged) {
       LogConfig.logInfo('👤 Changement utilisateur détecté: $lastUserId → $newUserId');
+      // Ne pas enregistrer maintenant, attendre la confirmation du nettoyage
+    } else if (lastUserId == null) {
+      LogConfig.logInfo('👤 Premier utilisateur ou cache vide: $newUserId');
     }
     
-    // Enregistrer le nouvel utilisateur
-    await _prefs!.setString('last_user_id', newUserId);
-    
     return hasChanged;
+  }
+
+  /// Confirme et enregistre le nouvel utilisateur APRÈS nettoyage
+  Future<void> confirmUserChange(String newUserId) async {
+    await _ensureInitialized();
+    await _prefs!.setString('last_user_id', newUserId);
+    LogConfig.logInfo('✅ Nouvel utilisateur confirmé: $newUserId');
   }
 
   // ===== SÉRIALISATION SIMPLIFIÉE =====

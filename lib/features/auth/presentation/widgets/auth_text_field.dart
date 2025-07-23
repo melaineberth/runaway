@@ -49,7 +49,6 @@ class _AuthTextFieldState extends State<AuthTextField> {
   @override
   Widget build(BuildContext context) {
     return SquircleContainer(
-      height: widget.bottom != null ? null : 60,
       radius: 50.0,
       gradient: false,
       padding: EdgeInsets.symmetric(
@@ -58,68 +57,75 @@ class _AuthTextFieldState extends State<AuthTextField> {
       ),
       color: context.adaptiveDisabled.withValues(alpha: 0.08),
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Row(
-            children: [
-              Expanded(
-                child: TextFormField(
-                  autofocus: widget.autofocus,
-                  initialValue: widget.initialValue,
-                  textCapitalization: widget.textCapitalization ?? TextCapitalization.none,
-                  autocorrect: false,
-                  validator: widget.validator,
-                  obscureText: widget.obscureText ? hidePassword : false,
-                  enabled: widget.enabled,
-                  keyboardType: widget.keyboardType,
-                  maxLength: widget.maxLength,
-                  onTapOutside: (event) {
-                    FocusManager.instance.primaryFocus?.unfocus();
-                  },
-                  controller: widget.controller,
-                  style: context.bodySmall?.copyWith(
-                    color: widget.enabled ? context.adaptiveTextPrimary : context.adaptiveDisabled,
-                  ),
-                  onChanged: widget.onChanged,
-                  decoration: InputDecoration(
-                    hintText: widget.hint,
-                    border: InputBorder.none,
-                    suffixText: widget.suffixText,
-                    hintStyle: context.bodySmall?.copyWith(
-                      color: widget.enabled ? context.adaptiveDisabled : context.adaptiveTextSecondary,
+          ConstrainedBox(
+            constraints: BoxConstraints(
+              minHeight: 50, // Hauteur minimale du champ
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: TextFormField(
+                    autofocus: widget.autofocus,
+                    initialValue: widget.initialValue,
+                    textCapitalization: widget.textCapitalization ?? TextCapitalization.none,
+                    autocorrect: false,
+                    validator: widget.validator,
+                    obscureText: widget.obscureText ? hidePassword : false,
+                    enabled: widget.enabled,
+                    keyboardType: widget.keyboardType,
+                    maxLength: widget.maxLength,
+                    onTapOutside: (event) {
+                      FocusManager.instance.primaryFocus?.unfocus();
+                    },
+                    controller: widget.controller,
+                    style: context.bodySmall?.copyWith(
+                      color: widget.enabled ? context.adaptiveTextPrimary : context.adaptiveDisabled,
                     ),
-                    errorStyle: context.bodySmall?.copyWith(
-                      color: Colors.red.shade300,
-                      fontSize: 12,
+                    onChanged: widget.onChanged,
+                    decoration: InputDecoration(
+                      hintText: widget.hint,
+                      border: InputBorder.none,
+                      suffixText: widget.suffixText,
+                      hintStyle: context.bodySmall?.copyWith(
+                        color: widget.enabled ? context.adaptiveDisabled : context.adaptiveTextSecondary,
+                      ),
+                      errorStyle: context.bodySmall?.copyWith(
+                        color: Colors.red.shade300,
+                        fontSize: 12,
+                      ),
+                      errorMaxLines: 2,
                     ),
+                    maxLines: widget.maxLines,
                   ),
-                  maxLines: widget.maxLines,
                 ),
-              ),
-              if(widget.suffixIcon != null) 
-                widget.suffixIcon!,
-              if (widget.obscureText)
-                hidePassword 
-                  ? IconButton(onPressed: () {
-                        setState(() {
-                          hidePassword = !hidePassword;
-                        });
-                      },
-                      icon: Icon(
-                        HugeIcons.solidRoundedView,
-                        color: context.adaptiveDisabled,
-                      ),
-                    )
-                  : IconButton(onPressed: () {
-                        setState(() {
-                          hidePassword = !hidePassword;
-                        });
-                      },
-                      icon: Icon(
-                        HugeIcons.solidRoundedViewOff,
-                        color: context.adaptiveDisabled,
-                      ),
-                    )
-            ],
+                if(widget.suffixIcon != null) 
+                  widget.suffixIcon!,
+                if (widget.obscureText)
+                  hidePassword 
+                    ? IconButton(onPressed: () {
+                          setState(() {
+                            hidePassword = !hidePassword;
+                          });
+                        },
+                        icon: Icon(
+                          HugeIcons.solidRoundedView,
+                          color: context.adaptiveDisabled,
+                        ),
+                      )
+                    : IconButton(onPressed: () {
+                          setState(() {
+                            hidePassword = !hidePassword;
+                          });
+                        },
+                        icon: Icon(
+                          HugeIcons.solidRoundedViewOff,
+                          color: context.adaptiveDisabled,
+                        ),
+                      )
+              ],
+            ),
           ),
           if (widget.bottom != null)
             widget.bottom!,

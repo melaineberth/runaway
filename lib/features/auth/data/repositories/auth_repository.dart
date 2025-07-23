@@ -17,7 +17,8 @@ import 'package:runaway/core/helper/services/device_fingerprint_service.dart';
 import 'package:runaway/core/helper/services/monitoring_service.dart';
 import 'package:runaway/core/utils/injections/service_locator.dart';
 import 'package:runaway/features/auth/domain/models/profile.dart';
-import 'package:runaway/features/credits/data/repositories/credits_repository.dart';
+import 'package:runaway/features/credits/presentation/blocs/credits_bloc.dart';
+import 'package:runaway/features/credits/presentation/blocs/credits_event.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' hide AuthException;
@@ -999,59 +1000,48 @@ class AuthRepository {
     try {
       LogConfig.logInfo('🧹 Nettoyage complet des données utilisateur...');
       
-      // 1. Vider le cache complet des crédits
+      // Vider le cache des crédits en premier
       await _invalidateCreditsCache();
       
-      // 2. Vider le cache général via CacheService
+      // Vider le cache général via CacheService
       try {
         final cacheService = CacheService.instance;
+        await cacheService.invalidateCreditsCache(); // Double sécurité
         await cacheService.clear();
         LogConfig.logInfo('🧹 Cache général vidé');
       } catch (e) {
         LogConfig.logError('❌ Erreur vidage cache général: $e');
       }
       
-      // 3. Nettoyer les données AppDataBloc
+      //  Nettoyer les données AppDataBloc
       try {
         final appDataBloc = sl.get<AppDataBloc>();
         appDataBloc.add(const AppDataClearRequested());
         LogConfig.logInfo('🧹 AppDataBloc nettoyé');
+        
+        //  Attendre que le nettoyage soit traité
+        await Future.delayed(Duration(milliseconds: 200));
       } catch (e) {
         LogConfig.logError('❌ Erreur nettoyage AppDataBloc: $e');
       }
       
-      // 4. Nettoyer SharedPreferences des données sensibles
-      await _clearSharedPreferences();
-      
-      LogConfig.logInfo('✅ Nettoyage complet terminé');
-    } catch (e) {
-      LogConfig.logError('❌ Erreur nettoyage données: $e');
-    }
-  }
-
-  Future<void> _clearSharedPreferences() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      
-      // Supprimer toutes les clés liées aux données utilisateur
-      final keysToRemove = [
-        'cache_user_credits',
-        'user_credits_cache',
-        'cached_credits_data',
-        'last_credits_sync',
-        'last_cache_validation',
-        'cache_credit_plans',
-        'cache_credit_transactions',
-        'last_user_id', // 🆕 Ajouter pour tracker le changement d'utilisateur
-      ];
-      
-      for (final key in keysToRemove) {
-        await prefs.remove(key);
+      //  Nettoyer les données CreditsBloc si disponible
+      try {
+        final creditsBloc = sl.isRegistered<CreditsBloc>() ? sl.get<CreditsBloc>() : null;
+        if (creditsBloc != null) {
+          creditsBloc.add(const CreditsReset());
+          LogConfig.logInfo('🧹 CreditsBloc nettoyé');
+          
+          // Attendre que le reset soit traité
+          await Future.delayed(Duration(milliseconds: 100));
+        }
+      } catch (e) {
+        LogConfig.logError('❌ Erreur nettoyage CreditsBloc: $e');
       }
       
-      LogConfig.logInfo('🧹 SharedPreferences nettoyées (${keysToRemove.length} clés)');
+      LogConfig.logInfo('✅ Nettoyage complet des données terminé');
     } catch (e) {
-      LogConfig.logError('❌ Erreur nettoyage SharedPreferences: $e');
+      LogConfig.logError('❌ Erreur nettoyage données utilisateur: $e');
     }
   }
 
@@ -1650,96 +1640,106 @@ class AuthRepository {
       if (deviceFingerprint != null && deviceFingerprint.isNotEmpty) {
         LogConfig.logInfo('📱 Device fingerprint trouvé: ${deviceFingerprint.substring(0, 8)}...');
         
-        // 2. Vérifier d'abord si déjà enregistré
+        // 2. Vérifier l'état actuel avec debug_device_data
         try {
           final debugResult = await _supabase.rpc('debug_device_data', params: {
             'p_user_id': userId,
           });
           
           if (debugResult != null && debugResult.isNotEmpty) {
-            final deviceRegsCount = debugResult.first['device_registrations_count'] ?? 0;
-            LogConfig.logInfo('📊 Enregistrements existants: $deviceRegsCount');
+            final userData = debugResult.first;
+            final deviceRegsCount = userData['device_registrations_count'] ?? 0;
+            final currentCredits = userData['current_credits'] ?? 0;
             
-            // Si pas d'enregistrement, forcer
+            LogConfig.logInfo('📊 État utilisateur: registrations=$deviceRegsCount, credits=$currentCredits');
+            
+            // 3. Si pas d'enregistrement d'appareil, forcer l'enregistrement
             if (deviceRegsCount == 0) {
               LogConfig.logInfo('🔧 Forcer enregistrement car aucun trouvé...');
               
               final registerResult = await _supabase.rpc('register_device_fingerprint', params: {
                 'p_user_id': userId,
                 'p_device_fingerprint': deviceFingerprint,
-                'p_force': true, // ✅ Forcer en cas d'échec du trigger
+                'p_force': true, // Forcer l'enregistrement
               });
               
               LogConfig.logInfo('✅ Enregistrement forcé: $registerResult');
             } else {
               LogConfig.logInfo('✅ Appareil déjà enregistré');
             }
+            
+            // 4. Vérification finale avec force_check_user_device
+            final finalCheck = await _supabase.rpc('force_check_user_device', params: {
+              'p_user_id': userId,
+            });
+            
+            LogConfig.logInfo('🔍 Vérification finale: $finalCheck');
+            
+          } else {
+            LogConfig.logWarning('⚠️ Aucun résultat de debug_device_data');
           }
         } catch (e) {
           LogConfig.logError('❌ Erreur vérification/enregistrement: $e');
+          
+          // En cas d'erreur, essayer quand même d'enregistrer
+          try {
+            await _supabase.rpc('register_device_fingerprint', params: {
+              'p_user_id': userId,
+              'p_device_fingerprint': deviceFingerprint,
+              'p_force': true,
+            });
+            LogConfig.logInfo('✅ Enregistrement de secours réussi');
+          } catch (fallbackError) {
+            LogConfig.logError('❌ Échec enregistrement de secours: $fallbackError');
+          }
         }
       } else {
         LogConfig.logWarning('⚠️ Aucun device fingerprint dans les métadonnées');
       }
-      
-      // 3. Vérification finale avec force_check_user_device
-      final result = await _supabase.rpc('force_check_user_device', params: {
+    } catch (e) {
+      LogConfig.logError('❌ Erreur générale _forceDeviceCheck: $e');
+    }
+  }
+
+  /// Diagnostique l'état d'un utilisateur pour le debugging
+  Future<Map<String, dynamic>?> debugUserState(String userId) async {
+    try {
+      final debugResult = await _supabase.rpc('debug_device_data', params: {
         'p_user_id': userId,
       });
       
-      if (result != null) {
-        LogConfig.logInfo('📊 Résultat vérification finale: $result');
-        
-        // Logique existante pour les corrections de crédits
-        if (result['should_have_credits'] == true && result['current_credits'] == 0) {
-          LogConfig.logInfo('🔄 Utilisateur légitime sans crédits, correction...');
-          
-          await _supabase.rpc('admin_grant_credits', params: {
-            'p_user_email': result['email'],
-            'p_amount': 10,
-            'p_reason': 'Correction automatique après vérification appareil'
-          });
-          
-          LogConfig.logInfo('✅ Crédits corrigés automatiquement');
-        }
-        else if (result['should_have_credits'] == false && result['current_credits'] > 0) {
-          LogConfig.logInfo('⚠️ Crédits abusifs détectés, invalidation cache...');
-          await _invalidateCreditsCache();
-          LogConfig.logInfo('🧹 Cache crédits invalidé après détection abus');
-        }
+      if (debugResult != null && debugResult.isNotEmpty) {
+        return Map<String, dynamic>.from(debugResult.first);
       }
-      
+      return null;
     } catch (e) {
-      LogConfig.logError('❌ Erreur force vérification appareil: $e');
+      LogConfig.logError('❌ Erreur debug utilisateur: $e');
+      return null;
     }
   }
 
   // Invalidation du cache des crédits
   Future<void> _invalidateCreditsCache() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
+      LogConfig.logInfo('💳 Invalidation cache crédits...');
       
-      // Supprimer toutes les clés liées au cache des crédits
-      final keysToRemove = [
-        'cache_user_credits',
-        'user_credits_cache',
-        'cached_credits_data',
-        'last_credits_sync',
-      ];
+      final cacheService = CacheService.instance;
+      await cacheService.invalidateCreditsCache();
+      
+      // Supprimer aussi les préférences partagées liées aux crédits
+      final prefs = await SharedPreferences.getInstance();
+      final keysToRemove = prefs.getKeys().where((key) => 
+        key.contains('credit') || 
+        key.contains('user_id') || 
+        key.contains('last_user') ||
+        key.startsWith('last_')
+      ).toList();
       
       for (final key in keysToRemove) {
         await prefs.remove(key);
-        LogConfig.logInfo('🗑️ Cache key supprimée: $key');
       }
       
-      // 🆕 Déclencher un refresh forcé des crédits via ServiceLocator si disponible
-      try {
-        sl.get<CreditsRepository>().getUserCredits(forceRefresh: true);
-        LogConfig.logInfo('🔄 Refresh forcé des crédits déclenché');
-      } catch (e) {
-        LogConfig.logInfo('⚠️ ServiceLocator non disponible pour refresh: $e');
-      }
-      
+      LogConfig.logInfo('💳 Cache crédits invalidé (${keysToRemove.length} clés supprimées)');
     } catch (e) {
       LogConfig.logError('❌ Erreur invalidation cache crédits: $e');
     }

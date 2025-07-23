@@ -2,13 +2,17 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:runaway/core/blocs/app_data/app_data_bloc.dart';
 import 'package:runaway/core/blocs/app_data/app_data_event.dart';
 import 'package:runaway/core/errors/api_exceptions.dart';
+import 'package:runaway/core/helper/config/secure_config.dart';
 import 'package:runaway/core/helper/extensions/extensions.dart';
+import 'package:runaway/core/helper/services/cache_service.dart';
 import 'package:runaway/core/router/router.dart';
 import 'package:runaway/features/credits/data/repositories/credits_repository.dart';
 import 'package:runaway/features/credits/data/services/iap_service.dart';
 import 'package:runaway/features/credits/domain/models/credit_plan.dart';
+import 'package:runaway/features/credits/domain/models/credit_transaction.dart';
 import 'package:runaway/features/credits/domain/models/user_credits.dart';
 import 'package:runaway/core/helper/config/log_config.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'credits_event.dart';
 import 'credits_state.dart';
@@ -30,6 +34,11 @@ class CreditsBloc extends Bloc<CreditsEvent, CreditsState> {
     on<CreditPlansRequested>(_onCreditPlansRequested);
     on<TransactionHistoryRequested>(_onTransactionHistoryRequested);
     on<CreditsReset>(_onCreditsReset);
+
+    on<TransactionCreatedEvent>(_onTransactionCreatedEvent);
+    on<TransactionCoherenceCheckRequested>(_onTransactionCoherenceCheck);
+    
+    LogConfig.logInfo('💳 CreditsBloc initialisé avec gestion des transactions améliorée');
   }
 
   Future<bool> hasEnoughCredits(int requiredCredits) async {
@@ -158,9 +167,15 @@ class CreditsBloc extends Bloc<CreditsEvent, CreditsState> {
           transactionId: result.transactionId!,
         ));
 
+        // Forcer le rechargement des transactions pour l'UI
+        // avec un délai pour s'assurer que la transaction est bien en DB
+        Future.delayed(Duration(milliseconds: 500), () {
+          add(TransactionHistoryRequested(forceRefresh: true));
+        });
+
         LogConfig.logInfo('Utilisation de ${event.amount} crédits réussie');
       } else {
-        // 🆕 Annuler la mise à jour optimiste
+        // Annuler la mise à jour optimiste
         _appDataBloc?.add(CreditBalanceUpdatedInAppData(
           newBalance: currentCredits.availableCredits,
           isOptimistic: false,
@@ -171,13 +186,83 @@ class CreditsBloc extends Bloc<CreditsEvent, CreditsState> {
     } catch (e) {
       LogConfig.logError('❌ Erreur utilisation crédits: $e');
       
-      // 🆕 Annuler la mise à jour optimiste
+      // Annuler la mise à jour optimiste
       _appDataBloc?.add(CreditBalanceUpdatedInAppData(
         newBalance: currentCredits.availableCredits,
         isOptimistic: false,
       ));
       
       emit(CreditsError(_getErrorMessage(e), currentCredits: currentCredits));
+    }
+  }
+
+  Future<void> _onTransactionCreatedEvent(
+    TransactionCreatedEvent event,
+    Emitter<CreditsState> emit,
+  ) async {
+    try {
+      LogConfig.logInfo('🔄 Rechargement après création transaction: ${event.transactionId}');
+      
+      // Attendre un peu pour s'assurer que la transaction est en DB
+      await Future.delayed(Duration(milliseconds: 300));
+      
+      // Recharger les transactions avec force refresh
+      add(TransactionHistoryRequested(forceRefresh: true));
+      
+    } catch (e) {
+      LogConfig.logError('❌ Erreur rechargement après transaction: $e');
+    }
+  }
+
+  Future<void> _onTransactionCoherenceCheck(
+    TransactionCoherenceCheckRequested event,
+    Emitter<CreditsState> emit,
+  ) async {
+    if (!SecureConfig.kIsProduction) return; // Seulement en mode debug
+    
+    try {
+      LogConfig.logInfo('🔍 Vérification cohérence transactions...');
+      
+      final credits = await _creditsRepository.getUserCredits(forceRefresh: true);
+      final transactions = await _creditsRepository.getCreditTransactions(
+        limit: 100, // Récupérer plus de transactions pour vérification
+        forceRefresh: true,
+      );
+      
+      final totalPurchased = transactions
+          .where((t) => t.amount > 0)
+          .fold<int>(0, (sum, t) => sum + t.amount);
+      
+      final totalUsed = transactions
+          .where((t) => t.amount < 0)
+          .fold<int>(0, (sum, t) => sum + t.amount.abs());
+      
+      final calculatedAvailable = totalPurchased - totalUsed;
+      
+      LogConfig.logInfo('📊 DIAGNOSTIC COHÉRENCE:');
+      LogConfig.logInfo('   Crédits disponibles (DB): ${credits.availableCredits}');
+      LogConfig.logInfo('   Crédits disponibles (calculé): $calculatedAvailable');
+      LogConfig.logInfo('   Total acheté (DB): ${credits.totalCreditsPurchased}');
+      LogConfig.logInfo('   Total acheté (transactions): $totalPurchased');
+      LogConfig.logInfo('   Total utilisé (DB): ${credits.totalCreditsUsed}');
+      LogConfig.logInfo('   Total utilisé (transactions): $totalUsed');
+      LogConfig.logInfo('   Nombre de transactions: ${transactions.length}');
+      
+      final isCoherent = credits.availableCredits == calculatedAvailable &&
+                        credits.totalCreditsPurchased == totalPurchased &&
+                        credits.totalCreditsUsed == totalUsed;
+      
+      LogConfig.logInfo('   Cohérent: ${isCoherent ? "✅" : "❌"}');
+      
+      if (!isCoherent) {
+        // En cas d'incohérence, forcer une invalidation complète
+        final cacheService = CacheService.instance;
+        await cacheService.invalidateCreditsCache();
+        LogConfig.logInfo('🧹 Cache invalidé à cause d\'incohérence');
+      }
+      
+    } catch (e) {
+      LogConfig.logError('❌ Erreur vérification cohérence: $e');
     }
   }
 
@@ -281,25 +366,61 @@ class CreditsBloc extends Bloc<CreditsEvent, CreditsState> {
     TransactionHistoryRequested event,
     Emitter<CreditsState> emit,
   ) async {
-    // 🆕 Si AppDataBloc a les données, les utiliser
-    if (_appDataBloc != null && _appDataBloc.state.creditTransactions.isNotEmpty) {
-      final transactions = _appDataBloc.state.creditTransactions;
-      final currentCredits = _appDataBloc.state.userCredits;
-      emit(TransactionHistoryLoaded(transactions, currentCredits: currentCredits));
+    // CORRECTION 2: Vérifier le changement d'utilisateur avant de charger les transactions
+    final currentUser = Supabase.instance.client.auth.currentUser;
+    if (currentUser == null) {
+      emit(const CreditsError('Utilisateur non connecté'));
       return;
     }
 
-    // Sinon, charger via repository
+    // CORRECTION 3: Si forceRefresh, invalider d'abord le cache des transactions
+    if (event.forceRefresh) {
+      try {
+        final cacheService = CacheService.instance;
+        await cacheService.invalidateTransactionsCache();
+        LogConfig.logInfo('🧹 Cache transactions invalidé avant rechargement');
+      } catch (e) {
+        LogConfig.logError('❌ Erreur invalidation cache transactions: $e');
+      }
+    }
+
     emit(const CreditsLoading());
 
     try {
-      final transactions = await _creditsRepository.getCreditTransactions(
-        limit: event.limit,
-        offset: event.offset,
-      );
-      final currentCredits = getCurrentCredits();
-      
-      emit(TransactionHistoryLoaded(transactions, currentCredits: currentCredits));
+      // CORRECTION 4: Charger les crédits actuels ET les transactions en parallèle
+      final results = await Future.wait([
+        _creditsRepository.getUserCredits(forceRefresh: event.forceRefresh),
+        _creditsRepository.getCreditTransactions(
+          limit: event.limit ?? 20,
+          offset: event.offset ?? 0,
+          forceRefresh: event.forceRefresh,
+        ),
+      ]);
+
+      final credits = results[0] as UserCredits;
+      final transactions = results[1] as List<CreditTransaction>;
+
+      // CORRECTION 5: Vérifier la cohérence entre crédits et transactions
+      if (transactions.isNotEmpty && !SecureConfig.kIsProduction) {
+        final totalUsedFromTransactions = transactions
+            .where((t) => t.amount < 0)
+            .fold<int>(0, (sum, t) => sum + t.amount.abs());
+        
+        if (totalUsedFromTransactions != credits.totalCreditsUsed) {
+          LogConfig.logInfo('⚠️ Incohérence détectée:');
+          LogConfig.logInfo('   Total utilisé (DB): ${credits.totalCreditsUsed}');
+          LogConfig.logInfo('   Total utilisé (transactions): $totalUsedFromTransactions');
+          LogConfig.logInfo('   Nombre de transactions: ${transactions.length}');
+        } else {
+          LogConfig.logInfo('✅ Cohérence vérifiée: ${transactions.length} transactions');
+        }
+      }
+
+      emit(TransactionHistoryLoaded(transactions, currentCredits: credits));
+
+      // CORRECTION 6: Synchroniser avec AppDataBloc si les crédits ont changé
+      _appDataBloc?.add(const CreditDataPreloadRequested());
+
     } catch (e) {
       LogConfig.logError('❌ Erreur chargement historique: $e');
       emit(CreditsError(_getErrorMessage(e)));

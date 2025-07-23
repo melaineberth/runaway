@@ -178,6 +178,11 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
           // Redirection automatique après déconnexion/suppression
           if (authState is Unauthenticated) {
             print('🧭 Utilisateur déconnecté, redirection vers HomeScreen');
+
+            // 1️⃣ Fermer la modal AccountScreen d'abord
+            if (context.mounted && Navigator.canPop(context)) {
+              context.pop();
+            }
             
             // Petit délai pour laisser l'animation se terminer
             Future.delayed(const Duration(milliseconds: 100), () {
