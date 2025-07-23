@@ -159,6 +159,13 @@ class _EditProfileScreenState extends State<EditProfileScreen> with TickerProvid
 
   // 🆕 Ajouter cette méthode pour gérer le succès
   void _handleProfileUpdateSuccess() {
+    // Remettre l'état de chargement à false d'abord
+    if (mounted) {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+
     // Afficher le snackbar de succès
     showTopSnackBar(
       Overlay.of(context),
@@ -167,10 +174,12 @@ class _EditProfileScreenState extends State<EditProfileScreen> with TickerProvid
       ),
     );
 
-    // Navigation
-    if (mounted) {
-      context.pop(); // ou context.pop() selon votre navigation
-    }
+    // 🆕 Petit délai pour permettre à AccountScreen de détecter le changement d'état
+    Future.delayed(const Duration(milliseconds: 150), () {
+      if (mounted) {
+        context.pop();
+      }
+    });
   }
 
   Widget _buildAvatarSection() {

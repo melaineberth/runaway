@@ -51,6 +51,9 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
   late AnimationController _fadeController;
   late Animation<double> _fadeAnimation;
 
+  // 🆕 Ajouter cette variable pour gérer le chargement
+  bool _isProfileUpdating = false;
+
   late String _screenLoadId;
   
   @override
@@ -165,6 +168,13 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
       screenName: 'account_screen',
       child: BlocListener<AuthBloc, AuthState>(
         listener: (context, authState) {
+          // 🆕 Gérer la fin du chargement du profil
+          if (authState is Authenticated && _isProfileUpdating) {
+            setState(() {
+              _isProfileUpdating = false;
+            });
+          }
+
           // Redirection automatique après déconnexion/suppression
           if (authState is Unauthenticated) {
             print('🧭 Utilisateur déconnecté, redirection vers HomeScreen');
@@ -178,6 +188,11 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
           }
         },
         child: BlocBuilder<AuthBloc, AuthState>(
+          // 🆕 Empêcher le rebuild pendant la mise à jour du profil
+          buildWhen: (previous, current) {
+            if (_isProfileUpdating) return false;
+            return true;
+          },
           builder: (_, authState) {          
             // Si l'utilisateur est connecté, afficher le contenu
             if (authState is Authenticated) {
@@ -870,14 +885,32 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
 
   void _navigateToEditProfile(BuildContext context, Profile profile) {
     _trackAccountAction('edit_profile_clicked');
-    showModalSheet(
-      context: context, 
+
+    // 🆕 Activer le chargement avant d'ouvrir EditProfileScreen
+    setState(() {
+      _isProfileUpdating = true;
+    });
+
+    showModalBottomSheet(
+      useRootNavigator: true,
+      isScrollControlled: true,
       isDismissible: false,
+      enableDrag: false,
+      context: context,
+      useSafeArea: false,
       backgroundColor: Colors.transparent,
-      child: EditProfileScreen(
+      clipBehavior: Clip.antiAliasWithSaveLayer,
+      builder: (context) => EditProfileScreen(
         profile: profile,
       ),
-    );
+    ).then((_) {
+      // 🆕 Désactiver le chargement si la modal se ferme sans mise à jour
+      if (_isProfileUpdating) {
+        setState(() {
+          _isProfileUpdating = false;
+        });
+      }
+    });
   }
 
   void _showLogoutDialog(BuildContext context) {

@@ -2783,15 +2783,27 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
             child: SizedBox(
               width: _markerSize,
               height: _markerSize,
-              child: Lottie.network(
-                'https://cdn.lottielab.com/l/7h3oieuvwUgm9B.json',
+              child: Lottie.asset(
+                'assets/anim/PIN.json',
                 controller: _lottieController,
                 fit: BoxFit.contain,
-                onLoaded:
-                    (c) =>
-                        _lottieController
-                          ..duration = c.duration
-                          ..forward(),
+                onLoaded: (c) => _lottieController
+                  ..duration = c.duration
+                  ..forward(),
+                  // 🆕 Gestion d'erreur
+                errorBuilder: (context, error, stackTrace) {
+                  return Container(
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).primaryColor,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      HugeIcons.strokeRoundedLocation01,
+                      color: Colors.white,
+                      size: _markerSize * 0.5,
+                    ),
+                  );
+                },
               ),
             ),
           ),

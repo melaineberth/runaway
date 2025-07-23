@@ -490,22 +490,25 @@ class _TrailixState extends State<Trailix> {
                 // ✅ Éviter les rebuilds inutiles pour theme
                 buildWhen: (previous, current) => previous.themeMode != current.themeMode,
                 builder: (context, themeState) {
-                  return MaterialApp.router(
-                    title: 'Trailix',
-                    debugShowCheckedModeBanner: false,
-                    routerConfig: router,
-                    theme: getAppTheme(Brightness.light),
-                    darkTheme: getAppTheme(Brightness.dark),
-                    themeMode: themeState.themeMode.toThemeMode(),
-                    locale: localeState.locale,
-                    localizationsDelegates: AppLocalizations.localizationsDelegates,
-                    supportedLocales: AppLocalizations.supportedLocales,
-                    builder: (context, child) {
-                      return MediaQuery(
-                        data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(1.0)),
-                        child: child ?? Container(),
-                      ).withOfflineIndicator();
-                    },
+                  return AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 200),
+                    child: MaterialApp.router(
+                      title: 'Trailix',
+                      debugShowCheckedModeBanner: false,
+                      routerConfig: router,
+                      theme: getAppTheme(Brightness.light),
+                      darkTheme: getAppTheme(Brightness.dark),
+                      themeMode: themeState.themeMode.toThemeMode(),
+                      locale: localeState.locale,
+                      localizationsDelegates: AppLocalizations.localizationsDelegates,
+                      supportedLocales: AppLocalizations.supportedLocales,
+                      builder: (context, child) {
+                        return MediaQuery(
+                          data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(1.0)),
+                          child: child ?? Container(),
+                        ).withOfflineIndicator();
+                      },
+                    ),
                   );
                 }
               );

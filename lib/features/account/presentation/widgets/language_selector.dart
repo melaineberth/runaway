@@ -84,9 +84,14 @@ class LanguageSelector extends StatelessWidget {
                           onTap: () {
                             if (!isSelected) {
                               context.localeBloc.add(LocaleChanged(locale));
+                              
+                              // 🆕 Délai pour voir la transition
+                              Future.delayed(const Duration(milliseconds: 150), () {
+                                if (context.mounted && Navigator.of(context).canPop()) {
+                                  Navigator.of(context).pop();
+                                }
+                              });
                             }
-
-                            context.pop();
                           },
                         ),
                       ),

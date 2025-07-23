@@ -115,3 +115,5 @@ flutter:
     - assets/img/pin.png
     - assets/img/LOGO_SYMBOLE.svg
     - assets/img/onboard.png
+    - assets/anim/LOCK.json
+    - assets/anim/PIN.json

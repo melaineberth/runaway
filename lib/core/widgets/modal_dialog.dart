@@ -38,29 +38,14 @@ class ModalDialog extends StatelessWidget {
   /// Construit le widget Lottie avec préchargement optimisé
   Widget _buildLottieAnimation() {
     if (imgPath == null) return const SizedBox.shrink();
-    
-    // Vérifier si c'est l'animation auth modal et si elle est préchargée
-    final isAuthModalAnimation = imgPath == LottiePreloadService.instance.authModalLottieUrl;
-    
-    if (isAuthModalAnimation && LottiePreloadService.instance.isAuthModalLottieLoaded) {
-      // Utiliser l'animation préchargée pour un affichage instantané
-      return Lottie.memory(
-        LottiePreloadService.instance.cachedAuthModalLottie!,
-        width: 100,
-        repeat: false,
-        fit: BoxFit.fill,
-        filterQuality: FilterQuality.high,
-      );
-    } else {
-      // Fallback vers le réseau pour les autres animations ou si le préchargement a échoué
-      return Lottie.network(
-        width: 100,
-        repeat: false,
-        fit: BoxFit.fill,
-        imgPath!,
-        filterQuality: FilterQuality.high,
-      );
-    }
+        
+    return Lottie.asset(
+      "assets/anim/LOCK.json",
+      width: 100,
+      repeat: false,
+      fit: BoxFit.fill,
+      filterQuality: FilterQuality.high,
+    );
   }
 
   @override
