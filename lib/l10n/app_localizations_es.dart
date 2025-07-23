@@ -1523,4 +1523,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get notEmailFound => 'Dirección de correo electrónico no encontrada';
+
+  @override
+  String get resetPasswordImpossible => 'No se puede restablecer la contraseña';
 }

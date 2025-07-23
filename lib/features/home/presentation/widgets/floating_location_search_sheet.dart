@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_keyboard_visibility/flutter_keyboard_visibility.dart';
 import 'package:hugeicons/hugeicons.dart';
@@ -57,7 +58,7 @@ class _FloatingLocationSearchSheetState extends State<FloatingLocationSearchShee
   static const Duration _kCollapseDuration = Duration(milliseconds: 300);
   static const Duration _kMidDuration = Duration(milliseconds: 350);
 
-  // 1️⃣  Champ d’état
+  // 1️⃣  Champ d'état
   late double _currentCollapsedRatio;
   bool _isCutByTop = false;
 
@@ -92,8 +93,6 @@ class _FloatingLocationSearchSheetState extends State<FloatingLocationSearchShee
         ? ((_kCollapsedHeight + media.padding.bottom) / media.size.height)
         : _kMinCollapsedRatio;
   }
-
-  // 🆕 Méthodes pour calculer les valeurs basées sur la position
     
   /// 📐 Calcule le padding horizontal en fonction de la position de la sheet
   double _calculateHorizontalPadding(double currentPosition) {
@@ -116,18 +115,86 @@ class _FloatingLocationSearchSheetState extends State<FloatingLocationSearchShee
     _currentCollapsedRatio = _kMinCollapsedRatio;
 
     _scrollController = ScrollController()
-    ..addListener(() => _updateEdgeState(_scrollController.position));
+      ..addListener(() => _updateEdgeState(_scrollController.position));
 
+    // Vérification initiale après le premier build
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final shouldCollapse =
-          !_isKeyboardVisible &&
-          _suggestions.isEmpty &&
-          _searchController.text.isEmpty;
+      _checkAndResetSheetPosition();
+    });
+  }
 
-      if (shouldCollapse) {
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Vérifier et réinitialiser la position quand on revient sur cette page
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkAndResetSheetPosition();
+    });
+  }
+
+  /// 🔄 Vérifie et réinitialise la position du sheet si nécessaire
+  void _checkAndResetSheetPosition() {
+    if (_isDisposed || !mounted) return;
+
+    // Vérifier l'état actuel du clavier
+    final keyboardController = KeyboardVisibilityController();
+    final currentKeyboardState = keyboardController.isVisible;
+    
+    // 🆕 Ne pas réagir si on n'est pas sur l'écran principal
+    if (!_isCurrentRouteHome()) {
+      return;
+    }
+    
+    // Mettre à jour l'état du clavier si nécessaire
+    if (_isKeyboardVisible != currentKeyboardState) {
+      _isKeyboardVisible = currentKeyboardState;
+    }
+
+    // Si le clavier est fermé, pas de suggestions et pas de texte
+    final shouldCollapse = !_isKeyboardVisible && 
+                          _suggestions.isEmpty && 
+                          _searchController.text.isEmpty;
+
+    if (shouldCollapse && _sheetCtrl.isAttached) {
+      // Vérifier si le sheet n'est pas déjà en position minimale
+      final currentSize = _sheetCtrl.size;
+      if (currentSize > _kMinCollapsedRatio + 0.01) {
+        // Fermer le sheet avec animation
         _scheduleConditionalCollapse();
       }
-    });
+    }
+  }
+
+  /// 🆕 Vérifie si on est sur la route Home
+  bool _isCurrentRouteHome() {
+    try {
+      // Méthode 1: Vérifier si le widget est dans l'arbre visible
+      final renderObject = context.findRenderObject();
+      if (renderObject == null || !renderObject.attached) {
+        return false;
+      }
+      
+      // Méthode 2: Vérifier si le widget parent (HomeScreen) est toujours là
+      final homeScreenContext = context.findAncestorWidgetOfExactType<Scaffold>();
+      if (homeScreenContext == null) {
+        return false;
+      }
+      
+      // Méthode 3: Vérifier que le focus n'est pas sur un autre écran
+      // Si un TextField a le focus mais ce n'est pas le nôtre, on est probablement sur un autre écran
+      final currentFocus = FocusScope.of(context).focusedChild;
+      if (currentFocus != null && currentFocus != _focusNode && !_focusNode.hasFocus) {
+        // Un autre champ a le focus, vérifier si c'est dans notre arbre
+        final isInOurTree = _focusNode.context != null;
+        if (!isInOurTree) {
+          return false;
+        }
+      }
+      
+      return true;
+    } catch (_) {
+      return false;
+    }
   }
   
   @override
@@ -159,6 +226,8 @@ class _FloatingLocationSearchSheetState extends State<FloatingLocationSearchShee
     _pillAnimationController.dispose();
     _searchController.dispose();
     _focusNode.dispose();
+    _scrollController.dispose();
+    _sheetCtrl.dispose();
   }
 
   /// 👂 Configure l'écoute du clavier
@@ -169,7 +238,24 @@ class _FloatingLocationSearchSheetState extends State<FloatingLocationSearchShee
     _keyboardSubscription = keyboardController.onChange.listen((bool visible) {
       if (_isDisposed || !mounted) return;
       
+      // 🆕 Ne réagir aux événements du clavier que si on est sur HomeScreen
+      if (!_isCurrentRouteHome()) {
+        debugPrint('🎹 Keyboard event ignored - not on home screen');
+        return;
+      }
+      
       debugPrint('🎹 Keyboard visibility: $visible');
+      
+      // 🆕 Éviter setState pendant le build
+      if (SchedulerBinding.instance.schedulerPhase == SchedulerPhase.persistentCallbacks) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted && !_isDisposed && _isCurrentRouteHome()) {
+            setState(() => _isKeyboardVisible = visible);
+            _handleKeyboardAnimation(visible);
+          }
+        });
+        return;
+      }
       
       setState(() => _isKeyboardVisible = visible);
       _handleKeyboardAnimation(visible);
@@ -183,11 +269,22 @@ class _FloatingLocationSearchSheetState extends State<FloatingLocationSearchShee
       setState(() {});
     });
   }
+
   // Animation Logic -----------------------------------------------------
 
   /// 🎬 Gère les animations de la modal en fonction du clavier
   Future<void> _handleKeyboardAnimation(bool keyboardVisible) async {
     if (_isAnimatingSheet || _isDisposed || !mounted) return;
+    
+    // 🆕 Éviter setState pendant le build
+    if (SchedulerBinding.instance.schedulerPhase == SchedulerPhase.persistentCallbacks) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && !_isDisposed) {
+          _handleKeyboardAnimation(keyboardVisible);
+        }
+      });
+      return;
+    }
     
     _isAnimatingSheet = true;
     
@@ -339,7 +436,7 @@ class _FloatingLocationSearchSheetState extends State<FloatingLocationSearchShee
         value,
         longitude: widget.userLongitude,
         latitude: widget.userLatitude,
-        limit: 30, // 🆕 Test avec 20 résultats
+        limit: 30, 
       );
 
       if (_isDisposed || !mounted) return;
@@ -422,7 +519,9 @@ class _FloatingLocationSearchSheetState extends State<FloatingLocationSearchShee
     // ‼️ évite setState durant le build
     if ((desiredRatio - _currentCollapsedRatio).abs() > 1e-4) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) setState(() => _currentCollapsedRatio = desiredRatio);
+        if (mounted && !_isDisposed) {
+          setState(() => _currentCollapsedRatio = desiredRatio);
+        }
       });
     }
 
@@ -468,15 +567,24 @@ class _FloatingLocationSearchSheetState extends State<FloatingLocationSearchShee
 
   /// 📜 Construit la sheet draggable (REMPLACEZ cette méthode)
   Widget _buildDraggableSheet(double collapsedRatio) {
-    return DraggableScrollableSheet(
-      controller: _sheetCtrl,
-      minChildSize: collapsedRatio,
-      maxChildSize: _kMaxRatio,
-      initialChildSize: collapsedRatio,
-      snap: true,
-      snapSizes: [collapsedRatio, _kSnapMidRatio, _kMaxRatio],
-      expand: false,
-      builder: (context, scrollController) => _buildScrollView(scrollController),
+    return NotificationListener<DraggableScrollableNotification>(
+      onNotification: (notification) {
+        // 🆕 Empêcher les notifications pendant le build
+        if (SchedulerBinding.instance.schedulerPhase == SchedulerPhase.persistentCallbacks) {
+          return true; // Bloquer la notification
+        }
+        return false; // Laisser passer la notification
+      },
+      child: DraggableScrollableSheet(
+        controller: _sheetCtrl,
+        minChildSize: collapsedRatio,
+        maxChildSize: _kMaxRatio,
+        initialChildSize: collapsedRatio,
+        snap: true,
+        snapSizes: [collapsedRatio, _kSnapMidRatio, _kMaxRatio],
+        expand: false,
+        builder: (context, scrollController) => _buildScrollView(scrollController),
+      ),
     );
   }
 
@@ -496,7 +604,7 @@ class _FloatingLocationSearchSheetState extends State<FloatingLocationSearchShee
           ),
           slivers: [
             SliverPadding(
-              padding: const EdgeInsets.only(bottom: 300), // 🆕 Correction et augmentation de l'espace
+              padding: const EdgeInsets.only(bottom: 300),
               sliver: _buildSuggestionsList(),
             ),
           ],

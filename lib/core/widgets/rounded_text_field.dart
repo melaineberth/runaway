@@ -9,6 +9,7 @@ class RoundedTextField extends StatefulWidget {
   final Function(String)? onChanged;
   final String? Function(String?)? validator;
   final bool enabled;
+  final bool autofocus;
   final TextInputType? keyboardType;
   final int? maxLength;
   final Widget? suffixIcon;
@@ -26,6 +27,7 @@ class RoundedTextField extends StatefulWidget {
     this.obscureText = false,
     this.validator,
     this.enabled = true,
+    this.autofocus = false,
     this.keyboardType,
     this.maxLength,
     this.suffixIcon,
@@ -54,6 +56,7 @@ class _RoundedTextFieldState extends State<RoundedTextField> {
             autocorrect: false,
             focusNode: widget.focusNode,
             validator: widget.validator,
+            autofocus: widget.autofocus,
             obscureText: widget.obscureText ? hidePassword : false,
             enabled: widget.enabled,
             keyboardType: widget.keyboardType,

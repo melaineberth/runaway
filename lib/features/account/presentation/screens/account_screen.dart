@@ -22,10 +22,10 @@ import 'package:runaway/core/utils/constant/constants.dart';
 import 'package:runaway/core/utils/injections/bloc_provider_extension.dart';
 import 'package:runaway/core/helper/extensions/monitoring_extensions.dart';
 import 'package:runaway/core/helper/services/monitoring_service.dart';
-import 'package:runaway/core/widgets/blurry_app_bar.dart';
 import 'package:runaway/core/widgets/blurry_page.dart';
 import 'package:runaway/core/widgets/icon_btn.dart';
 import 'package:runaway/core/widgets/modal_dialog.dart';
+import 'package:runaway/core/widgets/modal_sheet.dart';
 import 'package:runaway/core/widgets/squircle_container.dart';
 import 'package:runaway/core/widgets/top_snackbar.dart';
 import 'package:runaway/features/account/presentation/screens/edit_profile_screen.dart';
@@ -35,6 +35,7 @@ import 'package:runaway/features/auth/domain/models/profile.dart';
 import 'package:runaway/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:runaway/features/auth/presentation/bloc/auth_event.dart';
 import 'package:runaway/features/auth/presentation/bloc/auth_state.dart';
+import 'package:runaway/features/credits/presentation/screens/credit_plans_screen.dart';
 import 'package:top_snackbar_flutter/top_snack_bar.dart';
 
 import 'package:url_launcher/url_launcher.dart';
@@ -191,22 +192,7 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
   }
 
   Widget _buildEmptyUnauthenticated() {
-    return Scaffold(
-      extendBodyBehindAppBar: true,
-      appBar: AppBar(
-        forceMaterialTransparency: true,
-        automaticallyImplyLeading: false,
-        title: FadeTransition(
-          opacity: _fadeAnimation,
-          child: Text(
-            context.l10n.account,
-            style: context.bodySmall?.copyWith(
-              color: context.adaptiveTextPrimary,
-            ),
-          ),
-        ),
-      ),
-      body: AnimatedBuilder(
+    return AnimatedBuilder(
         animation: _fadeAnimation,
         builder: (context, child) {
           return Opacity(
@@ -278,16 +264,15 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
             ),
           );
         }
-      ),
-    );
+      );
   }
 
   Widget _buildAuthenticatedView(Authenticated authState) {
     final user = authState.profile;
 
-    return BlurryAppBar(
-      title: context.l10n.account, 
+    return BlurryPage(
       children: [
+        20.h,
         AnimatedBuilder(
           animation: _fadeAnimation,
           builder: (context, child) {
@@ -304,6 +289,8 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
             );
           }
         ),
+
+        50.h,
     
         AnimatedBuilder(
           animation: _fadeAnimation,
@@ -322,238 +309,234 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
   }
 
   Widget _buildSettingContent() {
-    return Padding(
-        padding: const EdgeInsets.all(20.0),
-        child: Column(
+    return Column(
+      children: [
+        // Preferences settings
+        _buildSettingCategory(
+          context,
+          title: context.l10n.preferences,
           children: [
-            // Preferences settings
-            _buildSettingCategory(
+            // Language selector
+            _buildSettingTile(
               context,
-              title: context.l10n.preferences,
-              children: [
-                // Language selector
-                _buildSettingTile(
-                  context,
-                  label: context.l10n.language,
-                  icon: HugeIcons.strokeRoundedLanguageSkill,
-                  onTap:
-                      () => showModalSheet(
-                        context: context,
-                        backgroundColor: Colors.transparent,
-                        child: LanguageSelector(),
+              label: context.l10n.language,
+              icon: HugeIcons.strokeRoundedLanguageSkill,
+              onTap: () => showModalSheet(
+                context: context,
+                backgroundColor: Colors.transparent,
+                child: LanguageSelector(),
+              ),
+              child: IconBtn(
+                padding: 0.0,
+                backgroundColor: Colors.transparent,
+                label: context.l10n.currentLanguage,
+                iconSize: 19,
+                labelColor: context.adaptiveTextSecondary,
+                iconColor: context.adaptiveTextSecondary,
+                trailling: HugeIcons.strokeStandardArrowRight01,
+              ),
+            ),
+      
+            // Notification switch
+            _buildSettingTile(
+              context,
+              label: context.l10n.notifications,
+              icon: HugeIcons.strokeRoundedNotification02,
+              child: BlocBuilder<NotificationBloc, NotificationState>(
+                builder: (context, notificationState) {
+                  Color getColor(Set<WidgetState> states) {
+                    // Vérifier si le switch est désactivé
+                    if (states.contains(WidgetState.disabled)) {
+                      return context.adaptiveDisabled.withValues(alpha: 0.5);
+                    }
+                    
+                    // Vérifier si le switch est activé (ON)
+                    if (states.contains(WidgetState.selected)) {
+                      return context.adaptivePrimary; // Couleur quand activé
+                    }
+                    
+                    // État par défaut (OFF)
+                    return context.adaptiveDisabled; // Couleur quand désactivé
+                  }
+    
+                  // Afficher un indicateur de chargement si en cours d'initialisation
+                  if (notificationState.isLoading &&
+                      !notificationState.isInitialized) {
+                    return SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                          context.adaptivePrimary,
+                        ),
                       ),
-                  child: IconBtn(
-                    padding: 0.0,
-                    backgroundColor: Colors.transparent,
-                    label: context.l10n.currentLanguage,
-                    iconSize: 19,
-                    labelColor: context.adaptiveTextSecondary,
-                    iconColor: context.adaptiveTextSecondary,
-                    trailling: HugeIcons.strokeStandardArrowRight01,
-                  ),
-                ),
-  
-                // Notification switch
-                _buildSettingTile(
-                  context,
-                  label: context.l10n.notifications,
-                  icon: HugeIcons.strokeRoundedNotification02,
-                  child: BlocBuilder<NotificationBloc, NotificationState>(
-                    builder: (context, notificationState) {
-                      Color getColor(Set<WidgetState> states) {
-                        // Vérifier si le switch est désactivé
-                        if (states.contains(WidgetState.disabled)) {
-                          return context.adaptiveDisabled.withValues(alpha: 0.5);
-                        }
-                        
-                        // Vérifier si le switch est activé (ON)
-                        if (states.contains(WidgetState.selected)) {
-                          return context.adaptivePrimary; // Couleur quand activé
-                        }
-                        
-                        // État par défaut (OFF)
-                        return context.adaptiveDisabled; // Couleur quand désactivé
-                      }
-
-                      // Afficher un indicateur de chargement si en cours d'initialisation
-                      if (notificationState.isLoading &&
-                          !notificationState.isInitialized) {
-                        return SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(
-                              context.adaptivePrimary,
-                            ),
+                    );
+                  }
+      
+                  return Switch(
+                    value: notificationState.notificationsEnabled,
+                    inactiveThumbColor: context.adaptiveDisabled,
+                    // inactiveTrackColor: Colors.red,
+                    trackOutlineColor: WidgetStateProperty.resolveWith(getColor),
+                    activeColor: context.adaptivePrimary,
+                    onChanged: notificationState.isLoading
+                      ? null
+                      : (value) {
+                        HapticFeedback.mediumImpact();
+    
+                        // Déclencher l'événement pour basculer les notifications
+                        context.notificationBloc.add(
+                          NotificationToggleRequested(
+                            enabled: value,
                           ),
                         );
-                      }
-  
-                      return Switch(
-                        value: notificationState.notificationsEnabled,
-                        inactiveThumbColor: context.adaptiveDisabled,
-                        // inactiveTrackColor: Colors.red,
-                        trackOutlineColor: WidgetStateProperty.resolveWith(getColor),
-                        activeColor: context.adaptivePrimary,
-                        onChanged: notificationState.isLoading
-                          ? null
-                          : (value) {
-                            HapticFeedback.mediumImpact();
-
-                            // Déclencher l'événement pour basculer les notifications
-                            context.notificationBloc.add(
-                              NotificationToggleRequested(
-                                enabled: value,
-                              ),
-                            );
-                          },
-                      );
-                    },
-                  ),
-                ),
-  
-                // Theme selector
-                _buildSettingTile(
-                  context,
-                  label: context.l10n.theme,
-                  icon: HugeIcons.strokeRoundedPaintBoard,
-                  onTap:
-                      () => showModalSheet(
-                        context: context,
-                        backgroundColor: Colors.transparent,
-                        child: const ThemeSelector(),
-                      ),
-                  child: BlocBuilder<ThemeBloc, ThemeState>(
-                    builder: (context, themeState) {
-                      String currentThemeLabel;
-                      switch (themeState.themeMode) {
-                        case AppThemeMode.auto:
-                          currentThemeLabel = context.l10n.autoTheme;
-                          break;
-                        case AppThemeMode.light:
-                          currentThemeLabel = context.l10n.lightTheme;
-                          break;
-                        case AppThemeMode.dark:
-                          currentThemeLabel = context.l10n.darkTheme;
-                          break;
-                      }
-  
-                      return IconBtn(
-                        padding: 0.0,
-                        backgroundColor: Colors.transparent,
-                        label: currentThemeLabel,
-                        iconSize: 19,
-                        labelColor: context.adaptiveTextSecondary,
-                        iconColor: context.adaptiveTextSecondary,
-                        trailling: HugeIcons.strokeStandardArrowRight01,
-                      );
-                    },
-                  ),
-                ),
-              ],
+                      },
+                  );
+                },
+              ),
             ),
-  
-            50.h,
-  
-            // Resources settings
-            _buildSettingCategory(
+      
+            // Theme selector
+            _buildSettingTile(
               context,
-              title: context.l10n.resources,
-              children: [
-                _buildSettingTile(
-                  context,
-                  label: context.l10n.contactSupport,
-                  icon: HugeIcons.strokeRoundedMail02,
-                  onTap: () => launchEmail(),
-                  child: HugeIcon(
-                    icon: HugeIcons.strokeStandardArrowRight01,
-                    color: context.adaptiveTextSecondary,
-                    size: 19,
+              label: context.l10n.theme,
+              icon: HugeIcons.strokeRoundedPaintBoard,
+              onTap:
+                  () => showModalSheet(
+                    context: context,
+                    backgroundColor: Colors.transparent,
+                    child: const ThemeSelector(),
                   ),
-                ),
-                _buildSettingTile(
-                  context,
-                  label: context.l10n.rateInStore,
-                  icon: HugeIcons.strokeRoundedStar,
-                  onTap: () => openStore(),
-                  child: IconBtn(
+              child: BlocBuilder<ThemeBloc, ThemeState>(
+                builder: (context, themeState) {
+                  String currentThemeLabel;
+                  switch (themeState.themeMode) {
+                    case AppThemeMode.auto:
+                      currentThemeLabel = context.l10n.autoTheme;
+                      break;
+                    case AppThemeMode.light:
+                      currentThemeLabel = context.l10n.lightTheme;
+                      break;
+                    case AppThemeMode.dark:
+                      currentThemeLabel = context.l10n.darkTheme;
+                      break;
+                  }
+      
+                  return IconBtn(
                     padding: 0.0,
                     backgroundColor: Colors.transparent,
-                    iconSize: 19,
-                    iconColor: context.adaptiveTextSecondary,
-                    trailling: HugeIcons.strokeStandardArrowRight01,
-                  ),
-                ),
-                _buildSettingTile(
-                  context,
-                  label: context.l10n.followOnX,
-                  icon: HugeIcons.strokeRoundedNewTwitter,
-                  onTap: () => launchURL(),
-                  child: IconBtn(
-                    padding: 0.0,
-                    backgroundColor: Colors.transparent,
-                    iconSize: 19,
-                    iconColor: context.adaptiveTextSecondary,
-                    trailling: HugeIcons.strokeStandardArrowRight01,
-                  ),
-                ),
-              ],
-            ),
-  
-            50.h,
-  
-            // Account settings
-            _buildSettingCategory(
-              context,
-              title: context.l10n.account,
-              children: [
-                // Disconnect user
-                _buildCreditsTile(),
-
-                // Disconnect user
-                _buildSettingTile(
-                  context,
-                  label: context.l10n.disconnect,
-                  icon: HugeIcons.strokeRoundedLogoutSquare02,
-                  onTap: () => _showLogoutDialog(context),
-                  child: IconBtn(
-                    padding: 0.0,
-                    backgroundColor: Colors.transparent,
+                    label: currentThemeLabel,
                     iconSize: 19,
                     labelColor: context.adaptiveTextSecondary,
                     iconColor: context.adaptiveTextSecondary,
                     trailling: HugeIcons.strokeStandardArrowRight01,
-                  ),
-                ),
-  
-                // Delete account
-                _buildSettingTile(
-                  context,
-                  label: context.l10n.deleteProfile,
-                  icon: HugeIcons.strokeRoundedDelete02,
-                  iconColor: Colors.red,
-                  labelColor: Colors.red,
-                  onTap: () => _showDeleteAccountDialog(context),
-                  child: IconBtn(
-                    padding: 0.0,
-                    backgroundColor: Colors.transparent,
-                    iconSize: 19,
-                    iconColor: Colors.red,
-                    trailling: HugeIcons.strokeStandardArrowRight01,
-                  ),
-                ),
-              ],
+                  );
+                },
+              ),
             ),
-  
-            70.h,
-  
-            _buildAppVersion(),
-  
-            70.h,
           ],
         ),
-      );
+      
+        50.h,
+      
+        // Resources settings
+        _buildSettingCategory(
+          context,
+          title: context.l10n.resources,
+          children: [
+            _buildSettingTile(
+              context,
+              label: context.l10n.contactSupport,
+              icon: HugeIcons.strokeRoundedMail02,
+              onTap: () => launchEmail(),
+              child: HugeIcon(
+                icon: HugeIcons.strokeStandardArrowRight01,
+                color: context.adaptiveTextSecondary,
+                size: 19,
+              ),
+            ),
+            _buildSettingTile(
+              context,
+              label: context.l10n.rateInStore,
+              icon: HugeIcons.strokeRoundedStar,
+              onTap: () => openStore(),
+              child: IconBtn(
+                padding: 0.0,
+                backgroundColor: Colors.transparent,
+                iconSize: 19,
+                iconColor: context.adaptiveTextSecondary,
+                trailling: HugeIcons.strokeStandardArrowRight01,
+              ),
+            ),
+            _buildSettingTile(
+              context,
+              label: context.l10n.followOnX,
+              icon: HugeIcons.strokeRoundedNewTwitter,
+              onTap: () => launchURL(),
+              child: IconBtn(
+                padding: 0.0,
+                backgroundColor: Colors.transparent,
+                iconSize: 19,
+                iconColor: context.adaptiveTextSecondary,
+                trailling: HugeIcons.strokeStandardArrowRight01,
+              ),
+            ),
+          ],
+        ),
+      
+        50.h,
+      
+        // Account settings
+        _buildSettingCategory(
+          context,
+          title: context.l10n.account,
+          children: [
+            // Disconnect user
+            _buildCreditsTile(),
+    
+            // Disconnect user
+            _buildSettingTile(
+              context,
+              label: context.l10n.disconnect,
+              icon: HugeIcons.strokeRoundedLogoutSquare02,
+              onTap: () => _showLogoutDialog(context),
+              child: IconBtn(
+                padding: 0.0,
+                backgroundColor: Colors.transparent,
+                iconSize: 19,
+                labelColor: context.adaptiveTextSecondary,
+                iconColor: context.adaptiveTextSecondary,
+                trailling: HugeIcons.strokeStandardArrowRight01,
+              ),
+            ),
+      
+            // Delete account
+            _buildSettingTile(
+              context,
+              label: context.l10n.deleteProfile,
+              icon: HugeIcons.strokeRoundedDelete02,
+              iconColor: Colors.red,
+              labelColor: Colors.red,
+              onTap: () => _showDeleteAccountDialog(context),
+              child: IconBtn(
+                padding: 0.0,
+                backgroundColor: Colors.transparent,
+                iconSize: 19,
+                iconColor: Colors.red,
+                trailling: HugeIcons.strokeStandardArrowRight01,
+              ),
+            ),
+          ],
+        ),
+      
+        70.h,
+      
+        _buildAppVersion(),
+      
+        70.h,
+      ],
+    );
   }
 
   Widget _buildCreditsTile() {
@@ -773,121 +756,116 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
     required Profile user,
     required Color color,
   }) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 20.0),
-      child: Column(
-        children: [
-          Container(
-            width: 150,
-            height: 150,
-            decoration: BoxDecoration(
-              color: color,
-              shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.07),
-                  spreadRadius: 2,
-                  blurRadius: 30,
-                  offset: Offset(0, 0), // changes position of shadow
-                ),
-              ],
-            ),
-            child:
-                user.avatarUrl != null
-                    ? GestureDetector(
-                      onTap: () {
-                        // Show pop-up dialog
-                        _openAvatar(context, user);
+    return Column(
+      children: [
+        Container(
+          width: 150,
+          height: 150,
+          decoration: BoxDecoration(
+            color: color,
+            shape: BoxShape.circle,
+          ),
+          child:
+              user.avatarUrl != null
+                  ? GestureDetector(
+                    onTap: () {
+                      // Show pop-up dialog
+                      _openAvatar(context, user);
+                    },
+                    child: Hero(
+                      tag: user.avatarUrl!,
+    
+                      // ✅ 1. garder la forme ronde pendant l’attente
+                      placeholderBuilder:
+                          (_, __, child) => ClipOval(child: child),
+    
+                      // ✅ 2. forcer aussi le shuttle à rester rond (push & pop)
+                      flightShuttleBuilder: (
+                        context,
+                        animation,
+                        direction,
+                        fromCtx,
+                        toCtx,
+                      ) {
+                        final shuttle =
+                            direction == HeroFlightDirection.push
+                                ? toCtx
+                                    .widget // agrandissement
+                                : fromCtx.widget; // réduction
+                        return ClipOval(child: shuttle);
                       },
-                      child: Hero(
-                        tag: user.avatarUrl!,
-
-                        // ✅ 1. garder la forme ronde pendant l’attente
-                        placeholderBuilder:
-                            (_, __, child) => ClipOval(child: child),
-
-                        // ✅ 2. forcer aussi le shuttle à rester rond (push & pop)
-                        flightShuttleBuilder: (
-                          context,
-                          animation,
-                          direction,
-                          fromCtx,
-                          toCtx,
-                        ) {
-                          final shuttle =
-                              direction == HeroFlightDirection.push
-                                  ? toCtx
-                                      .widget // agrandissement
-                                  : fromCtx.widget; // réduction
-                          return ClipOval(child: shuttle);
-                        },
-
-                        child: ClipOval(
-                          // <-- ou CircleAvatar, comme vous préférez
-                          child: CachedNetworkImage(
-                            imageUrl: user.avatarUrl!,
-                            fit: BoxFit.cover,
-                          ),
-                        ),
-                      ),
-                    )
-                    : Center(
-                      child: Text(
-                        user.initials,
-                        style: TextStyle(
-                          fontSize: 32,
-                          fontWeight: FontWeight.bold,
-                          color: darken(color),
+    
+                      child: ClipOval(
+                        // <-- ou CircleAvatar, comme vous préférez
+                        child: CachedNetworkImage(
+                          imageUrl: user.avatarUrl!,
+                          fit: BoxFit.cover,
                         ),
                       ),
                     ),
-          ),
-
-          10.h,
-
-          Column(
-            children: [
-              Text(
-                user.fullName ?? context.l10n.defaultUserName,
-                style: ctx.bodyMedium?.copyWith(
-                  fontSize: 22,
-                  color: context.adaptiveTextPrimary,
-                ),
+                  )
+                  : Center(
+                    child: Text(
+                      user.initials,
+                      style: TextStyle(
+                        fontSize: 32,
+                        fontWeight: FontWeight.bold,
+                        color: darken(color),
+                      ),
+                    ),
+                  ),
+        ),
+    
+        10.h,
+    
+        Column(
+          children: [
+            Text(
+              user.fullName ?? context.l10n.defaultUserName,
+              style: ctx.bodyMedium?.copyWith(
+                fontSize: 22,
+                color: context.adaptiveTextPrimary,
               ),
-              Text(
-                "@${user.username}",
-                style: ctx.bodySmall?.copyWith(
-                  fontWeight: FontWeight.w500,
-                  color: context.adaptiveTextSecondary,
-                ),
-              ),
-            ],
-          ),
-
-          20.h,
-
-          IconBtn(
-            padding: 10,
-            trailling: HugeIcons.strokeStandardArrowRight01,
-            iconSize: 20,
-            label: context.l10n.editProfile,
-            textStyle: ctx.bodySmall?.copyWith(
-              fontWeight: FontWeight.w500,
-              color: Colors.white,
             ),
-            iconColor: Colors.white,
-            backgroundColor: context.adaptivePrimary,
-            onPressed:
-                () => _navigateToEditProfile(context, user), // Nouvelle méthode
+            Text(
+              "@${user.username}",
+              style: ctx.bodySmall?.copyWith(
+                fontWeight: FontWeight.w500,
+                color: context.adaptiveTextSecondary,
+              ),
+            ),
+          ],
+        ),
+    
+        20.h,
+    
+        IconBtn(
+          padding: 10,
+          trailling: HugeIcons.strokeStandardArrowRight01,
+          iconSize: 20,
+          label: context.l10n.editProfile,
+          textStyle: ctx.bodySmall?.copyWith(
+            fontWeight: FontWeight.w500,
+            color: Colors.white,
           ),
-        ],
-      ),
+          iconColor: Colors.white,
+          backgroundColor: context.adaptivePrimary,
+          onPressed:
+              () => _navigateToEditProfile(context, user), // Nouvelle méthode
+        ),
+      ],
     );
   }
   
   void _navigateToCredits() {
     _trackAccountAction('manage_credits_clicked');
-    context.push('/manage-credits');
+    showModalSheet(
+      context: context,
+      useSafeArea: true,
+      backgroundColor: Colors.transparent,
+      child: ModalSheet(child: CreditPlansScreen()),
+    );
+    // context.push('/manage-credits');
   }
 
   void _navigateToEditProfile(BuildContext context, Profile profile) {

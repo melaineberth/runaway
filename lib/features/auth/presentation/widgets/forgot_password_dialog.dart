@@ -44,16 +44,19 @@ class _ForgotPasswordDialogState extends State<ForgotPasswordDialog> {
 
     final email = _emailController.text.trim();
     try {
-      // 1) Vérifier l'existence du profil dans Supabase
+      // Appeler la fonction RPC pour vérifier l'éligibilité
       final response = await su.Supabase.instance.client
-          .from('profiles')
-          .select('id')
-          .eq('email', email)
-          .single();
+          .rpc('check_password_reset_eligibility', params: {
+        'user_email': email,
+      });
 
       if (mounted) {
-        if (response == null || response['id'] == null) {
-          // 2a) Si pas trouvé → message d'erreur
+        final result = response as Map<String, dynamic>;
+        final userExists = result['user_exists'] as bool;
+        final canResetPassword = result['can_reset_password'] as bool;
+
+        if (!userExists) {
+          // Utilisateur non trouvé
           showTopSnackBar(
             Overlay.of(context),
             TopSnackBar(
@@ -61,8 +64,16 @@ class _ForgotPasswordDialogState extends State<ForgotPasswordDialog> {
               title: context.l10n.notEmailFound,
             ),
           );
+        } else if (!canResetPassword) {
+          showTopSnackBar(
+            Overlay.of(context),
+            TopSnackBar(
+              isWarning: true,
+              title: context.l10n.resetPasswordImpossible,
+            ),
+          );
         } else {
-          // 2b) Si trouvé → on déclenche l'événement ForgotPassword
+          // L'utilisateur peut réinitialiser son mot de passe
           context.authBloc.add(
             ForgotPasswordRequested(email: email),
           );

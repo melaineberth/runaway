@@ -2978,6 +2978,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Email address not found'**
   String get notEmailFound;
+
+  /// Error when the provider auth is Google or Apple
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to reset password'**
+  String get resetPasswordImpossible;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

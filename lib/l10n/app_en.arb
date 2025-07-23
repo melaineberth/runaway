@@ -2102,5 +2102,9 @@
   "notEmailFound": "Email address not found",
   "@notEmailFound": {
     "description":  "Error when the email address does not exist in the database"
+  },
+  "resetPasswordImpossible": "Unable to reset password",
+  "@resetPasswordImpossible": {
+    "description":  "Error when the provider auth is Google or Apple"
   }
 }

@@ -1,8 +1,5 @@
-import 'dart:ui';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:go_router/go_router.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:runaway/core/helper/config/log_config.dart';
 import 'package:runaway/core/helper/extensions/extensions.dart';
@@ -12,6 +9,8 @@ import 'package:runaway/core/utils/constant/constants.dart';
 import 'package:runaway/core/utils/injections/bloc_provider_extension.dart';
 import 'package:runaway/core/helper/extensions/monitoring_extensions.dart';
 import 'package:runaway/core/helper/services/monitoring_service.dart';
+import 'package:runaway/core/widgets/blurry_page.dart';
+import 'package:runaway/core/widgets/squircle_btn.dart';
 import 'package:runaway/core/widgets/squircle_container.dart';
 import 'package:runaway/core/widgets/top_snackbar.dart';
 import 'package:runaway/features/credits/domain/models/credit_transaction.dart';
@@ -69,62 +68,23 @@ class _CreditPlansScreenState extends State<CreditPlansScreen> {
         'user_credits': context.availableCredits,
         'has_credits': context.hasCredits,
       },
-      child: Scaffold(
-        extendBodyBehindAppBar: true,
-        appBar: AppBar(
-          forceMaterialTransparency: true,
-          title: Text(
-            context.l10n.manageCredits,
-            style: context.bodySmall?.copyWith(
-              color: context.adaptiveTextPrimary,
-            ),
-          ),
-          leading: IconButton(
-            onPressed: () => context.pop(), 
-            icon: Icon(HugeIcons.strokeStandardArrowLeft02),
-          ),
-          actions: [
-            IconButton(
-              onPressed:() => showModalSheet(
-                context: context, 
-                backgroundColor: Colors.transparent,
-                child: CreditPlanModal(),
-              ),
-              icon: Icon(HugeIcons.strokeRoundedAddCircle),
-            ),
-          ],
-          flexibleSpace: FlexibleSpaceBar(
-            background: BackdropFilter(
-              filter: ImageFilter.blur(
-                sigmaX: 50,
-                sigmaY: 50,
-              ),
-              child: Container(
-                color: context.adaptiveBackground.withValues(
-                  alpha: 0.8,
-                ),
-              ),
-            ),
-          ),
-        ),
-        body: MultiBlocListener(
-          listeners: [
-            // 🆕 Écouter les succès d'achat depuis CreditsBloc
-            BlocListener<CreditsBloc, CreditsState>(
-              listener: (context, state) {
-                if (state is CreditPurchaseSuccess) {
-                  _showPurchaseSuccessDialog(state);
-                } else if (state is CreditsError) {
-                  _showErrorSnackBar(state.message);
-                }
-              },
-            ),
-          ],
-          child: BlocBuilder<AppDataBloc, AppDataState>(
-            builder: (context, appDataState) {
-              return _buildMainContent(appDataState);
+      child: MultiBlocListener(
+        listeners: [
+          // 🆕 Écouter les succès d'achat depuis CreditsBloc
+          BlocListener<CreditsBloc, CreditsState>(
+            listener: (context, state) {
+              if (state is CreditPurchaseSuccess) {
+                _showPurchaseSuccessDialog(state);
+              } else if (state is CreditsError) {
+                _showErrorSnackBar(state.message);
+              }
             },
           ),
+        ],
+        child: BlocBuilder<AppDataBloc, AppDataState>(
+          builder: (context, appDataState) {
+            return _buildMainContent(appDataState);
+          },
         ),
       ),
     );
@@ -152,36 +112,54 @@ class _CreditPlansScreenState extends State<CreditPlansScreen> {
     final userCredits = appDataState.userCredits;
     final transactions = appDataState.creditTransactions;
 
-    return Padding(
-      padding: EdgeInsets.symmetric(horizontal: 20.0),
-      child: transactions.isEmpty ? _buildEmptyState() : ListView(
-        children: [
-          20.h,
-          _buildCreditsHeader(userCredits),
-          30.h,
-          Text(
-            context.l10n.transactionHistory,
-            style: context.bodyMedium?.copyWith(
-              fontSize: 18,
-              color: context.adaptiveTextSecondary,
-              fontWeight: FontWeight.w600,
+    return Stack(
+      children: [
+        transactions.isEmpty 
+          ? _buildEmptyState() 
+          : BlurryPage(
+              shrinkWrap: false,
+              children: [
+                _buildCreditsHeader(userCredits),
+                30.h,
+                Text(
+                  context.l10n.transactionHistory,
+                  style: context.bodyMedium?.copyWith(
+                    fontSize: 18,
+                    color: context.adaptiveTextSecondary,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+            
+                15.h,
+            
+                ...transactions.asMap().entries.map((entry) {
+                  final i = entry.key;
+                  final value = entry.value;
+                  return Padding(
+                    padding: EdgeInsets.only(bottom: i == transactions.length - 1 ? 0.0 : 12.0),
+                    child: _buildTransactionItem(value),
+                  );
+                }),
+            
+                80.h,
+              ],
+        ),
+        
+        Positioned(
+          left: 0,
+          right: 0,
+          bottom: 0,
+          child: SquircleBtn(
+            isPrimary: true,
+            label: context.l10n.buyCredits,
+            onTap: () => showModalSheet(
+              context: context, 
+              backgroundColor: Colors.transparent,
+              child: CreditPlanModal(),
             ),
           ),
-
-          15.h,
-
-          ...transactions.asMap().entries.map((entry) {
-            final i = entry.key;
-            final value = entry.value;
-            return Padding(
-              padding: EdgeInsets.only(bottom: i == transactions.length - 1 ? 0.0 : 12.0),
-              child: _buildTransactionItem(value),
-            );
-          }),
-
-          80.h,
-        ],
-      ),
+        )
+      ],
     );
   }
 

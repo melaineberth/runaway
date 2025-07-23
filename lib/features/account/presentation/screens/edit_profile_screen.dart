@@ -279,6 +279,14 @@ class _EditProfileScreenState extends State<EditProfileScreen> with TickerProvid
             color: context.adaptiveTextPrimary,
           ),
         ),
+        Text(
+          context.l10n.nonEditableUsername, // Remplacer par context.l10n.usernameCannotBeModified
+          style: context.bodySmall?.copyWith(
+            color: context.adaptiveDisabled,
+            fontSize: 14,
+            fontWeight: FontWeight.w400
+          ),
+        ),
         8.h,
         AuthTextField(
           hint: context.l10n.fullNameHint,
@@ -298,38 +306,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> with TickerProvid
     );
   }
 
-  Widget _buildUsernameField() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          context.l10n.usernameTitle, // Vous pouvez ajouter cette traduction
-          style: context.bodySmall?.copyWith(
-            color: context.adaptiveTextPrimary,
-          ),
-        ),
-        Text(
-          context.l10n.nonEditableUsername, // Remplacer par context.l10n.usernameCannotBeModified
-          style: context.bodySmall?.copyWith(
-            color: context.adaptiveDisabled,
-            fontSize: 14,
-            fontWeight: FontWeight.w400
-          ),
-        ),
-        8.h,
-        AuthTextField(
-          initialValue: widget.profile.username ?? '',
-          enabled: false,
-          suffixIcon: Icon(
-            HugeIcons.strokeRoundedSquareLock02,
-            size: 20,
-            color: context.adaptiveDisabled,
-          ),
-        ),
-      ],
-    );
-  }
-
   bool get _hasChanges {
     final nameChanged = _fullNameController.text.trim() != widget.profile.fullName;
     final avatarChanged = _selectedAvatar != null;
@@ -341,34 +317,34 @@ class _EditProfileScreenState extends State<EditProfileScreen> with TickerProvid
     return Stack(
       children: [
         ModalSheet(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Form(
-                key: _formKey,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [                      
-                    // Section Avatar
-                    _buildAvatarSection(),
-                    
-                    50.h,
-                    
-                    // Section Nom complet
-                    _buildFullNameField(),
-                    
-                    20.h,
-                    
-                    // Section Username (désactivé)
-                    _buildUsernameField(),
-                    
-                    40.h,
-        
-                    _buildCompleteButton(_isLoading),
-                  ],
+          child: Padding(
+            padding: EdgeInsetsGeometry.only(
+              bottom: MediaQuery.of(context).viewInsets.bottom,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Form(
+                  key: _formKey,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [                      
+                      // Section Avatar
+                      _buildAvatarSection(),
+                      
+                      50.h,
+                      
+                      // Section Nom complet
+                      _buildFullNameField(),
+                      
+                      12.h,
+                                          
+                      _buildCompleteButton(_isLoading),
+                    ],
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
         Positioned(

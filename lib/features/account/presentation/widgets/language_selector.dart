@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:runaway/core/helper/extensions/extensions.dart';
 import 'package:runaway/core/blocs/locale/locale_bloc.dart';
@@ -84,6 +85,8 @@ class LanguageSelector extends StatelessWidget {
                             if (!isSelected) {
                               context.localeBloc.add(LocaleChanged(locale));
                             }
+
+                            context.pop();
                           },
                         ),
                       ),

@@ -2111,5 +2111,9 @@
   "notEmailFound": "Indirizzo e-mail non trovato",
   "@notEmailFound": {
     "description":  "Errore quando l'indirizzo email non esiste nel database"
+  },
+  "resetPasswordImpossible": "Impossibile reimpostare la password",
+  "@resetPasswordImpossible": {
+    "description":  "Errore quando l'auth provider è Google o Apple"
   }
 }

@@ -186,7 +186,7 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
       context.routeGenerationBloc.add(SavedRouteLoaded(route.id));
       
       // Naviguer vers HomeScreen
-      context.go('/home');
+      context.pop();
       
       // Feedback haptique
       HapticFeedback.lightImpact();
@@ -281,56 +281,25 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
       _updateAnimationsForRoutes(routes.length);
     }
 
-    return BlurryAppBar(
-      title: context.l10n.historic, 
+    return BlurryPage(
       children: [
+        AnimatedBuilder(
+          animation: _fadeAnimation,
+          builder: (context, child) {
+            return Opacity(
+              opacity: _fadeAnimation.value,
+              child: Transform.translate(
+                offset: Offset(0, 20 * (1 - _fadeAnimation.value)),
+                child: _buildStatsCard(routes),
+              ),
+            );
+          },
+        ),
+
         20.h,
 
-          if (routes.length > 1) ...[
-            AnimatedBuilder(
-              animation: _fadeAnimation,
-              builder: (context, child) {
-                return Opacity(
-                  opacity: _fadeAnimation.value,
-                  child: Transform.translate(
-                    offset: Offset(0, 20 * (1 - _fadeAnimation.value)),
-                    child: _buildStatsCard(routes),
-                  ),
-                );
-              },
-            ),
-
-            20.h,
-          ],
-
-          _buildAnimatedRoutesList(routes),
+        _buildAnimatedRoutesList(routes),
       ],
-    );
-  }
-
-  PreferredSizeWidget _buildAppBar(bool activeBlur) {
-    return AppBar(
-      forceMaterialTransparency: true,
-      automaticallyImplyLeading: false,
-      title: FadeTransition(
-        opacity: _fadeAnimation,
-        child: Text(
-          context.l10n.historic,
-          style: context.bodySmall?.copyWith(color: context.adaptiveTextPrimary),
-        ),
-      ),
-      leading: IconButton(
-        onPressed: () => context.pop(), 
-        icon: Icon(HugeIcons.strokeStandardArrowLeft02),
-      ),
-      flexibleSpace: activeBlur ? FlexibleSpaceBar(
-        background: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 50, sigmaY: 50),
-          child: Container(
-            color: context.adaptiveBackground.withValues(alpha: 0.3),
-          ),
-        ),
-      ) : null,
     );
   }
 
@@ -375,171 +344,137 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
   Widget _buildLoadedList(List<SavedRoute> routes) {
     final sortedRoutes = routes.sortByCreationDate();
     
-    return Padding(
-      padding: const EdgeInsets.symmetric(
-        horizontal: 20.0,
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        key: const ValueKey('loaded'),
-        children: [
-          // Parcours avec animations décalées
-          ...sortedRoutes.asMap().entries.map((entry) {
-            final index = entry.key;
-            final route = entry.value;
-            
-            return AnimatedBuilder(
-              animation: _staggerController,
-              builder: (context, child) {
-                // Animations avec fallback sécurisé
-                final slideValue = index < _slideAnimations.length 
-                    ? _slideAnimations[index].value 
-                    : 0.0;
-                final scaleValue = index < _scaleAnimations.length 
-                    ? _scaleAnimations[index].value 
-                    : 1.0;
-                
-                return Opacity(
-                  opacity: _fadeAnimation.value,
-                  child: Transform.translate(
-                    offset: Offset(0, slideValue),
-                    child: Transform.scale(
-                      scale: scaleValue,
-                      child: Padding(
-                        padding: EdgeInsets.only(
-                          bottom: index >= sortedRoutes.length - 1 ? 90.0 : 20.0,
-                        ),
-                        child: HistoricCard(
-                          route: route,
-                          isEdit: isEditMode,
-                          onDelete: () => _deleteRoute(route),
-                          onSync: routes == routes.unsyncedRoutes ? _syncData : null,
-                          onRename: (newName) => _renameRoute(route, newName), // 🆕 Callback de renommage
-                          onShowOnMap: () => _showRouteOnMap(route), // 🆕 Callback ajouté
-                        ),
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      key: const ValueKey('loaded'),
+      children: [
+        // Parcours avec animations décalées
+        ...sortedRoutes.asMap().entries.map((entry) {
+          final index = entry.key;
+          final route = entry.value;
+          
+          return AnimatedBuilder(
+            animation: _staggerController,
+            builder: (context, child) {
+              // Animations avec fallback sécurisé
+              final slideValue = index < _slideAnimations.length 
+                  ? _slideAnimations[index].value 
+                  : 0.0;
+              final scaleValue = index < _scaleAnimations.length 
+                  ? _scaleAnimations[index].value 
+                  : 1.0;
+              
+              return Opacity(
+                opacity: _fadeAnimation.value,
+                child: Transform.translate(
+                  offset: Offset(0, slideValue),
+                  child: Transform.scale(
+                    scale: scaleValue,
+                    child: Padding(
+                      padding: EdgeInsets.only(
+                        bottom: index >= sortedRoutes.length - 1 ? 90.0 : 20.0,
+                      ),
+                      child: HistoricCard(
+                        route: route,
+                        isEdit: isEditMode,
+                        onDelete: () => _deleteRoute(route),
+                        onSync: routes == routes.unsyncedRoutes ? _syncData : null,
+                        onRename: (newName) => _renameRoute(route, newName), // 🆕 Callback de renommage
+                        onShowOnMap: () => _showRouteOnMap(route), // 🆕 Callback ajouté
                       ),
                     ),
                   ),
-                );
-              },
-            );
-          }),
-        ],
-      ),
+                ),
+              );
+            },
+          );
+        }),
+      ],
     );
   }
 
   /// Interface d'erreur
   Widget _buildErrorView(String error) {
-    return Scaffold(
-      extendBodyBehindAppBar: true,
-      appBar: AppBar(
-        forceMaterialTransparency: true,
-        backgroundColor: Colors.transparent,
-        title: Text(
-          context.l10n.historic,
-          style: context.bodySmall?.copyWith(color: context.adaptiveTextPrimary),
-        ),
-        flexibleSpace: FlexibleSpaceBar(
-          background: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 50, sigmaY: 50),
-            child: Container(
-              color: context.adaptiveBackground.withValues(alpha: 0.3),
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            HugeIcons.strokeRoundedAlert02,
+            size: 64,
+            color: Colors.red,
+          ),
+          16.h,
+          Text(
+            context.l10n.loadingError,
+            style: context.bodyLarge?.copyWith(
+              color: context.adaptiveTextPrimary,
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
             ),
           ),
-        ),
-        actions: [
-          IconButton(
+          8.h,
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: 40),
+            child: Text(
+              error,
+              style: context.bodyMedium?.copyWith(color: context.adaptiveTextPrimary),
+              textAlign: TextAlign.center,
+            ),
+          ),
+          24.h,
+          ElevatedButton.icon(
             onPressed: _loadSavedRoutes,
-            icon: Icon(HugeIcons.strokeRoundedRefresh, color: context.adaptiveTextPrimary),
+            icon: Icon(HugeIcons.strokeRoundedRefresh),
+            label: Text(context.l10n.retry),
           ),
         ],
-      ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              HugeIcons.strokeRoundedAlert02,
-              size: 64,
-              color: Colors.red,
-            ),
-            16.h,
-            Text(
-              context.l10n.loadingError,
-              style: context.bodyLarge?.copyWith(
-                color: context.adaptiveTextPrimary,
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            8.h,
-            Padding(
-              padding: EdgeInsets.symmetric(horizontal: 40),
-              child: Text(
-                error,
-                style: context.bodyMedium?.copyWith(color: context.adaptiveTextPrimary),
-                textAlign: TextAlign.center,
-              ),
-            ),
-            24.h,
-            ElevatedButton.icon(
-              onPressed: _loadSavedRoutes,
-              icon: Icon(HugeIcons.strokeRoundedRefresh),
-              label: Text(context.l10n.retry),
-            ),
-          ],
-        ),
       ),
     );
   }
 
   /// Interface vide (aucun parcours)
   Widget _buildEmptyView(AppDataState appDataState) {
-    return Scaffold(
-      extendBodyBehindAppBar: true,
-      appBar: _buildAppBar(false),
-      body: FadeTransition(
-        opacity: _fadeAnimation,
-        child: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              SquircleContainer(     
-                isGlow: true,         
-                color: context.adaptivePrimary,
-                padding: EdgeInsets.all(30.0),
-                child: Icon(
-                  HugeIcons.strokeRoundedRoute01,
-                  size: 50,
-                  color: Colors.white,
-                ),
+    return FadeTransition(
+      opacity: _fadeAnimation,
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            SquircleContainer(     
+              isGlow: true,         
+              color: context.adaptivePrimary,
+              padding: EdgeInsets.all(30.0),
+              child: Icon(
+                HugeIcons.strokeRoundedRoute01,
+                size: 50,
+                color: Colors.white,
               ),
-              30.h,
-              Text(
-                context.l10n.emptySavedRouteTitle,
-                style: context.bodyLarge?.copyWith(
-                  color: context.adaptiveTextPrimary,
-                  fontSize: 22,
-                  fontWeight: FontWeight.w700,
-                ),
+            ),
+            30.h,
+            Text(
+              context.l10n.emptySavedRouteTitle,
+              style: context.bodyLarge?.copyWith(
+                color: context.adaptiveTextPrimary,
+                fontSize: 22,
+                fontWeight: FontWeight.w700,
               ),
-              8.h,
-              Padding(
-                padding: EdgeInsets.symmetric(horizontal: 40),
-                child: Text(
-                  context.l10n.emptySavedRouteMessage,
-                  style: context.bodyMedium?.copyWith(
-                    color: context.adaptiveTextSecondary,
-                    fontWeight: FontWeight.w500,
-                    fontSize: 15,
-                    height: 1.3,
-                  ),
-                  textAlign: TextAlign.center,
+            ),
+            8.h,
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: 40),
+              child: Text(
+                context.l10n.emptySavedRouteMessage,
+                style: context.bodyMedium?.copyWith(
+                  color: context.adaptiveTextSecondary,
+                  fontWeight: FontWeight.w500,
+                  fontSize: 15,
+                  height: 1.3,
                 ),
+                textAlign: TextAlign.center,
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
@@ -554,37 +489,32 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
     final totalRoutes = routes.length;
     final unsyncedCount = routes.unsyncedRoutes.length;
     
-    return Padding(
-      padding: const EdgeInsets.symmetric(
-        horizontal: 20.0,
-      ),
-      child: SquircleContainer(
-        gradient: false,
-        radius: 50.0,
-        padding: EdgeInsets.all(20),
-        color: context.adaptiveBorder.withValues(alpha: 0.05),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
-          children: [
-            _buildStatItem(
-              icon: HugeIcons.strokeRoundedRoute01,
-              value: totalRoutes.toString(),
-              label: context.l10n.route,
-            ),
-            _buildStatItem(
-              icon: HugeIcons.strokeRoundedNavigator01,
-              value: '${totalDistance.toStringAsFixed(1)}km',
-              label: context.l10n.total,
-            ),
-            if (unsyncedCount > 0)
-            _buildStatItem(
-              icon: HugeIcons.strokeRoundedWifiOff01,
-              value: unsyncedCount.toString(),
-              label: context.l10n.unsynchronized,
-              color: Colors.orange,
-            )
-          ],
-        ),
+    return SquircleContainer(
+      gradient: false,
+      radius: 40.0,
+      padding: EdgeInsets.all(20),
+      color: context.adaptiveBorder.withValues(alpha: 0.05),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        children: [
+          _buildStatItem(
+            icon: HugeIcons.strokeRoundedRoute01,
+            value: totalRoutes.toString(),
+            label: context.l10n.route,
+          ),
+          _buildStatItem(
+            icon: HugeIcons.strokeRoundedNavigator01,
+            value: '${totalDistance.toStringAsFixed(1)}km',
+            label: context.l10n.total,
+          ),
+          if (unsyncedCount > 0)
+          _buildStatItem(
+            icon: HugeIcons.strokeRoundedWifiOff01,
+            value: unsyncedCount.toString(),
+            label: context.l10n.unsynchronized,
+            color: Colors.orange,
+          )
+        ],
       ),
     );
   }

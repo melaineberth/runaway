@@ -16,7 +16,10 @@ import 'package:runaway/core/utils/injections/bloc_provider_extension.dart';
 import 'package:runaway/core/helper/extensions/monitoring_extensions.dart';
 import 'package:runaway/core/helper/services/conversion_triggers.dart';
 import 'package:runaway/core/helper/services/monitoring_service.dart';
+import 'package:runaway/core/widgets/modal_sheet.dart';
+import 'package:runaway/features/account/presentation/screens/account_screen.dart';
 import 'package:runaway/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:runaway/features/historic/presentation/screens/historic_screen.dart';
 import 'package:runaway/features/home/presentation/widgets/floating_location_search_sheet.dart';
 import 'package:runaway/features/home/presentation/widgets/generation_limit_widget.dart';
 import 'package:runaway/core/widgets/loading_overlay.dart';
@@ -586,7 +589,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
   }
 
   /// 🆕 Exécution de la sauvegarde
-  void _performSaveRoute(String routeName) {
+  void _performSaveRoute(String routeName) async {
     final overlay = Overlay.of(context, rootOverlay: true);
 
     // Vérifications finales
@@ -632,6 +635,24 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
 
     // Afficher feedback immédiat
     showTopSnackBar(overlay, TopSnackBar(title: context.l10n.savedRoute));
+
+    // 🆕 ACTIONS POST-SAUVEGARDE : fermer le panel et nettoyer le parcours
+    // Attendre un petit délai pour que la sauvegarde se lance
+    await Future.delayed(const Duration(milliseconds: 100));
+    
+    // Vérifier que le widget est toujours monté
+    if (!mounted) return;
+    
+    // 1. Fermer le RouteInfoPanel en premier
+    _removeRouteInfoPanel();
+    
+    // 2. Attendre un petit délai pour éviter les conflits d'état
+    await Future.delayed(const Duration(milliseconds: 50));
+    
+    // 3. Nettoyer le parcours actif si le widget est toujours monté
+    if (mounted) {
+      await _clearGeneratedRoute();
+    }
   }
 
   /// 🆕 Dialogue pour demander la connexion
@@ -2111,6 +2132,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
 
   Future<T?> _presentModalSheet<T>(
     Widget Function(BuildContext) builder,
+    { bool useSafeArea = false}
   ) async {
     // 1️⃣ Masquer le panneau s’il est visible
     _removeRouteInfoPanel();
@@ -2120,30 +2142,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
       context: context,
       useRootNavigator: true,
       isScrollControlled: true,
+      useSafeArea: useSafeArea,
       backgroundColor: Colors.transparent,
       builder: builder,
     );
 
     // 3️⃣ Quand le sheet se ferme, remettre le panneau (si la route existe tjs)
-    if (mounted && generatedRouteCoordinates != null) {
-      _showRouteInfoModal();
-    }
-
-    return res;
-  }
-
-  Future<T?> _presentPushNavigate<T>(
-    String pagePath,
-  ) async {
-    // 1️⃣ Masquer le panneau s’il est visible
-    _removeRouteInfoPanel();
-
-    // 2️⃣ Pousser la route modal‑sheet
-    final T? res = await context.push<T>(
-      pagePath,
-    );
-
-    // 3️⃣ Quand la route se ferme, remettre le panneau (si la route existe tjs)
     if (mounted && generatedRouteCoordinates != null) {
       _showRouteInfoModal();
     }
@@ -2159,26 +2163,54 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
     _routeInfoEntry = null;
   }
 
+  SavedRoute? _getCurrentLoadedRoute() {
+    if (!_isHistoricRouteActive) return null;
+    
+    try {
+      final appDataState = context.appDataBloc.state;
+      if (!appDataState.hasHistoricData) return null;
+
+      final savedRoutes = appDataState.savedRoutes;
+      final currentDistance = _getGeneratedRouteDistance();
+      final currentParams = context.routeGenerationBloc.state.usedParameters;
+      
+      // Utiliser la méthode existante pour trouver la route similaire
+      return _findSimilarRoute(savedRoutes, currentDistance, currentParams);
+    } catch (e) {
+      LogConfig.logError('❌ Erreur lors de la récupération de la route courante: $e');
+      return null;
+    }
+  }
+
   void _showRouteInfoModal() {
     _removeRouteInfoPanel(); // retire l’éventuel ancien panel
 
     final overlayState = Overlay.of(context, rootOverlay: true);
+
+    // Récupérer la route sauvegardée si c'est un parcours historique
+    final currentSavedRoute = _getCurrentLoadedRoute();
 
     // 2. construire l’entry
     _routeInfoEntry = OverlayEntry(
       builder:
           (_) => _RouteInfoEntry(
             panel: FloatingRouteInfoPanel(
-              routeName: _isHistoricRouteActive ? "Name" : generateAutoRouteName(
+              routeName: currentSavedRoute?.name ?? generateAutoRouteName(
                 context,
                 context.routeGenerationBloc.state.usedParameters!,
                 _getGeneratedRouteDistance(),
               ),
-              routeDesc: _isHistoricRouteActive ? "Description" : generateAutoRouteDesc(  // 🆕 AJOUT de routeDesc
-                context,
-                context.routeGenerationBloc.state.usedParameters!,
-                _getGeneratedRouteDistance(),
-              ),
+            routeDesc: currentSavedRoute != null 
+              ? generateAutoRouteDesc(
+                  context,
+                  currentSavedRoute.parameters,
+                  currentSavedRoute.actualDistance ?? _getGeneratedRouteDistance(),
+                )
+              : generateAutoRouteDesc(
+                  context,
+                  context.routeGenerationBloc.state.usedParameters!,
+                  _getGeneratedRouteDistance(),
+                ),
               parameters: context.routeGenerationBloc.state.usedParameters!,
               distance: _getGeneratedRouteDistance(),
               isLoop: routeMetadata!['is_loop'] as bool? ?? true,
@@ -2448,7 +2480,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
     );
   }
 
-  void navigateTo(String path) {
+  void navigateTo(Widget child) {
     final authState = context.read<AuthBloc>().state;
     if (authState is! Authenticated) {
       if (mounted) {
@@ -2470,7 +2502,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
         ));
       }
     } else {
-      _presentPushNavigate(path);
+      _presentModalSheet((_) => ModalSheet(child: child), useSafeArea: true);
     }
   }
 
@@ -2600,7 +2632,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
                                       size: 25.0,
                                     ),
                                     onPressed:
-                                        () => navigateTo('/historic'),
+                                        () => navigateTo(HistoricScreen()),
                                   ),
                                 ),
     
@@ -2712,7 +2744,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
                 onLocationSelected: _onLocationSelected,
                 userLongitude: _userLongitude,
                 userLatitude: _userLatitude,
-                onProfile: () => navigateTo('/account'),
+                onProfile: () => navigateTo(AccountScreen()),
               ),
             ],
           );
