@@ -29,7 +29,7 @@ class ThemeService {
       }
     }
     
-    LogConfig.logInfo('📱 Utilisation du theme par défaut: light');
+    LogConfig.logInfo('📱 Utilisation du theme par défaut: auto');
     return AppThemeMode.auto;
   }
 

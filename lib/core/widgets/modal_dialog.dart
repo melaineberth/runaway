@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:lottie/lottie.dart';
+import 'package:runaway/core/blocs/theme_bloc/theme_bloc.dart';
 import 'package:runaway/core/helper/extensions/extensions.dart';
 import 'package:runaway/core/widgets/icon_btn.dart';
 import 'package:runaway/core/widgets/modal_sheet.dart';
@@ -38,12 +40,18 @@ class ModalDialog extends StatelessWidget {
   Widget _buildLottieAnimation() {
     if (imgPath == null) return const SizedBox.shrink();
         
-    return Lottie.asset(
-      "assets/anim/LOCK.json",
-      width: 100,
-      repeat: false,
-      fit: BoxFit.fill,
-      filterQuality: FilterQuality.high,
+    return BlocBuilder<ThemeBloc, ThemeState>(
+      // ✅ Éviter les rebuilds inutiles pour theme
+      buildWhen: (previous, current) => previous.themeMode != current.themeMode,
+      builder: (context, themeState) {
+        return Lottie.asset(
+          themeState.themeMode == AppThemeMode.dark ? "assets/anim/LOCKB.json" : "assets/anim/LOCK.json",
+          width: 100,
+          repeat: false,
+          fit: BoxFit.fill,
+          filterQuality: FilterQuality.high,
+        );
+      }
     );
   }
 

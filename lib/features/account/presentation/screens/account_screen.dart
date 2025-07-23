@@ -14,9 +14,9 @@ import 'package:runaway/core/helper/config/log_config.dart';
 import 'package:runaway/core/helper/extensions/extensions.dart';
 import 'package:runaway/core/blocs/app_data/app_data_bloc.dart';
 import 'package:runaway/core/blocs/app_data/app_data_state.dart';
-import 'package:runaway/core/blocs/notification/notification_bloc.dart';
-import 'package:runaway/core/blocs/notification/notification_event.dart';
-import 'package:runaway/core/blocs/notification/notification_state.dart';
+// import 'package:runaway/core/blocs/notification/notification_bloc.dart';
+// import 'package:runaway/core/blocs/notification/notification_event.dart';
+// import 'package:runaway/core/blocs/notification/notification_state.dart';
 import 'package:runaway/core/blocs/theme_bloc/theme_bloc.dart';
 import 'package:runaway/core/utils/constant/constants.dart';
 import 'package:runaway/core/utils/injections/bloc_provider_extension.dart';
@@ -358,64 +358,64 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
             ),
       
             // Notification switch
-            _buildSettingTile(
-              context,
-              label: context.l10n.notifications,
-              icon: HugeIcons.strokeRoundedNotification02,
-              child: BlocBuilder<NotificationBloc, NotificationState>(
-                builder: (context, notificationState) {
-                  Color getColor(Set<WidgetState> states) {
-                    // Vérifier si le switch est désactivé
-                    if (states.contains(WidgetState.disabled)) {
-                      return context.adaptiveDisabled.withValues(alpha: 0.5);
-                    }
+            // _buildSettingTile(
+            //   context,
+            //   label: context.l10n.notifications,
+            //   icon: HugeIcons.strokeRoundedNotification02,
+            //   child: BlocBuilder<NotificationBloc, NotificationState>(
+            //     builder: (context, notificationState) {
+            //       Color getColor(Set<WidgetState> states) {
+            //         // Vérifier si le switch est désactivé
+            //         if (states.contains(WidgetState.disabled)) {
+            //           return context.adaptiveDisabled.withValues(alpha: 0.5);
+            //         }
                     
-                    // Vérifier si le switch est activé (ON)
-                    if (states.contains(WidgetState.selected)) {
-                      return context.adaptivePrimary; // Couleur quand activé
-                    }
+            //         // Vérifier si le switch est activé (ON)
+            //         if (states.contains(WidgetState.selected)) {
+            //           return context.adaptivePrimary; // Couleur quand activé
+            //         }
                     
-                    // État par défaut (OFF)
-                    return context.adaptiveDisabled; // Couleur quand désactivé
-                  }
+            //         // État par défaut (OFF)
+            //         return context.adaptiveDisabled; // Couleur quand désactivé
+            //       }
     
-                  // Afficher un indicateur de chargement si en cours d'initialisation
-                  if (notificationState.isLoading &&
-                      !notificationState.isInitialized) {
-                    return SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        valueColor: AlwaysStoppedAnimation<Color>(
-                          context.adaptivePrimary,
-                        ),
-                      ),
-                    );
-                  }
+            //       // Afficher un indicateur de chargement si en cours d'initialisation
+            //       if (notificationState.isLoading &&
+            //           !notificationState.isInitialized) {
+            //         return SizedBox(
+            //           width: 20,
+            //           height: 20,
+            //           child: CircularProgressIndicator(
+            //             strokeWidth: 2,
+            //             valueColor: AlwaysStoppedAnimation<Color>(
+            //               context.adaptivePrimary,
+            //             ),
+            //           ),
+            //         );
+            //       }
       
-                  return Switch(
-                    value: notificationState.notificationsEnabled,
-                    inactiveThumbColor: context.adaptiveDisabled,
-                    // inactiveTrackColor: Colors.red,
-                    trackOutlineColor: WidgetStateProperty.resolveWith(getColor),
-                    activeColor: context.adaptivePrimary,
-                    onChanged: notificationState.isLoading
-                      ? null
-                      : (value) {
-                        HapticFeedback.mediumImpact();
+            //       return Switch(
+            //         value: notificationState.notificationsEnabled,
+            //         inactiveThumbColor: context.adaptiveDisabled,
+            //         // inactiveTrackColor: Colors.red,
+            //         trackOutlineColor: WidgetStateProperty.resolveWith(getColor),
+            //         activeColor: context.adaptivePrimary,
+            //         onChanged: notificationState.isLoading
+            //           ? null
+            //           : (value) {
+            //             HapticFeedback.mediumImpact();
     
-                        // Déclencher l'événement pour basculer les notifications
-                        context.notificationBloc.add(
-                          NotificationToggleRequested(
-                            enabled: value,
-                          ),
-                        );
-                      },
-                  );
-                },
-              ),
-            ),
+            //             // Déclencher l'événement pour basculer les notifications
+            //             context.notificationBloc.add(
+            //               NotificationToggleRequested(
+            //                 enabled: value,
+            //               ),
+            //             );
+            //           },
+            //       );
+            //     },
+            //   ),
+            // ),
       
             // Theme selector
             _buildSettingTile(
@@ -553,8 +553,9 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
         70.h,
       
         _buildAppVersion(),
+
+        70.h
       
-        70.h,
       ],
     );
   }
@@ -668,19 +669,19 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
             );
           },
         ),
-        Text.rich(
-          TextSpan(
-            text: context.l10n.termsAndPrivacy,
-            recognizer:
-                TapGestureRecognizer()
-                  ..onTap = () => print('Open Terms & Policy'),
-          ),
-          style: context.bodySmall?.copyWith(
-            fontSize: 13,
-            fontWeight: FontWeight.w500,
-            color: context.adaptiveBorder.withValues(alpha: 0.2),
-          ),
-        ),
+        // Text.rich(
+        //   TextSpan(
+        //     text: context.l10n.termsAndPrivacy,
+        //     recognizer:
+        //         TapGestureRecognizer()
+        //           ..onTap = () => print('Open Terms & Policy'),
+        //   ),
+        //   style: context.bodySmall?.copyWith(
+        //     fontSize: 13,
+        //     fontWeight: FontWeight.w500,
+        //     color: context.adaptiveBorder.withValues(alpha: 0.2),
+        //   ),
+        // ),
       ],
     );
   }

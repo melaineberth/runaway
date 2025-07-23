@@ -114,6 +114,8 @@ flutter:
     - assets/img/arrow.png
     - assets/img/pin.png
     - assets/img/LOGO_SYMBOLE.svg
-    - assets/img/onboard.png
+    - assets/img/onboard_black.png
+    - assets/img/onboard_white.png
     - assets/anim/LOCK.json
     - assets/anim/PIN.json
+    - assets/anim/LOCKB.json

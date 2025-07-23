@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hugeicons/hugeicons.dart';
+import 'package:runaway/core/blocs/theme_bloc/theme_bloc.dart';
 import 'package:runaway/core/helper/extensions/extensions.dart';
 import 'package:runaway/core/helper/extensions/monitoring_extensions.dart';
 import 'package:runaway/core/utils/constant/constants.dart';
@@ -125,73 +126,79 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
             builder: (context, authState) {
               final isLoading = authState is AuthLoading;
               
-              return Column(
-                children: [
-                  Expanded(
-                    child: Image.asset(
-                      "assets/img/onboard.png",
-                      fit: BoxFit.cover,
-                    ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.all(20.0),
-                    child: SquircleContainer(
-                      gradient: false,
-                      padding: EdgeInsets.all(20.0),
-                      color: context.adaptiveDisabled.withValues(alpha: 0.05),
-                      radius: 100.0,
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          _buildAuthInfo(),
-              
-                          40.h,
-              
-                          _buildSocialButtons(isLoading: isLoading),          
-                
-                          50.h,
-                          
-                          Text.rich(
-                            TextSpan(
-                              children: [
-                                TextSpan(
-                                  text: initialIndex == 0 
-                                    ? context.l10n.haveAccount 
-                                    : context.l10n.createAccountQuestion,
-                                  style: context.bodySmall?.copyWith(
-                                    fontSize: 15,
-                                    color: context.adaptiveTextPrimary,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                                TextSpan(
-                                  text: initialIndex == 0  
-                                    ? ' ${context.l10n.logIn}'
-                                    : ' ${context.l10n.signUp}',
-                                  style: context.bodySmall?.copyWith(
-                                    fontSize: 15,
-                                    color: context.adaptivePrimary,
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                  recognizer: TapGestureRecognizer()
-                                  ..onTap = () {
-                                    setState(() {
-                                      if (initialIndex == 1) {
-                                        initialIndex = 0; // <= CORRECT
-                                      } else {
-                                        initialIndex = 1; // <= CORRECT
-                                      }
-                                    });
-                                  },
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
+              return BlocBuilder<ThemeBloc, ThemeState>(
+                // ✅ Éviter les rebuilds inutiles pour theme
+                buildWhen: (previous, current) => previous.themeMode != current.themeMode,
+                builder: (context, themeState) {
+                  return Column(
+                    children: [
+                      Expanded(
+                        child: Image.asset(
+                          themeState.themeMode == AppThemeMode.dark ? "assets/img/onboard_black.png" : "assets/img/onboard_white.png",
+                          fit: BoxFit.cover,
+                        ),
                       ),
-                    ),
-                  ),
-                ],
+                      Padding(
+                        padding: const EdgeInsets.all(20.0),
+                        child: SquircleContainer(
+                          gradient: false,
+                          padding: EdgeInsets.all(20.0),
+                          color: context.adaptiveDisabled.withValues(alpha: 0.05),
+                          radius: 100.0,
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              _buildAuthInfo(),
+                  
+                              40.h,
+                  
+                              _buildSocialButtons(isLoading: isLoading),          
+                    
+                              50.h,
+                              
+                              Text.rich(
+                                TextSpan(
+                                  children: [
+                                    TextSpan(
+                                      text: initialIndex == 0 
+                                        ? context.l10n.haveAccount 
+                                        : context.l10n.createAccountQuestion,
+                                      style: context.bodySmall?.copyWith(
+                                        fontSize: 15,
+                                        color: context.adaptiveTextPrimary,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                    TextSpan(
+                                      text: initialIndex == 0  
+                                        ? ' ${context.l10n.logIn}'
+                                        : ' ${context.l10n.signUp}',
+                                      style: context.bodySmall?.copyWith(
+                                        fontSize: 15,
+                                        color: context.adaptivePrimary,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                      recognizer: TapGestureRecognizer()
+                                      ..onTap = () {
+                                        setState(() {
+                                          if (initialIndex == 1) {
+                                            initialIndex = 0; // <= CORRECT
+                                          } else {
+                                            initialIndex = 1; // <= CORRECT
+                                          }
+                                        });
+                                      },
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  );
+                }
               );              
             },
           ),

@@ -670,6 +670,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
         title: context.l10n.loginRequiredTitle,
         subtitle: context.l10n.loginRequiredDesc,
         validLabel: context.l10n.logIn,
+        imgPath: "assets/anim/LOCKB.json",
         onValid: () {
           HapticFeedback.mediumImpact();
           showSignModal(context, 1);
