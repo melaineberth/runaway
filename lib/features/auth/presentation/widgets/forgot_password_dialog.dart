@@ -9,6 +9,7 @@ import 'package:runaway/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:runaway/features/auth/presentation/bloc/auth_event.dart';
 import 'package:runaway/features/auth/presentation/bloc/auth_state.dart';
 import 'package:runaway/features/auth/presentation/widgets/auth_text_field.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' as su;
 import 'package:top_snackbar_flutter/top_snack_bar.dart';
 
 class ForgotPasswordDialog extends StatefulWidget {
@@ -38,9 +39,47 @@ class _ForgotPasswordDialogState extends State<ForgotPasswordDialog> {
     return null;
   }
 
-  void _handleSubmit() {
-    if (_formKey.currentState?.validate() ?? false) {
-      context.authBloc.add(ForgotPasswordRequested(email: _emailController.text));
+  Future<void> _handleSubmit() async {
+    if (!(_formKey.currentState?.validate() ?? false)) return;
+
+    final email = _emailController.text.trim();
+    try {
+      // 1) Vérifier l'existence du profil dans Supabase
+      final response = await su.Supabase.instance.client
+          .from('profiles')
+          .select('id')
+          .eq('email', email)
+          .single();
+
+      if (mounted) {
+        if (response == null || response['id'] == null) {
+          // 2a) Si pas trouvé → message d'erreur
+          showTopSnackBar(
+            Overlay.of(context),
+            TopSnackBar(
+              isWarning: true,
+              title: context.l10n.notEmailFound,
+            ),
+          );
+        } else {
+          // 2b) Si trouvé → on déclenche l'événement ForgotPassword
+          context.authBloc.add(
+            ForgotPasswordRequested(email: email),
+          );
+        }
+      }
+    } catch (e, stack) {
+      // En cas d'erreur réseau ou autre
+      debugPrint('Erreur lors de la vérification du profil : $e\n$stack');
+      if (mounted) {
+        showTopSnackBar(
+          Overlay.of(context),
+          TopSnackBar(
+            isError: true,
+            title: context.l10n.genericErrorRetry,
+          ),
+        );
+      }
     }
   }
 

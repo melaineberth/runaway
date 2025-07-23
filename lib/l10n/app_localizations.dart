@@ -2972,6 +2972,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Generated on the {date}'**
   String routeGenerateDesc(String date);
+
+  /// Error when the email address does not exist in the database
+  ///
+  /// In en, this message translates to:
+  /// **'Email address not found'**
+  String get notEmailFound;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

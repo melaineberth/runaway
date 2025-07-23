@@ -248,10 +248,9 @@ class AuthRepository {
       Map<String, String> deviceFingerprint = {};
       try {
         deviceFingerprint = await DeviceFingerprintService.instance.generateDeviceFingerprint();
-        LogConfig.logInfo('📱 Empreinte appareil générée pour Google Sign-In');
+        LogConfig.logInfo('📱 Empreinte appareil générée: ${deviceFingerprint['device_fingerprint']?.substring(0, 8)}...');
       } catch (e) {
-        LogConfig.logError('⚠️ Erreur génération empreinte Google: $e');
-        // Continue quand même la connexion sans l'empreinte
+        LogConfig.logError('⚠️ Erreur génération empreinte: $e');
       }
 
       // 1. Configuration Google Sign-In
@@ -320,11 +319,14 @@ class AuthRepository {
             
             await _supabase.auth.updateUser(
               UserAttributes(
-                data: {
+                data: deviceFingerprint.isNotEmpty ? {
                   'device_fingerprint': deviceFingerprint['device_fingerprint'],
                   'device_model': deviceFingerprint['device_model'],
                   'device_manufacturer': deviceFingerprint['device_manufacturer'],
                   'platform': deviceFingerprint['platform'],
+                  'signup_timestamp': DateTime.now().toIso8601String(),
+                  'signup_method': 'email',
+                } : {
                   'signup_timestamp': DateTime.now().toIso8601String(),
                   'signup_method': 'google',
                 },
@@ -455,15 +457,19 @@ class AuthRepository {
       Map<String, String> deviceFingerprint = {};
       try {
         deviceFingerprint = await DeviceFingerprintService.instance.generateDeviceFingerprint();
-        LogConfig.logInfo('📱 Empreinte appareil générée pour Apple Sign-In');
+        LogConfig.logInfo('📱 Empreinte appareil générée: ${deviceFingerprint['device_fingerprint']?.substring(0, 8)}...');
       } catch (e) {
-        LogConfig.logError('⚠️ Erreur génération empreinte Apple: $e');
-        // Continue quand même la connexion sans l'empreinte
+        LogConfig.logError('⚠️ Erreur génération empreinte: $e');
       }
+
+      // ← Nettoie la session Supabase et les tokens locaux
+      await _supabase.auth.signOut();
+      await SecureConfig.clearStoredTokens();
       
       // 3. Générer un nonce sécurisé
       final rawNonce = _generateNonce();
-      final nonce = sha256.convert(utf8.encode(rawNonce)).toString();
+      final state = _generateNonce();  // recommandé aussi pour le paramètre state
+      final hashedNonce = sha256ofString(rawNonce);
       
       // 4. Initier la connexion Apple
       final credential = await SignInWithApple.getAppleIDCredential(
@@ -471,7 +477,8 @@ class AuthRepository {
           AppleIDAuthorizationScopes.email,
           AppleIDAuthorizationScopes.fullName,
         ],
-        nonce: nonce,
+        nonce: hashedNonce,
+        state: state,
       );
 
       // 🔒 Valider le token Apple
@@ -500,7 +507,7 @@ class AuthRepository {
       final AuthResponse response = await _supabase.auth.signInWithIdToken(
         provider: OAuthProvider.apple,
         idToken: credential.identityToken!,
-        nonce: rawNonce,
+        nonce: hashedNonce,
       );
       
       if (response.user == null) {
@@ -522,11 +529,14 @@ class AuthRepository {
             
             await _supabase.auth.updateUser(
               UserAttributes(
-                data: {
+                data: deviceFingerprint.isNotEmpty ? {
                   'device_fingerprint': deviceFingerprint['device_fingerprint'],
                   'device_model': deviceFingerprint['device_model'],
                   'device_manufacturer': deviceFingerprint['device_manufacturer'],
                   'platform': deviceFingerprint['platform'],
+                  'signup_timestamp': DateTime.now().toIso8601String(),
+                  'signup_method': 'email',
+                } : {
                   'signup_timestamp': DateTime.now().toIso8601String(),
                   'signup_method': 'apple',
                 },
@@ -646,6 +656,12 @@ class AuthRepository {
     const charset = '0123456789ABCDEFGHIJKLMNOPQRSTUVXYZabcdefghijklmnopqrstuvwxyz-._';
     final random = Random.secure();
     return List.generate(length, (_) => charset[random.nextInt(charset.length)]).join();
+  }
+
+  String sha256ofString(String input) {
+    final bytes = utf8.encode(input);
+    final digest = sha256.convert(bytes);
+    return digest.toString();
   }
 
   /* ───────── 2) COMPLÉMENT DE PROFIL (ÉTAPE 2) ───────── */

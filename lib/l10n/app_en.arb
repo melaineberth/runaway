@@ -2098,5 +2098,9 @@
         "example": "2025-07-22"
       }
     }
+  },
+  "notEmailFound": "Email address not found",
+  "@notEmailFound": {
+    "description":  "Error when the email address does not exist in the database"
   }
 }

@@ -2224,7 +2224,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
       overlayState.insert(_routeInfoEntry!);
     }
   }
-  
+
   // 🆕 Démarre le timer de temps minimum pour le loading
   void _startMinimumLoadingTimer() {
     _loadingMinimumTimer?.cancel();
@@ -2460,12 +2460,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
           validLabel: context.l10n.logIn,
           cancelLabel: context.l10n.createAccount,
           onValid: () {
-            // showSignModal(context, 1);
-            context.push('/auth/1'); // Login
+            showSignModal(context, 1);
+            // context.push('/auth/1'); // Login
           },
           onCancel: () {
-            // showSignModal(context, 0);
-            context.push('/auth/0');
+            showSignModal(context, 0);
+            // context.push('/auth/0');
           },
         ));
       }

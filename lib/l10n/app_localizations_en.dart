@@ -1520,4 +1520,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String routeGenerateDesc(String date) {
     return 'Generated on the $date';
   }
+
+  @override
+  String get notEmailFound => 'Email address not found';
 }

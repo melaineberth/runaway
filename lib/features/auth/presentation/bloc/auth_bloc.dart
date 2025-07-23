@@ -595,24 +595,49 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     }
   }
 
-  Future<void> _onForgotPassword(ForgotPasswordRequested e, Emitter<AuthState> emit) async {
+  // auth_bloc.dart
+
+  Future<void> _onForgotPassword(
+    ForgotPasswordRequested event,
+    Emitter<AuthState> emit,
+  ) async {
     emit(AuthLoading());
+
     try {
-      await _repo.resetPassword(email: e.email);
-      emit(PasswordResetSent(e.email));
-      
-      // Retourner à l'état non authentifié après 3 secondes
-      Future.delayed(const Duration(seconds: 3), () {
-        if (!isClosed) emit(Unauthenticated());
-      });
-    } catch (err) {
-      LogConfig.logError('❌ Erreur mot de passe oublié: $err');
-      emit(AuthError(err.toString()));
-      
-      // Retourner à l'état précédent après l'erreur
-      Future.delayed(const Duration(seconds: 2), () {
-        if (!isClosed) emit(Unauthenticated());
-      });
+      // Envoi du mail de reset via votre repo Supabase
+      await _repo.resetPassword(email: event.email);
+
+      // Succès → on notifie l’envoi
+      emit(PasswordResetSent(event.email));
+
+      // Puis, après 3 s, on repasse à l'état non authentifié
+      await Future.delayed(const Duration(seconds: 3));
+      if (!isClosed) {
+        emit(Unauthenticated());
+      }
+    } on supabase.AuthApiException catch (apiErr) {
+      // Si Supabase renvoie une erreur de type AuthApiException
+      final msg = apiErr.message.contains('invalid')
+          ? 'Adresse e‑mail invalide ou non enregistrée.'
+          : apiErr.message;
+
+      LogConfig.logError('❌ Erreur réinitialisation mot de passe: $apiErr');
+      emit(AuthError(msg));
+
+      // Puis on revient à Unauthenticated pour permettre une nouvelle tentative
+      await Future.delayed(const Duration(seconds: 2));
+      if (!isClosed) {
+        emit(Unauthenticated());
+      }
+    } catch (err, stack) {
+      // Erreur réseau, autre…
+      LogConfig.logError('❌ Erreur mot de passe oublié: $err\n$stack');
+      emit(AuthError('Une erreur est survenue. Veuillez réessayer.'));
+
+      await Future.delayed(const Duration(seconds: 2));
+      if (!isClosed) {
+        emit(Unauthenticated());
+      }
     }
   }
 

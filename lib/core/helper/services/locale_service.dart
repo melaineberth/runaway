@@ -13,8 +13,8 @@ class LocaleService {
   static const List<Locale> supportedLocales = [
     Locale('en'),
     Locale('fr'),
-    Locale('it'),
-    Locale('es'),
+    // Locale('it'),
+    // Locale('es'),
   ];
 
   /// Obtient la langue sauvegardée ou celle du système par défaut

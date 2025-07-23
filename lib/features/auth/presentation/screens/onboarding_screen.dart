@@ -1,5 +1,4 @@
 import 'dart:io';
-import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -8,7 +7,7 @@ import 'package:hugeicons/hugeicons.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:runaway/core/helper/extensions/extensions.dart';
 import 'package:runaway/core/utils/injections/bloc_provider_extension.dart';
-import 'package:runaway/core/widgets/squircle_container.dart';
+import 'package:runaway/core/widgets/squircle_btn.dart';
 import 'package:runaway/core/widgets/top_snackbar.dart';
 import 'package:runaway/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:runaway/features/auth/presentation/bloc/auth_event.dart';
@@ -184,6 +183,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       child: BlocBuilder<AuthBloc, AuthState>(
         builder: (context, authState) {
           final isLoading = authState is AuthLoading;
+          final avatarSize = 200.0;
 
           return Stack(
             children: [
@@ -214,10 +214,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                                 clipBehavior: Clip.none,
                                 children: [
                                   Container(
-                                    width: 200,
-                                    height: 200,
+                                    width: avatarSize,
+                                    height: avatarSize,
                                     decoration: BoxDecoration(
-                                      color: context.adaptiveBorder,
+                                      color: context.adaptiveDisabled.withValues(alpha: 0.08),
                                       shape: BoxShape.circle,
                                     ),
                                     child: _avatar == null 
@@ -247,7 +247,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                                           width: 3,
                                         ),
                                       ),
-                                      child: Icon(HugeIcons.solidRoundedCamera01),
+                                      child: Icon(
+                                        HugeIcons.solidRoundedAdd01,
+                                        size: 20,
+                                        color: Colors.white,
+                                      ),
                                     ),
                                   ),
                                 ],
@@ -308,74 +312,22 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                           left: 15,
                           right: 15,
                           bottom: 40,
-                          child: _buildCompleteButton(isLoading),
+                          child: SquircleBtn(
+                            isPrimary: true,
+                            isLoading: isLoading || _isLoadingSuggestions,
+                            label: isLoading || _isLoadingSuggestions ? context.l10n.creatingProfile : context.l10n.complete,
+                            onTap: (isLoading || _isLoadingSuggestions) ? null : _handleCompleteProfile,
+                          ),
+                          // child: _buildCompleteButton(isLoading),
                         ),                
                       ],
                     ),
                   ),
                 ),
-              ),
-              
-              // Overlay de chargement
-              if (isLoading)
-              BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
-                child: Container(
-                  color: context.adaptiveBackground.withValues(alpha: 0.8),
-                  child: Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        CircularProgressIndicator(
-                          valueColor: AlwaysStoppedAnimation<Color>(context.adaptivePrimary),
-                        ),
-                        20.h,
-                        Text(
-                          context.l10n.creatingProfile,
-                          style: context.bodyMedium?.copyWith(
-                            color: context.adaptiveTextPrimary,
-                            fontSize: 17
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
+              ),              
             ],
           );
         }
-      ),
-    );
-  }
-
-  Widget _buildCompleteButton(bool isLoading) {
-    return SquircleContainer(
-      onTap: (isLoading || _isLoadingSuggestions) ? null : _handleCompleteProfile,
-      height: 60,
-      color: (isLoading || _isLoadingSuggestions) ? context.adaptivePrimary.withValues(alpha: 0.5) : context.adaptivePrimary,
-      radius: 30,
-      padding: EdgeInsets.symmetric(
-        horizontal: 15.0,
-        vertical: 5.0,
-      ),
-      child: Center(
-        child: (isLoading || _isLoadingSuggestions)
-        ? SizedBox(
-            width: 20,
-            height: 20,
-            child: CircularProgressIndicator(
-              strokeWidth: 2,
-              valueColor: AlwaysStoppedAnimation<Color>(Colors.black),
-            ),
-          )
-        : Text(
-            context.l10n.complete,
-            style: context.bodySmall?.copyWith(
-              color: Colors.white,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
       ),
     );
   }
