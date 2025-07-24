@@ -19,6 +19,7 @@ import 'package:runaway/core/helper/services/conversion_triggers.dart';
 import 'package:runaway/core/helper/services/monitoring_service.dart';
 import 'package:runaway/features/account/presentation/screens/account_screen.dart';
 import 'package:runaway/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:runaway/features/credits/presentation/screens/credit_plans_screen.dart';
 import 'package:runaway/features/historic/presentation/screens/historic_screen.dart';
 import 'package:runaway/features/home/presentation/widgets/floating_location_search_sheet.dart';
 import 'package:runaway/features/home/presentation/widgets/generation_limit_widget.dart';
@@ -2017,7 +2018,14 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
         cancelLabel:context.l10n.later,
         onValid: () {
           context.pop();
-          context.push('/manage-credits');
+          showModalSheet(
+            context: context,
+            useSafeArea: true,
+            isDismissible: true,
+            enableDrag: true,
+            backgroundColor: Colors.transparent,
+            child: CreditPlansScreen(),
+          );
         },
       ),
     );

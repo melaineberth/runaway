@@ -96,6 +96,7 @@ flutter_icons:
   android: true 
   ios: true
   image_path: "assets/img/icon.png"
+  adaptive_icon_foreground: "assets/img/logo_foreground.png"
 
 sentry:
   upload_debug_symbols: true

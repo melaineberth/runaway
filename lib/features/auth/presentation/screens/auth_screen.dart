@@ -18,6 +18,8 @@ import 'package:runaway/features/auth/presentation/bloc/auth_event.dart';
 import 'package:runaway/features/auth/presentation/bloc/auth_state.dart';
 import 'package:runaway/features/auth/presentation/screens/login_screen.dart';
 import 'package:runaway/features/auth/presentation/screens/signup_screen.dart';
+import 'package:runaway/features/auth/presentation/widgets/password_reset_code_dialog.dart';
+import 'package:runaway/features/auth/presentation/widgets/password_reset_success_dialog.dart';
 import 'package:top_snackbar_flutter/top_snack_bar.dart';
 
 class AuthScreen extends StatefulWidget {
@@ -76,6 +78,8 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
           current is ProfileIncomplete ||
           current is EmailConfirmationRequired ||
           current is PasswordResetSent ||
+          current is PasswordResetCodeSent ||
+          current is PasswordResetSuccess ||
           current is AuthError,
           
         listener: (context, authState) {
@@ -89,15 +93,29 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
             // Email de confirmation requis
             context.go('/email-confirmation?email=${Uri.encodeComponent(authState.email)}');
           } else if (authState is PasswordResetSent) {
-            // Mot de passe réinitialisé
+            // Mot de passe réinitialisé (ancien comportement)
             showTopSnackBar(
               Overlay.of(context),
               TopSnackBar(
-                title: context.l10n.resetEmail(authState.email),
+                title: "context.l10n.checkYourMailbox",
               ),
             );
+          } else if (authState is PasswordResetCodeSent) {
+            // Affichage du dialog de saisie du code
+            showModalSheet(
+              context: context,
+              backgroundColor: Colors.transparent,
+              child: PasswordResetCodeDialog(email: authState.email),
+            );
+          } else if (authState is PasswordResetSuccess) {
+            // Affichage du dialog de succès
+            Navigator.of(context).popUntil((route) => route.isFirst);
+            showModalSheet(
+              context: context,
+              backgroundColor: Colors.transparent,
+              child: const PasswordResetSuccessDialog(),
+            );
           } else if (authState is AuthError) {
-            // Afficher l'erreur
             showTopSnackBar(
               Overlay.of(context),
               TopSnackBar(

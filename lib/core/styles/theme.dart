@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'colors.dart';
 
 ThemeData getAppTheme(Brightness brightness) {
@@ -20,33 +21,33 @@ ThemeData getAppTheme(Brightness brightness) {
       onError: Colors.white,
     ),
     textTheme: TextTheme(
-      headlineLarge: TextStyle(
+      headlineLarge: GoogleFonts.roboto(
         fontSize: 32,
         fontWeight: FontWeight.bold,
         color: isDark ? AppColorsDark.textPrimary : AppColors.textPrimary,
       ),
-      titleLarge: TextStyle(
+      titleLarge: GoogleFonts.roboto(
         fontSize: 24,
         fontWeight: FontWeight.w600,
         color: isDark ? AppColorsDark.textPrimary : AppColors.textPrimary,
       ),
-      bodyLarge: TextStyle(
+      bodyLarge: GoogleFonts.roboto(
         fontSize: 35,
         fontWeight: FontWeight.w600,
-        letterSpacing: -0.3,
+        letterSpacing: -0.15,
         height: 1.2,
         color: isDark ? AppColorsDark.textPrimary : AppColors.textPrimary,
       ),
-      bodyMedium: TextStyle(
+      bodyMedium: GoogleFonts.roboto(
         fontSize: 20,
         fontWeight: FontWeight.w600,
-        letterSpacing: -0.3,
+        letterSpacing: -0.15,
         color: isDark ? AppColorsDark.textPrimary : AppColors.textPrimary,
       ),
-      bodySmall: TextStyle(
+      bodySmall: GoogleFonts.roboto(
         fontSize: 17,
         fontWeight: FontWeight.w600,
-        letterSpacing: -0.3,
+        letterSpacing: -0.15,
         color: isDark ? AppColorsDark.textPrimary : AppColors.textPrimary,
       ),
     ),

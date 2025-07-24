@@ -50,3 +50,14 @@ class EmailConfirmationRequired extends AuthState {
   @override
   List<Object> get props => [email];
 }
+
+class PasswordResetCodeSent extends AuthState {
+  final String email;
+  
+  PasswordResetCodeSent(this.email);
+  
+  @override
+  List<Object> get props => [email];
+}
+
+class PasswordResetSuccess extends AuthState {}

@@ -1564,25 +1564,68 @@ class AuthRepository {
     }
   }
 
-  /* ───────── MOT DE PASSE OUBLIÉ ───────── */
+  /* ───────── RÉINITIALISATION MOT DE PASSE (version OTP) ───────── */
   Future<void> resetPassword({required String email}) async {
     try {
-      print('🔐 Demande de réinitialisation de mot de passe pour: $email');
+      LogConfig.logInfo('🔐 Demande de réinitialisation mot de passe pour: $email');
       
-      // URL de redirection vers votre serveur
-      const String serverUrl = String.fromEnvironment(
-        'SERVER_URL', 
-        defaultValue: 'http://trailix.app' // Remplacez par votre URL de production
-      );
-
+      // Utiliser signInWithOtp pour envoyer un vrai code OTP à 6 chiffres
       await _supabase.auth.resetPasswordForEmail(
         email.trim(),
-        redirectTo: '$serverUrl/api/auth/reset-password', // ✅ /api/auth/ au lieu de /auth/
       );
       
-      LogConfig.logInfo('Email de réinitialisation envoyé');
+      LogConfig.logInfo('Code OTP à 6 chiffres envoyé');
     } catch (e) {
       LogConfig.logError('❌ Erreur réinitialisation mot de passe: $e');
+      throw AuthExceptionHandler.handleSupabaseError(e);
+    }
+  }
+
+  /* ───────── RÉINITIALISATION AVEC TOKEN/OTP ───────── */
+  Future<void> resetPasswordWithOTP({
+    required String email,
+    required String otp,
+    required String newPassword,
+  }) async {
+    try {
+      LogConfig.logInfo('🔐 Réinitialisation mot de passe avec OTP pour: $email');
+      
+      // Vérifier l'OTP et se connecter temporairement
+      final response = await _supabase.auth.verifyOTP(
+        type: OtpType.email, // Utiliser OtpType.email au lieu de recovery
+        email: email.trim(),
+        token: otp.trim(),
+      );
+
+      if (response.user == null) {
+        throw AuthException('Code invalide ou expiré');
+      }
+
+      LogConfig.logInfo('✅ OTP vérifié, mise à jour du mot de passe...');
+
+      // Maintenant qu'on est connecté, changer le mot de passe
+      await _supabase.auth.updateUser(
+        UserAttributes(
+          password: newPassword,
+        ),
+      );
+      
+      LogConfig.logInfo('✅ Mot de passe mis à jour avec succès');
+      
+      // Se déconnecter après le changement pour forcer une nouvelle connexion
+      await _supabase.auth.signOut();
+      
+      LogConfig.logInfo('✅ Réinitialisation complète, utilisateur déconnecté');
+    } catch (e) {
+      LogConfig.logError('❌ Erreur réinitialisation avec OTP: $e');
+      
+      // En cas d'erreur, s'assurer qu'on est déconnecté
+      try {
+        await _supabase.auth.signOut();
+      } catch (_) {
+        // Ignorer les erreurs de déconnexion
+      }
+      
       throw AuthExceptionHandler.handleSupabaseError(e);
     }
   }

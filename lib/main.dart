@@ -50,6 +50,11 @@ void main() async {
       SystemUiMode.edgeToEdge,
     );
 
+    SystemChrome.setPreferredOrientations([
+      DeviceOrientation.portraitUp,
+      DeviceOrientation.portraitDown
+    ]);
+
     try {
       // ✅ PHASE 1 : Initialisation parallèle des services critiques
       await _initializeCriticalServices();

@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:runaway/core/helper/extensions/extensions.dart';
-import 'package:runaway/core/utils/constant/constants.dart';
+// import 'package:runaway/core/utils/constant/constants.dart';
 import 'package:runaway/core/utils/injections/bloc_provider_extension.dart';
 import 'package:runaway/core/widgets/modal_sheet.dart';
 import 'package:runaway/core/widgets/squircle_btn.dart';
 import 'package:runaway/features/auth/presentation/bloc/auth_event.dart';
 import 'package:runaway/features/auth/presentation/widgets/auth_text_field.dart';
-import 'package:runaway/features/auth/presentation/widgets/forgot_password_dialog.dart';
+// import 'package:runaway/features/auth/presentation/widgets/forgot_password_dialog.dart';
 
 class LoginScreen extends StatefulWidget {
   final bool isLoading;
@@ -32,13 +32,13 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  void _showForgotPasswordDialog() {
-    showModalSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      child: ForgotPasswordDialog(),
-    );
-  }
+  // void _showForgotPasswordDialog() {
+  //   showModalSheet(
+  //     context: context,
+  //     backgroundColor: Colors.transparent,
+  //     child: ForgotPasswordDialog(),
+  //   );
+  // }
 
   String? emailValidator(String? v) => v != null && v.contains('@') ? null : context.l10n.emailInvalid;
 
@@ -114,21 +114,21 @@ class _LoginScreenState extends State<LoginScreen> {
                     controller: _passwordController,
                     enabled: !widget.isLoading,
                   ),
-                  10.h,
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: GestureDetector(
-                      onTap: widget.isLoading ? null : _showForgotPasswordDialog,
-                      child: Text(
-                        context.l10n.forgotPassword,
-                        style: context.bodySmall?.copyWith(
-                          fontSize: 14,
-                          color: context.adaptiveTextPrimary,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                  ),
+                  // 10.h,
+                  // Align(
+                  //   alignment: Alignment.centerRight,
+                  //   child: GestureDetector(
+                  //     onTap: widget.isLoading ? null : _showForgotPasswordDialog,
+                  //     child: Text(
+                  //       context.l10n.forgotPassword,
+                  //       style: context.bodySmall?.copyWith(
+                  //         fontSize: 14,
+                  //         color: context.adaptiveTextPrimary,
+                  //         fontWeight: FontWeight.w600,
+                  //       ),
+                  //     ),
+                  //   ),
+                  // ),
                 ],
               ),
               20.h,
