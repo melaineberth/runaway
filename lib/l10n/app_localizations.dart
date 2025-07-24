@@ -2984,6 +2984,54 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Unable to reset password'**
   String get resetPasswordImpossible;
+
+  /// Instructions to enter OTP code
+  ///
+  /// In en, this message translates to:
+  /// **'Enter the 6-digit code'**
+  String get enterVerificationCode;
+
+  /// Message indicating where OTP was sent
+  ///
+  /// In en, this message translates to:
+  /// **'We sent a 6-digit code to {email}'**
+  String verificationCodeSentTo(String email);
+
+  /// Action to verify OTP code
+  ///
+  /// In en, this message translates to:
+  /// **'Verify'**
+  String get verify;
+
+  /// Error message for invalid OTP
+  ///
+  /// In en, this message translates to:
+  /// **'Invalid or expired code'**
+  String get invalidCode;
+
+  /// Error message when OTP field is empty
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter the verification code'**
+  String get codeRequired;
+
+  /// Error message for incorrect OTP length
+  ///
+  /// In en, this message translates to:
+  /// **'Code must be 6 digits'**
+  String get codeMustBe6Digits;
+
+  /// Alternative option to use email link
+  ///
+  /// In en, this message translates to:
+  /// **'Or use the link in your email'**
+  String get orUseEmailLink;
+
+  /// Delete credit after abuse of connection
+  ///
+  /// In en, this message translates to:
+  /// **'Abuse of connection'**
+  String get abuseConnection;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hugeicons/hugeicons.dart';
@@ -27,6 +28,11 @@ class _EmailConfirmationScreenState extends State<EmailConfirmationScreen> {
   bool _canResend = false; // Commencer par false
   int _cooldownSeconds = 30; // Commencer avec 30 secondes
   bool _isResending = false;
+
+  // 🆕 Controllers pour OTP
+  final TextEditingController _otpController = TextEditingController();
+  final FocusNode _otpFocusNode = FocusNode();
+  String? _otpError;
 
   @override
   void initState() {
@@ -70,6 +76,40 @@ class _EmailConfirmationScreenState extends State<EmailConfirmationScreen> {
       
       context.authBloc.add(ResendConfirmationRequested(email: widget.email));
     }
+  }
+
+  // Validation et vérification OTP
+  void _verifyOTP() {
+    final otp = _otpController.text.trim();
+    
+    // Validation
+    if (otp.isEmpty) {
+      setState(() {
+        _otpError = context.l10n.codeRequired;
+      });
+      return;
+    }
+    
+    if (otp.length != 6 || !RegExp(r'^\d{6}$').hasMatch(otp)) {
+      setState(() {
+        _otpError = context.l10n.codeMustBe6Digits;
+      });
+      return;
+    }
+    
+    setState(() {
+      _otpError = null;
+    });
+    
+    // Déclencher la vérification
+    context.authBloc.add(VerifyOTPRequested(email: widget.email, otp: otp));
+  }
+
+  @override
+  void dispose() {
+    _otpController.dispose();
+    _otpFocusNode.dispose();
+    super.dispose();
   }
 
   @override
@@ -136,10 +176,10 @@ class _EmailConfirmationScreenState extends State<EmailConfirmationScreen> {
                 _buildTitle(),
                 16.h,
                 _buildSubtitle(),
-                40.h,
-                _buildResendButton(),
-                12.h,
-                _buildBackToLoginButton(),
+                32.h,
+                _buildOTPField(),
+                16.h,
+                _buildVerifyButton(),
                 const Spacer(flex: 2),
               ],
             ),
@@ -189,28 +229,101 @@ class _EmailConfirmationScreenState extends State<EmailConfirmationScreen> {
     );
   }
 
-  Widget _buildResendButton() {
+  // Champ de saisie OTP
+  Widget _buildOTPField() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          context.l10n.enterVerificationCode,
+          style: context.bodySmall?.copyWith(
+            color: context.adaptiveTextSecondary,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        8.h,
+        TextField(
+          controller: _otpController,
+          focusNode: _otpFocusNode,
+          keyboardType: TextInputType.number,
+          textAlign: TextAlign.center,
+          maxLength: 6,
+          inputFormatters: [
+            FilteringTextInputFormatter.digitsOnly,
+          ],
+          style: context.bodyMedium?.copyWith(
+            fontSize: 24,
+            fontWeight: FontWeight.w600,
+            letterSpacing: 8,
+          ),
+          decoration: InputDecoration(
+            counterText: '',
+            hintText: '000000',
+            hintStyle: context.bodyMedium?.copyWith(
+              fontSize: 24,
+              fontWeight: FontWeight.w300,
+              letterSpacing: 8,
+              color: context.adaptiveTextSecondary.withValues(alpha: 0.3),
+            ),
+            filled: true,
+            fillColor: context.adaptiveTextSecondary.withValues(alpha: 0.05),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide.none,
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(
+                color: context.adaptivePrimary,
+                width: 2,
+              ),
+            ),
+            errorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(
+                color: context.colorScheme.error,
+                width: 2,
+              ),
+            ),
+            focusedErrorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(
+                color: context.colorScheme.error,
+                width: 2,
+              ),
+            ),
+            errorText: _otpError,
+          ),
+          onChanged: (value) {
+            if (_otpError != null) {
+              setState(() {
+                _otpError = null;
+              });
+            }
+            // Auto-vérification quand 6 chiffres sont saisis
+            if (value.length == 6) {
+              _verifyOTP();
+            }
+          },
+        ),
+      ],
+    );
+  }
+
+  // Bouton de vérification
+  Widget _buildVerifyButton() {
     return BlocBuilder<AuthBloc, AuthState>(
       builder: (context, state) {
         final isLoading = state is AuthLoading;
+        final hasValidCode = _otpController.text.length == 6;
         
         return SquircleBtn(
           isPrimary: true,
           isLoading: isLoading,
-          onTap: (_canResend && !isLoading) ? _resendEmail : null,
-          label: _canResend 
-            ? context.l10n.resendCode
-            : context.l10n.resendCodeInDelay(_cooldownSeconds),
+          onTap: (hasValidCode && !isLoading) ? _verifyOTP : null,
+          label: context.l10n.verify,
         );
       },
-    );
-  }
-
-  Widget _buildBackToLoginButton() {
-    return SquircleBtn(
-      isPrimary: false,
-      onTap: () => context.go('/login'),
-      label: context.l10n.loginBack,
     );
   }
 }

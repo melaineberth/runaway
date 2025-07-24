@@ -44,6 +44,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
 
     on<ForgotPasswordRequested>(_onForgotPassword);
     on<ResendConfirmationRequested>(_onResendConfirmation);
+    on<VerifyOTPRequested>(_onVerifyOTP);
 
     // handlers internes
     on<_InternalProfileLoaded>(_onInternalProfileLoaded);
@@ -644,7 +645,29 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     }
   }
 
-  // auth_bloc.dart
+  Future<void> _onVerifyOTP(VerifyOTPRequested e, Emitter<AuthState> emit) async {
+    emit(AuthLoading());
+    try {
+      final user = await _repo.verifyOTP(email: e.email, otp: e.otp);
+      if (user == null) {
+        return emit(AuthError('Code invalide ou expiré'));
+      }
+
+      LogConfig.logInfo('✅ OTP vérifié pour: ${user.email}');
+      
+      // Email confirmé, passer à la complétion du profil
+      emit(ProfileIncomplete(user));
+    } catch (err) {
+      LogConfig.logError('❌ Erreur vérification OTP: $err');
+      // Rester sur l'écran de confirmation avec l'erreur
+      emit(AuthError(err.toString()));
+      
+      // Retourner à l'état de confirmation après l'erreur
+      Future.delayed(const Duration(seconds: 2), () {
+        if (!isClosed) emit(EmailConfirmationRequired(e.email));
+      });
+    }
+  }
 
   Future<void> _onForgotPassword(
     ForgotPasswordRequested event,

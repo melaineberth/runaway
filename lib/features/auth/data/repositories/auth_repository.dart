@@ -200,13 +200,6 @@ class AuthRepository {
           await _storeSessionTokensSecurely(resp.session!);
         }
 
-        // 🆕 Vérification immédiate après inscription
-        if (deviceFingerprint.isNotEmpty) {
-          // Attendre un peu pour que les triggers se terminent
-          await Future.delayed(Duration(seconds: 1));
-          await _forceDeviceCheck(resp.user!.id);
-        }
-
         MonitoringService.instance.finishApiRequest(
           operationId,
           statusCode: 200,
@@ -348,17 +341,7 @@ class AuthRepository {
               ),
             );
             
-            LogConfig.logInfo('✅ Métadonnées Google ajoutées');
-            
-            // 🆕 Vérification différée pour laisser le temps aux triggers de s'exécuter
-            Future.delayed(Duration(seconds: 3), () async {
-              try {
-                LogConfig.logInfo('🌐 Vérification Google différée...');
-                await _forceDeviceCheck(user.id);
-              } catch (e) {
-                LogConfig.logError('❌ Erreur vérification différée Google: $e');
-              }
-            });
+            LogConfig.logInfo('✅ Métadonnées Google ajoutées');            
           }
         } catch (e) {
           LogConfig.logError('⚠️ Erreur ajout métadonnées Google: $e');
@@ -559,17 +542,7 @@ class AuthRepository {
               ),
             );
             
-            LogConfig.logInfo('✅ Métadonnées Apple ajoutées');
-            
-            // 🆕 Vérification différée pour laisser le temps aux triggers de s'exécuter
-            Future.delayed(Duration(seconds: 3), () async {
-              try {
-                LogConfig.logInfo('🍎 Vérification Apple différée...');
-                await _forceDeviceCheck(user.id);
-              } catch (e) {
-                LogConfig.logError('❌ Erreur vérification différée Apple: $e');
-              }
-            });
+            LogConfig.logInfo('✅ Métadonnées Apple ajoutées');            
           }
         } catch (e) {
           LogConfig.logError('⚠️ Erreur ajout métadonnées Apple: $e');
@@ -741,7 +714,56 @@ class AuthRepository {
         }
       }
 
-      // 3. MODIFICATION : Récupérer l'email depuis l'utilisateur connecté
+      // 3. Validation anti-abus des crédits
+      try {
+        LogConfig.logInfo('🔍 Validation finale anti-abus des crédits pour: $userId');
+        
+        final validationResult = await _supabase
+            .rpc('validate_user_credits', params: {'p_user_id': userId});
+        
+        if (validationResult != null) {
+          if (validationResult['credits_removed'] == true) {
+            LogConfig.logWarning('⚠️ Crédits retirés pour abus détecté: $userId');
+          } else if (validationResult['credits_validated'] == true) {
+            LogConfig.logInfo('✅ Crédits validés: $userId (${validationResult['credits_count']} crédits)');
+          }
+        }
+        
+        // 🆕 AJOUT: Si l'appareil n'était pas encore enregistré, l'enregistrer maintenant
+        try {
+          final currentUser = _supabase.auth.currentUser;
+          final deviceFingerprint = currentUser?.userMetadata?['device_fingerprint'] as String?;
+          
+          if (deviceFingerprint != null && deviceFingerprint.isNotEmpty) {
+            // Vérifier si l'appareil est déjà enregistré
+            final existingRegistration = await _supabase
+                .from('device_registrations')
+                .select('id')
+                .eq('device_fingerprint', deviceFingerprint)
+                .eq('email', currentUser!.email!)
+                .maybeSingle();
+            
+            if (existingRegistration == null) {
+              LogConfig.logInfo('📝 Enregistrement appareil lors de completeProfile (rattrapage)...');
+              
+              final registerResult = await _supabase.rpc('register_device_after_otp', params: {
+                'p_user_id': userId,
+              });
+              
+              LogConfig.logInfo('✅ Enregistrement rattrapage: $registerResult');
+            } else {
+              LogConfig.logInfo('✅ Appareil déjà enregistré');
+            }
+          }
+        } catch (e) {
+          LogConfig.logWarning('⚠️ Erreur vérification/enregistrement appareil: $e');
+        }
+      } catch (e) {
+        LogConfig.logError('⚠️ Erreur validation crédits (continuant): $e');
+        // On continue même si la validation échoue
+      }
+
+      // 4. Récupérer l'email depuis l'utilisateur connecté
       final user = _supabase.auth.currentUser;
       if (user?.email == null) {
         throw AuthException('Utilisateur non connecté ou email manquant');
@@ -755,7 +777,7 @@ class AuthRepository {
       // Convertir en format Flutter-friendly (ex: 0xFF2196F3)
       final colorHex = '0x${userColor.toARGB32().toRadixString(16).padLeft(8, '0').toUpperCase()}';
 
-      // 4. Sauvegarder le profil complet
+      // 5. Sauvegarder le profil complet
       final data = await _supabase
         .from('profiles')
         .upsert({
@@ -786,7 +808,7 @@ class AuthRepository {
         // Ne pas faire échouer la création du profil pour ça
       }
 
-      // 🆕 Monitoring de succès
+      // Monitoring de succès
       MonitoringService.instance.finishOperation(
         operationId,
         success: true,
@@ -797,7 +819,7 @@ class AuthRepository {
         },
       );
 
-      // 🆕 Métrique business - profil complété
+      // Métrique business - profil complété
       MonitoringService.instance.recordMetric(
         'profile_completed',
         1,
@@ -808,7 +830,7 @@ class AuthRepository {
         },
       );
 
-      // 5. MODIFICATION : Informer si l'avatar n'a pas pu être uploadé
+      // 6. Informer si l'avatar n'a pas pu être uploadé
       if (avatar != null && avatarUrl == null) {
         // On peut retourner le profil mais signaler que l'avatar a échoué
         // L'UI pourra afficher un avertissement
@@ -820,7 +842,7 @@ class AuthRepository {
     } catch (e, stackTrace) {
       LogConfig.logError('❌ Erreur complétion profil: $e');
 
-      // 🆕 Monitoring d'erreur
+      // Monitoring d'erreur
       MonitoringService.instance.finishOperation(
         operationId,
         success: false,
@@ -1742,6 +1764,83 @@ class AuthRepository {
       LogConfig.logInfo('💳 Cache crédits invalidé (${keysToRemove.length} clés supprimées)');
     } catch (e) {
       LogConfig.logError('❌ Erreur invalidation cache crédits: $e');
+    }
+  }
+
+  /* ───────── VÉRIFICATION OTP EMAIL ───────── */
+  Future<User?> verifyOTP({required String email, required String otp}) async {
+    try {
+      print('🔍 Vérification OTP pour: $email');
+      
+      final response = await _supabase.auth.verifyOTP(
+        type: OtpType.signup,
+        email: email.trim(),
+        token: otp.trim(),
+      );
+      
+      if (response.user == null) {
+        throw AuthException('Échec de la vérification OTP');
+      }
+
+      final user = response.user!;
+      
+      // 🔒 Stocker les tokens si session créée
+      if (response.session != null) {
+        await _storeSessionTokensSecurely(response.session!);
+      }
+
+      // 🆕 CRUCIAL: Générer et mettre à jour les métadonnées d'appareil après vérification OTP
+      try {
+        final deviceFingerprint = await DeviceFingerprintService.instance.generateDeviceFingerprint();
+        
+        if (deviceFingerprint.isNotEmpty) {
+          LogConfig.logInfo('📱 Mise à jour métadonnées après OTP: ${deviceFingerprint['device_fingerprint']?.substring(0, 8)}...');
+          
+          await _supabase.auth.updateUser(
+            UserAttributes(
+              data: {
+                'device_fingerprint': deviceFingerprint['device_fingerprint'],
+                'device_model': deviceFingerprint['device_model'],
+                'device_manufacturer': deviceFingerprint['device_manufacturer'],
+                'platform': deviceFingerprint['platform'],
+                'otp_verified_timestamp': DateTime.now().toIso8601String(),
+              },
+            ),
+          );
+          
+          LogConfig.logInfo('✅ Métadonnées appareil mises à jour après vérification OTP');
+          
+          // 🆕 NOUVEAU: Enregistrer l'appareil dans device_registrations après OTP
+          try {
+            LogConfig.logInfo('📝 Enregistrement appareil après vérification OTP...');
+            
+            final registerResult = await _supabase.rpc('register_device_after_otp', params: {
+              'p_user_id': user.id,
+            });
+            
+            if (registerResult != null) {
+              LogConfig.logInfo('✅ Résultat enregistrement après OTP: $registerResult');
+              
+              if (registerResult['device_registered'] == true) {
+                final creditsGranted = registerResult['credits_granted'] == true;
+                LogConfig.logInfo('🎯 Appareil enregistré après OTP - crédits accordés: $creditsGranted');
+              }
+            }
+          } catch (e) {
+            LogConfig.logWarning('⚠️ Erreur enregistrement appareil après OTP: $e');
+            // Ne pas faire échouer la vérification OTP pour autant
+          }
+        }
+      } catch (e) {
+        LogConfig.logWarning('⚠️ Erreur mise à jour métadonnées post-OTP: $e');
+        // Continuer même si ça échoue
+      }
+      
+      LogConfig.logInfo('✅ OTP vérifié avec succès pour: ${user.email}');
+      return user;
+    } catch (e) {
+      LogConfig.logError('❌ Erreur vérification OTP: $e');
+      throw AuthExceptionHandler.handleSupabaseError(e);
     }
   }
 }

@@ -5,6 +5,7 @@ enum CreditTransactionType {
   usage,      // Utilisation pour génération
   bonus,      // Bonus (parrainage, etc.)
   refund,     // Remboursement
+  abuse_removal,
 }
 
 class CreditTransaction extends Equatable {
@@ -40,19 +41,6 @@ class CreditTransaction extends Equatable {
       return '+$amount';
     } else {
       return amount.toString();
-    }
-  }
-
-  String get typeDisplayName {
-    switch (type) {
-      case CreditTransactionType.purchase:
-        return 'Achat';
-      case CreditTransactionType.usage:
-        return 'Utilisation';
-      case CreditTransactionType.bonus:
-        return 'Bonus';
-      case CreditTransactionType.refund:
-        return 'Remboursement';
     }
   }
 

@@ -2106,5 +2106,46 @@
   "resetPasswordImpossible": "Unable to reset password",
   "@resetPasswordImpossible": {
     "description":  "Error when the provider auth is Google or Apple"
+  },
+
+  
+
+
+  "enterVerificationCode": "Enter the 6-digit code",
+  "@enterVerificationCode": {
+    "description": "Instructions to enter OTP code"
+  },
+  "verificationCodeSentTo": "We sent a 6-digit code to {email}",
+  "@verificationCodeSentTo": {
+    "description": "Message indicating where OTP was sent",
+    "placeholders": {
+      "email": {
+        "type": "String"
+      }
+    }
+  },
+  "verify": "Verify",
+  "@verify": {
+    "description": "Action to verify OTP code"
+  },
+  "invalidCode": "Invalid or expired code",
+  "@invalidCode": {
+    "description": "Error message for invalid OTP"
+  },
+  "codeRequired": "Please enter the verification code",
+  "@codeRequired": {
+    "description": "Error message when OTP field is empty"
+  },
+  "codeMustBe6Digits": "Code must be 6 digits",
+  "@codeMustBe6Digits": {
+    "description": "Error message for incorrect OTP length"
+  },
+  "orUseEmailLink": "Or use the link in your email",
+  "@orUseEmailLink": {
+    "description": "Alternative option to use email link"
+  },
+  "abuseConnection": "Abuse of connection",
+  "@abuseConnection": {
+    "description": "Delete credit after abuse of connection"
   }
 }

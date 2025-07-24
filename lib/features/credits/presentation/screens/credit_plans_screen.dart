@@ -432,6 +432,8 @@ class _CreditPlansScreenState extends State<CreditPlansScreen> {
         return Colors.blue;
       case CreditTransactionType.refund:
         return Colors.purple;
+      case CreditTransactionType.abuse_removal:
+        return Colors.red;
     }
   }
 
@@ -445,6 +447,8 @@ class _CreditPlansScreenState extends State<CreditPlansScreen> {
         return HugeIcons.solidRoundedParty;
       case CreditTransactionType.refund:
         return HugeIcons.solidRoundedRefresh;
+      case CreditTransactionType.abuse_removal:
+        return HugeIcons.solidRoundedCancelCircle;
     }
   }
 
@@ -502,6 +506,8 @@ class _CreditPlansScreenState extends State<CreditPlansScreen> {
         return context.l10n.bonusCreditsTitle;
       case CreditTransactionType.refund:
         return context.l10n.refundCreditsTitle;
+      case CreditTransactionType.abuse_removal:
+        return context.l10n.abuseConnection;
     }
   }
 

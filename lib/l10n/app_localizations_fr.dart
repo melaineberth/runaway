@@ -1526,4 +1526,30 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get resetPasswordImpossible => 'Impossible de réinitialiser le mot de passe';
+
+  @override
+  String get enterVerificationCode => 'Saisissez le code à 6 chiffres';
+
+  @override
+  String verificationCodeSentTo(String email) {
+    return 'Nous avons envoyé un code à 6 chiffres à $email';
+  }
+
+  @override
+  String get verify => 'Vérifier';
+
+  @override
+  String get invalidCode => 'Code invalide ou expiré';
+
+  @override
+  String get codeRequired => 'Veuillez saisir le code de vérification';
+
+  @override
+  String get codeMustBe6Digits => 'Le code doit contenir 6 chiffres';
+
+  @override
+  String get orUseEmailLink => 'Ou utilisez le lien dans votre email';
+
+  @override
+  String get abuseConnection => 'Abuse of connection';
 }

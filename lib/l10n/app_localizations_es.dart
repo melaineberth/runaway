@@ -1526,4 +1526,30 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get resetPasswordImpossible => 'No se puede restablecer la contraseña';
+
+  @override
+  String get enterVerificationCode => 'Enter the 6-digit code';
+
+  @override
+  String verificationCodeSentTo(String email) {
+    return 'We sent a 6-digit code to $email';
+  }
+
+  @override
+  String get verify => 'Verify';
+
+  @override
+  String get invalidCode => 'Invalid or expired code';
+
+  @override
+  String get codeRequired => 'Please enter the verification code';
+
+  @override
+  String get codeMustBe6Digits => 'Code must be 6 digits';
+
+  @override
+  String get orUseEmailLink => 'Or use the link in your email';
+
+  @override
+  String get abuseConnection => 'Abuse of connection';
 }

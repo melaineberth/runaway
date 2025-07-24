@@ -2106,5 +2106,44 @@
   "resetPasswordImpossible": "Impossible de réinitialiser le mot de passe",
   "@resetPasswordImpossible": {
     "description":  "Erreur lorsque l’auth provider est Google ou Apple"
+  },
+
+
+  "enterVerificationCode": "Saisissez le code à 6 chiffres",
+  "@enterVerificationCode": {
+    "description": "Instructions pour saisir le code OTP"
+  },
+  "verificationCodeSentTo": "Nous avons envoyé un code à 6 chiffres à {email}",
+  "@verificationCodeSentTo": {
+    "description": "Message indiquant où l'OTP a été envoyé",
+    "placeholders": {
+      "email": {
+        "type": "String"
+      }
+    }
+  },
+  "verify": "Vérifier",
+  "@verify": {
+    "description": "Action pour vérifier le code OTP"
+  },
+  "invalidCode": "Code invalide ou expiré",
+  "@invalidCode": {
+    "description": "Message d'erreur pour un OTP invalide"
+  },
+  "codeRequired": "Veuillez saisir le code de vérification",
+  "@codeRequired": {
+    "description": "Message d'erreur quand le champ OTP est vide"
+  },
+  "codeMustBe6Digits": "Le code doit contenir 6 chiffres",
+  "@codeMustBe6Digits": {
+    "description": "Message d'erreur pour une longueur OTP incorrecte"
+  },
+  "orUseEmailLink": "Ou utilisez le lien dans votre email",
+  "@orUseEmailLink": {
+    "description": "Option alternative d'utiliser le lien email"
+  },
+  "abuseConnection": "Abuse of connection",
+  "@abuseConnection": {
+    "description": "Delete credit after abuse of connection"
   }
 }
