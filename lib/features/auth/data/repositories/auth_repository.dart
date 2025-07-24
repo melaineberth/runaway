@@ -1276,11 +1276,32 @@ class AuthRepository {
 
       // 1. Supprimer les données utilisateur dans Supabase
       await _supabase
-          .from('profiles')
-          .delete()
-          .eq('id', user.id);
+        .from('credit_transactions')
+        .delete()
+        .eq('user_id', user.id);
 
-      LogConfig.logInfo('Profil supprimé de la base de données');
+      LogConfig.logInfo('Profil supprimé de la base credit_transactions');
+
+      await _supabase
+        .from('user_credits')
+        .delete()
+        .eq('user_id', user.id);
+
+      LogConfig.logInfo('Profil supprimé de la base user_credits');
+
+      await _supabase
+        .from('user_routes')
+        .delete()
+        .eq('user_id', user.id);
+
+      LogConfig.logInfo('Profil supprimé de la base user_routes');
+
+      await _supabase
+        .from('profiles')
+        .delete()
+        .eq('id', user.id);
+
+      LogConfig.logInfo('Profil supprimé de la base de données profiles');
 
       // 🆕 2. Nettoyer TOUTES les données locales avant la déconnexion finale
       try {
@@ -1309,10 +1330,18 @@ class AuthRepository {
       // 5. Nettoyer les tokens stockés
       await SecureConfig.clearStoredTokens();
 
-      // 6. Déconnexion finale
+      // 6. Déconnexion Supabase
       await _supabase.auth.signOut();
+      
+      // 7. Suppression Supabase User avec une instance dédiée admin
+      final adminClient = SupabaseClient(
+        SecureConfig.supabaseUrl,
+        SecureConfig.supabaseServiceRoleKey,
+      );
 
-      LogConfig.logInfo('✅ Compte supprimé et données nettoyées avec succès');
+      await adminClient.auth.admin.deleteUser(user.id);
+
+      LogConfig.logInfo('✅ Compte Supabase supprimé via adminClient');
     } catch (e) {
       LogConfig.logError('❌ Erreur suppression compte: $e');
       

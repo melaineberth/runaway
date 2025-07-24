@@ -68,23 +68,36 @@ class _CreditPlansScreenState extends State<CreditPlansScreen> {
         'user_credits': context.availableCredits,
         'has_credits': context.hasCredits,
       },
-      child: MultiBlocListener(
-        listeners: [
-          // 🆕 Écouter les succès d'achat depuis CreditsBloc
-          BlocListener<CreditsBloc, CreditsState>(
-            listener: (context, state) {
-              if (state is CreditPurchaseSuccess) {
-                _showPurchaseSuccessDialog(state);
-              } else if (state is CreditsError) {
-                _showErrorSnackBar(state.message);
-              }
-            },
+      child: ClipRRect(
+        borderRadius: BorderRadius.only(
+          topLeft: Radius.circular(40),
+          topRight: Radius.circular(40),
+        ),
+        child: Container(
+          padding: EdgeInsets.symmetric(
+            horizontal: 30.0,
+            vertical: 30.0,
           ),
-        ],
-        child: BlocBuilder<AppDataBloc, AppDataState>(
-          builder: (context, appDataState) {
-            return _buildMainContent(appDataState);
-          },
+          color: context.adaptiveBackground,
+          child: MultiBlocListener(
+            listeners: [
+              // 🆕 Écouter les succès d'achat depuis CreditsBloc
+              BlocListener<CreditsBloc, CreditsState>(
+                listener: (context, state) {
+                  if (state is CreditPurchaseSuccess) {
+                    _showPurchaseSuccessDialog(state);
+                  } else if (state is CreditsError) {
+                    _showErrorSnackBar(state.message);
+                  }
+                },
+              ),
+            ],
+            child: BlocBuilder<AppDataBloc, AppDataState>(
+              builder: (context, appDataState) {
+                return _buildMainContent(appDataState);
+              },
+            ),
+          ),
         ),
       ),
     );
@@ -148,12 +161,14 @@ class _CreditPlansScreenState extends State<CreditPlansScreen> {
         Positioned(
           left: 0,
           right: 0,
-          bottom: 0,
+          bottom: 10,
           child: SquircleBtn(
             isPrimary: true,
             label: context.l10n.buyCredits,
             onTap: () => showModalSheet(
               context: context, 
+              isDismissible: true,
+              enableDrag: true,
               backgroundColor: Colors.transparent,
               child: CreditPlanModal(),
             ),

@@ -42,12 +42,13 @@ void showModalSheet({
   Color backgroundColor = Colors.black,
   bool isDismissible = true,
   bool useSafeArea = false,
+  bool enableDrag = false,
 }) {
   showModalBottomSheet(
     useRootNavigator: true,
     isScrollControlled: true,
     isDismissible: isDismissible,
-    enableDrag: false,
+    enableDrag: enableDrag,
     context: context,
     useSafeArea: useSafeArea,
     backgroundColor: backgroundColor,

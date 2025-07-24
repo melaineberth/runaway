@@ -87,12 +87,9 @@ class ThemeSelector extends StatelessWidget {
                             if (!isSelected) {
                               context.themeBloc.add(ThemeChanged(themeMode));
                               
-                              // 🆕 Délai pour voir la transition
-                              Future.delayed(const Duration(milliseconds: 150), () {
-                                if (context.mounted && Navigator.of(context).canPop()) {
-                                  Navigator.of(context).pop();
-                                }
-                              });
+                              if (context.mounted && Navigator.of(context).canPop()) {
+                                Navigator.of(context).pop();
+                              }
                             }
                           },
                         ),

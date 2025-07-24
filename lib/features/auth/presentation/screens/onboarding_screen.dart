@@ -6,7 +6,9 @@ import 'package:go_router/go_router.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:runaway/core/helper/extensions/extensions.dart';
+import 'package:runaway/core/utils/constant/constants.dart';
 import 'package:runaway/core/utils/injections/bloc_provider_extension.dart';
+import 'package:runaway/core/widgets/modal_dialog.dart';
 import 'package:runaway/core/widgets/squircle_btn.dart';
 import 'package:runaway/core/widgets/top_snackbar.dart';
 import 'package:runaway/features/auth/presentation/bloc/auth_bloc.dart';
@@ -98,9 +100,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     }
   }
 
-  Future<void> _pickAvatar() async {
+  Future<void> _pickAvatar(ImageSource source) async {
     try {
-      final picked = await ImagePicker().pickImage(source: ImageSource.gallery);
+      final picked = await ImagePicker().pickImage(source: source);
       if (picked != null) {
         setState(() => _avatar = File(picked.path));
       }
@@ -115,6 +117,27 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         );
       }
     }
+  }
+
+  void chooseTypePicture() {
+    showModalSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      child: ModalDialog(
+        title: context.l10n.changePhoto, 
+        subtitle: context.l10n.desiredSelectionMode, 
+        validLabel: context.l10n.cameraMode,
+        cancelLabel:context.l10n.galleryMode,
+        onValid: () {
+          Navigator.pop(context);
+          _pickAvatar(ImageSource.camera);
+        },
+        onCancel: () {
+          Navigator.pop(context);
+          _pickAvatar(ImageSource.gallery);
+        },
+      )
+    );
   }
 
   String? _validateFullName(String? value) {
@@ -209,7 +232,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                         Column(
                           children: [
                             GestureDetector(
-                              onTap: isLoading ? null : _pickAvatar,
+                              onTap: isLoading ? null : chooseTypePicture,
                               child: Stack(
                                 clipBehavior: Clip.none,
                                 children: [

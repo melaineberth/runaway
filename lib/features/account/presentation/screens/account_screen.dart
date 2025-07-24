@@ -2,7 +2,6 @@ import 'dart:io';
 import 'dart:ui';
 
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -14,9 +13,6 @@ import 'package:runaway/core/helper/config/log_config.dart';
 import 'package:runaway/core/helper/extensions/extensions.dart';
 import 'package:runaway/core/blocs/app_data/app_data_bloc.dart';
 import 'package:runaway/core/blocs/app_data/app_data_state.dart';
-// import 'package:runaway/core/blocs/notification/notification_bloc.dart';
-// import 'package:runaway/core/blocs/notification/notification_event.dart';
-// import 'package:runaway/core/blocs/notification/notification_state.dart';
 import 'package:runaway/core/blocs/theme_bloc/theme_bloc.dart';
 import 'package:runaway/core/utils/constant/constants.dart';
 import 'package:runaway/core/utils/injections/bloc_provider_extension.dart';
@@ -25,7 +21,6 @@ import 'package:runaway/core/helper/services/monitoring_service.dart';
 import 'package:runaway/core/widgets/blurry_page.dart';
 import 'package:runaway/core/widgets/icon_btn.dart';
 import 'package:runaway/core/widgets/modal_dialog.dart';
-import 'package:runaway/core/widgets/modal_sheet.dart';
 import 'package:runaway/core/widgets/squircle_container.dart';
 import 'package:runaway/core/widgets/top_snackbar.dart';
 import 'package:runaway/features/account/presentation/screens/edit_profile_screen.dart';
@@ -192,20 +187,32 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
             });
           }
         },
-        child: BlocBuilder<AuthBloc, AuthState>(
-          // 🆕 Empêcher le rebuild pendant la mise à jour du profil
-          buildWhen: (previous, current) {
-            if (_isProfileUpdating) return false;
-            return true;
-          },
-          builder: (_, authState) {          
-            // Si l'utilisateur est connecté, afficher le contenu
-            if (authState is Authenticated) {
-              return _buildAuthenticatedView(authState);
-            }
-        
-            return _buildEmptyUnauthenticated();
-          },
+        child: ClipRRect(
+          borderRadius: BorderRadius.only(
+            topLeft: Radius.circular(40),
+            topRight: Radius.circular(40),
+          ),
+          child: Container(
+            padding: EdgeInsets.symmetric(
+              horizontal: 30.0,
+            ),
+            color: context.adaptiveBackground,
+            child: BlocBuilder<AuthBloc, AuthState>(
+              // 🆕 Empêcher le rebuild pendant la mise à jour du profil
+              buildWhen: (previous, current) {
+                if (_isProfileUpdating) return false;
+                return true;
+              },
+              builder: (_, authState) {          
+                // Si l'utilisateur est connecté, afficher le contenu
+                if (authState is Authenticated) {
+                  return _buildAuthenticatedView(authState);
+                }
+            
+                return _buildEmptyUnauthenticated();
+              },
+            ),
+          ),
         ),
       ),
     );
@@ -292,7 +299,7 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
 
     return BlurryPage(
       children: [
-        20.h,
+        50.h,
         AnimatedBuilder(
           animation: _fadeAnimation,
           builder: (context, child) {
@@ -341,11 +348,7 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
               context,
               label: context.l10n.language,
               icon: HugeIcons.strokeRoundedLanguageSkill,
-              onTap: () => showModalSheet(
-                context: context,
-                backgroundColor: Colors.transparent,
-                child: LanguageSelector(),
-              ),
+              onTap: () => _navigateToEditLanguage(),
               child: IconBtn(
                 padding: 0.0,
                 backgroundColor: Colors.transparent,
@@ -422,12 +425,7 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
               context,
               label: context.l10n.theme,
               icon: HugeIcons.strokeRoundedPaintBoard,
-              onTap:
-                  () => showModalSheet(
-                    context: context,
-                    backgroundColor: Colors.transparent,
-                    child: const ThemeSelector(),
-                  ),
+              onTap: () => _navigateToEditTheme(),
               child: BlocBuilder<ThemeBloc, ThemeState>(
                 builder: (context, themeState) {
                   String currentThemeLabel;
@@ -883,10 +881,54 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
     showModalSheet(
       context: context,
       useSafeArea: true,
+      isDismissible: true,
+      enableDrag: true,
       backgroundColor: Colors.transparent,
-      child: ModalSheet(child: CreditPlansScreen()),
+      child: CreditPlansScreen(),
     );
     // context.push('/manage-credits');
+  }
+
+  void _navigateToEditTheme() {
+    _trackAccountAction('edit_theme_clicked');
+
+    showModalBottomSheet(
+      useRootNavigator: true,
+      isScrollControlled: true,
+      isDismissible: false,
+      enableDrag: false,
+      context: context,
+      useSafeArea: false,
+      backgroundColor: Colors.transparent,
+      clipBehavior: Clip.antiAliasWithSaveLayer,
+      builder: (context) => ThemeSelector(),
+    ).then((_) {
+      // Désactiver le chargement si la modal se ferme sans mise à jour
+      if (mounted) {
+        context.pop();
+      }
+    });
+  }
+
+  void _navigateToEditLanguage() {
+    _trackAccountAction('edit_language_clicked');
+
+    showModalBottomSheet(
+      useRootNavigator: true,
+      isScrollControlled: true,
+      isDismissible: false,
+      enableDrag: false,
+      context: context,
+      useSafeArea: false,
+      backgroundColor: Colors.transparent,
+      clipBehavior: Clip.antiAliasWithSaveLayer,
+      builder: (context) => LanguageSelector(),
+    ).then((_) {
+      // Désactiver le chargement si la modal se ferme sans mise à jour
+      if (mounted) {
+        context.pop();
+      }
+    });
   }
 
   void _navigateToEditProfile(BuildContext context, Profile profile) {

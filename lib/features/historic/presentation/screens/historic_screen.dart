@@ -283,6 +283,7 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
 
     return BlurryPage(
       children: [
+        30.h,
         AnimatedBuilder(
           animation: _fadeAnimation,
           builder: (context, child) {
@@ -562,19 +563,31 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<AuthBloc, AuthState>(
-      builder: (_, authState) {          
-        // Si l'utilisateur est connecté, afficher le contenu
-        if (authState is Authenticated) {
-          return BlocBuilder<AppDataBloc, AppDataState>(
-            builder: (context, appDataState) {
-              return _buildMainContent(appDataState);
-            },
-          );
-        }
-
-        return _buildEmptyUnauthenticated();
-      },
+    return ClipRRect(
+      borderRadius: BorderRadius.only(
+        topLeft: Radius.circular(40),
+        topRight: Radius.circular(40),
+      ),
+      child: Container(
+        padding: EdgeInsets.symmetric(
+          horizontal: 30.0,
+        ),
+        color: context.adaptiveBackground,
+        child: BlocBuilder<AuthBloc, AuthState>(
+          builder: (_, authState) {          
+            // Si l'utilisateur est connecté, afficher le contenu
+            if (authState is Authenticated) {
+              return BlocBuilder<AppDataBloc, AppDataState>(
+                builder: (context, appDataState) {
+                  return _buildMainContent(appDataState);
+                },
+              );
+            }
+        
+            return _buildEmptyUnauthenticated();
+          },
+        ),
+      ),
     );
   }
 

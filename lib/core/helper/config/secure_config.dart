@@ -24,6 +24,7 @@ class SecureConfig {
   static String? _cachedMapboxToken;
   static String? _cachedSupabaseUrl;
   static String? _cachedSupabaseAnonKey;
+  static String? _cachedSupabaseServiceRoleKey;
 
   // 🆕 Cache pour monitoring
   static String? _cachedSentryDsn;
@@ -512,6 +513,35 @@ class SecureConfig {
     }
     
     _cachedSupabaseAnonKey = key;
+    return key;
+  }
+
+  static String get supabaseServiceRoleKey {
+    if (_cachedSupabaseServiceRoleKey != null) return _cachedSupabaseServiceRoleKey!;
+    
+    String? key;
+    if (kIsProduction) {
+      key = const String.fromEnvironment('SUPABASE_SERVICE_ROLE_KEY_PROD');
+      if (key.isEmpty) {
+        key = dotenv.env['SUPABASE_SERVICE_ROLE_KEY_PROD'];
+      }
+    } else {
+      key = const String.fromEnvironment('SUPABASE_SERVICE_ROLE_KEY_DEV');
+      if (key.isEmpty) {
+        key = dotenv.env['SUPABASE_SERVICE_ROLE_KEY_DEV'] ?? dotenv.env['SUPABASE_SERVICE_ROLE_KEY'];
+      }
+    }
+    
+    if (key == null || key.isEmpty) {
+      throw Exception('SUPABASE_SERVICE_ROLE_KEY non configuré pour l\'environnement ${kIsProduction ? 'PRODUCTION' : 'DEVELOPMENT'}');
+    }
+    
+    // Validation basique de la clé Supabase (format JWT)
+    if (!key.startsWith('eyJ')) {
+      throw Exception('Clé Supabase anonyme invalide: doit être un JWT');
+    }
+    
+    _cachedSupabaseServiceRoleKey = key;
     return key;
   }
 

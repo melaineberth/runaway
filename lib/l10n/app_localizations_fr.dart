@@ -1551,7 +1551,7 @@ class AppLocalizationsFr extends AppLocalizations {
   String get orUseEmailLink => 'Ou utilisez le lien dans votre email';
 
   @override
-  String get abuseConnection => 'Abuse of connection';
+  String get abuseConnection => 'Abus de connexion';
 
   @override
   String get passwordResetSuccess => 'Mot de passe mis à jour !';

@@ -2145,9 +2145,9 @@
   "@orUseEmailLink": {
     "description": "Option alternative d'utiliser le lien email"
   },
-  "abuseConnection": "Abuse of connection",
+  "abuseConnection": "Abus de connexion",
   "@abuseConnection": {
-    "description": "Delete credit after abuse of connection"
+    "description": "Supprimer le crédit après un abus de connexion"
   },
   "passwordResetSuccess": "Mot de passe mis à jour !",
   "@passwordResetSuccess": {

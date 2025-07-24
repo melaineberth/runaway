@@ -16,7 +16,6 @@ import 'package:runaway/core/utils/injections/bloc_provider_extension.dart';
 import 'package:runaway/core/helper/extensions/monitoring_extensions.dart';
 import 'package:runaway/core/helper/services/conversion_triggers.dart';
 import 'package:runaway/core/helper/services/monitoring_service.dart';
-import 'package:runaway/core/widgets/modal_sheet.dart';
 import 'package:runaway/features/account/presentation/screens/account_screen.dart';
 import 'package:runaway/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:runaway/features/historic/presentation/screens/historic_screen.dart';
@@ -2511,7 +2510,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
         ));
       }
     } else {
-      _presentModalSheet((_) => ModalSheet(child: child), useSafeArea: true);
+      _presentModalSheet((_) => child, useSafeArea: true);
     }
   }
 
