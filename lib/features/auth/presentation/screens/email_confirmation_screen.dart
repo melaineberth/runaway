@@ -68,15 +68,15 @@ class _EmailConfirmationScreenState extends State<EmailConfirmationScreen> {
     }
   }
 
-  void _resendEmail() {
-    if (_canResend && !_isResending) {
-      setState(() {
-        _isResending = true;
-      });
+  // void _resendEmail() {
+  //   if (_canResend && !_isResending) {
+  //     setState(() {
+  //       _isResending = true;
+  //     });
       
-      context.authBloc.add(ResendConfirmationRequested(email: widget.email));
-    }
-  }
+  //     context.authBloc.add(ResendConfirmationRequested(email: widget.email));
+  //   }
+  // }
 
   // Validation et vérification OTP
   void _verifyOTP() {

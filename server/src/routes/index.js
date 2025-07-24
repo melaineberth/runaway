@@ -46,6 +46,10 @@ router.post('/routes/generate',
   routeController.generateRoute
 );
 
+// ============= ROUTES D'AUTHENTIFICATION =============
+const authRoutes = require('./authRoutes');
+router.use('/auth', authRoutes);
+
 // ✅ NOUVELLE ROUTE : Analyse préalable de zone
 router.post('/routes/analyze-zone', async (req, res, next) => {
   try {

@@ -17,9 +17,9 @@ app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'"], // ✅ Autoriser scripts inline
+      styleSrc: ["'self'", "'unsafe-inline'"],  // ✅ Pour les styles aussi
       connectSrc: ["'self'", "https://graphhopper.com", "https://api.open-elevation.com"],
-      // ✅ FIX: Retirer workerSrc ou utiliser une syntaxe valide
-      // workerSrc: false, // ❌ INVALIDE
     },
   },
   crossOriginEmbedderPolicy: false, // Désactiver pour compatibilité mobile
