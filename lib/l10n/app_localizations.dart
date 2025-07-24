@@ -3032,6 +3032,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Abuse of connection'**
   String get abuseConnection;
+
+  /// Title shown when password reset is successful
+  ///
+  /// In en, this message translates to:
+  /// **'Password Updated!'**
+  String get passwordResetSuccess;
+
+  /// Description shown when password reset is successful
+  ///
+  /// In en, this message translates to:
+  /// **'Your password has been successfully updated. You can now log in with your new password.'**
+  String get passwordResetSuccessDesc;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

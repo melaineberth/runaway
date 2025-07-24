@@ -2109,6 +2109,9 @@
   },
 
 
+
+
+
   "enterVerificationCode": "Saisissez le code à 6 chiffres",
   "@enterVerificationCode": {
     "description": "Instructions pour saisir le code OTP"
@@ -2145,5 +2148,13 @@
   "abuseConnection": "Abuse of connection",
   "@abuseConnection": {
     "description": "Delete credit after abuse of connection"
+  },
+  "passwordResetSuccess": "Mot de passe mis à jour !",
+  "@passwordResetSuccess": {
+    "description": "Titre affiché quand la réinitialisation du mot de passe réussit"
+  },
+  "passwordResetSuccessDesc": "Votre mot de passe a été mis à jour avec succès. Vous pouvez maintenant vous connecter avec votre nouveau mot de passe.",
+  "@passwordResetSuccessDesc": {
+    "description": "Description affichée quand la réinitialisation du mot de passe réussit"
   }
 }

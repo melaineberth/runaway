@@ -1540,9 +1540,15 @@ class AuthRepository {
     try {
       print('🔐 Demande de réinitialisation de mot de passe pour: $email');
       
+      // URL de redirection vers votre serveur
+      const String serverUrl = String.fromEnvironment(
+        'SERVER_URL', 
+        defaultValue: 'http://trailix.app' // Remplacez par votre URL de production
+      );
+
       await _supabase.auth.resetPasswordForEmail(
         email.trim(),
-        redirectTo: '${SecureConfig.supabaseUrl}/auth/v1/verify?type=recovery',
+        redirectTo: '$serverUrl/api/auth/reset-password', // ✅ /api/auth/ au lieu de /auth/
       );
       
       LogConfig.logInfo('Email de réinitialisation envoyé');

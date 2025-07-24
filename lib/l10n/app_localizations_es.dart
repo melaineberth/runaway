@@ -1552,4 +1552,10 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get abuseConnection => 'Abuse of connection';
+
+  @override
+  String get passwordResetSuccess => 'Password Updated!';
+
+  @override
+  String get passwordResetSuccessDesc => 'Your password has been successfully updated. You can now log in with your new password.';
 }

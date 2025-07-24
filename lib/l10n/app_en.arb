@@ -2111,6 +2111,8 @@
   
 
 
+  
+
   "enterVerificationCode": "Enter the 6-digit code",
   "@enterVerificationCode": {
     "description": "Instructions to enter OTP code"
@@ -2147,5 +2149,13 @@
   "abuseConnection": "Abuse of connection",
   "@abuseConnection": {
     "description": "Delete credit after abuse of connection"
+  },
+  "passwordResetSuccess": "Password Updated!",
+  "@passwordResetSuccess": {
+    "description": "Title shown when password reset is successful"
+  },
+  "passwordResetSuccessDesc": "Your password has been successfully updated. You can now log in with your new password.",
+  "@passwordResetSuccessDesc": {
+    "description": "Description shown when password reset is successful"
   }
 }

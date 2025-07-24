@@ -1552,4 +1552,10 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get abuseConnection => 'Abuse of connection';
+
+  @override
+  String get passwordResetSuccess => 'Mot de passe mis à jour !';
+
+  @override
+  String get passwordResetSuccessDesc => 'Votre mot de passe a été mis à jour avec succès. Vous pouvez maintenant vous connecter avec votre nouveau mot de passe.';
 }

@@ -25,14 +25,24 @@
 
 	<key>CFBundleURLTypes</key>
 	<array>
-	<dict>
-		<key>CFBundleTypeRole</key>
-		<string>Editor</string>
-		<key>CFBundleURLSchemes</key>
-		<array>
-			<string>com.googleusercontent.apps.1058853410972-gp1jnf9sm1br069fuid5734kfgtv35l0</string>
-		</array>
-	</dict>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>com.googleusercontent.apps.1058853410972-gp1jnf9sm1br069fuid5734kfgtv35l0</string>
+			</array>
+		</dict>
+
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>trailix.deep.link</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>trailix</string>
+			</array>
+		</dict>
+
 	</array>
 
 	<key>NSAppTransportSecurity</key>

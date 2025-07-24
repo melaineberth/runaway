@@ -13,6 +13,7 @@ import 'package:runaway/features/auth/presentation/bloc/auth_state.dart';
 import 'package:runaway/features/auth/presentation/screens/auth_screen.dart';
 import 'package:runaway/features/auth/presentation/screens/email_confirmation_screen.dart';
 import 'package:runaway/features/auth/presentation/screens/onboarding_screen.dart';
+import 'package:runaway/features/auth/presentation/screens/password_reset_success_screen.dart';
 import 'package:runaway/features/credits/presentation/screens/credit_plans_screen.dart';
 import 'package:runaway/features/historic/presentation/screens/historic_screen.dart';
 import 'package:top_snackbar_flutter/top_snack_bar.dart';
@@ -80,6 +81,14 @@ final GoRouter router = GoRouter(
       pageBuilder: (context, state) => NoTransitionPage(
         key: state.pageKey,
         child: const OnboardingScreen(),
+      ),
+    ),
+    GoRoute(
+      path: '/password-reset-success',
+      name: 'password-reset-success',
+      pageBuilder: (context, state) => NoTransitionPage(
+        key: state.pageKey,
+        child: const PasswordResetSuccessScreen(),
       ),
     ),
     GoRoute(
