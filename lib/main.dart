@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:hydrated_bloc/hydrated_bloc.dart';
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart';
@@ -44,6 +45,10 @@ void main() async {
     SentryWidgetsFlutterBinding.ensureInitialized();
 
     LogConfig.logInfo('🚀 Démarrage Trailix...');
+
+    SystemChrome.setEnabledSystemUIMode(
+      SystemUiMode.edgeToEdge,
+    );
 
     try {
       // ✅ PHASE 1 : Initialisation parallèle des services critiques

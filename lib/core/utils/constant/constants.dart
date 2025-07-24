@@ -23,6 +23,10 @@ Future<double> getDeviceCornerRadius() async {
     return 0;
   }
 
+  if (Platform.isAndroid) {
+    return 50;
+  }
+
   try {
     final radius = await _channel.invokeMethod<double>('getCornerRadius');
 
@@ -53,6 +57,9 @@ void showModalSheet({
     useSafeArea: useSafeArea,
     backgroundColor: backgroundColor,
     clipBehavior: Clip.antiAliasWithSaveLayer,
+    constraints: BoxConstraints(
+      maxWidth: double.infinity, // ✅ Force la largeur maximale
+    ),
     builder: (modalCtx) {
       return child;
     },

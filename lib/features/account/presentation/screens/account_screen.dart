@@ -193,6 +193,7 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
             topRight: Radius.circular(40),
           ),
           child: Container(
+            height: MediaQuery.of(context).size.height / 1.1,
             padding: EdgeInsets.symmetric(
               horizontal: 30.0,
             ),
@@ -901,13 +902,11 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
       useSafeArea: false,
       backgroundColor: Colors.transparent,
       clipBehavior: Clip.antiAliasWithSaveLayer,
+      constraints: BoxConstraints(
+        maxWidth: double.infinity, // ✅ Force la largeur maximale
+      ),
       builder: (context) => ThemeSelector(),
-    ).then((_) {
-      // Désactiver le chargement si la modal se ferme sans mise à jour
-      if (mounted) {
-        context.pop();
-      }
-    });
+    );
   }
 
   void _navigateToEditLanguage() {
@@ -922,13 +921,11 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
       useSafeArea: false,
       backgroundColor: Colors.transparent,
       clipBehavior: Clip.antiAliasWithSaveLayer,
+      constraints: BoxConstraints(
+        maxWidth: double.infinity, // ✅ Force la largeur maximale
+      ),
       builder: (context) => LanguageSelector(),
-    ).then((_) {
-      // Désactiver le chargement si la modal se ferme sans mise à jour
-      if (mounted) {
-        context.pop();
-      }
-    });
+    );
   }
 
   void _navigateToEditProfile(BuildContext context, Profile profile) {
@@ -948,6 +945,9 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
       useSafeArea: false,
       backgroundColor: Colors.transparent,
       clipBehavior: Clip.antiAliasWithSaveLayer,
+      constraints: BoxConstraints(
+        maxWidth: double.infinity, // ✅ Force la largeur maximale
+      ),
       builder: (context) => EditProfileScreen(
         profile: profile,
       ),

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 import 'dart:math' as math;
 import 'dart:ui' as ui;
 
@@ -2152,6 +2153,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
       isScrollControlled: true,
       useSafeArea: useSafeArea,
       backgroundColor: Colors.transparent,
+      constraints: BoxConstraints(
+        maxWidth: double.infinity, 
+      ),
       builder: builder,
     );
 
@@ -2545,6 +2549,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
   }
 
   Widget _buildMainContent(BuildContext context, RouteGenerationState routeState) {
+    final double maxHeight = Platform.isAndroid ? 0.91 : 0.94;
+
     return Scaffold(
       extendBody: true,
       resizeToAvoidBottomInset: false,
@@ -2585,33 +2591,32 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
                 ),
               ),
     
-              // 🆕 MARQUEUR LOTTIE ANIMÉ
+              // Marqueur animé
               if (_showLottieMarker &&
                   _lottieMarkerLat != null &&
                   _lottieMarkerLng != null)
                 _buildLottieMarker(),
     
-              // Interface normale
+              // Interface
               if (!isNavigationMode && !_isInNavigationMode)
                 Align(
                   alignment: Alignment.topCenter,
                   child: SizedBox(
                     width: MediaQuery.of(context).size.width,
-                    height: MediaQuery.of(context).size.height * 0.94,
+                    height: MediaQuery.of(context).size.height * maxHeight,
                     child: SafeArea(
                       child: Padding(
                         padding: const EdgeInsets.all(20.0),
                         child: Column(
-                          mainAxisAlignment:
-                              MainAxisAlignment.spaceBetween,
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           crossAxisAlignment: CrossAxisAlignment.end,
                           children: [
-                            // Right menu
+                            // Menu haut
                             Row(
                               spacing: 8.0,
-                              mainAxisAlignment:
-                                  MainAxisAlignment.end,
+                              mainAxisAlignment: MainAxisAlignment.end,
                               children: [
+                                // Bouton droit
                                 Container(
                                   padding: EdgeInsets.symmetric(
                                     horizontal: 5.0,
@@ -2619,18 +2624,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
                                   ),
                                   decoration: BoxDecoration(
                                     color: context.adaptiveBackground,
-                                    borderRadius:
-                                        BorderRadius.circular(100),
+                                    borderRadius: BorderRadius.circular(100),
                                     boxShadow: [
                                       BoxShadow(
-                                        color: Colors.black
-                                            .withValues(alpha: 0.15),
+                                        color: Colors.black.withValues(alpha: 0.15),
                                         spreadRadius: 2,
                                         blurRadius: 30,
-                                        offset: Offset(
-                                          0,
-                                          0,
-                                        ), // changes position of shadow
+                                        offset: Offset(0, 0), // changes position of shadow
                                       ),
                                     ],
                                   ),
@@ -2639,15 +2639,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
                                       HugeIcons.solidRoundedFavourite,
                                       size: 25.0,
                                     ),
-                                    onPressed:
-                                        () => navigateTo(HistoricScreen()),
+                                    onPressed: () => navigateTo(HistoricScreen()),
                                   ),
                                 ),
     
-                                // Left menu
+                                // Bouton gauche
                                 Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                   children: [
                                     Container(
                                       padding: EdgeInsets.symmetric(
@@ -2655,25 +2653,14 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
                                         vertical: 5.0,
                                       ),
                                       decoration: BoxDecoration(
-                                        color:
-                                            context
-                                                .adaptiveBackground,
-                                        borderRadius:
-                                            BorderRadius.circular(
-                                              100,
-                                            ),
+                                        color: context.adaptiveBackground,
+                                        borderRadius:BorderRadius.circular(100),
                                         boxShadow: [
                                           BoxShadow(
-                                            color: Colors.black
-                                                .withValues(
-                                                  alpha: 0.15,
-                                                ),
+                                            color: Colors.black.withValues(alpha: 0.15),
                                             spreadRadius: 2,
                                             blurRadius: 30,
-                                            offset: Offset(
-                                              0,
-                                              0,
-                                            ), // changes position of shadow
+                                            offset: Offset(0, 0), // changes position of shadow
                                           ),
                                         ],
                                       ),
@@ -2683,16 +2670,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
                                           // User tracking
                                           IconButton(
                                             icon: Icon(
-                                              HugeIcons
-                                                  .solidRoundedMapsGlobal01,
-                                              color:
-                                                  _trackingMode ==
-                                                          TrackingMode
-                                                              .userTracking
-                                                      ? AppColors
-                                                          .primary
-                                                      : context
-                                                          .adaptiveTextSecondary,
+                                              HugeIcons.solidRoundedMapsGlobal01,
+                                              color: _trackingMode == TrackingMode.userTracking
+                                                ? AppColors.primary
+                                                : context.adaptiveTextSecondary,
                                               size: 28.0,
                                             ),
                                             onPressed: _activateUserTracking,
@@ -2700,8 +2681,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
                                           // Map style
                                           IconButton(
                                             icon: Icon(
-                                              HugeIcons
-                                                  .solidRoundedLayerMask01,
+                                              HugeIcons.solidRoundedLayerMask01,
                                               size: 28.0,
                                             ),
                                             onPressed: _openMapStyleSelector,
@@ -2714,6 +2694,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
                               ],
                             ),
     
+                            // Bouton de génération
                             Container(
                               padding: EdgeInsets.symmetric(
                                 horizontal: 6.0,
@@ -2729,7 +2710,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
                                     color: Colors.black.withValues(alpha: 0.15),
                                     spreadRadius: 2,
                                     blurRadius: 30,
-                                    offset: Offset(0,0,), // changes position of shadow
+                                    offset: Offset(0, 0),
                                   ),
                                 ],
                               ),
@@ -2747,7 +2728,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
                     ),
                   ),
                 ),
-    
+
+              // Barre de recherche
               FloatingLocationSearchSheet(
                 onLocationSelected: _onLocationSelected,
                 userLongitude: _userLongitude,

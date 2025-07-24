@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'dart:io';
+import 'dart:math' as math;
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
@@ -46,10 +48,13 @@ class FloatingLocationSearchSheet extends StatefulWidget {
 class _FloatingLocationSearchSheetState extends State<FloatingLocationSearchSheet> with TickerProviderStateMixin {
   // 📏 Constants de design -----------------------------------------------
   late final ScrollController _scrollController;
-  static const double _kCollapsedHeight = 92.0;
+
+  // 🆕 Hauteurs dynamiques calculées
+  static const double _kSearchBarHeight = 60.0;
+  static const double _kCollapsedPadding = 8.0;
+  
   static const double _kSnapMidRatio = 0.45;
   static const double _kMaxRatio = 0.93;
-  static const double _kMinCollapsedRatio = 0.082;
   static const Duration _kDebounceDelay = Duration(milliseconds: 500);
   static const Duration _kAnimationDelay = Duration(milliseconds: 100);
   
@@ -58,8 +63,6 @@ class _FloatingLocationSearchSheetState extends State<FloatingLocationSearchShee
   static const Duration _kCollapseDuration = Duration(milliseconds: 300);
   static const Duration _kMidDuration = Duration(milliseconds: 350);
 
-  // 1️⃣  Champ d'état
-  late double _currentCollapsedRatio;
   bool _isCutByTop = false;
 
   // Controllers et états ------------------------------------------------
@@ -85,23 +88,64 @@ class _FloatingLocationSearchSheetState extends State<FloatingLocationSearchShee
   
   /// 🎯 Vérifie si la modal doit être dans un état "expanded"
   bool get _shouldBeExpanded => _suggestions.isNotEmpty || _isKeyboardVisible || _searchController.text.isNotEmpty;
+
+  double _getMinimumCollapsedRatio(BuildContext context) {
+    final media = MediaQuery.of(context);
+    final minimumHeight = _calculateMinimumContentHeight(context);
+    
+    // Calculer le ratio mais avec une limite basse raisonnable
+    final ratio = minimumHeight / media.size.height;
+    
+    return ratio;
+  }
+
+  /// 📐 Calcule la hauteur minimale nécessaire pour afficher le contenu
+  double _calculateMinimumContentHeight(BuildContext context) {
+    final additionalHeight = Platform.isAndroid ? 20.0 : 17.0;
+    // Hauteur de base = barre de recherche + paddings
+    double baseHeight = _kSearchBarHeight + additionalHeight; // +16px pour le padding intérieur (8px top + 8px bottom)
+        
+    return baseHeight;
+  }
   
   /// 📐 Calcule le ratio collapsed basé sur l'état actuel
   double _calculateCollapsedRatio(BuildContext context) {
     final media = MediaQuery.of(context);
-    return _shouldBeExpanded 
-        ? ((_kCollapsedHeight + media.padding.bottom) / media.size.height)
-        : _kMinCollapsedRatio;
-  }
+    final minRatio = _getMinimumCollapsedRatio(context);
     
+    if (_shouldBeExpanded) {
+      // Pour l'état expanded, utiliser plus d'espace pour les suggestions
+      final expandedHeight = _calculateMinimumContentHeight(context) + media.padding.bottom + 100; // +100 pour suggestions
+      final expandedRatio = (expandedHeight / media.size.height).clamp(minRatio, _kMaxRatio);
+      return expandedRatio;
+    } else {
+      // Pour l'état collapsed, utiliser exactement la hauteur du contenu
+      return minRatio;
+    }
+  }
+
   /// 📐 Calcule le padding horizontal en fonction de la position de la sheet
   double _calculateHorizontalPadding(double currentPosition) {
+    final minRatio = _getMinimumCollapsedRatio(context);
     // Position entre 0.0 (collapsed) et 1.0 (expanded)
-    final progress = ((currentPosition - _kMinCollapsedRatio) / 
-                    (_kMaxRatio - _kMinCollapsedRatio)).clamp(0.0, 1.0);
+    final progress = ((currentPosition - minRatio) / (_kMaxRatio - minRatio)).clamp(0.0, 1.0);
 
     // Interpolation inversée : 20px (collapsed) vers 0px (expanded)
     return 20.0 - (progress * 20.0);
+  }
+
+  /// 📐 Calcule le padding bottom en fonction de la plateforme
+  double _calculateBottomPadding(BuildContext context, double horizontalPadding) {
+    final media = MediaQuery.of(context);
+  
+    // Sur Android, ajouter le padding système pour la barre de navigation
+    if (Platform.isAndroid) {
+      // Utiliser la hauteur minimale comme base + padding système
+      return math.max(horizontalPadding, media.padding.bottom + 8.0);
+    }
+    
+    // Sur iOS, garder le comportement existant mais avec minimum
+    return horizontalPadding;
   }
 
   // Lifecycle -----------------------------------------------------------
@@ -112,7 +156,6 @@ class _FloatingLocationSearchSheetState extends State<FloatingLocationSearchShee
     _initializeControllers();
     _setupKeyboardListener();
     _setupFocusListener();
-    _currentCollapsedRatio = _kMinCollapsedRatio;
 
     _scrollController = ScrollController()
       ..addListener(() => _updateEdgeState(_scrollController.position));
@@ -158,7 +201,8 @@ class _FloatingLocationSearchSheetState extends State<FloatingLocationSearchShee
     if (shouldCollapse && _sheetCtrl.isAttached) {
       // Vérifier si le sheet n'est pas déjà en position minimale
       final currentSize = _sheetCtrl.size;
-      if (currentSize > _kMinCollapsedRatio + 0.01) {
+      final minRatio = _getMinimumCollapsedRatio(context); // 🔧 CHANGEMENT
+      if (currentSize > minRatio + 0.01) {
         // Fermer le sheet avec animation
         _scheduleConditionalCollapse();
       }
@@ -361,8 +405,9 @@ class _FloatingLocationSearchSheetState extends State<FloatingLocationSearchShee
     try {
       _isAnimatingSheet = true;
       
+      final minRatio = _getMinimumCollapsedRatio(context); // 🔧 CHANGEMENT
       await _sheetCtrl.animateTo(
-        _kMinCollapsedRatio,
+        minRatio,
         duration: _kCollapseDuration,
         curve: AppleCurves.easeInOutQuart,
       );
@@ -515,12 +560,16 @@ class _FloatingLocationSearchSheetState extends State<FloatingLocationSearchShee
   @override
   Widget build(BuildContext context) {
     final desiredRatio = _calculateCollapsedRatio(context);
+    final minRatio = _getMinimumCollapsedRatio(context); // 🔧 AJOUT
+
+    // 🔧 CHANGEMENT: Initialiser _currentCollapsedRatio si pas encore fait
+    double? currentCollapsedRatio = desiredRatio;
 
     // ‼️ évite setState durant le build
-    if ((desiredRatio - _currentCollapsedRatio).abs() > 1e-4) {
+    if ((desiredRatio - currentCollapsedRatio).abs() > 1e-4) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted && !_isDisposed) {
-          setState(() => _currentCollapsedRatio = desiredRatio);
+          setState(() => currentCollapsedRatio = desiredRatio);
         }
       });
     }
@@ -528,15 +577,18 @@ class _FloatingLocationSearchSheetState extends State<FloatingLocationSearchShee
     return AnimatedBuilder(
       animation: _sheetCtrl,
       builder: (context, child) {
-        final currentPosition = _sheetCtrl.isAttached ? _sheetCtrl.size : _kMinCollapsedRatio;
+        final currentPosition = _sheetCtrl.isAttached ? _sheetCtrl.size : minRatio;
         final horizontalPadding = _calculateHorizontalPadding(currentPosition);
+
+        // 🆕 Calcul du padding bottom spécifique à la plateforme
+        final bottomPadding = _calculateBottomPadding(context, horizontalPadding);
 
         return Padding(
           padding: EdgeInsets.fromLTRB(
             horizontalPadding,
             0,
             horizontalPadding,
-            horizontalPadding,
+            bottomPadding,
           ),
           child: Container(
             decoration: BoxDecoration(
@@ -556,7 +608,7 @@ class _FloatingLocationSearchSheetState extends State<FloatingLocationSearchShee
                 decoration: BoxDecoration(
                   color: context.adaptiveBackground,
                 ),
-                child: _buildDraggableSheet(_currentCollapsedRatio),
+                child: _buildDraggableSheet(currentCollapsedRatio!),
               ),
             ),
           ),
@@ -595,7 +647,10 @@ class _FloatingLocationSearchSheetState extends State<FloatingLocationSearchShee
     child: Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        _buildSearchBar(),
+        Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: _buildSearchBar(),
+        ),
         CustomScrollView(
           shrinkWrap: true,
           controller: scrollController,
@@ -616,21 +671,18 @@ class _FloatingLocationSearchSheetState extends State<FloatingLocationSearchShee
 
   /// 🔍 Construit la barre de recherche
   Widget _buildSearchBar() {
-    return Padding(
-      padding: const EdgeInsets.all(8.0),
-      child: Row(
-        children: [
-          Expanded(child: _buildSearchField()),
-          _buildProfileButton(),
-        ],
-      ),
+    return Row(
+      children: [
+        Expanded(child: _buildSearchField()),
+        _buildProfileButton(),
+      ],
     );
   }
 
   /// 📝 Construit le champ de recherche
   Widget _buildSearchField() {
     return Container(
-      height: 60,
+      height: _kSearchBarHeight,
       padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 8),
       decoration: BoxDecoration(
         color: context.adaptiveDisabled.withValues(alpha: 0.08),

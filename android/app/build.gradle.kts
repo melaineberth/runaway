@@ -51,5 +51,6 @@ flutter {
 }
 
 dependencies {
+    implementation("com.google.mlkit:object-detection:17.0.2")
     implementation("androidx.multidex:multidex:2.0.1")
 }

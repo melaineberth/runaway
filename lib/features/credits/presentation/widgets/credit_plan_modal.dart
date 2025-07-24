@@ -245,7 +245,9 @@ class _CreditPlanModalState extends State<CreditPlanModal> {
       ],
       child: BlocBuilder<AppDataBloc, AppDataState>(
         builder: (context, appDataState) {
-          return _buildMainContent(appDataState);
+          return ModalSheet(
+            child: _buildMainContent(appDataState),
+          );
         },
       ),
     );
@@ -255,10 +257,8 @@ class _CreditPlanModalState extends State<CreditPlanModal> {
   Widget _buildMainContent(AppDataState appDataState) {
     // État de chargement
     if (!appDataState.isCreditDataLoaded && appDataState.isLoading) {
-      return ModalSheet(
-        child: const Center(
-          child: CircularProgressIndicator(),
-        ),
+      return const Center(
+        child: CircularProgressIndicator(),
       );
     }
 
@@ -280,139 +280,135 @@ class _CreditPlanModalState extends State<CreditPlanModal> {
       }
     });
 
-    return ModalSheet(
-      child: const Center(
-        child: CircularProgressIndicator(),
-      ),
+    return const Center(
+      child: CircularProgressIndicator(),
     );
   }
 
   Widget _buildPlansContent(AppDataState appDataState) {
     final plans = appDataState.activePlans;
 
-    return ModalSheet(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [    
-          Text(
-            context.l10n.creditPlanModalTitle,
-            style: context.bodyMedium?.copyWith(
-              color: context.adaptiveTextPrimary,
-              height: 1.3,
-            ),
-            textAlign: TextAlign.center,
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [    
+        Text(
+          context.l10n.creditPlanModalTitle,
+          style: context.bodyMedium?.copyWith(
+            color: context.adaptiveTextPrimary,
+            height: 1.3,
           ),
-          20.h, 
-          if (plans.isNotEmpty) ...[
-              ...List.generate(
-              plans.length,
-              (index) {
-                final plan = plans[index];
-                return Padding(
-                  padding: EdgeInsets.only(bottom: index == plans.length - 1 ? 0 : 8),
-                  child: CreditPlanCard(
-                    plan: plan,
-                    isSelected: selectedPlanId == plan.id,
-                    onTap: () {
-                      setState(() {
-                        selectedPlanId = plan.id;
-                      });
-                    },
-                  ),
-                ); 
-              }
-            ), 
-          ]
-          else ...[
-            // Aucun plan disponible
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: context.adaptiveSurface,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Column(
-                children: [
-                  Icon(
-                    Icons.info_outline,
+          textAlign: TextAlign.center,
+        ),
+        20.h, 
+        if (plans.isNotEmpty) ...[
+            ...List.generate(
+            plans.length,
+            (index) {
+              final plan = plans[index];
+              return Padding(
+                padding: EdgeInsets.only(bottom: index == plans.length - 1 ? 0 : 8),
+                child: CreditPlanCard(
+                  plan: plan,
+                  isSelected: selectedPlanId == plan.id,
+                  onTap: () {
+                    setState(() {
+                      selectedPlanId = plan.id;
+                    });
+                  },
+                ),
+              ); 
+            }
+          ), 
+        ]
+        else ...[
+          // Aucun plan disponible
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: context.adaptiveSurface,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Column(
+              children: [
+                Icon(
+                  Icons.info_outline,
+                  color: context.adaptiveTextSecondary,
+                  size: 32,
+                ),
+                12.h,
+                Text(
+                  context.l10n.notAvailablePlans,
+                  style: context.bodyMedium?.copyWith(
                     color: context.adaptiveTextSecondary,
-                    size: 32,
                   ),
-                  12.h,
-                  Text(
-                    context.l10n.notAvailablePlans,
-                    style: context.bodyMedium?.copyWith(
-                      color: context.adaptiveTextSecondary,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ],
-              ),
+                  textAlign: TextAlign.center,
+                ),
+              ],
             ),
-          ],
-
-          30.h,
-
-          Text(
-            context.l10n.creditPlanModalSubtitle,
-            style: context.bodySmall?.copyWith(
-              color: context.adaptiveTextSecondary,
-              fontSize: 15,
-              fontWeight: FontWeight.w500,
-            ),
-            textAlign: TextAlign.center,
-          ),
-
-          15.h,
-
-          SquircleBtn(
-            isPrimary: true,
-            onTap: selectedPlanId != null ? () {
-              // Récupérer le plan sélectionné depuis appDataState
-              final selectedPlan = appDataState.activePlans.firstWhere(
-                (plan) => plan.id == selectedPlanId,
-                orElse: () => throw Exception(context.l10n.notAvailablePlans),
-              );
-              
-              // Appeler _handlePurchase avec les bons paramètres
-              _handlePurchase(
-                selectedPlan.id,      // String planId
-                selectedPlan.credits, // int credits
-                selectedPlan.price,   // double price
-              );
-            } : null,
-            label: selectedPlanId != null 
-              ? context.l10n.buySelectedPlan
-              : context.l10n.selectPlan,
-          ),
-
-          // 🆕 Bouton de rafraîchissement si pas de plans
-          if (plans.isEmpty) ...[
-            12.h,
-            SquircleBtn(
-              isPrimary: false,
-              onTap: () {
-                LogConfig.logInfo('🔄 Rafraîchissement des plans demandé');
-                context.refreshCreditData();
-              },
-              label: context.l10n.refresh,
-            ),
-          ],
-
-          12.h,
-
-          Text(
-            context.l10n.creditPlanModalWarning,
-            style: context.bodySmall?.copyWith(
-              color: context.adaptiveTextSecondary,
-              fontSize: 10,
-              fontWeight: FontWeight.w500,
-            ),
-            textAlign: TextAlign.center,
           ),
         ],
-      ),
+    
+        30.h,
+    
+        Text(
+          context.l10n.creditPlanModalSubtitle,
+          style: context.bodySmall?.copyWith(
+            color: context.adaptiveTextSecondary,
+            fontSize: 15,
+            fontWeight: FontWeight.w500,
+          ),
+          textAlign: TextAlign.center,
+        ),
+    
+        15.h,
+    
+        SquircleBtn(
+          isPrimary: true,
+          onTap: selectedPlanId != null ? () {
+            // Récupérer le plan sélectionné depuis appDataState
+            final selectedPlan = appDataState.activePlans.firstWhere(
+              (plan) => plan.id == selectedPlanId,
+              orElse: () => throw Exception(context.l10n.notAvailablePlans),
+            );
+            
+            // Appeler _handlePurchase avec les bons paramètres
+            _handlePurchase(
+              selectedPlan.id,      // String planId
+              selectedPlan.credits, // int credits
+              selectedPlan.price,   // double price
+            );
+          } : null,
+          label: selectedPlanId != null 
+            ? context.l10n.buySelectedPlan
+            : context.l10n.selectPlan,
+        ),
+    
+        // 🆕 Bouton de rafraîchissement si pas de plans
+        if (plans.isEmpty) ...[
+          12.h,
+          SquircleBtn(
+            isPrimary: false,
+            onTap: () {
+              LogConfig.logInfo('🔄 Rafraîchissement des plans demandé');
+              context.refreshCreditData();
+            },
+            label: context.l10n.refresh,
+          ),
+        ],
+    
+        12.h,
+    
+        Text(
+          context.l10n.creditPlanModalWarning,
+          style: context.bodySmall?.copyWith(
+            color: context.adaptiveTextSecondary,
+            fontSize: 10,
+            fontWeight: FontWeight.w500,
+          ),
+          textAlign: TextAlign.center,
+        ),
+      ],
     );
   }
 

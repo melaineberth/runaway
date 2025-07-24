@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -105,102 +107,110 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
             );
           }
         },
-        child: Scaffold(
-          extendBodyBehindAppBar: true,
-          resizeToAvoidBottomInset: false,
-          appBar: AppBar(
-            automaticallyImplyLeading: false,
-            backgroundColor: Colors.transparent,
-            actions: [
-              IconButton(
-                onPressed: () => context.pop(), 
-                icon: Icon(
-                  HugeIcons.solidRoundedCancelCircle,
-                  color: context.adaptiveDisabled.withValues(alpha: 0.2),
-                  size: 28,
+        child: SizedBox(
+          height: MediaQuery.of(context).size.height / 1.1,
+          child: Scaffold(
+            extendBodyBehindAppBar: true,
+            resizeToAvoidBottomInset: false,
+            appBar: AppBar(
+              automaticallyImplyLeading: false,
+              backgroundColor: Colors.transparent,
+              actions: [
+                IconButton(
+                  onPressed: () => context.pop(), 
+                  icon: Icon(
+                    HugeIcons.solidRoundedCancelCircle,
+                    color: context.adaptiveDisabled.withValues(alpha: 0.2),
+                    size: 28,
+                  ),
                 ),
-              ),
-            ],
-          ),
-          body: BlocBuilder<AuthBloc, AuthState>(
-            builder: (context, authState) {
-              final isLoading = authState is AuthLoading;
-              
-              return BlocBuilder<ThemeBloc, ThemeState>(
-                // ✅ Éviter les rebuilds inutiles pour theme
-                buildWhen: (previous, current) => previous.themeMode != current.themeMode,
-                builder: (context, themeState) {
-                  return Column(
-                    children: [
-                      Expanded(
-                        child: Image.asset(
-                          themeState.themeMode == AppThemeMode.dark ? "assets/img/onboard_black.png" : "assets/img/onboard_white.png",
-                          fit: BoxFit.cover,
-                        ),
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.all(20.0),
-                        child: SquircleContainer(
-                          gradient: false,
-                          padding: EdgeInsets.all(20.0),
-                          color: context.adaptiveDisabled.withValues(alpha: 0.05),
-                          radius: 100.0,
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              _buildAuthInfo(),
-                  
-                              40.h,
-                  
-                              _buildSocialButtons(isLoading: isLoading),          
-                    
-                              50.h,
-                              
-                              Text.rich(
-                                TextSpan(
-                                  children: [
-                                    TextSpan(
-                                      text: initialIndex == 0 
-                                        ? context.l10n.haveAccount 
-                                        : context.l10n.createAccountQuestion,
-                                      style: context.bodySmall?.copyWith(
-                                        fontSize: 15,
-                                        color: context.adaptiveTextPrimary,
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                    ),
-                                    TextSpan(
-                                      text: initialIndex == 0  
-                                        ? ' ${context.l10n.logIn}'
-                                        : ' ${context.l10n.signUp}',
-                                      style: context.bodySmall?.copyWith(
-                                        fontSize: 15,
-                                        color: context.adaptivePrimary,
-                                        fontWeight: FontWeight.w700,
-                                      ),
-                                      recognizer: TapGestureRecognizer()
-                                      ..onTap = () {
-                                        setState(() {
-                                          if (initialIndex == 1) {
-                                            initialIndex = 0; // <= CORRECT
-                                          } else {
-                                            initialIndex = 1; // <= CORRECT
-                                          }
-                                        });
-                                      },
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
+              ],
+            ),
+            body: BlocBuilder<AuthBloc, AuthState>(
+              builder: (context, authState) {
+                final isLoading = authState is AuthLoading;
+                
+                return BlocBuilder<ThemeBloc, ThemeState>(
+                  // ✅ Éviter les rebuilds inutiles pour theme
+                  buildWhen: (previous, current) => previous.themeMode != current.themeMode,
+                  builder: (context, themeState) {
+                    return Column(
+                      children: [
+                        Expanded(
+                          child: Image.asset(
+                            themeState.themeMode == AppThemeMode.dark ? "assets/img/onboard_black.png" : "assets/img/onboard_white.png",
+                            fit: BoxFit.cover,
                           ),
                         ),
-                      ),
-                    ],
-                  );
-                }
-              );              
-            },
+                        Padding(
+                          padding: EdgeInsets.fromLTRB(
+                            20.0,
+                            20.0,
+                            20.0,
+                            Platform.isAndroid ? MediaQuery.of(context).padding.bottom + 20.0 : 20.0,
+                          ),
+                          child: SquircleContainer(
+                            gradient: false,
+                            padding: EdgeInsets.all(20.0),
+                            color: context.adaptiveDisabled.withValues(alpha: 0.05),
+                            radius: 100.0,
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                _buildAuthInfo(),
+                    
+                                40.h,
+                    
+                                _buildSocialButtons(isLoading: isLoading),          
+                      
+                                50.h,
+                                
+                                Text.rich(
+                                  TextSpan(
+                                    children: [
+                                      TextSpan(
+                                        text: initialIndex == 0 
+                                          ? context.l10n.haveAccount 
+                                          : context.l10n.createAccountQuestion,
+                                        style: context.bodySmall?.copyWith(
+                                          fontSize: 15,
+                                          color: context.adaptiveTextPrimary,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                      TextSpan(
+                                        text: initialIndex == 0  
+                                          ? ' ${context.l10n.logIn}'
+                                          : ' ${context.l10n.signUp}',
+                                        style: context.bodySmall?.copyWith(
+                                          fontSize: 15,
+                                          color: context.adaptivePrimary,
+                                          fontWeight: FontWeight.w700,
+                                        ),
+                                        recognizer: TapGestureRecognizer()
+                                        ..onTap = () {
+                                          setState(() {
+                                            if (initialIndex == 1) {
+                                              initialIndex = 0; // <= CORRECT
+                                            } else {
+                                              initialIndex = 1; // <= CORRECT
+                                            }
+                                          });
+                                        },
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    );
+                  }
+                );              
+              },
+            ),
           ),
         )
       ),
@@ -265,30 +275,33 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
         8.h,
         Row(
           children: [
-            Expanded(
-              child: SquircleBtn(
-                isPrimary: true,
-                isLoading: isLoading,
-                onTap: isLoading ? null : _handleAppleSignIn,
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      HugeIcons.solidSharpApple,
-                      color: Colors.white,
-                    ),
-                    5.w,
-                    Text(
-                      context.l10n.apple,
-                      style: context.bodySmall?.copyWith(
+            if (!Platform.isAndroid) ...[
+              Expanded(
+                child: SquircleBtn(
+                  isPrimary: true,
+                  isLoading: isLoading,
+                  onTap: isLoading ? null : _handleAppleSignIn,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        HugeIcons.solidSharpApple,
                         color: Colors.white,
                       ),
-                    ),
-                  ],
+                      5.w,
+                      Text(
+                        context.l10n.apple,
+                        style: context.bodySmall?.copyWith(
+                          color: Colors.white,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
-            ),
-            8.w,
+              8.w,
+            ],
+            
             Expanded(
               child: SquircleBtn(
                 isPrimary: true,

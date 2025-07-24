@@ -42,8 +42,9 @@ class _BlurryPageState extends State<BlurryPage> with TickerProviderStateMixin {
   late final AnimationController _blurAnimationController;
   late final Animation<double> _blurAnimation;
   bool _isCutByTop = false;
-  bool _isCutByLeft  = false;         // 🆕 si scroll horizontal
-  bool _isCutByRight = false;         // 🆕 si scroll horizontal
+  bool _isCutByBottom = false;
+  bool _isCutByLeft = false; // 🆕 si scroll horizontal
+  bool _isCutByRight = false; // 🆕 si scroll horizontal
 
   @override
   void initState() {
@@ -82,31 +83,42 @@ class _BlurryPageState extends State<BlurryPage> with TickerProviderStateMixin {
     super.dispose();
   }
 
-  // 1️⃣  helper : calcule la visibilité des bords
+  // Calcule la visibilité des bords
   void _updateEdgeState(ScrollMetrics m) {
     if (widget.scrollDirection == Axis.vertical) {
-      final cut = _scrollController.offset > 0;
-      if (cut != _isCutByTop) {
-        setState(() => _isCutByTop = cut);
+      final cutTop = _scrollController.offset > 0;
+      final cutBottom = _scrollController.offset < _scrollController.position.maxScrollExtent;
 
-        // Notifier le parent du changement d'état
-        widget.onScrollStateChanged?.call(cut);
-        
-        // Animer le flou au lieu d'un changement brusque
-        if (cut) {
+      bool changed = false;
+
+      if (cutTop != _isCutByTop) {
+        _isCutByTop = cutTop;
+        widget.onScrollStateChanged?.call(cutTop);
+
+        if (cutTop) {
           _blurAnimationController.forward();
         } else {
           _blurAnimationController.reverse();
         }
+
+        changed = true;
       }
+
+      if (cutBottom != _isCutByBottom) {
+        _isCutByBottom = cutBottom;
+        changed = true;
+      }
+
+      if (changed) setState(() {});
     } else {
       final offset = _scrollController.offset;
-      final max    = _scrollController.position.maxScrollExtent;
-      final cutLeft  = offset > 0;
+      final max = _scrollController.position.maxScrollExtent;
+      final cutLeft = offset > 0;
       final cutRight = offset < max;
+
       if (cutLeft != _isCutByLeft || cutRight != _isCutByRight) {
         setState(() {
-          _isCutByLeft  = cutLeft;
+          _isCutByLeft = cutLeft;
           _isCutByRight = cutRight;
         });
       }
@@ -131,34 +143,39 @@ class _BlurryPageState extends State<BlurryPage> with TickerProviderStateMixin {
                   padding: widget.padding ?? EdgeInsets.zero,
                   child: NotificationListener<ScrollNotification>(
                     onNotification: (n) {
-                      _updateEdgeState(n.metrics);        // <— met à jour même sans déplacement
+                      _updateEdgeState(n.metrics); // <— met à jour même sans déplacement
                       return false;
                     },
                     child: widget.child ??
-                        ListView(
-                          controller: _scrollController,
-                          scrollDirection: widget.scrollDirection,
-                          physics: widget.physics,
-                          shrinkWrap: widget.shrinkWrap,
-                          padding: widget.contentPadding,
-                          children: widget.children,
-                        ),
+                    ListView(
+                      controller: _scrollController,
+                      scrollDirection: widget.scrollDirection,
+                      physics: widget.physics,
+                      shrinkWrap: widget.shrinkWrap,
+                      padding: widget.contentPadding,
+                      children: widget.children,
+                    ),
                   ),
                 ),
+
+                // 🔸 Fade BOTTOM 
                 if (widget.scrollDirection == Axis.vertical)
-                IgnorePointer(
-                  ignoring: true,
-                  child: Container(
-                    height: MediaQuery.of(context).size.height / 2.5,
-                    decoration: BoxDecoration(
-                      gradient: SmoothGradient(
-                        from:
-                            widget.color?.withValues(alpha: 0) ??
-                            context.adaptiveBackground.withValues(alpha: 0),
-                        to: widget.color ?? context.adaptiveBackground,
-                        curve: Curves.linear,
-                        begin: Alignment.center,
-                        end: Alignment.bottomCenter,
+                AnimatedOpacity(
+                  opacity: _isCutByBottom ? 1.0 : 0.0,
+                  duration: const Duration(milliseconds: 300),
+                  curve: Curves.easeInOut,
+                  child: IgnorePointer(
+                    ignoring: true,
+                    child: Container(
+                      height: MediaQuery.of(context).size.height / 2.5,
+                      decoration: BoxDecoration(
+                        gradient: SmoothGradient(
+                          from: widget.color?.withValues(alpha: 0) ?? context.adaptiveBackground.withValues(alpha: 0),
+                          to: widget.color ?? context.adaptiveBackground,
+                          curve: Curves.linear,
+                          begin: Alignment.center,
+                          end: Alignment.bottomCenter,
+                        ),
                       ),
                     ),
                   ),
@@ -181,9 +198,7 @@ class _BlurryPageState extends State<BlurryPage> with TickerProviderStateMixin {
               decoration: BoxDecoration(
                 gradient: SmoothGradient(
                   from: widget.color ?? context.adaptiveBackground,
-                  to:
-                      widget.color?.withValues(alpha: 0) ??
-                      context.adaptiveBackground.withValues(alpha: 0),
+                  to: widget.color?.withValues(alpha: 0) ?? context.adaptiveBackground.withValues(alpha: 0),
                   curve: Curves.linear,
                   begin: Alignment.topCenter,
                   end: Alignment.center,
@@ -193,7 +208,7 @@ class _BlurryPageState extends State<BlurryPage> with TickerProviderStateMixin {
           ),
         ),
 
-        // 🔸 Fade GAUCHE (scroll horizontal)
+        // 🔸 Fade GAUCHE
         if (widget.scrollDirection == Axis.horizontal)
           AnimatedOpacity(
             opacity: _isCutByLeft ? 1 : 0,
@@ -208,10 +223,9 @@ class _BlurryPageState extends State<BlurryPage> with TickerProviderStateMixin {
                   decoration: BoxDecoration(
                     gradient: SmoothGradient(
                       from: widget.color ?? context.adaptiveBackground,
-                      to:   widget.color?.withValues(alpha: 0) ??
-                            context.adaptiveBackground.withValues(alpha: 0),
+                      to: widget.color?.withValues(alpha: 0) ?? context.adaptiveBackground.withValues(alpha: 0),
                       begin: Alignment.centerLeft,
-                      end:   Alignment.center,
+                      end: Alignment.center,
                       curve: Curves.linear,
                     ),
                   ),
@@ -220,7 +234,7 @@ class _BlurryPageState extends State<BlurryPage> with TickerProviderStateMixin {
             ),
           ),
 
-        // 🔸 Fade DROITE (scroll horizontal)
+        // 🔸 Fade DROITE
         if (widget.scrollDirection == Axis.horizontal)
           AnimatedOpacity(
             opacity: _isCutByRight ? 1 : 0,
@@ -234,11 +248,10 @@ class _BlurryPageState extends State<BlurryPage> with TickerProviderStateMixin {
                   width: MediaQuery.of(context).size.width / 2.5,
                   decoration: BoxDecoration(
                     gradient: SmoothGradient(
-                      from: widget.color?.withValues(alpha: 0) ??
-                            context.adaptiveBackground.withValues(alpha: 0),
-                      to:   widget.color ?? context.adaptiveBackground,
+                      from: widget.color?.withValues(alpha: 0) ?? context.adaptiveBackground.withValues(alpha: 0),
+                      to: widget.color ?? context.adaptiveBackground,
                       begin: Alignment.center,
-                      end:   Alignment.centerRight,
+                      end: Alignment.centerRight,
                       curve: Curves.linear,
                     ),
                   ),

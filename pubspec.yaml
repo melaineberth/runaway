@@ -79,6 +79,7 @@ dependencies:
   flutter_cache_manager: ^3.4.1
   flutter_secure_storage: ^9.2.4
   avatar_glow: ^3.0.1
+  google_fonts: ^6.2.1
 
 dev_dependencies:
   flutter_test:

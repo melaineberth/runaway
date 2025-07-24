@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:hugeicons/hugeicons.dart';
@@ -74,6 +76,7 @@ class _CreditPlansScreenState extends State<CreditPlansScreen> {
           topRight: Radius.circular(40),
         ),
         child: Container(
+          height: MediaQuery.of(context).size.height / 1.1,
           padding: EdgeInsets.symmetric(
             horizontal: 30.0,
             vertical: 30.0,
@@ -161,7 +164,7 @@ class _CreditPlansScreenState extends State<CreditPlansScreen> {
         Positioned(
           left: 0,
           right: 0,
-          bottom: 10,
+          bottom: Platform.isAndroid ? MediaQuery.of(context).padding.bottom : 10,
           child: SquircleBtn(
             isPrimary: true,
             label: context.l10n.buyCredits,

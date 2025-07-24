@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:runaway/core/helper/extensions/extensions.dart';
 import 'package:runaway/core/utils/constant/constants.dart';
@@ -31,11 +33,15 @@ class _ModalSheetState extends State<ModalSheet> {
   @override
   Widget build(BuildContext context) {
     // Inner R = max(0, Outer – Padding)
-    final double innerRadius =
-      (_deviceCornerRadius - _outerPadding).clamp(0.0, double.infinity);
+    final double innerRadius = (_deviceCornerRadius - _outerPadding).clamp(0.0, double.infinity);
 
     return Padding(
-      padding: EdgeInsets.all(_outerPadding),
+      padding: EdgeInsets.fromLTRB(
+        _outerPadding,
+        _outerPadding,
+        _outerPadding,
+        Platform.isAndroid ? MediaQuery.of(context).padding.bottom + _outerPadding : _outerPadding,
+      ),
       child: Container(
         height: widget.height,
         width: double.infinity,

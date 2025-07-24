@@ -569,6 +569,7 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
         topRight: Radius.circular(40),
       ),
       child: Container(
+        height: MediaQuery.of(context).size.height / 1.1,
         padding: EdgeInsets.symmetric(
           horizontal: 30.0,
         ),
