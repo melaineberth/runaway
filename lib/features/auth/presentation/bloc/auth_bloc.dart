@@ -42,10 +42,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     on<DeleteAccountRequested>(_onDeleteAccount);
     on<NotificationSettingsToggleRequested>(_onNotificationSettingsToggle);
 
-    on<ResendConfirmationRequested>(_onResendConfirmation);
     on<VerifyOTPRequested>(_onVerifyOTP);
-    on<ForgotPasswordRequested>(_onForgotPassword);
-    on<ResetPasswordWithOTPRequested>(_onResetPasswordWithOTP);
 
     // handlers internes
     on<_InternalProfileLoaded>(_onInternalProfileLoaded);
@@ -664,100 +661,6 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       emit(AuthError(err.toString()));
       
       // Retourner à l'état de confirmation après l'erreur
-      Future.delayed(const Duration(seconds: 2), () {
-        if (!isClosed) emit(EmailConfirmationRequired(e.email));
-      });
-    }
-  }
-
-  Future<void> _onForgotPassword(
-    ForgotPasswordRequested event,
-    Emitter<AuthState> emit,
-  ) async {
-    emit(AuthLoading());
-
-    try {
-      // Envoi du mail de reset via votre repo Supabase
-      await _repo.resetPassword(email: event.email);
-
-      // Succès → on passe à l'état de saisie du code OTP
-      emit(PasswordResetCodeSent(event.email));
-
-    } on supabase.AuthApiException catch (apiErr) {
-      // Si Supabase renvoie une erreur de type AuthApiException
-      final msg = apiErr.message.contains('invalid')
-          ? 'Adresse e-mail invalide ou non enregistrée.'
-          : apiErr.message;
-
-      LogConfig.logError('❌ Erreur réinitialisation mot de passe: $apiErr');
-      emit(AuthError(msg));
-
-      // Puis on revient à Unauthenticated pour permettre une nouvelle tentative
-      await Future.delayed(const Duration(seconds: 2));
-      if (!isClosed) {
-        emit(Unauthenticated());
-      }
-    } catch (err, stack) {
-      // Erreur réseau, autre…
-      LogConfig.logError('❌ Erreur mot de passe oublié: $err\n$stack');
-      emit(AuthError('Une erreur est survenue. Veuillez réessayer.'));
-
-      await Future.delayed(const Duration(seconds: 2));
-      if (!isClosed) {
-        emit(Unauthenticated());
-      }
-    }
-  }
-
-  Future<void> _onResetPasswordWithOTP(
-    ResetPasswordWithOTPRequested event,
-    Emitter<AuthState> emit,
-  ) async {
-    emit(AuthLoading());
-
-    try {
-      await _repo.resetPasswordWithOTP(
-        email: event.email,
-        otp: event.otp,
-        newPassword: event.newPassword,
-      );
-
-      LogConfig.logInfo('✅ Mot de passe réinitialisé avec succès');
-      
-      // Émission de l'état de succès
-      emit(PasswordResetSuccess());
-
-      // Retour à l'état non authentifié après 3 secondes
-      await Future.delayed(const Duration(seconds: 3));
-      if (!isClosed) {
-        emit(Unauthenticated());
-      }
-
-    } catch (err) {
-      LogConfig.logError('❌ Erreur réinitialisation avec OTP: $err');
-      
-      // Retourner à l'écran de saisie du code avec l'erreur
-      emit(AuthError(err.toString()));
-      
-      await Future.delayed(const Duration(seconds: 2));
-      if (!isClosed) {
-        emit(PasswordResetCodeSent(event.email));
-      }
-    }
-  }
-
-  Future<void> _onResendConfirmation(ResendConfirmationRequested e, Emitter<AuthState> emit) async {
-    // Ne pas émettre AuthLoading pour éviter de bloquer l'UI
-    try {
-      await _repo.resendConfirmationEmail(email: e.email);
-      LogConfig.logInfo('Email de confirmation renvoyé avec succès');
-      // Rester sur EmailConfirmationRequired pour maintenir l'écran
-      emit(EmailConfirmationRequired(e.email));
-    } catch (err) {
-      LogConfig.logError('❌ Erreur renvoi confirmation: $err');
-      emit(AuthError(err.toString()));
-      
-      // Retourner à l'état précédent après l'erreur
       Future.delayed(const Duration(seconds: 2), () {
         if (!isClosed) emit(EmailConfirmationRequired(e.email));
       });

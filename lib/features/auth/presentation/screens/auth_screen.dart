@@ -18,8 +18,6 @@ import 'package:runaway/features/auth/presentation/bloc/auth_event.dart';
 import 'package:runaway/features/auth/presentation/bloc/auth_state.dart';
 import 'package:runaway/features/auth/presentation/screens/login_screen.dart';
 import 'package:runaway/features/auth/presentation/screens/signup_screen.dart';
-import 'package:runaway/features/auth/presentation/widgets/password_reset_code_dialog.dart';
-import 'package:runaway/features/auth/presentation/widgets/password_reset_success_dialog.dart';
 import 'package:top_snackbar_flutter/top_snack_bar.dart';
 
 class AuthScreen extends StatefulWidget {
@@ -101,20 +99,11 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
               ),
             );
           } else if (authState is PasswordResetCodeSent) {
-            // Affichage du dialog de saisie du code
-            showModalSheet(
-              context: context,
-              backgroundColor: Colors.transparent,
-              child: PasswordResetCodeDialog(email: authState.email),
-            );
+            // Affichage du dialog de saisie 
+
           } else if (authState is PasswordResetSuccess) {
             // Affichage du dialog de succès
-            Navigator.of(context).popUntil((route) => route.isFirst);
-            showModalSheet(
-              context: context,
-              backgroundColor: Colors.transparent,
-              child: const PasswordResetSuccessDialog(),
-            );
+
           } else if (authState is AuthError) {
             showTopSnackBar(
               Overlay.of(context),

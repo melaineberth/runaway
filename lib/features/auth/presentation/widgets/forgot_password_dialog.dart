@@ -1,12 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:runaway/core/helper/extensions/extensions.dart';
-import 'package:runaway/core/utils/injections/bloc_provider_extension.dart';
 import 'package:runaway/core/widgets/modal_sheet.dart';
 import 'package:runaway/core/widgets/squircle_btn.dart';
 import 'package:runaway/core/widgets/top_snackbar.dart';
 import 'package:runaway/features/auth/presentation/bloc/auth_bloc.dart';
-import 'package:runaway/features/auth/presentation/bloc/auth_event.dart';
 import 'package:runaway/features/auth/presentation/bloc/auth_state.dart';
 import 'package:runaway/features/auth/presentation/widgets/auth_text_field.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' as su;
@@ -74,9 +72,7 @@ class _ForgotPasswordDialogState extends State<ForgotPasswordDialog> {
           );
         } else {
           // L'utilisateur peut réinitialiser son mot de passe
-          context.authBloc.add(
-            ForgotPasswordRequested(email: email),
-          );
+          
         }
       }
     } catch (e, stack) {
