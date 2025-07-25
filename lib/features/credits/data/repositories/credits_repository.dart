@@ -4,6 +4,7 @@ import 'dart:math' as math;
 import 'package:runaway/core/blocs/app_data/app_data_bloc.dart';
 import 'package:runaway/core/blocs/app_data/app_data_event.dart';
 import 'package:runaway/core/errors/auth_exceptions.dart';
+import 'package:runaway/core/helper/services/app_data_initialization_service.dart';
 import 'package:runaway/core/helper/services/cache_service.dart';
 import 'package:runaway/core/helper/services/monitoring_service.dart';
 import 'package:runaway/core/utils/injections/service_locator.dart';
@@ -554,6 +555,15 @@ class CreditsRepository {
       
       // Mettre à jour le cache avec les nouvelles données
       await _cache.set('cache_user_credits', newCredits);
+      
+      // Notifier immédiatement l'AppDataBloc pour mise à jour du cache
+      try {
+        AppDataInitializationService.confirmCreditBalance(newCredits.availableCredits);
+        AppDataInitializationService.refreshCreditData();
+        LogConfig.logInfo('✅ AppDataBloc notifié pour mise à jour immédiate');
+      } catch (e) {
+        LogConfig.logError('❌ Erreur notification AppDataBloc: $e');
+      }
       
       LogConfig.logInfo('Crédits ajoutés avec succès. Nouveau solde: ${newCredits.availableCredits}');
       return newCredits;

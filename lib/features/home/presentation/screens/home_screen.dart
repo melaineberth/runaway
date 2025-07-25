@@ -9,7 +9,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lottie/lottie.dart';
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart' as mp;
-import 'package:runaway/core/helper/config/secure_config.dart';
 import 'package:runaway/core/utils/constant/constants.dart';
 import 'package:runaway/core/blocs/app_data/app_data_bloc.dart';
 import 'package:runaway/core/blocs/app_data/app_data_event.dart';
@@ -18,11 +17,8 @@ import 'package:runaway/core/utils/injections/bloc_provider_extension.dart';
 import 'package:runaway/core/helper/extensions/monitoring_extensions.dart';
 import 'package:runaway/core/helper/services/conversion_triggers.dart';
 import 'package:runaway/core/helper/services/monitoring_service.dart';
-import 'package:runaway/core/widgets/conversion_listener.dart';
 import 'package:runaway/core/widgets/icon_btn.dart';
-import 'package:runaway/core/widgets/modal_sheet.dart';
 import 'package:runaway/core/widgets/route_info_tracker.dart';
-import 'package:runaway/core/widgets/squircle_btn.dart';
 import 'package:runaway/features/account/presentation/screens/account_screen.dart';
 import 'package:runaway/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:runaway/features/credits/presentation/screens/credit_plans_screen.dart';
@@ -249,19 +245,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
       LogConfig.logInfo('🎓 Tutoriel marqué comme affiché');
     } catch (e) {
       LogConfig.logError('❌ Erreur marquage tutoriel: $e');
-    }
-  }
-
-  /// 🧪 Fonction de test pour relancer le tutoriel (développement uniquement)
-  Future<void> _resetTutorialForTesting() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setBool(_tutorialShownKey, false);
-      _isTutorialShown = false;
-      LogConfig.logInfo('🧪 Tutoriel réinitialisé pour les tests');
-      _createTutorial(); // Relancer immédiatement
-    } catch (e) {
-      LogConfig.logError('❌ Erreur reset tutoriel: $e');
     }
   }
 
@@ -510,19 +493,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
           _createTutorial();
         }
       });
-    }
-  }
-
-  /// 🆕 Déclenche manuellement la modal de conversion pour les tests
-  void _showConversionPromptManually() {
-    try {
-      // Importer ConversionListener en haut du fichier si pas déjà fait
-      // import 'package:runaway/core/widgets/conversion_listener.dart';
-      
-      ConversionListener.showConversionPrompt('manual_test');
-      debugPrint('🧪 Modal de conversion déclenchée manuellement');
-    } catch (e) {
-      debugPrint('❌ Erreur déclenchement manuel modal conversion: $e');
     }
   }
 
@@ -2950,83 +2920,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
                               spacing: 8.0,
                               mainAxisAlignment: MainAxisAlignment.end,
                               children: [
-                                if (!SecureConfig.kIsProduction) ...[
-                                                                  // Bouton debug
-                                Container(
-                                  padding: EdgeInsets.symmetric(
-                                    horizontal: 5.0,
-                                    vertical: 5.0,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: context.adaptiveBackground,
-                                    borderRadius: BorderRadius.circular(100),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: Colors.black.withValues(alpha: 0.15),
-                                        spreadRadius: 2,
-                                        blurRadius: 30,
-                                        offset: Offset(0, 0), // changes position of shadow
-                                      ),
-                                    ],
-                                  ),
-                                  child: IconButton(
-                                    icon: Icon(
-                                      HugeIcons.solidRoundedBug01,
-                                      size: 25.0,
-                                    ),
-                                    onPressed: () {
-                                      _presentModalSheet((_) => ModalSheet(
-                                          child: Column(
-                                            crossAxisAlignment: CrossAxisAlignment.start,
-                                            mainAxisSize: MainAxisSize.min,
-                                            children: [
-                                              Text(
-                                                "Debug",
-                                                style: context.bodySmall?.copyWith(
-                                                  color: context.adaptiveTextPrimary,
-                                                ),
-                                              ),
-                                              2.h,
-                                              Text(
-                                                "Accès aux fonctions de debug",
-                                                style: context.bodySmall?.copyWith(
-                                                  color: context.adaptiveTextSecondary,
-                                                  fontSize: 15,
-                                                  fontWeight: FontWeight.w500
-                                                ),
-                                              ),
-                                              20.h,
-                                              SquircleBtn(
-                                                isPrimary: true,
-                                                label: "Reset tutorial",
-                                                onTap: () {
-                                                  context.pop();
-                                                  _resetTutorialForTesting();
-                                                },
-                                              ),
-                                              10.h, // 🆕 Espacement entre les boutons
-    
-                                              // 🆕 Nouveau bouton pour tester la modal de conversion
-                                              SquircleBtn(
-                                                isPrimary: false,
-                                                label: "Test modal conversion",
-                                                onTap: () {
-                                                  context.pop();
-                                                  _showConversionPromptManually();
-                                                },
-                                              ),
-                                            ],
-                                          ),
-                                        )
-                                      );
-                                    },
-                                  ),
-                                ),
-
-                                const Spacer(),
-
-                                ],
-
                                 // Bouton droit
                                 Container(
                                   key: historicKey,

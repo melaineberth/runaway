@@ -75,15 +75,20 @@ class _CreditPlanModalState extends State<CreditPlanModal> {
       
       LogConfig.logInfo('Plan trouvé: ${selectedPlan.name} (${selectedPlan.credits} crédits)');
 
+      // Déclencher l'achat via CreditsBloc d'abord pour gérer l'état
+      context.creditsBloc.add(
+        CreditPurchaseRequested(selectedPlan.id),
+      );
+
       // Effectuer l'achat - chaque achat doit être un NOUVEAU achat (consommable)
       final purchaseResult = await IAPService.makePurchase(selectedPlan);
       
       // Vérifier le résultat de l'achat
       if (purchaseResult.isSuccess) {
-        // ✅ Nouveau achat réussi
+        // Achat réussi
         final transactionId = purchaseResult.transactionId;
         if (transactionId != null && mounted) {
-          LogConfig.logInfo('Nouveau achat réussi avec transaction: $transactionId');
+          LogConfig.logInfo('✅ Nouveau achat réussi avec transaction: $transactionId');
           
           // Confirmer l'achat via CreditsBloc
           context.creditsBloc.add(
@@ -110,6 +115,7 @@ class _CreditPlanModalState extends State<CreditPlanModal> {
         } else {
           if (mounted) {
             _showErrorSnackBar(context.l10n.missingTransactionID);
+            MonitoringService.instance.finishOperation(operationId, success: false);
           }
         }
       } else if (purchaseResult.isCanceled) {
@@ -224,21 +230,46 @@ class _CreditPlanModalState extends State<CreditPlanModal> {
   Widget build(BuildContext context) {
     return MultiBlocListener(
       listeners: [
-        // 🆕 Écouter les événements de CreditsBloc pour les achats
+        // Écouter les événements de CreditsBloc pour les achats
         BlocListener<CreditsBloc, CreditsState>(
           listener: (context, state) {
             if (state is CreditPurchaseSuccess) {
-              // Fermer immédiatement la modal
-              context.pop();
+              LogConfig.logInfo('✅ Achat réussi - fermeture de la modal');
               
-              showTopSnackBar(
-                Overlay.of(context),
-                TopSnackBar(
-                  title: state.message,
-                ),
-              );              
+              // Fermer immédiatement la modal avec un délai minimal pour s'assurer que le build est terminé
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (mounted && context.canPop()) {
+                  context.pop();
+                  LogConfig.logInfo('✅ Modal fermée avec succès');
+                }
+              });
+              
+              // Afficher le message de succès après fermeture
+              Future.delayed(const Duration(milliseconds: 200), () {
+                if (context.mounted) {
+                  showTopSnackBar(
+                    Overlay.of(context),
+                    TopSnackBar(
+                      title: state.message,
+                    ),
+                  );
+                }
+              });
             } else if (state is CreditsError) {
+              LogConfig.logError('❌ Erreur achat: ${state.message}');
               _showErrorSnackBar(state.message);
+            } else if (state is CreditPurchaseInProgress) {
+              LogConfig.logInfo('🛒 Achat en cours...');
+              // L'état de chargement est déjà géré par l'UI
+            }
+          },
+        ),
+        // Aussi écouter les changements d'AppDataBloc pour les mises à jour de crédits
+        BlocListener<AppDataBloc, AppDataState>(
+          listener: (context, state) {
+            // Si les crédits ont été mis à jour suite à un achat, on peut rafraîchir l'affichage
+            if (state.isCreditDataLoaded && state.userCredits != null) {
+              LogConfig.logInfo('💳 Crédits mis à jour dans AppDataBloc: ${state.userCredits!.availableCredits}');
             }
           },
         ),

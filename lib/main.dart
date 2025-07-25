@@ -110,6 +110,8 @@ void main() async {
   });
 }
 
+// ===== PHASE D'INITIALISATION =====
+
 /// Phase 1 : Services critiques en parallèle
 Future<void> _initializeCriticalServices() async {
   LogConfig.logInfo('🚀 Phase 1: Services critiques...');
@@ -133,7 +135,7 @@ Future<void> _initializeCriticalServices() async {
   }
 }
 
-/// Initialisation du monitoring
+/// Phase 1.5 : Initialisation du monitoring
 Future<void> _initializeMonitoring() async {  
   try {
     // Initialiser le service principal de monitoring
@@ -440,6 +442,8 @@ Future<void> _initializeConversionService() async {
   }
 }
 
+// ===== APP PRINCIAPLE =====
+
 class Trailix extends StatefulWidget {
   const Trailix({super.key});
 
@@ -529,6 +533,8 @@ class _TrailixState extends State<Trailix> {
     );
   }
 }
+
+// ===== CAS D'ERREUR =====
 
 class ErrorApp extends StatelessWidget {
   final String error;

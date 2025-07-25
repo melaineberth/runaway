@@ -4,6 +4,7 @@ import 'package:runaway/core/blocs/app_data/app_data_event.dart';
 import 'package:runaway/core/errors/api_exceptions.dart';
 import 'package:runaway/core/helper/config/secure_config.dart';
 import 'package:runaway/core/helper/extensions/extensions.dart';
+import 'package:runaway/core/helper/services/app_data_initialization_service.dart';
 import 'package:runaway/core/helper/services/cache_service.dart';
 import 'package:runaway/core/router/router.dart';
 import 'package:runaway/features/credits/data/repositories/credits_repository.dart';
@@ -303,8 +304,11 @@ class CreditsBloc extends Bloc<CreditsEvent, CreditsState> {
     Emitter<CreditsState> emit,
   ) async {
     try {
+      // Rafraîchir les crédits utilisateur après l'achat avec un délai pour s'assurer que la DB est à jour
+      await Future.delayed(const Duration(milliseconds: 500));
+
       // Rafraîchir les crédits utilisateur après l'achat
-      final updatedCredits = await _creditsRepository.getUserCredits();
+      final updatedCredits = await _creditsRepository.getUserCredits(forceRefresh: true);
       
       // Récupérer le plan acheté
       final plans = await _creditsRepository.getCreditPlans();
@@ -313,18 +317,40 @@ class CreditsBloc extends Bloc<CreditsEvent, CreditsState> {
         orElse: () => throw Exception('Plan non trouvé'),
       );
 
+       // Synchroniser AVANT d'émettre le succès pour s'assurer que l'AppDataBloc est à jour
+      if (_appDataBloc != null) {
+        try {
+          _appDataBloc.add(CreditPurchaseCompletedInAppData(
+            planId: event.planId,
+            paymentIntentId: event.paymentIntentId,
+            creditsAdded: purchasedPlan.totalCreditsWithBonus,
+          ));
+          
+          // Attendre un peu que l'AppDataBloc traite l'événement
+          await Future.delayed(const Duration(milliseconds: 300));
+          
+          // Force une mise à jour immédiate de l'AppDataBloc
+          AppDataInitializationService.confirmCreditBalance(updatedCredits.availableCredits);
+          
+          LogConfig.logInfo('✅ AppDataBloc synchronisé avec les nouveaux crédits');
+        } catch (e) {
+          LogConfig.logError('❌ Erreur synchronisation AppDataBloc: $e');
+        }
+      }
+
+      // Émettre le succès APRÈS la synchronisation pour que la modal se ferme au bon moment
       emit(CreditPurchaseSuccess(
         updatedCredits: updatedCredits,
         message: 'Achat réussi ! ${purchasedPlan.totalCreditsWithBonus} crédits ajoutés',
         purchasedPlan: purchasedPlan,
       ));
 
-      // 🆕 Synchroniser avec AppDataBloc
-      _appDataBloc?.add(CreditPurchaseCompletedInAppData(
-        planId: event.planId,
-        paymentIntentId: event.paymentIntentId,
-        creditsAdded: purchasedPlan.totalCreditsWithBonus,
-      ));
+      // // 🆕 Synchroniser avec AppDataBloc
+      // _appDataBloc?.add(CreditPurchaseCompletedInAppData(
+      //   planId: event.planId,
+      //   paymentIntentId: event.paymentIntentId,
+      //   creditsAdded: purchasedPlan.totalCreditsWithBonus,
+      // ));
 
       LogConfig.logInfo('Achat de crédits confirmé');
     } catch (e) {

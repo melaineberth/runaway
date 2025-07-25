@@ -132,34 +132,44 @@ class _CreditPlansScreenState extends State<CreditPlansScreen> {
       children: [
         transactions.isEmpty 
           ? _buildEmptyState() 
-          : BlurryPage(
-              shrinkWrap: false,
-              children: [
-                _buildCreditsHeader(userCredits),
-                30.h,
-                Text(
-                  context.l10n.transactionHistory,
-                  style: context.bodyMedium?.copyWith(
-                    fontSize: 18,
-                    color: context.adaptiveTextSecondary,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
+          : Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildCreditsHeader(userCredits),
+            30.h,
             
-                15.h,
+            Text(
+              context.l10n.transactionHistory,
+              style: context.bodyMedium?.copyWith(
+                fontSize: 18,
+                color: context.adaptiveTextSecondary,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            15.h,
             
-                ...transactions.asMap().entries.map((entry) {
-                  final i = entry.key;
-                  final value = entry.value;
-                  return Padding(
-                    padding: EdgeInsets.only(bottom: i == transactions.length - 1 ? 0.0 : 12.0),
-                    child: _buildTransactionItem(value),
-                  );
-                }),
-            
-                80.h,
-              ],
+            Expanded(
+              child: BlurryPage(
+                physics: const BouncingScrollPhysics(),
+                shrinkWrap: false,
+                children: [
+                  ...transactions.asMap().entries.map((entry) {
+                    final i = entry.key;
+                    final value = entry.value;
+                    return Padding(
+                      padding: EdgeInsets.only(bottom: i == transactions.length - 1 ? 0.0 : 12.0),
+                      child: _buildTransactionItem(value),
+                    );
+                  }),
+                  
+                  // 🚀 Espace pour le bouton en bas (éviter que le dernier élément soit caché)
+                  SizedBox(height: 100 + (Platform.isAndroid ? MediaQuery.of(context).padding.bottom : 10)),
+                ],
+              ),
+            ),
+          ],
         ),
+
         
         Positioned(
           left: 0,
