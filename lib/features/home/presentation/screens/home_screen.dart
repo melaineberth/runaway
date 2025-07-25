@@ -9,6 +9,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lottie/lottie.dart';
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart' as mp;
+import 'package:runaway/core/helper/config/secure_config.dart';
 import 'package:runaway/core/utils/constant/constants.dart';
 import 'package:runaway/core/blocs/app_data/app_data_bloc.dart';
 import 'package:runaway/core/blocs/app_data/app_data_event.dart';
@@ -17,6 +18,9 @@ import 'package:runaway/core/utils/injections/bloc_provider_extension.dart';
 import 'package:runaway/core/helper/extensions/monitoring_extensions.dart';
 import 'package:runaway/core/helper/services/conversion_triggers.dart';
 import 'package:runaway/core/helper/services/monitoring_service.dart';
+import 'package:runaway/core/widgets/icon_btn.dart';
+import 'package:runaway/core/widgets/modal_sheet.dart';
+import 'package:runaway/core/widgets/squircle_btn.dart';
 import 'package:runaway/features/account/presentation/screens/account_screen.dart';
 import 'package:runaway/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:runaway/features/credits/presentation/screens/credit_plans_screen.dart';
@@ -33,6 +37,7 @@ import 'package:runaway/features/home/presentation/widgets/save_route_sheet.dart
 import 'package:runaway/features/route_generator/domain/models/route_parameters.dart';
 import 'package:runaway/features/route_generator/domain/models/saved_route.dart';
 import 'package:runaway/features/route_generator/presentation/blocs/extensions/route_generation_bloc_extensions.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' as sb;
 import 'package:hugeicons/hugeicons.dart';
 import 'package:geolocator/geolocator.dart' as gl;
@@ -137,6 +142,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
   static const Duration _minimumLoadingDuration = Duration(milliseconds: 1500);
 
   // === TUTORIAL ===
+  TutorialCoachMark? _currentTutorial;
+  static const String _tutorialShownKey = 'tutorial_shown';
+  bool _isTutorialShown = false;
+  final ValueNotifier<int> _tutorialStepNotifier = ValueNotifier<int>(0);
+  
   final generateKey = GlobalKey();
   final historicKey = GlobalKey();
   final mapSettingsKey = GlobalKey();
@@ -157,7 +167,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
     _preloadLocationInBackground();
     _setupRouteGenerationListener();
     _initializeMapStyle();
-
+    _initializeTutorial();
 
     // 🆕 Marquer l'écran comme chargé après l'initialisation
     WidgetsBinding.instance.addPostFrameCallback((_) async {
@@ -172,8 +182,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
       } catch (e) {
         LogConfig.logError('❌ Erreur vérification initiale: $e');
       }
-
-      _createTutorial();
     });
   }
 
@@ -183,7 +191,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
     _fadeController.dispose();
     _positionStream?.cancel();
     _lottieController.dispose();
-    // 🆕 Nettoyer le timer
+    _tutorialStepNotifier.dispose();
     _loadingMinimumTimer?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
@@ -210,7 +218,55 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
     }
   }
 
+  Future<void> _initializeTutorial() async {
+    await _checkTutorialStatus();
+    // Afficher le tutoriel après un délai pour s'assurer que tout est chargé
+    Future.delayed(const Duration(milliseconds: 1500), () {
+      _showTutorialIfFirstTime();
+    });
+  }
+
+  /// 🎓 Vérifier si le tutoriel a déjà été affiché
+  Future<void> _checkTutorialStatus() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      _isTutorialShown = prefs.getBool(_tutorialShownKey) ?? false;
+      LogConfig.logInfo('🎓 Statut tutoriel: ${_isTutorialShown ? "déjà affiché" : "première fois"}');
+    } catch (e) {
+      LogConfig.logError('❌ Erreur vérification tutoriel: $e');
+      _isTutorialShown = false;
+    }
+  }
+
+  /// 🎓 Marquer le tutoriel comme affiché
+  Future<void> _markTutorialAsShown() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool(_tutorialShownKey, true);
+      _isTutorialShown = true;
+      LogConfig.logInfo('🎓 Tutoriel marqué comme affiché');
+    } catch (e) {
+      LogConfig.logError('❌ Erreur marquage tutoriel: $e');
+    }
+  }
+
+  /// 🧪 Fonction de test pour relancer le tutoriel (développement uniquement)
+  Future<void> _resetTutorialForTesting() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool(_tutorialShownKey, false);
+      _isTutorialShown = false;
+      LogConfig.logInfo('🧪 Tutoriel réinitialisé pour les tests');
+      _createTutorial(); // Relancer immédiatement
+    } catch (e) {
+      LogConfig.logError('❌ Erreur reset tutoriel: $e');
+    }
+  }
+
   void _createTutorial() {
+    // Réinitialiser l'étape AU DÉBUT
+    _tutorialStepNotifier.value = 0;
+
     final targets = [
       // Bouton de génération
       TargetFocus(
@@ -227,14 +283,14 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    "Bouton de génération",
+                    "Génération de parcours",
                     style: context.bodyMedium?.copyWith(
                       fontWeight: FontWeight.w700,
                       color: Colors.white,
                     ),
                   ),
                   Text(
-                    "Use this button to add new elements to the list",
+                    "Créez un nouveau parcours personnalisé selon vos préférences",
                     style: context.bodySmall?.copyWith(
                       fontWeight: FontWeight.w400,
                       color: Colors.white.withValues(alpha: 0.6),
@@ -261,14 +317,14 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    "Historique des sauvegardes",
+                    "Historique des parcours",
                     style: context.bodyMedium?.copyWith(
                       fontWeight: FontWeight.w700,
                       color: Colors.white,
                     ),
                   ),
                   Text(
-                    "Use this button to add new elements to the list",
+                    "Retrouvez tous vos parcours sauvegardés et téléchargez-les ultérieurement",
                     style: context.bodySmall?.copyWith(
                       fontWeight: FontWeight.w400,
                       color: Colors.white.withValues(alpha: 0.6),
@@ -295,18 +351,19 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   Text(
-                    "Réglage de carte",
+                    "Réglages de carte",
                     style: context.bodyMedium?.copyWith(
                       fontWeight: FontWeight.w700,
                       color: Colors.white,
                     ),
                   ),
                   Text(
-                    "Use this button to add new elements to the list",
+                    "Changez le style de carte et activez le suivi de votre position GPS",
                     style: context.bodySmall?.copyWith(
                       fontWeight: FontWeight.w400,
                       color: Colors.white.withValues(alpha: 0.6),
                     ),
+                    textAlign: TextAlign.end,
                   ),
                 ],
               );
@@ -329,14 +386,14 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    "Recherche d'une adresse",
+                    "Recherche d'adresse",
                     style: context.bodyMedium?.copyWith(
                       fontWeight: FontWeight.w700,
                       color: Colors.white,
                     ),
                   ),
                   Text(
-                    "Use this button to add new elements to the list",
+                    "Recherchez n'importe quelle adresse pour centrer la carte et générer des parcours depuis ce point",
                     style: context.bodySmall?.copyWith(
                       fontWeight: FontWeight.w400,
                       color: Colors.white.withValues(alpha: 0.6),
@@ -370,7 +427,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
                     ),
                   ),
                   Text(
-                    "Use this button to add new elements to the list",
+                    "Gérez votre profil, vos crédits et les paramètres de l'application",
                     style: context.bodySmall?.copyWith(
                       fontWeight: FontWeight.w400,
                       color: Colors.white.withValues(alpha: 0.6),
@@ -384,29 +441,74 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
       ),
     ];
 
-    final tutorial = TutorialCoachMark(
+    _currentTutorial = TutorialCoachMark(
       targets: targets,
-      // skipWidget: Padding(
-      //   padding: const EdgeInsets.symmetric(
-      //     horizontal: 20.0,
-      //   ),
-      //   child: IconBtn(
-      //     icon: HugeIcons.solidStandardArrowRight02,
-      //     backgroundColor: context.adaptivePrimary,
-      //     iconColor: Colors.white,
-      //   ),
-      // ),
+      skipWidget: ValueListenableBuilder<int>(
+        valueListenable: _tutorialStepNotifier,
+        builder: (context, step, child) {
+          final isLastStep = step == targets.length - 1;
+          return Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: 20.0,
+            ),
+            child: IconBtn(
+              padding: 12,
+              icon: isLastStep 
+                ? HugeIcons.solidStandardTick01 
+                : HugeIcons.solidStandardArrowRight02,
+              backgroundColor: context.adaptivePrimary,
+              iconColor: Colors.white,
+              onPressed: () {
+                debugPrint("🎓 Étape suivante: $step");
+                HapticFeedback.mediumImpact();
+                
+                if (isLastStep) {
+                  _currentTutorial?.finish();
+                } else {
+                  // Déclencher la transition immédiatement
+                  _currentTutorial?.next();
+                  
+                  // Retarder la mise à jour de l'icône pour synchroniser avec la transition
+                  Future.delayed(const Duration(milliseconds: 400), () {
+                    if (mounted) {
+                      _tutorialStepNotifier.value++;
+                    }
+                  });
+                }
+              },
+            ),
+          );
+        },
+      ),
       onSkip: () {
-        print("skip");
+        debugPrint("🎓 Tutoriel ignoré par l'utilisateur");
+        _markTutorialAsShown();
         return true;
+      },
+      onFinish: () {
+        debugPrint("🎓 Tutoriel terminé");
+        _markTutorialAsShown();
       },
     );
 
-    Future.delayed(const Duration(milliseconds: 500), () {
+    Future.delayed(const Duration(milliseconds: 300), () {
       if (mounted) {
-        tutorial.show(context: context);
+        _currentTutorial?.show(context: context);
       }
     });
+  }
+
+  /// 🎓 Modifiez votre méthode d'initialisation pour vérifier si afficher le tutoriel
+  /// Ajoutez ceci dans _initializeMap() ou une méthode similaire appelée après l'initialisation complète
+  void _showTutorialIfFirstTime() {
+    if (!_isTutorialShown) {
+      LogConfig.logInfo('🎓 Première ouverture détectée, affichage du tutoriel');
+      Future.delayed(const Duration(milliseconds: 1000), () {
+        if (mounted) {
+          _createTutorial();
+        }
+      });
+    }
   }
 
   /// 🎨 Initialiser le style de carte au démarrage
@@ -2825,6 +2927,75 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
                               spacing: 8.0,
                               mainAxisAlignment: MainAxisAlignment.end,
                               children: [
+                                if (!SecureConfig.kIsProduction) ...[
+                                                                  // Bouton debug
+                                Container(
+                                  padding: EdgeInsets.symmetric(
+                                    horizontal: 5.0,
+                                    vertical: 5.0,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: context.adaptiveBackground,
+                                    borderRadius: BorderRadius.circular(100),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black.withValues(alpha: 0.15),
+                                        spreadRadius: 2,
+                                        blurRadius: 30,
+                                        offset: Offset(0, 0), // changes position of shadow
+                                      ),
+                                    ],
+                                  ),
+                                  child: IconButton(
+                                    icon: Icon(
+                                      HugeIcons.solidRoundedBug01,
+                                      size: 25.0,
+                                    ),
+                                    onPressed: () {
+                                      showModalSheet(
+                                        context: context, 
+                                        backgroundColor: Colors.transparent,
+                                        child: ModalSheet(
+                                          child: Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Text(
+                                                "Debug",
+                                                style: context.bodySmall?.copyWith(
+                                                  color: context.adaptiveTextPrimary,
+                                                ),
+                                              ),
+                                              2.h,
+                                              Text(
+                                                "Accès aux fonctions de debug",
+                                                style: context.bodySmall?.copyWith(
+                                                  color: context.adaptiveTextSecondary,
+                                                  fontSize: 15,
+                                                  fontWeight: FontWeight.w500
+                                                ),
+                                              ),
+                                              20.h,
+                                              SquircleBtn(
+                                                isPrimary: true,
+                                                label: "Reset tutorial",
+                                                onTap: () {
+                                                  context.pop();
+                                                  _resetTutorialForTesting();
+                                                },
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                ),
+
+                                const Spacer(),
+
+                                ],
+
                                 // Bouton droit
                                 Container(
                                   key: historicKey,
