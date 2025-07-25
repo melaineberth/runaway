@@ -3188,6 +3188,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'The new password must be different from the old one'**
   String get passwordMustBeDifferent;
+
+  /// Message during the verification of the password recovery code
+  ///
+  /// In en, this message translates to:
+  /// **'Verification of the code...'**
+  String get verfyPasswordInProgress;
+
+  /// Action to request a new code during the verification of the password recovery code
+  ///
+  /// In en, this message translates to:
+  /// **'Request a new code'**
+  String get requestNewCode;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

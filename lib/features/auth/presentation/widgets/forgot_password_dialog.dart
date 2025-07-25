@@ -361,7 +361,7 @@ class _ForgotPasswordDialogState extends State<ForgotPasswordDialog> {
                   ),
                   8.w,
                   Text(
-                    'Vérification du code...',
+                    context.l10n.verfyPasswordInProgress,
                     style: context.bodySmall?.copyWith(
                       color: context.adaptiveTextSecondary,
                       fontStyle: FontStyle.italic,
@@ -383,7 +383,7 @@ class _ForgotPasswordDialogState extends State<ForgotPasswordDialog> {
                   });
                 },
                 child: Text(
-                  'Demander un nouveau code',
+                  context.l10n.requestNewCode,
                   style: context.bodySmall?.copyWith(
                     color: context.adaptivePrimary,
                     fontWeight: FontWeight.w600,

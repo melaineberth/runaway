@@ -2255,5 +2255,13 @@
   "passwordMustBeDifferent": "Le nouveau mot de passe doit être différent de l'ancien",
   "@passwordMustBeDifferent": {
     "description": "Message d'erreur lorsque le nouveau mot de passe est identique à l'ancien"
+  },
+  "verfyPasswordInProgress": "Vérification du code...",
+  "@verfyPasswordInProgress": {
+    "description": "Message during the verification of the password recovery code"
+  },
+  "requestNewCode": "Demander un nouveau code",
+  "@requestNewCode": {
+    "description": "Action to request a new code during the verification of the password recovery code"
   }
 }

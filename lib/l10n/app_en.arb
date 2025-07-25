@@ -2158,10 +2158,6 @@
   "@passwordResetSuccessDesc": {
     "description": "Description shown when password reset is successful"
   },
-
-
-
-
   "saveRoutesTitle": "Save your routes",
   "@saveRoutesTitle": {
     "description": "Conversation beneifts saving route title"
@@ -2230,8 +2226,6 @@
   "@conversionSubtitleDefault": {
     "description": "Default conversion modal subtitle"
   },
-
-  
   "enterEmailToReset": "Enter your email address to receive a reset code",
   "@enterEmailToReset": {
     "description": "Instructions for password reset"
@@ -2259,5 +2253,14 @@
   "passwordMustBeDifferent": "The new password must be different from the old one",
   "@passwordMustBeDifferent": {
     "description": "Error message when new password is the same as the old one"
+  },
+
+  "verfyPasswordInProgress": "Verification of the code...",
+  "@verfyPasswordInProgress": {
+    "description": "Message during the verification of the password recovery code"
+  },
+  "requestNewCode": "Request a new code",
+  "@requestNewCode": {
+    "description": "Action to request a new code during the verification of the password recovery code"
   }
 }

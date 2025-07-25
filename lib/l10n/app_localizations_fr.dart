@@ -1630,4 +1630,10 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get passwordMustBeDifferent => 'Le nouveau mot de passe doit être différent de l\'ancien';
+
+  @override
+  String get verfyPasswordInProgress => 'Vérification du code...';
+
+  @override
+  String get requestNewCode => 'Demander un nouveau code';
 }
