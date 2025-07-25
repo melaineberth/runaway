@@ -3,6 +3,7 @@ import 'dart:io';
 import 'dart:math' as math;
 import 'dart:ui' as ui;
 
+import 'package:app_tutorial/app_tutorial.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -135,6 +136,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
   // 🆕 Temps minimum de loading (configurable)
   static const Duration _minimumLoadingDuration = Duration(milliseconds: 1500);
 
+  // === TUTORIAL ===
+  final generateKey = GlobalKey();
+  final historicKey = GlobalKey();
+  final mapSettingsKey = GlobalKey();
+  final searchBarKey = GlobalKey();
+  final accountKey = GlobalKey();
+
   @override
   void initState() {
     super.initState();
@@ -142,13 +150,14 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
 
     // 🆕 Démarrer le tracking de chargement d'écran
     _screenLoadId = context.trackScreenLoad('home_screen');
-    
+
     _initializeAnimationControllers();
     _restoreStateFromService();
     _restoreMapStyleFromService();
     _preloadLocationInBackground();
     _setupRouteGenerationListener();
     _initializeMapStyle();
+
 
     // 🆕 Marquer l'écran comme chargé après l'initialisation
     WidgetsBinding.instance.addPostFrameCallback((_) async {
@@ -164,6 +173,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
         LogConfig.logError('❌ Erreur vérification initiale: $e');
       }
 
+      Future.delayed(const Duration(seconds: 2)).then((value) {
+      _showTutorial();
+    });
     });
   }
 
@@ -200,6 +212,69 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
     }
   }
 
+  void _showTutorial() async {
+    print("Initialisation des items de tutorial");
+    final items = [
+      TutorialItem(
+        globalKey: generateKey,
+        color: Colors.black.withValues(alpha: 0.6),
+        borderRadius: const Radius.circular(100.0),
+        shapeFocus: ShapeFocus.roundedSquare,
+        child: const TutorialItemContent(
+          title: 'Bouton de génération',
+          content: 'This is the increment button',
+        ),
+      ),
+      TutorialItem(
+        globalKey: historicKey,
+        shapeFocus: ShapeFocus.roundedSquare,
+        borderRadius: const Radius.circular(100.0),
+        child: const TutorialItemContent(
+          title: 'Accès au parcours sauvegardé',
+          content: 'This is the text that displays the status of the counter',
+        ),
+      ),
+      TutorialItem(
+        globalKey: mapSettingsKey,
+        color: Colors.black.withValues(alpha: 0.6),
+        shapeFocus: ShapeFocus.roundedSquare,
+        borderRadius: const Radius.circular(100.0),
+        child: const TutorialItemContent(
+          title: 'Réglage de carte',
+          content: 'This is the avatar that displays something',
+        ),
+      ),
+      TutorialItem(
+        globalKey: searchBarKey,
+        color: Colors.black.withValues(alpha: 0.6),
+        shapeFocus: ShapeFocus.roundedSquare,
+        borderRadius: const Radius.circular(100.0),
+        child: const TutorialItemContent(
+          title: 'Recherche d\'adresse',
+          content: 'This is the avatar that displays something',
+        ),
+      ),
+      TutorialItem(
+        globalKey: accountKey,
+        color: Colors.black.withValues(alpha: 0.6),
+        shapeFocus: ShapeFocus.roundedSquare,
+        borderRadius: const Radius.circular(100.0),
+        child: const TutorialItemContent(
+          title: 'Compte utilisateur',
+          content: 'This is the avatar that displays something',
+        ),
+      ),
+    ];
+
+    Tutorial.showTutorial(
+      context,
+      items,
+      onTutorialComplete: () {
+        print("Tutoriel terminé !");
+      },
+    );
+  }
+
   /// 🎨 Initialiser le style de carte au démarrage
   Future<void> _initializeMapStyle() async {
     try {
@@ -226,15 +301,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
       duration: const Duration(milliseconds: 800),
       vsync: this,
     );
-
-    // _fadeAnimation = Tween<double>(
-    //   begin: 0.0,
-    //   end: 1.0,
-    // ).animate(CurvedAnimation(
-    //   parent: _fadeController,
-    //   curve: Curves.easeOut,
-    // ));
-
+ 
     _fadeController.forward();
 
     _lottieController = AnimationController(
@@ -2626,6 +2693,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
                               children: [
                                 // Bouton droit
                                 Container(
+                                  key: historicKey,
                                   padding: EdgeInsets.symmetric(
                                     horizontal: 5.0,
                                     vertical: 5.0,
@@ -2656,6 +2724,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
                                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                   children: [
                                     Container(
+                                      key: mapSettingsKey,
                                       padding: EdgeInsets.symmetric(
                                         horizontal: 5.0,
                                         vertical: 5.0,
@@ -2704,6 +2773,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
     
                             // Bouton de génération
                             Container(
+                              key: generateKey,
                               padding: EdgeInsets.symmetric(
                                 horizontal: 6.0,
                                 vertical: 6.0,
@@ -2739,6 +2809,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
 
               // Barre de recherche
               FloatingLocationSearchSheet(
+                accountKey: accountKey,
+                searchBarKey: searchBarKey,
                 onLocationSelected: _onLocationSelected,
                 userLongitude: _userLongitude,
                 userLatitude: _userLatitude,
@@ -2822,6 +2894,65 @@ class _RouteInfoEntry extends StatelessWidget {
       right: 0,
       bottom: 0,
       child: Material(color: Colors.transparent, child: panel),
+    );
+  }
+}
+
+class TutorialItemContent extends StatelessWidget {
+  const TutorialItemContent({
+    super.key,
+    required this.title,
+    required this.content,
+  });
+
+  final String title;
+  final String content;
+
+  @override
+  Widget build(BuildContext context) {
+    final width = MediaQuery.of(context).size.width;
+
+    return Center(
+      child: SizedBox(
+        height: MediaQuery.of(context).size.height * 0.6,
+        child: Padding(
+          padding: EdgeInsets.symmetric(horizontal: width * 0.1),
+          child: Column(
+            children: [
+              Text(
+                title,
+                style: const TextStyle(color: Colors.white),
+              ),
+              const SizedBox(height: 10.0),
+              Text(
+                content,
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: Colors.white),
+              ),
+              const Spacer(),
+              Row(
+                children: [
+                  TextButton(
+                    onPressed: () => Tutorial.skipAll(context),
+                    child: const Text(
+                      'Skip onboarding',
+                      style: TextStyle(color: Colors.white),
+                    ),
+                  ),
+                  const Spacer(),
+                  const TextButton(
+                    onPressed: null,
+                    child: Text(
+                      'Next',
+                      style: TextStyle(color: Colors.white),
+                    ),
+                  ),
+                ],
+              )
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
