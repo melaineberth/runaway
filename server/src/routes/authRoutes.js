@@ -1,6 +1,4 @@
 const express = require('express');
-const path = require('path');
-const fs = require('fs');
 const { createClient } = require('@supabase/supabase-js');
 const logger = require('../config/logger');
 
@@ -11,28 +9,8 @@ const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-// Cache du fichier HTML pour éviter de le relire à chaque requête
-let resetPasswordHtml = null;
-
 /**
- * Charge le fichier HTML de reset password (avec cache)
- */
-function loadResetPasswordHtml() {
-  if (resetPasswordHtml === null) {
-    try {
-      const htmlPath = path.join(__dirname, '../views/reset-password.html');
-      resetPasswordHtml = fs.readFileSync(htmlPath, 'utf8');
-      logger.info('Template reset-password.html chargé avec succès');
-    } catch (error) {
-      logger.error('Erreur chargement template reset-password.html:', error);
-      throw new Error('Template HTML non trouvé');
-    }
-  }
-  return resetPasswordHtml;
-}
-
-/**
- * Page de réinitialisation de mot de passe
+ * Page de réinitialisation de mot de passe avec EJS
  * Accessible via: https://votre-serveur/auth/reset-password?access_token=...&refresh_token=...
  */
 router.get('/reset-password', (req, res) => {
@@ -42,33 +20,28 @@ router.get('/reset-password', (req, res) => {
     // Vérifier que c'est bien un reset password
     if (type !== 'recovery') {
       logger.warn('Tentative d\'accès reset-password avec type invalide:', type);
-      return res.status(400).send(`
-        <html>
-          <body style="font-family: Arial; text-align: center; padding: 50px;">
-            <h1>❌ Lien invalide</h1>
-            <p>Ce lien de réinitialisation n'est pas valide.</p>
-          </body>
-        </html>
-      `);
+      return res.render('reset-password', {
+        error: 'Ce lien de réinitialisation n\'est pas valide.',
+        accessToken: '',
+        refreshToken: ''
+      });
     }
     
     if (!access_token) {
       logger.warn('Tentative d\'accès reset-password sans token');
-      return res.status(400).send(`
-        <html>
-          <body style="font-family: Arial; text-align: center; padding: 50px;">
-            <h1>⏰ Lien expiré</h1>
-            <p>Ce lien de réinitialisation a expiré ou est invalide.</p>
-            <p>Veuillez demander un nouveau lien depuis l'application.</p>
-          </body>
-        </html>
-      `);
+      return res.render('reset-password', {
+        error: 'Ce lien de réinitialisation a expiré ou est invalide. Veuillez demander un nouveau lien depuis l\'application.',
+        accessToken: '',
+        refreshToken: ''
+      });
     }
     
-    // Charger et servir le template HTML
-    const htmlContent = loadResetPasswordHtml();
-    res.setHeader('Content-Type', 'text/html; charset=utf-8');
-    res.send(htmlContent);
+    // Rendu de la page avec les tokens
+    res.render('reset-password', {
+      error: null,
+      accessToken: access_token,
+      refreshToken: refresh_token || ''
+    });
     
     logger.info('Page reset-password servie', {
       hasToken: !!access_token,
@@ -80,14 +53,11 @@ router.get('/reset-password', (req, res) => {
     
   } catch (error) {
     logger.error('Erreur page reset-password:', error);
-    res.status(500).send(`
-      <html>
-        <body style="font-family: Arial; text-align: center; padding: 50px;">
-          <h1>🚨 Erreur serveur</h1>
-          <p>Une erreur est survenue. Veuillez réessayer plus tard.</p>
-        </body>
-      </html>
-    `);
+    res.render('reset-password', {
+      error: 'Une erreur est survenue. Veuillez réessayer plus tard.',
+      accessToken: '',
+      refreshToken: ''
+    });
   }
 });
 
@@ -209,7 +179,6 @@ function validatePassword(password) {
 
 /**
  * Route de test pour vérifier que les routes auth fonctionnent
- * À SUPPRIMER en production
  */
 router.get('/test', (req, res) => {
   res.json({ 
@@ -219,7 +188,8 @@ router.get('/test', (req, res) => {
     availableRoutes: [
       'GET /auth/reset-password',
       'POST /auth/update-password',
-      'GET /auth/test (development only)'
+      'GET /auth/test',
+      'GET /auth/health'
     ]
   });
 });
@@ -229,7 +199,6 @@ router.get('/test', (req, res) => {
  */
 router.get('/health', (req, res) => {
   const supabaseConfigured = !!(supabaseUrl && process.env.SUPABASE_ANON_KEY && supabaseServiceKey);
-  const templateExists = fs.existsSync(path.join(__dirname, '../views/reset-password.html'));
   
   res.json({
     success: true,
@@ -237,7 +206,7 @@ router.get('/health', (req, res) => {
     status: 'healthy',
     checks: {
       supabaseConfigured,
-      templateExists,
+      ejsConfigured: !!res.render,
       timestamp: new Date().toISOString()
     }
   });
@@ -247,10 +216,12 @@ router.get('/health', (req, res) => {
 router.use((error, req, res, next) => {
   logger.error('Auth route error:', error);
   
-  if (error.message.includes('Template HTML non trouvé')) {
-    return res.status(500).json({
-      success: false,
-      error: 'Configuration du serveur incomplète'
+  // Si c'est une requête pour la page de reset, renvoyer une page d'erreur
+  if (req.path === '/reset-password') {
+    return res.render('reset-password', {
+      error: 'Une erreur est survenue. Veuillez réessayer plus tard.',
+      accessToken: '',
+      refreshToken: ''
     });
   }
   

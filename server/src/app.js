@@ -2,13 +2,18 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const compression = require('compression');
+const path = require('path');
 const routes = require('./routes');
 
-// ✅ NOUVEAUX SERVICES intégrés
+// Services intégrés
 const { monitoringMiddleware } = require('./services/routeMonitoringService');
 const logger = require('./config/logger');
 
 const app = express();
+
+// ============= CONFIGURATION EJS =============
+app.set('view engine', 'ejs');
+app.set('views', path.join(__dirname, 'views'));
 
 // ============= CONFIGURATION AVANCÉE =============
 

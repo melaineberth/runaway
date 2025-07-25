@@ -31,6 +31,10 @@ router.post('/metrics/reset', healthController.resetMetrics);
 
 // ============= ROUTES DE GÉNÉRATION AMÉLIORÉES =============
 
+// ============= ROUTES D'AUTHENTIFICATION =============
+const authRoutes = require('./authRoutes');
+router.use('/auth', authRoutes);
+
 // ✅ ROUTE PRINCIPALE avec analyse géographique complète
 router.post('/routes/generate', 
   // 1. Validation et optimisation de base
@@ -45,10 +49,6 @@ router.post('/routes/generate',
   // 4. Génération avec toutes les améliorations
   routeController.generateRoute
 );
-
-// ============= ROUTES D'AUTHENTIFICATION =============
-const authRoutes = require('./authRoutes');
-router.use('/auth', authRoutes);
 
 // ✅ NOUVELLE ROUTE : Analyse préalable de zone
 router.post('/routes/analyze-zone', async (req, res, next) => {
