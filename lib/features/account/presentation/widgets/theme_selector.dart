@@ -6,7 +6,6 @@ import 'package:hugeicons/hugeicons.dart';
 import 'package:runaway/core/helper/extensions/extensions.dart';
 import 'package:runaway/core/blocs/theme_bloc/theme_bloc.dart';
 import 'package:runaway/core/utils/injections/bloc_provider_extension.dart';
-import 'package:runaway/core/widgets/icon_btn.dart';
 import 'package:runaway/core/widgets/modal_sheet.dart';
 import 'package:runaway/core/widgets/squircle_container.dart';
 
@@ -15,121 +14,96 @@ class ThemeSelector extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Stack(
-      children: [
-        ModalSheet(
-          child: BlocBuilder<ThemeBloc, ThemeState>(
-            // ✅ Ne rebuild que si le mode ou le status loading change
-            buildWhen: (previous, current) =>
-              previous.themeMode != current.themeMode ||
-              previous.isLoading != current.isLoading,
-          
-            builder: (context, state) {
-              if (state.isLoading) {
-                return const SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                );
-              }
-              return Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    context.l10n.theme,
-                    style: context.bodySmall?.copyWith(
-                      color: context.adaptiveTextPrimary,
-                    ),
-                  ),
-                  2.h,
-                  Text(
-                    context.l10n.selectPreferenceTheme,
-                    style: context.bodySmall?.copyWith(
-                      color: context.adaptiveTextSecondary,
-                      fontSize: 15,
-                      fontWeight: FontWeight.w500
-                    ),
-                  ),
-                  20.h,
-                  Column(
-                    children: [
-                      ...AppThemeMode.values.asMap().entries.map((entry) {
-                        final i = entry.key;
-                        final themeMode = entry.value;
-                        final isSelected = themeMode == state.themeMode;
-                        final themeName = _getThemeName(context, themeMode);
-                        final isDefault = themeMode == AppThemeMode.auto;
-                        
-                        return MultiBlocListener(
-                          listeners: [
-                            BlocListener<ThemeBloc, ThemeState>(
-                              // ✅ Écouter seulement quand le theme change (et pas en loading)
-                              listenWhen: (previous, current) => 
-                                  previous.themeMode != current.themeMode && !current.isLoading,
-              
-                              listener: (context, state) {
-                                SchedulerBinding.instance.addPostFrameCallback((_) {
-                                  if (context.mounted && Navigator.of(context).canPop()) {
-                                    Navigator.of(context).pop();
-                                  }
-                                });
-                              },
-                            ),
-                          ],
-                          child: Padding(
-                            padding: EdgeInsets.only(
-                              bottom: i == AppThemeMode.values.length - 1 ? 0 : 10,
-                            ),
-                            child: _buildThemeTile(
-                              context: context, 
-                              name: themeName, 
-                              icon: _getThemeIcon(themeMode),
-                              isSelected: isSelected, 
-                              isDefault: isDefault,          
-                              onTap: () {
-                                if (!isSelected) {
-                                  context.themeBloc.add(ThemeChanged(themeMode));
-                                  
-                                  if (context.mounted && Navigator.of(context).canPop()) {
-                                    context.pop();
-                                    context.pop();
-                                  }
-                                }
-                              },
-                            ),
-                          ),
-                        );
-                      })
-                    ],
-                  )
-                ],
-              );
-            }
-          ),
-        ),
-        Positioned(
-          right: 15,
-          top: 15,
-          child: AnimatedSwitcher(
-            duration: const Duration(milliseconds: 300),
-            transitionBuilder: (child, animation) => ScaleTransition(
-              scale: CurvedAnimation(
-                parent: animation,
-                curve: Curves.easeIn,
-                reverseCurve: Curves.easeOut,
+    return ModalSheet(
+      child: BlocBuilder<ThemeBloc, ThemeState>(
+        // ✅ Ne rebuild que si le mode ou le status loading change
+        buildWhen: (previous, current) =>
+          previous.themeMode != current.themeMode ||
+          previous.isLoading != current.isLoading,
+      
+        builder: (context, state) {
+          if (state.isLoading) {
+            return const SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            );
+          }
+          return Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                context.l10n.theme,
+                style: context.bodySmall?.copyWith(
+                  color: context.adaptiveTextPrimary,
+                ),
               ),
-              child: FadeTransition(opacity: animation, child: child),
-            ),
-            child: IconBtn(
-              backgroundColor: Colors.transparent,
-              icon: HugeIcons.solidRoundedCancelCircle,
-              iconColor: context.adaptiveDisabled.withValues(alpha: 0.4),
-              onPressed: () => context.pop(),
-            ),
-          ),
-        )
-      ],
+              2.h,
+              Text(
+                context.l10n.selectPreferenceTheme,
+                style: context.bodySmall?.copyWith(
+                  color: context.adaptiveTextSecondary,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w500
+                ),
+              ),
+              20.h,
+              Column(
+                children: [
+                  ...AppThemeMode.values.asMap().entries.map((entry) {
+                    final i = entry.key;
+                    final themeMode = entry.value;
+                    final isSelected = themeMode == state.themeMode;
+                    final themeName = _getThemeName(context, themeMode);
+                    final isDefault = themeMode == AppThemeMode.auto;
+                    
+                    return MultiBlocListener(
+                      listeners: [
+                        BlocListener<ThemeBloc, ThemeState>(
+                          // ✅ Écouter seulement quand le theme change (et pas en loading)
+                          listenWhen: (previous, current) => 
+                              previous.themeMode != current.themeMode && !current.isLoading,
+          
+                          listener: (context, state) {
+                            SchedulerBinding.instance.addPostFrameCallback((_) {
+                              if (context.mounted && Navigator.of(context).canPop()) {
+                                Navigator.of(context).pop();
+                              }
+                            });
+                          },
+                        ),
+                      ],
+                      child: Padding(
+                        padding: EdgeInsets.only(
+                          bottom: i == AppThemeMode.values.length - 1 ? 0 : 10,
+                        ),
+                        child: _buildThemeTile(
+                          context: context, 
+                          name: themeName, 
+                          icon: _getThemeIcon(themeMode),
+                          isSelected: isSelected, 
+                          isDefault: isDefault,          
+                          onTap: () {
+                            if (!isSelected) {
+                              context.themeBloc.add(ThemeChanged(themeMode));
+                              
+                              if (context.mounted && Navigator.of(context).canPop()) {
+                                context.pop();
+                                context.pop();
+                              }
+                            }
+                          },
+                        ),
+                      ),
+                    );
+                  })
+                ],
+              )
+            ],
+          );
+        }
+      ),
     );
   }
 

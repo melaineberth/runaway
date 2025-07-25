@@ -3,7 +3,6 @@ import 'dart:io';
 import 'dart:math' as math;
 import 'dart:ui' as ui;
 
-import 'package:app_tutorial/app_tutorial.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -54,6 +53,7 @@ import 'package:runaway/core/helper/config/log_config.dart';
 import 'package:runaway/features/route_generator/presentation/blocs/route_generation/route_generation_state.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' as su;
 import 'package:top_snackbar_flutter/top_snack_bar.dart';
+import 'package:tutorial_coach_mark/tutorial_coach_mark.dart';
 import '../../../route_generator/presentation/screens/route_parameter_screen.dart'
     as gen;
 import '../blocs/route_parameters_event.dart';
@@ -173,9 +173,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
         LogConfig.logError('❌ Erreur vérification initiale: $e');
       }
 
-      Future.delayed(const Duration(seconds: 2)).then((value) {
-      _showTutorial();
-    });
+      _createTutorial();
     });
   }
 
@@ -212,67 +210,203 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
     }
   }
 
-  void _showTutorial() async {
-    print("Initialisation des items de tutorial");
-    final items = [
-      TutorialItem(
-        globalKey: generateKey,
-        color: Colors.black.withValues(alpha: 0.6),
-        borderRadius: const Radius.circular(100.0),
-        shapeFocus: ShapeFocus.roundedSquare,
-        child: const TutorialItemContent(
-          title: 'Bouton de génération',
-          content: 'This is the increment button',
-        ),
+  void _createTutorial() {
+    final targets = [
+      // Bouton de génération
+      TargetFocus(
+        identify: "generateButton",
+        keyTarget: generateKey,
+        alignSkip: Alignment.bottomLeft,
+        shape: ShapeLightFocus.Circle,
+        radius: 100,
+        contents: [
+          TargetContent(
+            align: ContentAlign.left,
+            builder: (context, controller) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    "Bouton de génération",
+                    style: context.bodyMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white,
+                    ),
+                  ),
+                  Text(
+                    "Use this button to add new elements to the list",
+                    style: context.bodySmall?.copyWith(
+                      fontWeight: FontWeight.w400,
+                      color: Colors.white.withValues(alpha: 0.6),
+                    ),
+                  ),
+                ],
+              );
+            },
+          ),
+        ],
       ),
-      TutorialItem(
-        globalKey: historicKey,
-        shapeFocus: ShapeFocus.roundedSquare,
-        borderRadius: const Radius.circular(100.0),
-        child: const TutorialItemContent(
-          title: 'Accès au parcours sauvegardé',
-          content: 'This is the text that displays the status of the counter',
-        ),
+      // Bouton de sauvegarde
+      TargetFocus(
+        identify: "historicButton",
+        keyTarget: historicKey,
+        alignSkip: Alignment.bottomLeft,
+        shape: ShapeLightFocus.Circle,
+        radius: 100,
+        contents: [
+          TargetContent(
+            align: ContentAlign.bottom,
+            builder: (context, controller) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    "Historique des sauvegardes",
+                    style: context.bodyMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white,
+                    ),
+                  ),
+                  Text(
+                    "Use this button to add new elements to the list",
+                    style: context.bodySmall?.copyWith(
+                      fontWeight: FontWeight.w400,
+                      color: Colors.white.withValues(alpha: 0.6),
+                    ),
+                  ),
+                ],
+              );
+            },
+          ),
+        ],
       ),
-      TutorialItem(
-        globalKey: mapSettingsKey,
-        color: Colors.black.withValues(alpha: 0.6),
-        shapeFocus: ShapeFocus.roundedSquare,
-        borderRadius: const Radius.circular(100.0),
-        child: const TutorialItemContent(
-          title: 'Réglage de carte',
-          content: 'This is the avatar that displays something',
-        ),
+      // Bouton de map
+      TargetFocus(
+        identify: "mapSettingsButton",
+        keyTarget: mapSettingsKey,
+        alignSkip: Alignment.bottomLeft,
+        shape: ShapeLightFocus.RRect,
+        radius: 35,
+        contents: [
+          TargetContent(
+            align: ContentAlign.bottom,
+            builder: (context, controller) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    "Réglage de carte",
+                    style: context.bodyMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white,
+                    ),
+                  ),
+                  Text(
+                    "Use this button to add new elements to the list",
+                    style: context.bodySmall?.copyWith(
+                      fontWeight: FontWeight.w400,
+                      color: Colors.white.withValues(alpha: 0.6),
+                    ),
+                  ),
+                ],
+              );
+            },
+          ),
+        ],
       ),
-      TutorialItem(
-        globalKey: searchBarKey,
-        color: Colors.black.withValues(alpha: 0.6),
-        shapeFocus: ShapeFocus.roundedSquare,
-        borderRadius: const Radius.circular(100.0),
-        child: const TutorialItemContent(
-          title: 'Recherche d\'adresse',
-          content: 'This is the avatar that displays something',
-        ),
+      // Bouton de map
+      TargetFocus(
+        identify: "searchBarButton",
+        keyTarget: searchBarKey,
+        alignSkip: Alignment.bottomRight,
+        shape: ShapeLightFocus.RRect,
+        radius: 35,
+        contents: [
+          TargetContent(
+            align: ContentAlign.top,
+            builder: (context, controller) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    "Recherche d'une adresse",
+                    style: context.bodyMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white,
+                    ),
+                  ),
+                  Text(
+                    "Use this button to add new elements to the list",
+                    style: context.bodySmall?.copyWith(
+                      fontWeight: FontWeight.w400,
+                      color: Colors.white.withValues(alpha: 0.6),
+                    ),
+                  ),
+                ],
+              );
+            },
+          ),
+        ],
       ),
-      TutorialItem(
-        globalKey: accountKey,
-        color: Colors.black.withValues(alpha: 0.6),
-        shapeFocus: ShapeFocus.roundedSquare,
-        borderRadius: const Radius.circular(100.0),
-        child: const TutorialItemContent(
-          title: 'Compte utilisateur',
-          content: 'This is the avatar that displays something',
-        ),
+      // Bouton de compte
+      TargetFocus(
+        identify: "accountButton",
+        keyTarget: accountKey,
+        alignSkip: Alignment.bottomLeft,
+        shape: ShapeLightFocus.Circle,
+        radius: 100,
+        contents: [
+          TargetContent(
+            align: ContentAlign.top,
+            builder: (context, controller) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    "Accès au compte",
+                    style: context.bodyMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white,
+                    ),
+                  ),
+                  Text(
+                    "Use this button to add new elements to the list",
+                    style: context.bodySmall?.copyWith(
+                      fontWeight: FontWeight.w400,
+                      color: Colors.white.withValues(alpha: 0.6),
+                    ),
+                  ),
+                ],
+              );
+            },
+          ),
+        ],
       ),
     ];
 
-    Tutorial.showTutorial(
-      context,
-      items,
-      onTutorialComplete: () {
-        print("Tutoriel terminé !");
+    final tutorial = TutorialCoachMark(
+      targets: targets,
+      // skipWidget: Padding(
+      //   padding: const EdgeInsets.symmetric(
+      //     horizontal: 20.0,
+      //   ),
+      //   child: IconBtn(
+      //     icon: HugeIcons.solidStandardArrowRight02,
+      //     backgroundColor: context.adaptivePrimary,
+      //     iconColor: Colors.white,
+      //   ),
+      // ),
+      onSkip: () {
+        print("skip");
+        return true;
       },
     );
+
+    Future.delayed(const Duration(milliseconds: 500), () {
+      if (mounted) {
+        tutorial.show(context: context);
+      }
+    });
   }
 
   /// 🎨 Initialiser le style de carte au démarrage
@@ -2894,65 +3028,6 @@ class _RouteInfoEntry extends StatelessWidget {
       right: 0,
       bottom: 0,
       child: Material(color: Colors.transparent, child: panel),
-    );
-  }
-}
-
-class TutorialItemContent extends StatelessWidget {
-  const TutorialItemContent({
-    super.key,
-    required this.title,
-    required this.content,
-  });
-
-  final String title;
-  final String content;
-
-  @override
-  Widget build(BuildContext context) {
-    final width = MediaQuery.of(context).size.width;
-
-    return Center(
-      child: SizedBox(
-        height: MediaQuery.of(context).size.height * 0.6,
-        child: Padding(
-          padding: EdgeInsets.symmetric(horizontal: width * 0.1),
-          child: Column(
-            children: [
-              Text(
-                title,
-                style: const TextStyle(color: Colors.white),
-              ),
-              const SizedBox(height: 10.0),
-              Text(
-                content,
-                textAlign: TextAlign.center,
-                style: const TextStyle(color: Colors.white),
-              ),
-              const Spacer(),
-              Row(
-                children: [
-                  TextButton(
-                    onPressed: () => Tutorial.skipAll(context),
-                    child: const Text(
-                      'Skip onboarding',
-                      style: TextStyle(color: Colors.white),
-                    ),
-                  ),
-                  const Spacer(),
-                  const TextButton(
-                    onPressed: null,
-                    child: Text(
-                      'Next',
-                      style: TextStyle(color: Colors.white),
-                    ),
-                  ),
-                ],
-              )
-            ],
-          ),
-        ),
-      ),
     );
   }
 }

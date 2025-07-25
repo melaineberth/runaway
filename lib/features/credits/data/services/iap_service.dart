@@ -30,6 +30,14 @@ class IAPService {
   /// Achats en cours : { purchaseId → Completer }
   static final Map<String, Completer<PurchaseResult>> _pendingPurchases = {};
 
+  /// Récupère les détails d'un produit par son ID
+  static ProductDetails? getProductDetails(String iapId) {
+    return _products[iapId];
+  }
+
+  /// Récupère tous les produits chargés
+  static Map<String, ProductDetails> get loadedProducts => Map.unmodifiable(_products);
+
   static Future<void> initialize() async {
     await _ensureInitialized();
     debugPrint('🛒 IAP Service initialized');

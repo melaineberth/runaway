@@ -306,10 +306,14 @@ class _CreditPlanModalState extends State<CreditPlanModal> {
             plans.length,
             (index) {
               final plan = plans[index];
+              // 🆕 Récupérer les ProductDetails correspondants
+              final productDetails = IAPService.getProductDetails(plan.iapId);
+
               return Padding(
                 padding: EdgeInsets.only(bottom: index == plans.length - 1 ? 0 : 8),
                 child: CreditPlanCard(
                   plan: plan,
+                  productDetails: productDetails, // 🆕 Passer ProductDetails
                   isSelected: selectedPlanId == plan.id,
                   onTap: () {
                     setState(() {
@@ -371,12 +375,16 @@ class _CreditPlanModalState extends State<CreditPlanModal> {
               (plan) => plan.id == selectedPlanId,
               orElse: () => throw Exception(context.l10n.notAvailablePlans),
             );
+
+            // 🆕 Récupérer les ProductDetails pour le prix réel
+            final productDetails = IAPService.getProductDetails(selectedPlan.iapId);
+            final actualPrice = productDetails?.rawPrice ?? selectedPlan.price;
             
             // Appeler _handlePurchase avec les bons paramètres
             _handlePurchase(
               selectedPlan.id,      // String planId
               selectedPlan.credits, // int credits
-              selectedPlan.price,   // double price
+              actualPrice,   // double price
             );
           } : null,
           label: selectedPlanId != null 

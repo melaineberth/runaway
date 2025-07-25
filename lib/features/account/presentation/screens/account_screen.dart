@@ -896,8 +896,8 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
     showModalBottomSheet(
       useRootNavigator: true,
       isScrollControlled: true,
-      isDismissible: false,
-      enableDrag: false,
+      isDismissible: true,
+      enableDrag: true,
       context: context,
       useSafeArea: false,
       backgroundColor: Colors.transparent,
@@ -915,8 +915,8 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
     showModalBottomSheet(
       useRootNavigator: true,
       isScrollControlled: true,
-      isDismissible: false,
-      enableDrag: false,
+      isDismissible: true,
+      enableDrag: true,
       context: context,
       useSafeArea: false,
       backgroundColor: Colors.transparent,
