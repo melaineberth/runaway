@@ -17,6 +17,15 @@ class AuthDataListener extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocListener<AuthBloc, AuthState>(
       listener: (context, authState) {
+        // 🆕 PRIORITÉ: Ignorer les actions pendant le processus de reset de mot de passe
+        if (authState is PasswordResetCodeSent || 
+            authState is PasswordResetSent ||
+            authState is PasswordResetCodeVerified || 
+            authState is PasswordResetSuccess) {
+          print('🔐 AuthDataListener: Processus de reset en cours - ignorer les actions');
+          return;
+        }
+        
         if (authState is Authenticated) {
           // Utilisateur connecté -> démarrer le pré-chargement
           print('🔐 Utilisateur authentifié, démarrage du pré-chargement...');

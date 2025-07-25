@@ -51,12 +51,18 @@ class _ConversionListenerState extends State<ConversionListener> {
     super.dispose();
   }
 
-
-
   @override
   Widget build(BuildContext context) {
     return BlocListener<AuthBloc, AuthState>(
       listener: (context, authState) {
+        // 🆕 PRIORITÉ: Ignorer les actions pendant le processus de reset de mot de passe
+        if (authState is PasswordResetCodeSent || 
+            authState is PasswordResetCodeVerified || 
+            authState is PasswordResetSuccess) {
+          print('🔐 ConversionListener: Processus de reset en cours - ignorer les actions');
+          return;
+        }
+        
         if (authState is Authenticated) {
           // ✅ Utilisateur connecté → annuler tout prompt en cours
           _delayedPromptTimer?.cancel();

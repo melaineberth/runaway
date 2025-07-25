@@ -39,6 +39,15 @@ final GoRouter router = GoRouter(
     final isOnAuthPage = authPages.contains(currentLocation);
     
     print('🧭 Router redirect: current=$currentLocation, authState=${authState.runtimeType}');
+
+    // Ne pas rediriger pendant les processus de reset de mot de passe
+    if (authState is PasswordResetCodeSent || 
+        authState is PasswordResetCodeVerified || 
+        authState is PasswordResetSuccess) {
+      // Pendant le processus de reset, ne pas rediriger
+      print('🔐 Processus de reset en cours - pas de redirection');
+      return null;
+    }
     
     // Gestion des redirections selon l'état d'authentification
     if (authState is AuthInitial || authState is AuthLoading) {
@@ -213,6 +222,14 @@ class AuthWrapper extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocListener<AuthBloc, AuthState>(
       listener: (context, authState) {
+        // 🆕 PRIORITÉ: Ignorer les actions pendant le processus de reset de mot de passe
+        if (authState is PasswordResetCodeSent || 
+            authState is PasswordResetCodeVerified || 
+            authState is PasswordResetSuccess) {
+          print('🔐 AuthWrapper: Processus de reset en cours - ignorer les actions');
+          return;
+        }
+        
         // 🔧 CORRECTION: Ajouter des logs pour debug et éviter les actions redondantes
         LogConfig.logInfo('🔄 AuthWrapper: Changement d\'état - ${authState.runtimeType}');
         

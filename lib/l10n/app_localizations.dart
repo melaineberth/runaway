@@ -3146,6 +3146,42 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Unlock saving, goals, and performance tracking.'**
   String get conversionSubtitleDefault;
+
+  /// Instructions for password reset
+  ///
+  /// In en, this message translates to:
+  /// **'Enter your email address to receive a reset code'**
+  String get enterEmailToReset;
+
+  /// Title for new password step
+  ///
+  /// In en, this message translates to:
+  /// **'Enter new password'**
+  String get enterNewPassword;
+
+  /// Subtitle for new password step
+  ///
+  /// In en, this message translates to:
+  /// **'Create a strong new password'**
+  String get createNewPassword;
+
+  /// Placeholder for new password field
+  ///
+  /// In en, this message translates to:
+  /// **'New password'**
+  String get newPasswordHint;
+
+  /// Button text to send reset code
+  ///
+  /// In en, this message translates to:
+  /// **'Send reset code'**
+  String get sendResetCode;
+
+  /// Button text to update password
+  ///
+  /// In en, this message translates to:
+  /// **'Update password'**
+  String get updatePassword;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

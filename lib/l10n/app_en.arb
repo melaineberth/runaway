@@ -2229,5 +2229,29 @@
   "conversionSubtitleDefault": "Unlock saving, goals, and performance tracking.",
   "@conversionSubtitleDefault": {
     "description": "Default conversion modal subtitle"
+  },
+  "enterEmailToReset": "Enter your email address to receive a reset code",
+  "@enterEmailToReset": {
+    "description": "Instructions for password reset"
+  },
+  "enterNewPassword": "Enter new password",
+  "@enterNewPassword": {
+    "description": "Title for new password step"
+  },
+  "createNewPassword": "Create a strong new password",
+  "@createNewPassword": {
+    "description": "Subtitle for new password step"
+  },
+  "newPasswordHint": "New password",
+  "@newPasswordHint": {
+    "description": "Placeholder for new password field"
+  },
+  "sendResetCode": "Send reset code",
+  "@sendResetCode": {
+    "description": "Button text to send reset code"
+  },
+  "updatePassword": "Update password",
+  "@updatePassword": {
+    "description": "Button text to update password"
   }
 }

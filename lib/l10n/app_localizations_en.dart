@@ -1609,4 +1609,22 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get conversionSubtitleDefault => 'Unlock saving, goals, and performance tracking.';
+
+  @override
+  String get enterEmailToReset => 'Enter your email address to receive a reset code';
+
+  @override
+  String get enterNewPassword => 'Enter new password';
+
+  @override
+  String get createNewPassword => 'Create a strong new password';
+
+  @override
+  String get newPasswordHint => 'New password';
+
+  @override
+  String get sendResetCode => 'Send reset code';
+
+  @override
+  String get updatePassword => 'Update password';
 }

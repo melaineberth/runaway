@@ -43,6 +43,9 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     on<NotificationSettingsToggleRequested>(_onNotificationSettingsToggle);
 
     on<VerifyOTPRequested>(_onVerifyOTP);
+    on<ForgotPasswordRequested>(_onForgotPassword);
+    on<VerifyPasswordResetCodeRequested>(_onVerifyPasswordResetCode);
+    on<ResetPasswordRequested>(_onResetPassword);
 
     // handlers internes
     on<_InternalProfileLoaded>(_onInternalProfileLoaded);
@@ -54,8 +57,16 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       try {
         final user = data.session?.user;
         if (user == null) return add(_InternalLoggedOut());
+
+        // Ignorer les changements de session pendant le processus de reset
+        if (state is PasswordResetCodeSent || 
+            state is PasswordResetCodeVerified || 
+            state is PasswordResetSuccess) {
+          LogConfig.logInfo('🔐 Stream listener: Processus de reset en cours - ignorer changement session');
+          return;
+        }
         
-        // FIX: Utiliser skipCleanup pour éviter le nettoyage automatique
+        // Utiliser skipCleanup pour éviter le nettoyage automatique
         final p = await _repo.getProfile(user.id, skipCleanup: true);
         
         if (p == null) {
@@ -664,6 +675,69 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       Future.delayed(const Duration(seconds: 2), () {
         if (!isClosed) emit(EmailConfirmationRequired(e.email));
       });
+    }
+  }
+
+  Future<void> _onForgotPassword(ForgotPasswordRequested e, Emitter<AuthState> emit) async {
+    emit(AuthLoading());
+    try {
+      // Utiliser la fonction RPC existante pour vérifier l'éligibilité
+      final response = await _repo.checkPasswordResetEligibility(e.email);
+      
+      if (!response['user_exists']) {
+        return emit(AuthError('Email non trouvé'));
+      }
+      
+      if (!response['can_reset_password']) {
+        return emit(AuthError('Impossible de réinitialiser le mot de passe'));
+      }
+      
+      // Envoyer le code de réinitialisation
+      await _repo.sendPasswordResetCode(e.email);
+      
+      emit(PasswordResetCodeSent(e.email));
+      LogConfig.logInfo('✅ Code de réinitialisation envoyé à: ${e.email}');
+    } catch (err) {
+      LogConfig.logError('❌ Erreur envoi code réinitialisation: $err');
+      emit(AuthError('Erreur lors de l\'envoi du code'));
+    }
+  }
+
+  Future<void> _onVerifyPasswordResetCode(VerifyPasswordResetCodeRequested e, Emitter<AuthState> emit) async {
+    emit(AuthLoading());
+    try {
+      final isValid = await _repo.verifyPasswordResetCode(e.email, e.code);
+      
+      if (!isValid) {
+        return emit(AuthError('Code invalide ou expiré'));
+      }
+      
+      // Code valide, passer à l'état vérifié pour permettre la saisie du nouveau mot de passe
+      emit(PasswordResetCodeVerified(e.email, e.code));
+      LogConfig.logInfo('✅ Code de réinitialisation vérifié pour: ${e.email}');
+    } catch (err) {
+      LogConfig.logError('❌ Erreur vérification code: $err');
+      
+      // Émettre directement l'erreur puis l'état précédent immédiatement
+      emit(AuthError(err.toString()));
+      
+      // Vérifier si l'émetteur n'est pas fermé avant d'émettre l'état de retour
+      if (!emit.isDone) {
+        emit(PasswordResetCodeSent(e.email));
+      }
+    }
+  }
+
+  Future<void> _onResetPassword(ResetPasswordRequested e, Emitter<AuthState> emit) async {
+    emit(AuthLoading());
+    try {
+      await _repo.resetPasswordWithCode(e.email, e.code, e.newPassword);
+      
+      emit(PasswordResetSuccess());
+      LogConfig.logInfo('✅ Mot de passe réinitialisé pour: ${e.email}');
+    } catch (err) {
+      LogConfig.logError('❌ Erreur réinitialisation mot de passe: $err');
+      emit(AuthError('Erreur lors de la réinitialisation'));
     }
   }
 

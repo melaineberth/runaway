@@ -30,8 +30,6 @@ class AppleCurves {
 class FloatingLocationSearchSheet extends StatefulWidget {
   const FloatingLocationSearchSheet({
     super.key,
-    required this.searchBarKey,
-    required this.accountKey,
     this.onLocationSelected,
     this.userLongitude,
     this.userLatitude,
@@ -42,8 +40,6 @@ class FloatingLocationSearchSheet extends StatefulWidget {
   final double? userLongitude;
   final double? userLatitude;
   final Function()? onProfile;
-  final GlobalKey searchBarKey;
-  final GlobalKey accountKey;
 
   @override
   State<FloatingLocationSearchSheet> createState() => _FloatingLocationSearchSheetState();
@@ -686,7 +682,6 @@ class _FloatingLocationSearchSheetState extends State<FloatingLocationSearchShee
   /// 📝 Construit le champ de recherche
   Widget _buildSearchField() {
     return Container(
-      key: widget.searchBarKey,
       height: _kSearchBarHeight,
       padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 8),
       decoration: BoxDecoration(
@@ -767,7 +762,6 @@ class _FloatingLocationSearchSheetState extends State<FloatingLocationSearchShee
       child: BlocBuilder<AuthBloc, AuthState>(
         builder: (context, authState) {
           return GestureDetector(
-            key: widget.accountKey,
             onTap: widget.onProfile,
             child: authState is Authenticated 
                 ? _buildAuthenticatedAvatar(authState.profile)

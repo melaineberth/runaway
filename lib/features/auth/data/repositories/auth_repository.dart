@@ -1360,6 +1360,167 @@ class AuthRepository {
     }
   }
 
+  /// Vérifie l'éligibilité au reset de mot de passe
+  Future<Map<String, dynamic>> checkPasswordResetEligibility(String email) async {
+    try {
+      final response = await _supabase.rpc('check_password_reset_eligibility', params: {
+        'user_email': email,
+      });
+      
+      return Map<String, dynamic>.from(response);
+    } catch (e) {
+      LogConfig.logError('❌ Erreur vérification éligibilité: $e');
+      throw AuthException('Erreur lors de la vérification');
+    }
+  }
+
+  /// Envoie un code de réinitialisation par email
+  Future<void> sendPasswordResetCode(String email) async {
+    try {
+      // Utiliser Supabase pour envoyer un email avec un code OTP
+      await _supabase.auth.resetPasswordForEmail(
+        email,
+        redirectTo: null, // Pas de redirection, on utilise le code OTP
+      );
+      
+      LogConfig.logInfo('📧 Code de réinitialisation envoyé à: $email');
+    } catch (e) {
+      LogConfig.logError('❌ Erreur envoi code: $e');
+      throw AuthException('Impossible d\'envoyer le code');
+    }
+  }
+
+  /// Vérifie un code de réinitialisation de mot de passe
+  Future<bool> verifyPasswordResetCode(String email, String code) async {
+    try {
+      LogConfig.logInfo('🔍 Vérification code pour: $email');
+      
+      // Validation préliminaire
+      if (code.length != 6 || !RegExp(r'^\d{6}$').hasMatch(code)) {
+        LogConfig.logWarning('⚠️ Format de code invalide');
+        return false;
+      }
+      
+      // Vérifier le code OTP de récupération avec Supabase
+      final response = await _supabase.auth.verifyOTP(
+        type: OtpType.recovery,
+        email: email.trim(),
+        token: code.trim(),
+      );
+      
+      // Si la vérification réussit, déconnecter immédiatement pour éviter la redirection
+      if (response.user != null && response.session != null) {
+        LogConfig.logInfo('✅ Code valide pour: $email - déconnexion temporaire');
+        
+        // Déconnecter immédiatement pour éviter que l'utilisateur soit redirigé
+        await _supabase.auth.signOut();
+        
+        return true;
+      }
+      
+      LogConfig.logWarning('⚠️ Code invalide pour: $email');
+      return false;
+      
+    } on AuthException catch (e) {
+      LogConfig.logError('❌ Erreur Auth Supabase: $e');
+      
+      // Assurez-vous qu'aucune session n'est active en cas d'erreur
+      try {
+        await _supabase.auth.signOut();
+      } catch (signOutError) {
+        // Ignorer les erreurs de déconnexion
+      }
+      
+      // Ne pas lever d'exception pour les codes invalides, juste retourner false
+      if (e.message.toLowerCase().contains('invalid') || 
+          e.message.toLowerCase().contains('expired') ||
+          e.message.toLowerCase().contains('not_found')) {
+        return false;
+      }
+      
+      // Pour les autres erreurs Auth, lever une exception avec un message clair
+      throw AuthException(_parseSupabaseError(e));
+      
+    } catch (e) {
+      LogConfig.logError('❌ Erreur générale vérification code: $e');
+      
+      // Assurez-vous qu'aucune session n'est active en cas d'erreur
+      try {
+        await _supabase.auth.signOut();
+      } catch (signOutError) {
+        // Ignorer les erreurs de déconnexion
+      }
+      
+      // Pour les erreurs réseau ou autres, lever une exception
+      throw AuthException(_parseSupabaseError(e));
+    }
+  }
+
+  /// Réinitialise le mot de passe après vérification du code (version améliorée)
+  Future<void> resetPasswordWithCode(String email, String code, String newPassword) async {
+    try {
+      LogConfig.logInfo('🔄 Réinitialisation mot de passe pour: $email');
+      
+      // Validation du mot de passe avant tentative
+      if (newPassword.length < 8) {
+        throw AuthException('Le mot de passe doit contenir au moins 8 caractères');
+      }
+      
+      // Première étape: Vérifier le code OTP une nouvelle fois pour être sûr
+      final verifyResponse = await _supabase.auth.verifyOTP(
+        type: OtpType.recovery,
+        email: email.trim(),
+        token: code.trim(),
+      );
+      
+      if (verifyResponse.user == null || verifyResponse.session == null) {
+        throw AuthException('Code invalide ou expiré');
+      }
+      
+      LogConfig.logInfo('✅ Code re-vérifié, mise à jour du mot de passe...');
+      
+      // Deuxième étape: Mettre à jour le mot de passe
+      final updateResponse = await _supabase.auth.updateUser(
+        UserAttributes(password: newPassword),
+      );
+      
+      if (updateResponse.user == null) {
+        throw AuthException('Impossible de mettre à jour le mot de passe');
+      }
+      
+      LogConfig.logInfo('✅ Mot de passe mis à jour pour: $email');
+      
+      // Troisième étape: Déconnecter l'utilisateur pour qu'il se reconnecte
+      await _supabase.auth.signOut();
+      
+      LogConfig.logInfo('🔒 Utilisateur déconnecté après changement de mot de passe');
+      
+    } on AuthException catch (e) {
+      LogConfig.logError('❌ Erreur Auth réinitialisation: $e');
+      
+      // Nettoyer la session en cas d'erreur
+      try {
+        await _supabase.auth.signOut();
+      } catch (signOutError) {
+        LogConfig.logError('❌ Erreur déconnexion après échec: $signOutError');
+      }
+      
+      throw AuthException(_parseSupabaseError(e));
+      
+    } catch (e) {
+      LogConfig.logError('❌ Erreur générale réinitialisation: $e');
+      
+      // Nettoyer la session en cas d'erreur
+      try {
+        await _supabase.auth.signOut();
+      } catch (signOutError) {
+        LogConfig.logError('❌ Erreur déconnexion après échec: $signOutError');
+      }
+      
+      throw AuthException(_parseSupabaseError(e));
+    }
+  }
+
   /* ───────── HELPER POUR GÉNÉRER USERNAME UNIQUE (réutilisé si nécessaire) ───────── */
   Future<String> _generateUniqueUsername(String baseName) async {
     // Nettoyer le nom de base
@@ -1836,5 +1997,29 @@ class AuthRepository {
       LogConfig.logError('❌ Erreur vérification OTP: $e');
       throw AuthExceptionHandler.handleSupabaseError(e);
     }
+  }
+
+  /// Helper pour analyser et formater les erreurs Supabase
+  String _parseSupabaseError(dynamic error) {
+    final errorString = error.toString().toLowerCase();
+    
+    // 🆕 Gestion spécifique des codes OTP expirés
+    if (errorString.contains('otp_expired') || errorString.contains('token has expired')) {
+      return 'Code expiré. Demandez un nouveau code de réinitialisation';
+    } else if (errorString.contains('invalid_token') || errorString.contains('token_not_found')) {
+      return 'Code invalide. Vérifiez le code reçu par email';
+    } else if (errorString.contains('too_many_requests')) {
+      return 'Trop de tentatives. Veuillez patienter avant de réessayer';
+    } else if (errorString.contains('email_not_confirmed')) {
+      return 'Adresse email non confirmée';
+    } else if (errorString.contains('signup_disabled')) {
+      return 'La réinitialisation de mot de passe est temporairement désactivée';
+    } else if (errorString.contains('weak_password')) {
+      return 'Le mot de passe n\'est pas assez fort';
+    } else if (errorString.contains('network') || errorString.contains('timeout')) {
+      return 'Problème de connexion. Vérifiez votre réseau';
+    }
+    
+    return 'Une erreur inattendue s\'est produite';
   }
 }

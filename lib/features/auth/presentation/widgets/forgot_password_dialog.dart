@@ -1,14 +1,22 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 import 'package:runaway/core/helper/extensions/extensions.dart';
 import 'package:runaway/core/widgets/modal_sheet.dart';
 import 'package:runaway/core/widgets/squircle_btn.dart';
 import 'package:runaway/core/widgets/top_snackbar.dart';
 import 'package:runaway/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:runaway/features/auth/presentation/bloc/auth_state.dart';
+import 'package:runaway/features/auth/presentation/bloc/auth_event.dart';
 import 'package:runaway/features/auth/presentation/widgets/auth_text_field.dart';
-import 'package:supabase_flutter/supabase_flutter.dart' as su;
 import 'package:top_snackbar_flutter/top_snack_bar.dart';
+
+enum ForgotPasswordStep {
+  email,
+  code,
+  newPassword,
+}
 
 class ForgotPasswordDialog extends StatefulWidget {
   const ForgotPasswordDialog({super.key});
@@ -20,10 +28,23 @@ class ForgotPasswordDialog extends StatefulWidget {
 class _ForgotPasswordDialogState extends State<ForgotPasswordDialog> {
   final _formKey = GlobalKey<FormState>();
   final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _codeController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
+  
+  ForgotPasswordStep _currentStep = ForgotPasswordStep.email;
+  String? _email;
+  String? _verifiedCode;
+
+  // Ajouter ces variables d'état en haut de la classe _ForgotPasswordDialogState
+  bool _codeVerifying = false;
+  String? _codeError;
+  bool _showRetryOption = false;
 
   @override
   void dispose() {
     _emailController.dispose();
+    _codeController.dispose();
+    _passwordController.dispose();
     super.dispose();
   }
 
@@ -37,146 +58,361 @@ class _ForgotPasswordDialogState extends State<ForgotPasswordDialog> {
     return null;
   }
 
-  Future<void> _handleSubmit() async {
+  String? codeValidator(String? value) {
+    if (value == null || value.trim().isEmpty) {
+      return context.l10n.codeRequired;
+    }
+    if (value.length != 6 || !RegExp(r'^\d{6}$').hasMatch(value)) {
+      return context.l10n.codeMustBe6Digits;
+    }
+    return null;
+  }
+
+  String? passwordValidator(String? v) {
+    if (v == null || v.isEmpty) {
+      return context.l10n.requiredPassword;
+    }
+    
+    if (v.length < 8) {
+      return context.l10n.requiredCountCharacters(8);
+    }
+    
+    if (!v.contains(RegExp(r'[A-Z]'))) {
+      return context.l10n.requiredCapitalLetter;
+    }
+    
+    if (!v.contains(RegExp(r'[a-z]'))) {
+      return context.l10n.requiredMinusculeLetter;
+    }
+    
+    if (!v.contains(RegExp(r'[0-9]'))) {
+      return context.l10n.requiredDigit;
+    }
+    
+    if (!v.contains(RegExp(r'[!@#$%^&*(),.?":{}|<>]'))) {
+      return context.l10n.requiredSymbol;
+    }
+    
+    return null;
+  }
+
+  void _handleSubmit() {
     if (!(_formKey.currentState?.validate() ?? false)) return;
 
-    final email = _emailController.text.trim();
-    try {
-      // Appeler la fonction RPC pour vérifier l'éligibilité
-      final response = await su.Supabase.instance.client
-          .rpc('check_password_reset_eligibility', params: {
-        'user_email': email,
-      });
-
-      if (mounted) {
-        final result = response as Map<String, dynamic>;
-        final userExists = result['user_exists'] as bool;
-        final canResetPassword = result['can_reset_password'] as bool;
-
-        if (!userExists) {
-          // Utilisateur non trouvé
-          showTopSnackBar(
-            Overlay.of(context),
-            TopSnackBar(
-              isWarning: true,
-              title: context.l10n.notEmailFound,
-            ),
-          );
-        } else if (!canResetPassword) {
-          showTopSnackBar(
-            Overlay.of(context),
-            TopSnackBar(
-              isWarning: true,
-              title: context.l10n.resetPasswordImpossible,
-            ),
-          );
-        } else {
-          // L'utilisateur peut réinitialiser son mot de passe
-          
-        }
-      }
-    } catch (e, stack) {
-      // En cas d'erreur réseau ou autre
-      debugPrint('Erreur lors de la vérification du profil : $e\n$stack');
-      if (mounted) {
-        showTopSnackBar(
-          Overlay.of(context),
-          TopSnackBar(
-            isError: true,
-            title: context.l10n.genericErrorRetry,
-          ),
-        );
-      }
+    switch (_currentStep) {
+      case ForgotPasswordStep.email:
+        _sendResetCode();
+        break;
+      case ForgotPasswordStep.code:
+        _verifyCode();
+        break;
+      case ForgotPasswordStep.newPassword:
+        _resetPassword();
+        break;
     }
+  }
+
+  void _sendResetCode() {
+    final email = _emailController.text.trim();
+    _email = email;
+    context.read<AuthBloc>().add(ForgotPasswordRequested(email: email));
+  }
+
+  void _verifyCode() {
+    final code = _codeController.text.trim();
+    
+    // Validation locale d'abord
+    if (code.isEmpty) {
+      setState(() {
+        _codeError = context.l10n.codeRequired;
+      });
+      return;
+    }
+    
+    if (code.length != 6 || !RegExp(r'^\d{6}$').hasMatch(code)) {
+      setState(() {
+        _codeError = context.l10n.codeMustBe6Digits;
+      });
+      return;
+    }
+    
+    setState(() {
+      _codeError = null;
+      _codeVerifying = true;
+    });
+    
+    context.read<AuthBloc>().add(
+      VerifyPasswordResetCodeRequested(email: _email!, code: code)
+    );
+  }
+
+  void _resetPassword() {
+    final newPassword = _passwordController.text.trim();
+    context.read<AuthBloc>().add(
+      ResetPasswordRequested(
+        email: _email!,
+        code: _verifiedCode!,
+        newPassword: newPassword,
+      )
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return BlocListener<AuthBloc, AuthState>(
       listener: (context, state) {
-        if (state is PasswordResetSent) {
+        if (state is PasswordResetCodeSent) {
+          setState(() {
+            _currentStep = ForgotPasswordStep.code;
+            _codeVerifying = false;
+            _showRetryOption = false; // Reset option retry
+          });
+        } else if (state is PasswordResetCodeVerified) {
+          setState(() {
+            _currentStep = ForgotPasswordStep.newPassword;
+            _verifiedCode = state.verifiedCode;
+            _codeVerifying = false;
+            _showRetryOption = false;
+          });
+        } else if (state is PasswordResetSuccess) {
           Navigator.of(context).pop();
-          showTopSnackBar(
-            Overlay.of(context),
-            TopSnackBar(
-              title: context.l10n.resetEmail(state.email),
-            ),
-          );
+          context.go('/password-reset-success');
         } else if (state is AuthError) {
+          setState(() {
+            _codeVerifying = false;
+            // 🆕 Afficher l'option retry si le code est expiré
+            _showRetryOption = state.message.contains('expiré') || state.message.contains('expired');
+          });
           showTopSnackBar(
             Overlay.of(context),
             TopSnackBar(
-              isError: true,
+              isWarning: true,
               title: state.message,
             ),
           );
         }
       },
       child: ModalSheet(
-        child: Form(
-          key: _formKey,
-          child: Padding(
-            padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+        child: Padding(
+          padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+          child: Form(
+            key: _formKey,
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Text(
-                  context.l10n.forgotPassword,
-                  style: context.bodyMedium?.copyWith(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w600,
-                    color: context.adaptiveTextPrimary,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-                16.h,
-                Text(
-                  context.l10n.receiveResetLink,
-                  style: context.bodySmall?.copyWith(
-                    color: context.adaptiveTextSecondary,
-                    fontWeight: FontWeight.w400,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-                24.h,
-                AuthTextField(
-                  hint: context.l10n.emailHint,
-                  validator: emailValidator,
-                  controller: _emailController,
-                  enabled: true,
-                ),
-                8.h,
-                BlocBuilder<AuthBloc, AuthState>(
-                  builder: (context, state) {
-                    final isLoading = state is AuthLoading;
-                    return Row(
-                      children: [
-                        Expanded(
-                          child: SquircleBtn(
-                            isPrimary: false,
-                            onTap: isLoading ? null : () => Navigator.of(context).pop(),
-                            label: context.l10n.cancel,
-                          ),
-                        ),
-                        8.w,
-                        Expanded(
-                          child: SquircleBtn(
-                            isPrimary: true,
-                            isLoading: isLoading,
-                            onTap: isLoading ? null : _handleSubmit,
-                            label: context.l10n.send,
-                          ),
-                        ),
-                      ],
-                    );
-                  },
-                ),
+                _buildHeader(),
+                20.h,
+                _buildCurrentStepContent(),
+                20.h,
+                _buildSubmitButton(),
               ],
             ),
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildHeader() {
+    String title;
+    String subtitle;
+
+    switch (_currentStep) {
+      case ForgotPasswordStep.email:
+        title = context.l10n.forgotPassword;
+        subtitle = context.l10n.enterEmailToReset;
+        break;
+      case ForgotPasswordStep.code:
+        title = context.l10n.enterVerificationCode;
+        subtitle = context.l10n.verificationCodeSentTo(_email ?? '');
+        break;
+      case ForgotPasswordStep.newPassword:
+        title = context.l10n.enterNewPassword;
+        subtitle = context.l10n.createNewPassword;
+        break;
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: context.bodySmall?.copyWith(
+            color: context.adaptiveTextPrimary,
+            fontSize: 18,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        2.h,
+        Text(
+          subtitle,
+          style: context.bodySmall?.copyWith(
+            color: context.adaptiveTextSecondary,
+            fontSize: 15,
+            fontWeight: FontWeight.w400,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildCurrentStepContent() {
+    switch (_currentStep) {
+      case ForgotPasswordStep.email:
+        return AuthTextField(
+          hint: context.l10n.emailHint,
+          validator: emailValidator,
+          controller: _emailController,
+        );
+      case ForgotPasswordStep.code:
+        return Column(
+          children: [
+            TextField(
+              controller: _codeController,
+              keyboardType: TextInputType.number,
+              textAlign: TextAlign.center,
+              maxLength: 6,
+              inputFormatters: [
+                FilteringTextInputFormatter.digitsOnly,
+              ],
+              style: context.bodyMedium?.copyWith(
+                fontSize: 24,
+                fontWeight: FontWeight.w600,
+                letterSpacing: 8,
+              ),
+              decoration: InputDecoration(
+                counterText: '',
+                hintText: '000000',
+                hintStyle: context.bodyMedium?.copyWith(
+                  fontSize: 24,
+                  fontWeight: FontWeight.w300,
+                  letterSpacing: 8,
+                  color: context.adaptiveTextSecondary.withValues(alpha: 0.3),
+                ),
+                filled: true,
+                fillColor: context.adaptiveTextSecondary.withValues(alpha: 0.05),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none,
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(
+                    color: context.adaptivePrimary,
+                    width: 2,
+                  ),
+                ),
+                errorBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(
+                    color: context.colorScheme.error,
+                    width: 2,
+                  ),
+                ),
+              ),
+              onChanged: (value) {
+                // Effacer l'erreur quand l'utilisateur tape
+                if (_codeError != null) {
+                  setState(() {
+                    _codeError = null;
+                  });
+                }
+              },
+            ),
+            if (_codeVerifying) ...[
+              8.h,
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation<Color>(
+                        context.adaptivePrimary,
+                      ),
+                    ),
+                  ),
+                  8.w,
+                  Text(
+                    'Vérification du code...',
+                    style: context.bodySmall?.copyWith(
+                      color: context.adaptiveTextSecondary,
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+                ],
+                
+              ),
+            ],
+            10.h,
+            // 🆕 Option pour redemander un code si expiré
+            if (_showRetryOption) ...[
+              TextButton(
+                onPressed: () {
+                  setState(() {
+                    _currentStep = ForgotPasswordStep.email;
+                    _showRetryOption = false;
+                    _codeController.clear();
+                  });
+                },
+                child: Text(
+                  'Demander un nouveau code',
+                  style: context.bodySmall?.copyWith(
+                    color: context.adaptivePrimary,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              5.h,
+            ],
+            Text(
+              context.l10n.orUseEmailLink,
+              style: context.bodySmall?.copyWith(
+                color: context.adaptiveTextSecondary,
+                fontStyle: FontStyle.italic,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        );
+      case ForgotPasswordStep.newPassword:
+        return AuthTextField(
+          hint: context.l10n.newPasswordHint,
+          obscureText: true,
+          validator: passwordValidator,
+          controller: _passwordController,
+        );
+    }
+  }
+
+  Widget _buildSubmitButton() {
+    return BlocBuilder<AuthBloc, AuthState>(
+      builder: (context, state) {
+        final isLoading = state is AuthLoading;
+        
+        String buttonText;
+        switch (_currentStep) {
+          case ForgotPasswordStep.email:
+            buttonText = context.l10n.sendResetCode;
+            break;
+          case ForgotPasswordStep.code:
+            buttonText = context.l10n.verify;
+            break;
+          case ForgotPasswordStep.newPassword:
+            buttonText = context.l10n.updatePassword;
+            break;
+        }
+        
+        return SquircleBtn(
+          isPrimary: true,
+          isLoading: isLoading,
+          onTap: isLoading ? null : _handleSubmit,
+          label: buttonText,
+        );
+      },
     );
   }
 }

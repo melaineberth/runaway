@@ -61,3 +61,13 @@ class PasswordResetCodeSent extends AuthState {
 }
 
 class PasswordResetSuccess extends AuthState {}
+
+class PasswordResetCodeVerified extends AuthState {
+  final String email;
+  final String verifiedCode;
+  
+  PasswordResetCodeVerified(this.email, this.verifiedCode);
+  
+  @override
+  List<Object> get props => [email, verifiedCode];
+}
