@@ -1611,20 +1611,23 @@ class AppLocalizationsFr extends AppLocalizations {
   String get conversionSubtitleDefault => 'Débloquez la sauvegarde, les objectifs et le suivi de performances.';
 
   @override
-  String get enterEmailToReset => 'Enter your email address to receive a reset code';
+  String get enterEmailToReset => 'Saisissez votre adresse email pour recevoir un code de réinitialisation';
 
   @override
-  String get enterNewPassword => 'Enter new password';
+  String get enterNewPassword => 'Saisissez le nouveau mot de passe';
 
   @override
-  String get createNewPassword => 'Create a strong new password';
+  String get createNewPassword => 'Créez un nouveau mot de passe sécurisé';
 
   @override
-  String get newPasswordHint => 'New password';
+  String get newPasswordHint => 'Nouveau mot de passe';
 
   @override
-  String get sendResetCode => 'Send reset code';
+  String get sendResetCode => 'Envoyer le code de réinitialisation';
 
   @override
-  String get updatePassword => 'Update password';
+  String get updatePassword => 'Mettre à jour le mot de passe';
+
+  @override
+  String get passwordMustBeDifferent => 'Le nouveau mot de passe doit être différent de l\'ancien';
 }

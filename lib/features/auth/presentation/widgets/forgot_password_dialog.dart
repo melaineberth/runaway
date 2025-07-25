@@ -3,13 +3,16 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:runaway/core/helper/extensions/extensions.dart';
+import 'package:runaway/core/utils/constant/constants.dart';
 import 'package:runaway/core/widgets/modal_sheet.dart';
 import 'package:runaway/core/widgets/squircle_btn.dart';
 import 'package:runaway/core/widgets/top_snackbar.dart';
 import 'package:runaway/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:runaway/features/auth/presentation/bloc/auth_state.dart';
 import 'package:runaway/features/auth/presentation/bloc/auth_event.dart';
+import 'package:runaway/features/auth/presentation/screens/password_reset_success_screen.dart';
 import 'package:runaway/features/auth/presentation/widgets/auth_text_field.dart';
+import 'package:runaway/features/auth/presentation/widgets/password_strength_indicator.dart';
 import 'package:top_snackbar_flutter/top_snack_bar.dart';
 
 enum ForgotPasswordStep {
@@ -30,6 +33,9 @@ class _ForgotPasswordDialogState extends State<ForgotPasswordDialog> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _codeController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+
+  // Variables pour l'indicateur de force
+  bool _showPasswordStrength = false;
   
   ForgotPasswordStep _currentStep = ForgotPasswordStep.email;
   String? _email;
@@ -41,11 +47,23 @@ class _ForgotPasswordDialogState extends State<ForgotPasswordDialog> {
   bool _showRetryOption = false;
 
   @override
+  void initState() {
+    super.initState();
+    _passwordController.addListener(_onPasswordChanged);
+  }
+
+  @override
   void dispose() {
     _emailController.dispose();
     _codeController.dispose();
     _passwordController.dispose();
     super.dispose();
+  }
+
+  void _onPasswordChanged() {
+    setState(() {
+      _showPasswordStrength = _passwordController.text.isNotEmpty;
+    });
   }
 
   String? emailValidator(String? value) {
@@ -68,6 +86,7 @@ class _ForgotPasswordDialogState extends State<ForgotPasswordDialog> {
     return null;
   }
 
+  // 🆕 Modifier la validation du mot de passe pour inclure toutes les exigences
   String? passwordValidator(String? v) {
     if (v == null || v.isEmpty) {
       return context.l10n.requiredPassword;
@@ -175,8 +194,13 @@ class _ForgotPasswordDialogState extends State<ForgotPasswordDialog> {
             _showRetryOption = false;
           });
         } else if (state is PasswordResetSuccess) {
-          Navigator.of(context).pop();
-          context.go('/password-reset-success');
+          context.pop();
+
+          showModalSheet(
+            context: context, 
+            backgroundColor: Colors.transparent,
+            child: PasswordResetSuccessScreen(),
+          );
         } else if (state is AuthError) {
           setState(() {
             _codeVerifying = false;
@@ -368,22 +392,23 @@ class _ForgotPasswordDialogState extends State<ForgotPasswordDialog> {
               ),
               5.h,
             ],
-            Text(
-              context.l10n.orUseEmailLink,
-              style: context.bodySmall?.copyWith(
-                color: context.adaptiveTextSecondary,
-                fontStyle: FontStyle.italic,
-              ),
-              textAlign: TextAlign.center,
-            ),
           ],
         );
       case ForgotPasswordStep.newPassword:
         return AuthTextField(
-          hint: context.l10n.newPasswordHint,
+          hint: context.l10n.passwordHint,
           obscureText: true,
           validator: passwordValidator,
           controller: _passwordController,
+          bottom: AnimatedSwitcher(
+          duration: const Duration(milliseconds: 300),
+          child: (_passwordController.text.isNotEmpty)
+            ? PasswordStrengthIndicator(
+                password: _passwordController.text,
+                isVisible: _showPasswordStrength,
+              )
+            : null
+          ),
         );
     }
   }

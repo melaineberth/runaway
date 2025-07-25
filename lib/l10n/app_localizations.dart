@@ -3182,6 +3182,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Update password'**
   String get updatePassword;
+
+  /// Error message when new password is the same as the old one
+  ///
+  /// In en, this message translates to:
+  /// **'The new password must be different from the old one'**
+  String get passwordMustBeDifferent;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

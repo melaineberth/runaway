@@ -25,6 +25,9 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   final CreditsBloc? _creditsBloc; // 🆕 Injection optionnelle
   late final StreamSubscription _sub;
 
+  // Variable pour éviter les redirections automatiques pendant le reset de mot de passe
+  bool _isInPasswordResetFlow = false;
+
   AuthBloc({
     AuthRepository? authRepository,
     CreditsBloc? creditsBloc, // 🆕 Paramètre optionnel
@@ -50,7 +53,12 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     // handlers internes
     on<_InternalProfileLoaded>(_onInternalProfileLoaded);
     on<_InternalProfileIncomplete>((e, emit) => emit(ProfileIncomplete(e.user)));
-    on<_InternalLoggedOut>((e, emit) => emit(Unauthenticated()));
+    on<_InternalLoggedOut>((e, emit) {
+      // Ne pas émettre Unauthenticated si on est en processus de reset
+      if (!_isInPasswordResetFlow) {
+        emit(Unauthenticated());
+      }
+    });
 
     // FIX: Nouvelle logique pour le stream listener
     _sub = _repo.authChangesStream.listen((data) async {
@@ -58,11 +66,9 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         final user = data.session?.user;
         if (user == null) return add(_InternalLoggedOut());
 
-        // Ignorer les changements de session pendant le processus de reset
-        if (state is PasswordResetCodeSent || 
-            state is PasswordResetCodeVerified || 
-            state is PasswordResetSuccess) {
-          LogConfig.logInfo('🔐 Stream listener: Processus de reset en cours - ignorer changement session');
+        // Ignorer les changements d'auth si on est en processus de reset de mot de passe
+        if (_isInPasswordResetFlow) {
+          LogConfig.logInfo('🔒 Changement d\'auth ignoré - processus reset en cours');
           return;
         }
         
@@ -681,6 +687,9 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   Future<void> _onForgotPassword(ForgotPasswordRequested e, Emitter<AuthState> emit) async {
     emit(AuthLoading());
     try {
+      // Marquer le début du processus de reset
+      _isInPasswordResetFlow = true;
+
       // Utiliser la fonction RPC existante pour vérifier l'éligibilité
       final response = await _repo.checkPasswordResetEligibility(e.email);
       
@@ -698,6 +707,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       emit(PasswordResetCodeSent(e.email));
       LogConfig.logInfo('✅ Code de réinitialisation envoyé à: ${e.email}');
     } catch (err) {
+      _isInPasswordResetFlow = false; // Reset en cas d'erreur
       LogConfig.logError('❌ Erreur envoi code réinitialisation: $err');
       emit(AuthError('Erreur lors de l\'envoi du code'));
     }
@@ -706,15 +716,18 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   Future<void> _onVerifyPasswordResetCode(VerifyPasswordResetCodeRequested e, Emitter<AuthState> emit) async {
     emit(AuthLoading());
     try {
+      LogConfig.logInfo('🔍 Tentative vérification code pour: ${e.email}');
+      
       final isValid = await _repo.verifyPasswordResetCode(e.email, e.code);
       
       if (!isValid) {
         return emit(AuthError('Code invalide ou expiré'));
       }
       
-      // Code valide, passer à l'état vérifié pour permettre la saisie du nouveau mot de passe
+      // Code valide, session active créée - passer à l'étape nouveau mot de passe
       emit(PasswordResetCodeVerified(e.email, e.code));
       LogConfig.logInfo('✅ Code de réinitialisation vérifié pour: ${e.email}');
+      
     } catch (err) {
       LogConfig.logError('❌ Erreur vérification code: $err');
       
@@ -731,13 +744,35 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   Future<void> _onResetPassword(ResetPasswordRequested e, Emitter<AuthState> emit) async {
     emit(AuthLoading());
     try {
+      // Utiliser la session active créée lors de la vérification (pas de re-vérification du token)
       await _repo.resetPasswordWithCode(e.email, e.code, e.newPassword);
+      
+      // Marquer la fin du processus de reset
+      _isInPasswordResetFlow = false;
       
       emit(PasswordResetSuccess());
       LogConfig.logInfo('✅ Mot de passe réinitialisé pour: ${e.email}');
     } catch (err) {
       LogConfig.logError('❌ Erreur réinitialisation mot de passe: $err');
-      emit(AuthError('Erreur lors de la réinitialisation'));
+      
+      final errorMessage = err.toString();
+      
+      // Si c'est juste un problème de mot de passe identique, rester dans le flow
+      if (errorMessage.toLowerCase().contains('même mot de passe') || 
+          errorMessage.toLowerCase().contains('différent de l\'ancien')) {
+        
+        // Rester dans l'étape de saisie du nouveau mot de passe
+        emit(AuthError(errorMessage));
+        
+        // Retourner à l'état de saisie du nouveau mot de passe
+        if (!emit.isDone) {
+          emit(PasswordResetCodeVerified(e.email, e.code));
+        }
+      } else {
+        // Pour les autres erreurs, sortir du processus de reset
+        _isInPasswordResetFlow = false;
+        emit(AuthError('Erreur lors de la réinitialisation'));
+      }
     }
   }
 

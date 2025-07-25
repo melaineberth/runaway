@@ -2230,6 +2230,8 @@
   "@conversionSubtitleDefault": {
     "description": "Default conversion modal subtitle"
   },
+
+  
   "enterEmailToReset": "Enter your email address to receive a reset code",
   "@enterEmailToReset": {
     "description": "Instructions for password reset"
@@ -2253,5 +2255,9 @@
   "updatePassword": "Update password",
   "@updatePassword": {
     "description": "Button text to update password"
+  },
+  "passwordMustBeDifferent": "The new password must be different from the old one",
+  "@passwordMustBeDifferent": {
+    "description": "Error message when new password is the same as the old one"
   }
 }

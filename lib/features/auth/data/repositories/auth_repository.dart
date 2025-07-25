@@ -12,9 +12,11 @@ import 'package:runaway/core/blocs/app_data/app_data_bloc.dart';
 import 'package:runaway/core/blocs/app_data/app_data_event.dart';
 import 'package:runaway/core/errors/auth_exceptions.dart';
 import 'package:runaway/core/helper/config/secure_config.dart';
+import 'package:runaway/core/helper/extensions/extensions.dart';
 import 'package:runaway/core/helper/services/cache_service.dart';
 import 'package:runaway/core/helper/services/device_fingerprint_service.dart';
 import 'package:runaway/core/helper/services/monitoring_service.dart';
+import 'package:runaway/core/router/router.dart';
 import 'package:runaway/core/utils/injections/service_locator.dart';
 import 'package:runaway/features/auth/domain/models/profile.dart';
 import 'package:runaway/features/credits/presentation/blocs/credits_bloc.dart';
@@ -1408,13 +1410,9 @@ class AuthRepository {
         token: code.trim(),
       );
       
-      // Si la vérification réussit, déconnecter immédiatement pour éviter la redirection
+      // Si la vérification réussit, garder la session active pour la prochaine étape
       if (response.user != null && response.session != null) {
-        LogConfig.logInfo('✅ Code valide pour: $email - déconnexion temporaire');
-        
-        // Déconnecter immédiatement pour éviter que l'utilisateur soit redirigé
-        await _supabase.auth.signOut();
-        
+        LogConfig.logInfo('✅ Code valide pour: $email - session active pour reset');
         return true;
       }
       
@@ -1456,7 +1454,7 @@ class AuthRepository {
     }
   }
 
-  /// Réinitialise le mot de passe après vérification du code (version améliorée)
+  /// Réinitialise le mot de passe (sans re-vérifier le code)
   Future<void> resetPasswordWithCode(String email, String code, String newPassword) async {
     try {
       LogConfig.logInfo('🔄 Réinitialisation mot de passe pour: $email');
@@ -1466,20 +1464,15 @@ class AuthRepository {
         throw AuthException('Le mot de passe doit contenir au moins 8 caractères');
       }
       
-      // Première étape: Vérifier le code OTP une nouvelle fois pour être sûr
-      final verifyResponse = await _supabase.auth.verifyOTP(
-        type: OtpType.recovery,
-        email: email.trim(),
-        token: code.trim(),
-      );
-      
-      if (verifyResponse.user == null || verifyResponse.session == null) {
-        throw AuthException('Code invalide ou expiré');
+      // Vérifier qu'une session active existe (du à la vérification précédente)
+      final currentUser = _supabase.auth.currentUser;
+      if (currentUser == null) {
+        throw AuthException('Session expirée. Veuillez recommencer le processus');
       }
       
-      LogConfig.logInfo('✅ Code re-vérifié, mise à jour du mot de passe...');
+      LogConfig.logInfo('✅ Session active trouvée, mise à jour du mot de passe...');
       
-      // Deuxième étape: Mettre à jour le mot de passe
+      // Mettre à jour le mot de passe directement (le token a déjà été vérifié)
       final updateResponse = await _supabase.auth.updateUser(
         UserAttributes(password: newPassword),
       );
@@ -1490,19 +1483,22 @@ class AuthRepository {
       
       LogConfig.logInfo('✅ Mot de passe mis à jour pour: $email');
       
-      // Troisième étape: Déconnecter l'utilisateur pour qu'il se reconnecte
+      // Déconnecter l'utilisateur pour qu'il se reconnecte avec le nouveau mot de passe
       await _supabase.auth.signOut();
       
       LogConfig.logInfo('🔒 Utilisateur déconnecté après changement de mot de passe');
       
     } on AuthException catch (e) {
-      LogConfig.logError('❌ Erreur Auth réinitialisation: $e');
+      LogConfig.logError('❌ Erreur Auth lors de la réinitialisation: $e');
       
-      // Nettoyer la session en cas d'erreur
-      try {
-        await _supabase.auth.signOut();
-      } catch (signOutError) {
-        LogConfig.logError('❌ Erreur déconnexion après échec: $signOutError');
+      // Ne pas nettoyer la session si c'est juste un problème de mot de passe identique
+      if (!e.message.toLowerCase().contains('same_password') && 
+          !e.message.toLowerCase().contains('même mot de passe')) {
+        try {
+          await _supabase.auth.signOut();
+        } catch (signOutError) {
+          // Ignorer les erreurs de déconnexion
+        }
       }
       
       throw AuthException(_parseSupabaseError(e));
@@ -1510,11 +1506,15 @@ class AuthRepository {
     } catch (e) {
       LogConfig.logError('❌ Erreur générale réinitialisation: $e');
       
-      // Nettoyer la session en cas d'erreur
-      try {
-        await _supabase.auth.signOut();
-      } catch (signOutError) {
-        LogConfig.logError('❌ Erreur déconnexion après échec: $signOutError');
+      // Ne pas nettoyer la session si c'est juste un problème de mot de passe identique
+      final errorString = e.toString().toLowerCase();
+      if (!errorString.contains('same_password') && 
+          !errorString.contains('même mot de passe')) {
+        try {
+          await _supabase.auth.signOut();
+        } catch (signOutError) {
+          // Ignorer les erreurs de déconnexion
+        }
       }
       
       throw AuthException(_parseSupabaseError(e));
@@ -2001,25 +2001,42 @@ class AuthRepository {
 
   /// Helper pour analyser et formater les erreurs Supabase
   String _parseSupabaseError(dynamic error) {
-    final errorString = error.toString().toLowerCase();
+    final errorString = error.toLowerCase();
+
+    final context = rootNavigatorKey.currentContext!;
     
-    // 🆕 Gestion spécifique des codes OTP expirés
-    if (errorString.contains('otp_expired') || errorString.contains('token has expired')) {
-      return 'Code expiré. Demandez un nouveau code de réinitialisation';
-    } else if (errorString.contains('invalid_token') || errorString.contains('token_not_found')) {
-      return 'Code invalide. Vérifiez le code reçu par email';
-    } else if (errorString.contains('too_many_requests')) {
-      return 'Trop de tentatives. Veuillez patienter avant de réessayer';
-    } else if (errorString.contains('email_not_confirmed')) {
-      return 'Adresse email non confirmée';
-    } else if (errorString.contains('signup_disabled')) {
-      return 'La réinitialisation de mot de passe est temporairement désactivée';
-    } else if (errorString.contains('weak_password')) {
-      return 'Le mot de passe n\'est pas assez fort';
-    } else if (errorString.contains('network') || errorString.contains('timeout')) {
-      return 'Problème de connexion. Vérifiez votre réseau';
+    // Erreurs spécifiques avec codes
+    if (errorString.contains('same_password') || error == 'SAME_PASSWORD') {
+      return context.l10n.passwordMustBeDifferent;
+    } else if (errorString.contains('password_too_short') || error == 'PASSWORD_TOO_SHORT') {
+      return context.l10n.passwordTooShort;
+    } else if (errorString.contains('session_expired') || error == 'SESSION_EXPIRED') {
+      return context.l10n.expiredSession;
+    } else if (errorString.contains('update_password_failed') || error == 'UPDATE_PASSWORD_FAILED') {
+      return 'Impossible de mettre à jour le mot de passe';
     }
     
-    return 'Une erreur inattendue s\'est produite';
+    // Erreurs Supabase standard
+    if (errorString.contains('email_already_exists') || errorString.contains('user_already_exists')) {
+      return context.l10n.emailAlreadyUsed;
+    } else if (errorString.contains('invalid_credentials')) {
+      return context.l10n.invalidCredentials;
+    } else if (errorString.contains('email_not_found') || errorString.contains('user_not_found')) {
+      return context.l10n.notEmailFound;
+    } else if (errorString.contains('email_not_confirmed')) {
+      return context.l10n.confirmEmailBeforeLogin;
+    } else if (errorString.contains('invalid_password') || errorString.contains('weak_password')) {
+      return context.l10n.passwordTooSimple;
+    } else if (errorString.contains('too_many_requests')) {
+      return 'Trop de tentatives. Veuillez patienter avant de réessayer';
+    } else if (errorString.contains('otp_expired') || errorString.contains('token_expired')) {
+      return 'Code expiré. Demandez un nouveau code de réinitialisation';
+    } else if (errorString.contains('invalid_token') || errorString.contains('token_not_found')) {
+      return context.l10n.invalidCode;
+    } else if (errorString.contains('network') || errorString.contains('timeout')) {
+      return context.l10n.connectionProblem;
+    }
+    
+    return context.l10n.authenticationError;
   }
 }

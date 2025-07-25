@@ -2227,5 +2227,33 @@
   "conversionSubtitleDefault": "Débloquez la sauvegarde, les objectifs et le suivi de performances.",
   "@conversionSubtitleDefault": {
     "description": "Sous-titre par défaut de la modal de conversion"
+  },
+  "enterEmailToReset": "Saisissez votre adresse email pour recevoir un code de réinitialisation",
+  "@enterEmailToReset": {
+    "description": "Instructions pour la réinitialisation du mot de passe"
+  },
+  "enterNewPassword": "Saisissez le nouveau mot de passe",
+  "@enterNewPassword": {
+    "description": "Titre pour l'étape du nouveau mot de passe"
+  },
+  "createNewPassword": "Créez un nouveau mot de passe sécurisé",
+  "@createNewPassword": {
+    "description": "Sous-titre pour l'étape du nouveau mot de passe"
+  },
+  "newPasswordHint": "Nouveau mot de passe",
+  "@newPasswordHint": {
+    "description": "Texte d'indication pour le champ nouveau mot de passe"
+  },
+  "sendResetCode": "Envoyer le code de réinitialisation",
+  "@sendResetCode": {
+    "description": "Texte du bouton pour envoyer le code de réinitialisation"
+  },
+  "updatePassword": "Mettre à jour le mot de passe",
+  "@updatePassword": {
+    "description": "Texte du bouton pour mettre à jour le mot de passe"
+  },
+  "passwordMustBeDifferent": "Le nouveau mot de passe doit être différent de l'ancien",
+  "@passwordMustBeDifferent": {
+    "description": "Message d'erreur lorsque le nouveau mot de passe est identique à l'ancien"
   }
 }
