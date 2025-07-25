@@ -2157,5 +2157,77 @@
   "passwordResetSuccessDesc": "Your password has been successfully updated. You can now log in with your new password.",
   "@passwordResetSuccessDesc": {
     "description": "Description shown when password reset is successful"
+  },
+
+
+
+
+  "saveRoutesTitle": "Save your routes",
+  "@saveRoutesTitle": {
+    "description": "Conversation beneifts saving route title"
+  },
+  "saveRoutesSubtitle": "Keep your favorite routes with automatic photos",
+  "@saveRoutesSubtitle": {
+    "description": "Conversation beneifts saving route subtitle"
+  },
+  "customGoalsTitle": "Custom goals",
+  "@customGoalsTitle": {
+    "description": "Conversation beneifts customize goal title"
+  },
+  "customGoalsSubtitle": "Create your goals for distance, speed and time",
+  "@customGoalsSubtitle": {
+    "description": "Conversation beneifts customize goal subtitle"
+  },
+  "exportRoutesTitle": "Export of your routes",
+  "@exportRoutesTitle": {
+    "description": "Conversation beneifts export route title"
+  },
+  "exportRoutesSubtitle": "Export your routes in GPX or KML to your favorite apps",
+  "@exportRoutesSubtitle": {
+    "description": "Conversation beneifts export route subtitle"
+  },
+  "alreadyHaveAnAccount": "I have an account",
+  "@alreadyHaveAnAccount": {
+    "description": "Option for user have already an account"
+  },
+  "conversionTitleRouteGenerated": "Great route! 🎉",
+  "@conversionTitleRouteGenerated": {
+    "description": "Conversion modal title displayed after route generation"
+  },
+  "conversionTitleActivityViewed": "Ready for your goals? 📊",
+  "@conversionTitleActivityViewed": {
+    "description": "Conversion modal title displayed after viewing statistics"
+  },
+  "conversionTitleMultipleRoutes": "You love exploring! 🗺️",
+  "@conversionTitleMultipleRoutes": {
+    "description": "Conversion modal title displayed after generating multiple routes"
+  },
+  "conversionTitleManualTest": "Modal test! 🧪",
+  "@conversionTitleManualTest": {
+    "description": "Conversion modal title during manual testing"
+  },
+  "conversionTitleDefault": "Take it to the next level! 🚀",
+  "@conversionTitleDefault": {
+    "description": "Default conversion modal title"
+  },
+  "conversionSubtitleRouteGenerated": "Save this route and track your performance with a free account.",
+  "@conversionSubtitleRouteGenerated": {
+    "description": "Conversion modal subtitle displayed after route generation"
+  },
+  "conversionSubtitleActivityViewed": "Create personalized goals and track your records.",
+  "@conversionSubtitleActivityViewed": {
+    "description": "Conversion modal subtitle displayed after viewing statistics"
+  },
+  "conversionSubtitleMultipleRoutes": "Save all your favorite routes and export them as GPX.",
+  "@conversionSubtitleMultipleRoutes": {
+    "description": "Conversion modal subtitle displayed after generating multiple routes"
+  },
+  "conversionSubtitleManualTest": "Modal triggered manually for testing - all features await you!",
+  "@conversionSubtitleManualTest": {
+    "description": "Conversion modal subtitle during manual testing"
+  },
+  "conversionSubtitleDefault": "Unlock saving, goals, and performance tracking.",
+  "@conversionSubtitleDefault": {
+    "description": "Default conversion modal subtitle"
   }
 }

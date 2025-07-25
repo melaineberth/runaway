@@ -1558,4 +1558,55 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get passwordResetSuccessDesc => 'Your password has been successfully updated. You can now log in with your new password.';
+
+  @override
+  String get saveRoutesTitle => 'Save your routes';
+
+  @override
+  String get saveRoutesSubtitle => 'Keep your favorite routes with automatic photos';
+
+  @override
+  String get customGoalsTitle => 'Custom goals';
+
+  @override
+  String get customGoalsSubtitle => 'Create your goals for distance, speed and time';
+
+  @override
+  String get exportRoutesTitle => 'Export of your routes';
+
+  @override
+  String get exportRoutesSubtitle => 'Export your routes in GPX or KML to your favorite apps';
+
+  @override
+  String get alreadyHaveAnAccount => 'I have an account';
+
+  @override
+  String get conversionTitleRouteGenerated => 'Great route! 🎉';
+
+  @override
+  String get conversionTitleActivityViewed => 'Ready for your goals? 📊';
+
+  @override
+  String get conversionTitleMultipleRoutes => 'You love exploring! 🗺️';
+
+  @override
+  String get conversionTitleManualTest => 'Modal test! 🧪';
+
+  @override
+  String get conversionTitleDefault => 'Take it to the next level! 🚀';
+
+  @override
+  String get conversionSubtitleRouteGenerated => 'Save this route and track your performance with a free account.';
+
+  @override
+  String get conversionSubtitleActivityViewed => 'Create personalized goals and track your records.';
+
+  @override
+  String get conversionSubtitleMultipleRoutes => 'Save all your favorite routes and export them as GPX.';
+
+  @override
+  String get conversionSubtitleManualTest => 'Modal triggered manually for testing - all features await you!';
+
+  @override
+  String get conversionSubtitleDefault => 'Unlock saving, goals, and performance tracking.';
 }

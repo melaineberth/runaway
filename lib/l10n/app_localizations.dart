@@ -3044,6 +3044,108 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Your password has been successfully updated. You can now log in with your new password.'**
   String get passwordResetSuccessDesc;
+
+  /// Conversation beneifts saving route title
+  ///
+  /// In en, this message translates to:
+  /// **'Save your routes'**
+  String get saveRoutesTitle;
+
+  /// Conversation beneifts saving route subtitle
+  ///
+  /// In en, this message translates to:
+  /// **'Keep your favorite routes with automatic photos'**
+  String get saveRoutesSubtitle;
+
+  /// Conversation beneifts customize goal title
+  ///
+  /// In en, this message translates to:
+  /// **'Custom goals'**
+  String get customGoalsTitle;
+
+  /// Conversation beneifts customize goal subtitle
+  ///
+  /// In en, this message translates to:
+  /// **'Create your goals for distance, speed and time'**
+  String get customGoalsSubtitle;
+
+  /// Conversation beneifts export route title
+  ///
+  /// In en, this message translates to:
+  /// **'Export of your routes'**
+  String get exportRoutesTitle;
+
+  /// Conversation beneifts export route subtitle
+  ///
+  /// In en, this message translates to:
+  /// **'Export your routes in GPX or KML to your favorite apps'**
+  String get exportRoutesSubtitle;
+
+  /// Option for user have already an account
+  ///
+  /// In en, this message translates to:
+  /// **'I have an account'**
+  String get alreadyHaveAnAccount;
+
+  /// Conversion modal title displayed after route generation
+  ///
+  /// In en, this message translates to:
+  /// **'Great route! 🎉'**
+  String get conversionTitleRouteGenerated;
+
+  /// Conversion modal title displayed after viewing statistics
+  ///
+  /// In en, this message translates to:
+  /// **'Ready for your goals? 📊'**
+  String get conversionTitleActivityViewed;
+
+  /// Conversion modal title displayed after generating multiple routes
+  ///
+  /// In en, this message translates to:
+  /// **'You love exploring! 🗺️'**
+  String get conversionTitleMultipleRoutes;
+
+  /// Conversion modal title during manual testing
+  ///
+  /// In en, this message translates to:
+  /// **'Modal test! 🧪'**
+  String get conversionTitleManualTest;
+
+  /// Default conversion modal title
+  ///
+  /// In en, this message translates to:
+  /// **'Take it to the next level! 🚀'**
+  String get conversionTitleDefault;
+
+  /// Conversion modal subtitle displayed after route generation
+  ///
+  /// In en, this message translates to:
+  /// **'Save this route and track your performance with a free account.'**
+  String get conversionSubtitleRouteGenerated;
+
+  /// Conversion modal subtitle displayed after viewing statistics
+  ///
+  /// In en, this message translates to:
+  /// **'Create personalized goals and track your records.'**
+  String get conversionSubtitleActivityViewed;
+
+  /// Conversion modal subtitle displayed after generating multiple routes
+  ///
+  /// In en, this message translates to:
+  /// **'Save all your favorite routes and export them as GPX.'**
+  String get conversionSubtitleMultipleRoutes;
+
+  /// Conversion modal subtitle during manual testing
+  ///
+  /// In en, this message translates to:
+  /// **'Modal triggered manually for testing - all features await you!'**
+  String get conversionSubtitleManualTest;
+
+  /// Default conversion modal subtitle
+  ///
+  /// In en, this message translates to:
+  /// **'Unlock saving, goals, and performance tracking.'**
+  String get conversionSubtitleDefault;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

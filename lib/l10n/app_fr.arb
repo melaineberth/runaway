@@ -2156,5 +2156,76 @@
   "passwordResetSuccessDesc": "Votre mot de passe a été mis à jour avec succès. Vous pouvez maintenant vous connecter avec votre nouveau mot de passe.",
   "@passwordResetSuccessDesc": {
     "description": "Description affichée quand la réinitialisation du mot de passe réussit"
+  },
+
+
+
+  "saveRoutesTitle": "Sauvegarde de vos parcours",
+  "@saveRoutesTitle": {
+    "description": "Conversation beneifts saving route title"
+  },
+  "saveRoutesSubtitle": "Gardez vos routes favorites avec photos automatiques",
+  "@saveRoutesSubtitle": {
+    "description": "Conversation beneifts saving route subtitle"
+  },
+  "customGoalsTitle": "Objectifs personnalisés",
+  "@customGoalsTitle": {
+    "description": "Conversation beneifts customize goal title"
+  },
+  "customGoalsSubtitle": "Créez vos objectifs de distance, vitesse et temps",
+  "@customGoalsSubtitle": {
+    "description": "Conversation beneifts customize goal subtitle"
+  },
+  "exportRoutesTitle": "Export de parcours",
+  "@exportRoutesTitle": {
+    "description": "Conversation beneifts export route title"
+  },
+  "exportRoutesSubtitle": "Exportez vos routes en GPX ou KML vers vos apps favorites",
+  "@exportRoutesSubtitle": {
+    "description": "Conversation beneifts export route subtitle"
+  },
+  "alreadyHaveAnAccount": "J'ai déjà un compte",
+  "@alreadyHaveAnAccount": {
+    "description": "Option for user have already an account"
+  },
+  "conversionTitleRouteGenerated": "Super parcours ! 🎉",
+  "@conversionTitleRouteGenerated": {
+    "description": "Titre de la modal de conversion affiché après génération d'un parcours"
+  },
+  "conversionTitleActivityViewed": "Prêt pour vos objectifs ? 📊",
+  "@conversionTitleActivityViewed": {
+    "description": "Titre de la modal de conversion affiché après consultation des statistiques"
+  },
+  "conversionTitleMultipleRoutes": "Vous aimez explorer ! 🗺️",
+  "@conversionTitleMultipleRoutes": {
+    "description": "Titre de la modal de conversion affiché après génération de plusieurs parcours"
+  },
+  "conversionTitleManualTest": "Test de la modal ! 🧪",
+  "@conversionTitleManualTest": {
+    "description": "Titre de la modal de conversion lors d'un test manuel"
+  },
+  "conversionTitleDefault": "Passez au niveau supérieur ! 🚀",
+  "@conversionTitleDefault": {
+    "description": "Titre par défaut de la modal de conversion"
+  },
+  "conversionSubtitleRouteGenerated": "Sauvegardez ce parcours et suivez vos performances avec un compte gratuit.",
+  "@conversionSubtitleRouteGenerated": {
+    "description": "Sous-titre de la modal de conversion affiché après génération d'un parcours"
+  },
+  "conversionSubtitleActivityViewed": "Créez vos objectifs personnalisés et suivez vos records.",
+  "@conversionSubtitleActivityViewed": {
+    "description": "Sous-titre de la modal de conversion affiché après consultation des statistiques"
+  },
+  "conversionSubtitleMultipleRoutes": "Sauvegardez tous vos parcours favoris et exportez-les en GPX.",
+  "@conversionSubtitleMultipleRoutes": {
+    "description": "Sous-titre de la modal de conversion affiché après génération de plusieurs parcours"
+  },
+  "conversionSubtitleManualTest": "Modal déclenchée manuellement pour test - toutes les fonctionnalités vous attendent !",
+  "@conversionSubtitleManualTest": {
+    "description": "Sous-titre de la modal de conversion lors d'un test manuel"
+  },
+  "conversionSubtitleDefault": "Débloquez la sauvegarde, les objectifs et le suivi de performances.",
+  "@conversionSubtitleDefault": {
+    "description": "Sous-titre par défaut de la modal de conversion"
   }
 }

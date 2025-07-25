@@ -1558,4 +1558,55 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get passwordResetSuccessDesc => 'Votre mot de passe a été mis à jour avec succès. Vous pouvez maintenant vous connecter avec votre nouveau mot de passe.';
+
+  @override
+  String get saveRoutesTitle => 'Sauvegarde de vos parcours';
+
+  @override
+  String get saveRoutesSubtitle => 'Gardez vos routes favorites avec photos automatiques';
+
+  @override
+  String get customGoalsTitle => 'Objectifs personnalisés';
+
+  @override
+  String get customGoalsSubtitle => 'Créez vos objectifs de distance, vitesse et temps';
+
+  @override
+  String get exportRoutesTitle => 'Export de parcours';
+
+  @override
+  String get exportRoutesSubtitle => 'Exportez vos routes en GPX ou KML vers vos apps favorites';
+
+  @override
+  String get alreadyHaveAnAccount => 'J\'ai déjà un compte';
+
+  @override
+  String get conversionTitleRouteGenerated => 'Super parcours ! 🎉';
+
+  @override
+  String get conversionTitleActivityViewed => 'Prêt pour vos objectifs ? 📊';
+
+  @override
+  String get conversionTitleMultipleRoutes => 'Vous aimez explorer ! 🗺️';
+
+  @override
+  String get conversionTitleManualTest => 'Test de la modal ! 🧪';
+
+  @override
+  String get conversionTitleDefault => 'Passez au niveau supérieur ! 🚀';
+
+  @override
+  String get conversionSubtitleRouteGenerated => 'Sauvegardez ce parcours et suivez vos performances avec un compte gratuit.';
+
+  @override
+  String get conversionSubtitleActivityViewed => 'Créez vos objectifs personnalisés et suivez vos records.';
+
+  @override
+  String get conversionSubtitleMultipleRoutes => 'Sauvegardez tous vos parcours favoris et exportez-les en GPX.';
+
+  @override
+  String get conversionSubtitleManualTest => 'Modal déclenchée manuellement pour test - toutes les fonctionnalités vous attendent !';
+
+  @override
+  String get conversionSubtitleDefault => 'Débloquez la sauvegarde, les objectifs et le suivi de performances.';
 }

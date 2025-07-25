@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:runaway/core/helper/extensions/extensions.dart';
 import 'package:runaway/core/helper/services/conversion_service.dart';
+import 'package:runaway/core/utils/constant/constants.dart';
 import 'package:runaway/core/widgets/modal_sheet.dart';
+import 'package:runaway/core/widgets/squircle_btn.dart';
 import 'package:runaway/core/widgets/squircle_container.dart';
 
 class ConversionPromptModal extends StatefulWidget {
@@ -53,7 +55,7 @@ class _ConversionPromptModalState extends State<ConversionPromptModal> with Tick
 
     _pulseAnimation = Tween<double>(
       begin: 1.0,
-      end: 1.05,
+      end: 1.1,
     ).animate(CurvedAnimation(
       parent: _pulseController,
       curve: Curves.easeInOut,
@@ -164,23 +166,18 @@ class _ConversionPromptModalState extends State<ConversionPromptModal> with Tick
     final benefits = [
       {
         'icon': HugeIcons.solidRoundedBookmark01,
-        'title': 'Sauvegarde de vos parcours',
-        'subtitle': 'Retrouvez vos routes favorites à tout moment',
+        'title': context.l10n.saveRoutesTitle,
+        'subtitle': context.l10n.saveRoutesSubtitle,
       },
       {
         'icon': HugeIcons.solidRoundedTarget03,
-        'title': 'Objectifs personnalisés',
-        'subtitle': 'Suivez vos progrès et atteignez vos buts',
+        'title': context.l10n.customGoalsTitle,
+        'subtitle': context.l10n.customGoalsSubtitle,
       },
       {
-        'icon': HugeIcons.solidRoundedAnalytics01,
-        'title': 'Statistiques détaillées',
-        'subtitle': 'Analysez vos performances au fil du temps',
-      },
-      {
-        'icon': HugeIcons.solidRoundedAnalytics01,
-        'title': 'Synchronisation multi-appareils',
-        'subtitle': 'Accédez à vos données partout',
+        'icon': HugeIcons.solidRoundedDownloadCircle01,
+        'title': context.l10n.exportRouteTitle,
+        'subtitle': context.l10n.exportRoutesSubtitle,
       },
     ];
     
@@ -245,23 +242,12 @@ class _ConversionPromptModalState extends State<ConversionPromptModal> with Tick
         // Bouton principal - Créer un compte
         SizedBox(
           width: double.infinity,
-          child: SquircleContainer(
+          child: SquircleBtn(
+            isPrimary: true,
+            label: context.l10n.createFreeAccount,
             onTap: () {
-              Navigator.of(context).pop();
-              // _showAuthModal(const SignupScreen());
+              showSignModal(context, 0);
             },
-            height: 60,
-            color: context.adaptivePrimary,
-            radius: 40.0,
-            child: Center(
-              child: Text(
-                'Créer un compte gratuit',
-                style: context.bodySmall?.copyWith(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
           ),
         ),
         
@@ -270,24 +256,12 @@ class _ConversionPromptModalState extends State<ConversionPromptModal> with Tick
         // Bouton secondaire - Se connecter
         SizedBox(
           width: double.infinity,
-          child: SquircleContainer(
+          child: SquircleBtn(
+            backgroundColor: Colors.transparent,
             onTap: () {
-              Navigator.of(context).pop();
-              // _showAuthModal(const LoginScreen());
+              showSignModal(context, 1);
             },
-            height: 60,
-            gradient: false,
-            color: context.adaptiveDisabled.withValues(alpha: 0),
-            radius: 40.0,
-            child: Center(
-              child: Text(
-                'J\'ai déjà un compte',
-                style: context.bodySmall?.copyWith(
-                  color: context.adaptiveDisabled,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
+            label: context.l10n.alreadyHaveAnAccount,
           ),
         ),
       ],
@@ -297,26 +271,30 @@ class _ConversionPromptModalState extends State<ConversionPromptModal> with Tick
   String _getContextualTitle() {
     switch (widget.context) {
       case 'route_generated':
-        return 'Super parcours ! 🎉';
+        return context.l10n.conversionTitleRouteGenerated;
       case 'activity_viewed':
-        return 'Motivé(e) par vos stats ! 📊';
+        return context.l10n.conversionTitleActivityViewed;
       case 'multiple_routes':
-        return 'Vous adorez explorer ! 🗺️';
+        return context.l10n.conversionTitleMultipleRoutes;
+      case 'manual_test':
+        return context.l10n.conversionTitleManualTest;
       default:
-        return 'Prêt(e) pour la suite ? 🚀';
+        return context.l10n.conversionTitleDefault;
     }
   }
   
   String _getContextualSubtitle() {
     switch (widget.context) {
       case 'route_generated':
-        return 'Sauvegardez ce parcours et bien plus encore avec un compte gratuit.';
+        return context.l10n.conversionSubtitleRouteGenerated;
       case 'activity_viewed':
-        return 'Créez un compte pour suivre vos progrès et définir des objectifs.';
+        return context.l10n.conversionSubtitleActivityViewed;
       case 'multiple_routes':
-        return 'Sauvegardez tous vos parcours favoris et suivez vos performances.';
+        return context.l10n.conversionSubtitleMultipleRoutes;
+      case 'manual_test':
+        return context.l10n.conversionSubtitleManualTest;
       default:
-        return 'Créez votre compte gratuit pour débloquer toutes les fonctionnalités.';
+        return context.l10n.conversionSubtitleDefault;
     }
   }
 }

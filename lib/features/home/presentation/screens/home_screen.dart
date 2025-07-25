@@ -18,8 +18,10 @@ import 'package:runaway/core/utils/injections/bloc_provider_extension.dart';
 import 'package:runaway/core/helper/extensions/monitoring_extensions.dart';
 import 'package:runaway/core/helper/services/conversion_triggers.dart';
 import 'package:runaway/core/helper/services/monitoring_service.dart';
+import 'package:runaway/core/widgets/conversion_listener.dart';
 import 'package:runaway/core/widgets/icon_btn.dart';
 import 'package:runaway/core/widgets/modal_sheet.dart';
+import 'package:runaway/core/widgets/route_info_tracker.dart';
 import 'package:runaway/core/widgets/squircle_btn.dart';
 import 'package:runaway/features/account/presentation/screens/account_screen.dart';
 import 'package:runaway/features/auth/presentation/bloc/auth_bloc.dart';
@@ -508,6 +510,19 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
           _createTutorial();
         }
       });
+    }
+  }
+
+  /// 🆕 Déclenche manuellement la modal de conversion pour les tests
+  void _showConversionPromptManually() {
+    try {
+      // Importer ConversionListener en haut du fichier si pas déjà fait
+      // import 'package:runaway/core/widgets/conversion_listener.dart';
+      
+      ConversionListener.showConversionPrompt('manual_test');
+      debugPrint('🧪 Modal de conversion déclenchée manuellement');
+    } catch (e) {
+      debugPrint('❌ Erreur déclenchement manuel modal conversion: $e');
     }
   }
 
@@ -2479,11 +2494,16 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
   }
 
   /// Retire proprement le panneau s’il est encore monté
-  void _removeRouteInfoPanel() {
-    if (_routeInfoEntry?.mounted ?? false) {
-      _routeInfoEntry!.remove();
+  void _removeRouteInfoPanel({bool dispose = false}) {
+    // 🆕 Marquer RouteInfoCard comme inactif
+    RouteInfoTracker.instance.setRouteInfoActive(false);
+
+    if (_routeInfoEntry != null) {
+      if (dispose || _routeInfoEntry!.mounted) {
+        _routeInfoEntry!.remove();
+      }
+      _routeInfoEntry = null;
     }
-    _routeInfoEntry = null;
   }
 
   SavedRoute? _getCurrentLoadedRoute() {
@@ -2507,6 +2527,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
 
   void _showRouteInfoModal() {
     _removeRouteInfoPanel(); // retire l’éventuel ancien panel
+
+    // 🆕 Marquer RouteInfoCard comme actif
+    RouteInfoTracker.instance.setRouteInfoActive(true);
 
     final overlayState = Overlay.of(context, rootOverlay: true);
 
@@ -2952,10 +2975,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
                                       size: 25.0,
                                     ),
                                     onPressed: () {
-                                      showModalSheet(
-                                        context: context, 
-                                        backgroundColor: Colors.transparent,
-                                        child: ModalSheet(
+                                      _presentModalSheet((_) => ModalSheet(
                                           child: Column(
                                             crossAxisAlignment: CrossAxisAlignment.start,
                                             mainAxisSize: MainAxisSize.min,
@@ -2984,9 +3004,20 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
                                                   _resetTutorialForTesting();
                                                 },
                                               ),
+                                              10.h, // 🆕 Espacement entre les boutons
+    
+                                              // 🆕 Nouveau bouton pour tester la modal de conversion
+                                              SquircleBtn(
+                                                isPrimary: false,
+                                                label: "Test modal conversion",
+                                                onTap: () {
+                                                  context.pop();
+                                                  _showConversionPromptManually();
+                                                },
+                                              ),
                                             ],
                                           ),
-                                        ),
+                                        )
                                       );
                                     },
                                   ),
