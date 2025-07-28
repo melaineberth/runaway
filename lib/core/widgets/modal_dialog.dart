@@ -70,7 +70,7 @@ class ModalDialog extends StatelessWidget {
               Text( 
                 title,
                 style: context.bodyMedium?.copyWith(
-                  fontSize: 22,
+                  fontSize: 18,
                   color: context.adaptiveTextPrimary,
                 ),
               ),
@@ -78,6 +78,7 @@ class ModalDialog extends StatelessWidget {
               Text(
                 subtitle,
                 style: context.bodySmall?.copyWith(
+                  fontSize: 16,
                   color: context.adaptiveTextSecondary,
                   fontWeight: FontWeight.w400,
                 ),

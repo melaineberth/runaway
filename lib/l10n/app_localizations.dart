@@ -3200,6 +3200,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Request a new code'**
   String get requestNewCode;
+
+  /// Message during the verification of sending number
+  ///
+  /// In en, this message translates to:
+  /// **'Required field'**
+  String get requiredField;
+
+  /// Message during the verification of sending number
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter a valid number'**
+  String get enterValidNumber;
+
+  /// Minimum value.
+  ///
+  /// In en, this message translates to:
+  /// **'The value must be greater than or equal to {min}'**
+  String greaterValue(String min);
+
+  /// Maximum value.
+  ///
+  /// In en, this message translates to:
+  /// **'The value must be less than or equal to {max}'**
+  String lessValue(String max);
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

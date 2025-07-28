@@ -66,6 +66,7 @@ class IconBtn extends StatelessWidget {
                 child: Text(
                   label!, 
                   style: textStyle ?? context.bodySmall?.copyWith(
+                    fontSize: 16,
                     color: labelColor ?? context.adaptiveTextSecondary,
                   ),
                 ),

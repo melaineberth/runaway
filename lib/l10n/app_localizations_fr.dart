@@ -1636,4 +1636,20 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get requestNewCode => 'Demander un nouveau code';
+
+  @override
+  String get requiredField => 'Champ obligatoire';
+
+  @override
+  String get enterValidNumber => 'Veuillez entrer un nombre valide';
+
+  @override
+  String greaterValue(String min) {
+    return 'La valeur doit être supérieur ou égale à $min';
+  }
+
+  @override
+  String lessValue(String max) {
+    return 'La valeur doit être inférieure ou égale à $max';
+  }
 }

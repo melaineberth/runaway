@@ -1636,4 +1636,20 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get requestNewCode => 'Request a new code';
+
+  @override
+  String get requiredField => 'Required field';
+
+  @override
+  String get enterValidNumber => 'Please enter a valid number';
+
+  @override
+  String greaterValue(String min) {
+    return 'The value must be greater than or equal to $min';
+  }
+
+  @override
+  String lessValue(String max) {
+    return 'The value must be less than or equal to $max';
+  }
 }

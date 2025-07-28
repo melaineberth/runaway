@@ -2113,6 +2113,8 @@
 
   
 
+
+
   "enterVerificationCode": "Enter the 6-digit code",
   "@enterVerificationCode": {
     "description": "Instructions to enter OTP code"
@@ -2254,7 +2256,6 @@
   "@passwordMustBeDifferent": {
     "description": "Error message when new password is the same as the old one"
   },
-
   "verfyPasswordInProgress": "Verification of the code...",
   "@verfyPasswordInProgress": {
     "description": "Message during the verification of the password recovery code"
@@ -2262,5 +2263,34 @@
   "requestNewCode": "Request a new code",
   "@requestNewCode": {
     "description": "Action to request a new code during the verification of the password recovery code"
+  },
+
+
+
+  "requiredField": "Required field",
+  "@requiredField" : {
+    "description": "Message during the verification of sending number"
+  },
+  "enterValidNumber": "Please enter a valid number",
+  "@enterValidNumber" : {
+    "description": "Message during the verification of sending number"
+  },
+  "greaterValue": "The value must be greater than or equal to {min}",
+  "@greaterValue": {
+    "description": "Minimum value.",
+    "placeholders": {
+      "min": {
+        "type": "String"
+      }
+    }
+  },
+  "lessValue": "The value must be less than or equal to {max}",
+  "@lessValue": {
+    "description": "Maximum value.",
+    "placeholders": {
+      "max": {
+        "type": "String"
+      }
+    }
   }
 }

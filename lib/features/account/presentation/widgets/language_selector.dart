@@ -7,6 +7,7 @@ import 'package:runaway/core/helper/extensions/extensions.dart';
 import 'package:runaway/core/blocs/locale/locale_bloc.dart';
 import 'package:runaway/core/utils/injections/bloc_provider_extension.dart';
 import 'package:runaway/core/helper/services/locale_service.dart';
+import 'package:runaway/core/widgets/list_header.dart';
 import 'package:runaway/core/widgets/modal_sheet.dart';
 import 'package:runaway/core/widgets/squircle_container.dart';
 
@@ -31,22 +32,10 @@ class LanguageSelector extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                context.l10n.availableLanguage,
-                style: context.bodySmall?.copyWith(
-                  color: context.adaptiveTextPrimary,
-                ),
+              ListHeader(
+                title: context.l10n.availableLanguage,
+                subtitle: context.l10n.selectPreferenceLanguage,
               ),
-              2.h,
-              Text(
-                context.l10n.selectPreferenceLanguage,
-                style: context.bodySmall?.copyWith(
-                  color: context.adaptiveTextSecondary,
-                  fontSize: 15,
-                  fontWeight: FontWeight.w500
-                ),
-              ),
-              20.h,
               Column(
                 children: [
                   ...LocaleService.supportedLocales.asMap().entries.map((entry) {

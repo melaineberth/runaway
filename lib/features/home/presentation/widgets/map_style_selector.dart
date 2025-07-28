@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:runaway/core/helper/extensions/extensions.dart';
+import 'package:runaway/core/widgets/list_header.dart';
 import 'package:runaway/core/widgets/modal_sheet.dart';
 import 'package:runaway/core/widgets/squircle_container.dart';
 import 'package:runaway/features/home/domain/models/mapbox_style_constants.dart';
@@ -43,22 +44,10 @@ class _MapStyleSelectorState extends State<MapStyleSelector> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            context.l10n.mapStyleTitle,
-            style: context.bodySmall?.copyWith(
-              color: context.adaptiveTextPrimary,
-            ),
+          ListHeader(
+            title: context.l10n.mapStyleTitle,
+            subtitle: context.l10n.mapStyleSubtitle,
           ),
-          2.h,
-          Text(
-            context.l10n.mapStyleSubtitle,
-            style: context.bodySmall?.copyWith(
-              color: context.adaptiveTextSecondary,
-              fontSize: 15,
-              fontWeight: FontWeight.w500
-            ),
-          ),
-          20.h,
           ...MapboxStyleConstants.availableStyles.asMap().entries.map((entry) {
               final i = entry.key;
               final style = entry.value;

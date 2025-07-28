@@ -1905,9 +1905,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
     try {
       // Déterminer le type d'utilisateur
       final authState = context.authBloc.state;
-      final isGuest =
-          authState is! Authenticated ||
-          su.Supabase.instance.client.auth.currentUser == null;
+      final isGuest = authState is! Authenticated || su.Supabase.instance.client.auth.currentUser == null;
 
       LogConfig.logInfo('👤 Mode: ${isGuest ? "Guest" : "Authentifié"}');
 
@@ -2005,7 +2003,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
       child: ModalDialog(
         title: context.l10n.insufficientCreditsTitle,
         subtitle: context.l10n.insufficientCreditsDescription(requiredCredits, context.l10n.generateRoute.toLowerCase(), availableCredits),
-        validLabel: context.l10n.buyCredits,
+        validLabel: context.l10n.manageCredits,
         cancelLabel:context.l10n.later,
         onValid: () {
           context.pop();
@@ -2488,12 +2486,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
       backgroundColor: Colors.transparent,
       child: GenerationLimitWidget(
         capability: capability,
-        onDebug:
-            () => showModalSheet(
-              context: context,
-              backgroundColor: Colors.transparent,
-              child: GuestGenerationIndicator(),
-            ),
+        onDebug: () => showModalSheet(
+          context: context,
+          backgroundColor: Colors.transparent,
+          child: GuestGenerationIndicator(),
+        ),
         onLogin: () => showSignModal(context, 0),
       ),
     );

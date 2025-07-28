@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:runaway/core/errors/api_exceptions.dart';
 import 'package:runaway/core/errors/error_handler.dart';
-import 'package:runaway/core/helper/config/environment_config.dart';
+import 'package:runaway/core/helper/config/secure_config.dart';
 import 'package:runaway/core/helper/services/connectivity_service.dart';
 import 'package:runaway/features/route_generator/domain/models/activity_type.dart';
 import 'package:runaway/features/route_generator/domain/models/graphhopper_route_result.dart';
@@ -53,7 +53,7 @@ class GraphHopperApiService {
     LogConfig.logInfo('⏱️ Timeout configuré: ${timeout.inSeconds}s');
 
     final response = await http.post(
-      Uri.parse('${EnvironmentConfig.apiBaseUrl}/routes/generate'),
+      Uri.parse('${SecureConfig.apiBaseUrl}/routes/generate'),
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
@@ -128,7 +128,7 @@ class GraphHopperApiService {
       LogConfig.logInfo('📤 Envoi requête itinéraire: ${jsonEncode(requestBody)}');
 
       final response = await http.post(
-        Uri.parse('${EnvironmentConfig.apiBaseUrl}/routes/simple'),
+        Uri.parse('${SecureConfig.apiBaseUrl}/routes/simple'),
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
@@ -182,7 +182,7 @@ class GraphHopperApiService {
   }) async {
     try {
       final response = await http.post(
-        Uri.parse('${EnvironmentConfig.apiBaseUrl}/routes/analyze'),
+        Uri.parse('${SecureConfig.apiBaseUrl}/routes/analyze'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'coordinates': coordinates}),
       ).timeout(Duration(seconds: 15));
@@ -259,7 +259,7 @@ class GraphHopperApiService {
   static Future<bool> testApiConnectivity() async {
     try {
       final response = await http.get(
-        Uri.parse('${EnvironmentConfig.apiBaseUrl}/health'),
+        Uri.parse('${SecureConfig.apiBaseUrl}/health'),
         headers: {'Accept': 'application/json'},
       ).timeout(const Duration(seconds: 5));
       

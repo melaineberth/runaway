@@ -1,6 +1,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:runaway/core/helper/extensions/extensions.dart';
+import 'package:runaway/core/widgets/list_header.dart';
 import 'package:runaway/core/widgets/tick_slider.dart';
 
 class ParameterSlider extends StatelessWidget {
@@ -16,7 +17,7 @@ class ParameterSlider extends StatelessWidget {
   final IconData endIcon;
   final TextStyle? style;
 
-  // ✅ NOUVEAU : Paramètres haptiques optionnels
+  // Paramètres haptiques optionnels
   final bool enableHapticFeedback;
   final HapticIntensity hapticIntensity;
 
@@ -42,13 +43,10 @@ class ParameterSlider extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          title,
-          style: style ?? context.bodySmall?.copyWith(
-            color: context.adaptiveTextPrimary,
-          ),
+        ListHeader(
+          title: title,
+          titleStyle: style,
         ),
-        10.h,
         TickSlider(
           min: min,
           max: max,

@@ -67,7 +67,7 @@ class _BlurryPageState extends State<BlurryPage> with TickerProviderStateMixin {
     );
 
     _scrollController = ScrollController()
-    ..addListener(() => _updateEdgeState(_scrollController.position));
+      ..addListener(() => _updateEdgeState(_scrollController.position));
 
     // Exposer le controller au parent après l'initialisation
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -135,7 +135,7 @@ class _BlurryPageState extends State<BlurryPage> with TickerProviderStateMixin {
           builder: (context, child) {
             // Protection : s'assurer que sigma est toujours valide
             // final safeSigma = _blurAnimation.value.clamp(0.1, 50.0);
-
+    
             return Stack(
               alignment: Alignment.bottomCenter,
               children: [
@@ -157,7 +157,7 @@ class _BlurryPageState extends State<BlurryPage> with TickerProviderStateMixin {
                     ),
                   ),
                 ),
-
+    
                 // 🔸 Fade BOTTOM 
                 if (widget.scrollDirection == Axis.vertical)
                 AnimatedOpacity(
@@ -184,7 +184,7 @@ class _BlurryPageState extends State<BlurryPage> with TickerProviderStateMixin {
             );
           },
         ),
-
+    
         // 🔸 Fade TOP 
         if (widget.scrollDirection == Axis.vertical)
         AnimatedOpacity(
@@ -207,7 +207,7 @@ class _BlurryPageState extends State<BlurryPage> with TickerProviderStateMixin {
             ),
           ),
         ),
-
+    
         // 🔸 Fade GAUCHE
         if (widget.scrollDirection == Axis.horizontal)
           AnimatedOpacity(
@@ -233,7 +233,7 @@ class _BlurryPageState extends State<BlurryPage> with TickerProviderStateMixin {
               ),
             ),
           ),
-
+    
         // 🔸 Fade DROITE
         if (widget.scrollDirection == Axis.horizontal)
           AnimatedOpacity(

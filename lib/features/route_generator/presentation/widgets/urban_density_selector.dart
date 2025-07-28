@@ -1,6 +1,7 @@
 import 'package:bounce/bounce.dart';
 import 'package:flutter/material.dart';
 import 'package:runaway/core/helper/extensions/extensions.dart';
+import 'package:runaway/core/widgets/list_header.dart';
 import '../../domain/models/urban_density.dart';
 
 class UrbanDensitySelector extends StatelessWidget {
@@ -18,22 +19,10 @@ class UrbanDensitySelector extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          context.l10n.urbanization,
-          style: context.bodySmall?.copyWith(
-            color: context.adaptiveTextPrimary,
-          ),
+        ListHeader(
+          title: context.l10n.urbanization,
+          subtitle: selectedDensity.desc(context),
         ),
-        3.h,
-        Text(
-          selectedDensity.desc(context),
-          style: context.bodySmall?.copyWith(
-            color: context.adaptiveTextSecondary,
-            fontSize: 15,
-            fontWeight: FontWeight.w500
-          ),
-        ),
-        15.h,
         Row(
           children: UrbanDensity.values.map((density) {
             final isSelected = density == selectedDensity;

@@ -2,36 +2,38 @@ import 'package:bounce/bounce.dart';
 import 'package:flutter/material.dart';
 import 'package:runaway/core/helper/extensions/extensions.dart';
 import 'package:runaway/core/widgets/list_header.dart';
-import '../../domain/models/terrain_type.dart';
+import 'package:runaway/features/route_generator/domain/models/route_parameters.dart';
 
-class TerrainSelector extends StatelessWidget {
-  final TerrainType selectedTerrain;
-  final Function(TerrainType) onTerrainSelected;
+class SurfacePreferenceSelector extends StatelessWidget {
+  final double currentValue;
+  final ValueChanged<double> onValueChanged;
 
-  const TerrainSelector({
+  const SurfacePreferenceSelector({
     super.key,
-    required this.selectedTerrain,
-    required this.onTerrainSelected,
+    required this.currentValue,
+    required this.onValueChanged,
   });
 
   @override
   Widget build(BuildContext context) {
+    final currentType = SurfaceType.fromValue(currentValue);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         ListHeader(
-          title: context.l10n.terrain,
-          subtitle: selectedTerrain.desc(context),
+          title: context.l10n.surfacePreference,
+          subtitle: _getDescription(context, currentType),
         ),
         Row(
-          children: TerrainType.values.map((terrain) {
-            final isSelected = terrain == selectedTerrain;
+          children: SurfaceType.values.map((surface) {
+            final isSelected = surface == currentType;
             return Padding(
               padding: const EdgeInsets.only(right: 8.0),
               child: Bounce(
-                onTap: () => onTerrainSelected(terrain),
+                onTap: () => onValueChanged(surface.value),
                 child: Container(
-                  padding: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                   decoration: BoxDecoration(
                     color: isSelected ? context.adaptivePrimary : context.adaptiveBorder.withValues(alpha: 0.08),
                     borderRadius: BorderRadius.circular(100),
@@ -45,7 +47,7 @@ class TerrainSelector extends StatelessWidget {
                     ],
                   ),
                   child: Text(
-                    terrain.label(context),
+                    surface.label(context),
                     style: context.bodySmall?.copyWith(
                       color: isSelected ? Colors.white : context.adaptiveTextSecondary.withValues(alpha: 0.5),
                       fontWeight: FontWeight.w600,
@@ -58,5 +60,16 @@ class TerrainSelector extends StatelessWidget {
         ),
       ],
     );
+  }
+
+  String _getDescription(BuildContext context, SurfaceType surface) {
+    switch (surface) {
+      case SurfaceType.asphalt:
+        return context.l10n.asphaltSurfaceDesc;
+      case SurfaceType.mixed:
+        return context.l10n.mixedSurfaceDesc;
+      case SurfaceType.natural:
+        return context.l10n.naturalSurfaceDesc;
+    }
   }
 }

@@ -42,6 +42,13 @@ class SecureConfig {
   static const String _keyTokenExpiry = 'trailix_token_expiry';
   static const String _keyTokenRotationKey = 'trailix_token_rotation_key';
 
+  static bool get isProduction => dotenv.env['ENVIRONMENT'] == 'production';
+  static bool get isDevelopment => dotenv.env['ENVIRONMENT'] == 'development';
+
+  static Duration get apiTimeout => Duration(
+    seconds: int.tryParse(dotenv.env['API_TIMEOUT'] ?? '30') ?? 30,
+  );
+
   /// 🔒 Méthode helper pour écriture sécurisée avec gestion des conflits
   static Future<bool> _writeSecurely(String key, String value) async {
     try {
@@ -425,6 +432,21 @@ class SecureConfig {
     await isSecureStorageAvailable();
   }
 
+  static String get apiBaseUrl {
+    final String? baseUrl = dotenv.env['API_BASE_URL'];
+    
+    if (baseUrl == null || baseUrl.isEmpty) {
+      throw Exception('API_BASE_URL must be configured in .env file');
+    }
+    
+    // Validation de l'URL
+    if (!Uri.tryParse(baseUrl)!.isAbsolute) {
+      throw Exception('API_BASE_URL must be a valid absolute URL');
+    }
+    
+    return baseUrl.endsWith('/') ? baseUrl.substring(0, baseUrl.length - 1) : baseUrl;
+  }
+
   /// Token Mapbox avec fallback production/développement
   static String get mapboxToken {
     if (_cachedMapboxToken != null) return _cachedMapboxToken!;
@@ -753,5 +775,15 @@ class SecureConfig {
     }
     
     return isHealthy;
+  }
+
+  static void validate() {
+    try {
+      apiBaseUrl; // Déclenche la validation
+      LogConfig.logInfo('Configuration environment');
+    } catch (e) {
+      LogConfig.logError('❌ Erreur configuration: $e');
+      rethrow;
+    }
   }
 }

@@ -2,6 +2,7 @@ import 'package:bounce/bounce.dart';
 import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:runaway/core/helper/extensions/extensions.dart';
+import 'package:runaway/core/widgets/list_header.dart';
 import 'package:runaway/core/widgets/squircle_container.dart';
 import '../../domain/models/activity_type.dart';
 
@@ -20,13 +21,9 @@ class ActivitySelector extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          context.l10n.activity,
-          style: context.bodySmall?.copyWith(
-            color: context.adaptiveTextPrimary,
-          ),
+        ListHeader(
+          title: context.l10n.activity,
         ),
-        15.h,
         Row(
           children: ActivityType.values.map((activity) {
             final isSelected = activity == selectedActivity;

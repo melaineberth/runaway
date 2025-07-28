@@ -427,7 +427,7 @@ class _CreditPlansScreenState extends State<CreditPlansScreen> {
                   _formatDate(transaction.createdAt),
                   style: context.bodySmall?.copyWith(
                     color: context.adaptiveTextSecondary,
-                    fontSize: 16,
+                    fontSize: 14,
                   ),
                 ),
               ],

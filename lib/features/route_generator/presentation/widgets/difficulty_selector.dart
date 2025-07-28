@@ -2,16 +2,16 @@ import 'package:bounce/bounce.dart';
 import 'package:flutter/material.dart';
 import 'package:runaway/core/helper/extensions/extensions.dart';
 import 'package:runaway/core/widgets/list_header.dart';
-import '../../domain/models/terrain_type.dart';
+import 'package:runaway/features/route_generator/domain/models/route_parameters.dart';
 
-class TerrainSelector extends StatelessWidget {
-  final TerrainType selectedTerrain;
-  final Function(TerrainType) onTerrainSelected;
+class DifficultySelector extends StatelessWidget {
+  final DifficultyLevel selectedDifficulty;
+  final ValueChanged<DifficultyLevel> onDifficultySelected;
 
-  const TerrainSelector({
+  const DifficultySelector({
     super.key,
-    required this.selectedTerrain,
-    required this.onTerrainSelected,
+    required this.selectedDifficulty,
+    required this.onDifficultySelected,
   });
 
   @override
@@ -20,16 +20,16 @@ class TerrainSelector extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         ListHeader(
-          title: context.l10n.terrain,
-          subtitle: selectedTerrain.desc(context),
+          title: context.l10n.difficulty,
         ),
-        Row(
-          children: TerrainType.values.map((terrain) {
-            final isSelected = terrain == selectedTerrain;
+        Wrap(
+          runSpacing: 8.0,
+          children: DifficultyLevel.values.map((difficulty) {
+            final isSelected = difficulty == selectedDifficulty;
             return Padding(
               padding: const EdgeInsets.only(right: 8.0),
               child: Bounce(
-                onTap: () => onTerrainSelected(terrain),
+                onTap: () => onDifficultySelected(difficulty),
                 child: Container(
                   padding: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                   decoration: BoxDecoration(
@@ -45,7 +45,7 @@ class TerrainSelector extends StatelessWidget {
                     ],
                   ),
                   child: Text(
-                    terrain.label(context),
+                    difficulty.label(context),
                     style: context.bodySmall?.copyWith(
                       color: isSelected ? Colors.white : context.adaptiveTextSecondary.withValues(alpha: 0.5),
                       fontWeight: FontWeight.w600,

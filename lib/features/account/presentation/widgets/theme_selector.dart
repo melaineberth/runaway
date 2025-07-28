@@ -6,6 +6,7 @@ import 'package:hugeicons/hugeicons.dart';
 import 'package:runaway/core/helper/extensions/extensions.dart';
 import 'package:runaway/core/blocs/theme_bloc/theme_bloc.dart';
 import 'package:runaway/core/utils/injections/bloc_provider_extension.dart';
+import 'package:runaway/core/widgets/list_header.dart';
 import 'package:runaway/core/widgets/modal_sheet.dart';
 import 'package:runaway/core/widgets/squircle_container.dart';
 
@@ -33,22 +34,10 @@ class ThemeSelector extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                context.l10n.theme,
-                style: context.bodySmall?.copyWith(
-                  color: context.adaptiveTextPrimary,
-                ),
+              ListHeader(
+                title: context.l10n.theme,
+                subtitle: context.l10n.selectPreferenceTheme,
               ),
-              2.h,
-              Text(
-                context.l10n.selectPreferenceTheme,
-                style: context.bodySmall?.copyWith(
-                  color: context.adaptiveTextSecondary,
-                  fontSize: 15,
-                  fontWeight: FontWeight.w500
-                ),
-              ),
-              20.h,
               Column(
                 children: [
                   ...AppThemeMode.values.asMap().entries.map((entry) {

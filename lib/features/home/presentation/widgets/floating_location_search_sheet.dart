@@ -913,7 +913,7 @@ class _FloatingLocationSearchSheetState extends State<FloatingLocationSearchShee
         Text(
           parts.first,
           style: context.bodyMedium?.copyWith(
-            fontSize: 16,
+            fontSize: 18,
             fontWeight: FontWeight.w600,
           ),
           maxLines: 1,

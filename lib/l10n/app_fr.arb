@@ -2263,5 +2263,34 @@
   "requestNewCode": "Demander un nouveau code",
   "@requestNewCode": {
     "description": "Action to request a new code during the verification of the password recovery code"
+  },
+
+
+
+  "requiredField": "Champ obligatoire",
+  "@requiredField" : {
+    "description": "Message during the verification of sending number"
+  },
+  "enterValidNumber": "Veuillez entrer un nombre valide",
+  "@enterValidNumber" : {
+    "description": "Message during the verification of sending number"
+  },
+  "greaterValue": "La valeur doit être supérieur ou égale à {min}",
+  "@greaterValue": {
+    "description": "Minimum value.",
+    "placeholders": {
+      "min": {
+        "type": "String"
+      }
+    }
+  },
+  "lessValue": "La valeur doit être inférieure ou égale à {max}",
+  "@lessValue": {
+    "description": "Maximum value.",
+    "placeholders": {
+      "max": {
+        "type": "String"
+      }
+    }
   }
 }

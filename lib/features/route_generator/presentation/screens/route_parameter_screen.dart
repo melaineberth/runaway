@@ -1,6 +1,4 @@
 import 'dart:math' as math;
-
-import 'package:bounce/bounce.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -14,11 +12,13 @@ import 'package:runaway/core/helper/extensions/monitoring_extensions.dart';
 import 'package:runaway/core/helper/services/monitoring_service.dart';
 import 'package:runaway/core/helper/services/permission_service.dart';
 import 'package:runaway/core/widgets/blurry_page.dart';
+import 'package:runaway/core/widgets/list_header.dart';
 import 'package:runaway/core/widgets/modal_sheet.dart';
 import 'package:runaway/core/widgets/squircle_btn.dart';
 import 'package:runaway/core/widgets/tick_slider.dart';
 import 'package:runaway/features/route_generator/data/validation/route_parameters_validator.dart';
-import 'package:runaway/features/route_generator/domain/models/route_parameters.dart';
+import 'package:runaway/features/route_generator/presentation/widgets/difficulty_selector.dart';
+import 'package:runaway/features/route_generator/presentation/widgets/surface_preference_selector.dart';
 
 import '../../../home/presentation/blocs/route_parameters_bloc.dart';
 import '../../../home/presentation/blocs/route_parameters_event.dart';
@@ -54,7 +54,7 @@ class _RouteParameterScreenState extends State<RouteParameterScreen> with Ticker
   ValidationResult? _currentValidation;
   List<AppPermissionStatus> _missingPermissions = [];
 
-  // ✅ Variables pour éviter les fuites mémoire
+  // Variables pour éviter les fuites mémoire
   bool _isDisposed = false;
 
   @override
@@ -245,6 +245,7 @@ class _RouteParameterScreenState extends State<RouteParameterScreen> with Ticker
                         _trackParameterChange('activity_type', activity.name);
                       },
                     ),
+                    
                     30.h,
                       
                     // Terrain
@@ -255,6 +256,7 @@ class _RouteParameterScreenState extends State<RouteParameterScreen> with Ticker
                         _trackParameterChange('terrain_type', terrain.name);
                       },
                     ),
+                    
                     30.h,
                       
                     // Densité urbaine
@@ -265,6 +267,7 @@ class _RouteParameterScreenState extends State<RouteParameterScreen> with Ticker
                         _trackParameterChange('urban_density', density.name);
                       },
                     ),
+                    
                     30.h,
 
                     // Distance
@@ -283,18 +286,15 @@ class _RouteParameterScreenState extends State<RouteParameterScreen> with Ticker
                       enableHapticFeedback: true,
                       hapticIntensity: HapticIntensity.light, // ✅ Plus subtil pour précision
                     ),
+                    
                     30.h,
       
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          context.l10n.elevationRange,
-                          style: context.bodySmall?.copyWith(
-                            color: context.adaptiveTextPrimary,
-                          ),
+                        ListHeader(
+                          title: context.l10n.elevationRange,
                         ),
-                        15.h,
                         Column(
                           children: [
                             // Dénivelé minimum
@@ -315,13 +315,15 @@ class _RouteParameterScreenState extends State<RouteParameterScreen> with Ticker
                               },
                               enableHapticFeedback: true,
                               hapticIntensity: HapticIntensity.light,
-                              style: context.bodySmall?.copyWith(
-                                color: context.adaptiveTextSecondary,
-                                fontSize: 15,
-                                fontWeight: FontWeight.w500
-                              ),
+                              style: context.bodyMedium?.copyWith(
+                              fontSize: 16,
+                              color: context.adaptiveTextSecondary,
+                              fontWeight: FontWeight.w500,
                             ),
+                            ),
+                            
                             15.h,
+
                             // Dénivelé maximum
                             ParameterSlider(
                               title: context.l10n.maxElevation,
@@ -346,10 +348,10 @@ class _RouteParameterScreenState extends State<RouteParameterScreen> with Ticker
                               },
                               enableHapticFeedback: true,
                               hapticIntensity: HapticIntensity.light,
-                              style: context.bodySmall?.copyWith(
+                              style: context.bodyMedium?.copyWith(
+                                fontSize: 16,
                                 color: context.adaptiveTextSecondary,
-                                fontSize: 15,
-                                fontWeight: FontWeight.w500
+                                fontWeight: FontWeight.w500,
                               ),
                             ),
                           ],
@@ -394,6 +396,7 @@ class _RouteParameterScreenState extends State<RouteParameterScreen> with Ticker
                       title: Text(
                         context.l10n.advancedOptions,
                         style: context.bodySmall?.copyWith(
+                          fontSize: 18,
                           color: context.adaptiveTextPrimary,
                         ),
                       ),
@@ -508,21 +511,6 @@ class _RouteParameterScreenState extends State<RouteParameterScreen> with Ticker
   }
 
   Widget _buildAdvancedOptions(RouteParametersState state) {
-    Color getColor(Set<WidgetState> states) {
-      // Vérifier si le switch est désactivé
-      if (states.contains(WidgetState.disabled)) {
-        return context.adaptiveDisabled.withValues(alpha: 0.5);
-      }
-      
-      // Vérifier si le switch est activé (ON)
-      if (states.contains(WidgetState.selected)) {
-        return context.adaptivePrimary; // Couleur quand activé
-      }
-      
-      // État par défaut (OFF)
-      return context.adaptiveDisabled; // Couleur quand désactivé
-    }
-
     return Column(
       children: [
         ParameterSlider(
@@ -553,25 +541,11 @@ class _RouteParameterScreenState extends State<RouteParameterScreen> with Ticker
 
         30.h,
         
-        SwitchListTile(
-          inactiveThumbColor: context.adaptiveDisabled,
-          activeColor: context.adaptivePrimary,
-          contentPadding: EdgeInsets.zero,
-          trackOutlineColor: WidgetStateProperty.resolveWith(getColor),
-          title: Text(
-            context.l10n.prioritizeParks,
-            style: context.bodySmall?.copyWith(color: context.adaptiveTextPrimary),
-          ),
-          subtitle: Text(
-            context.l10n.preferGreenSpaces,
-            style: context.bodySmall?.copyWith(
-              color: context.adaptiveTextSecondary,
-              fontSize: 15,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-          value: state.parameters.prioritizeParks,
-          onChanged: (value) {
+        _buildSwitchTile(
+          context.l10n.prioritizeParks,
+          context.l10n.preferGreenSpaces,
+          state.parameters.prioritizeParks,
+          (value) {
             context.routeParametersBloc.add(PrioritizeParksToggled(value));
             _trackParameterChange('prioritize_parks', value);
           },
@@ -579,66 +553,33 @@ class _RouteParameterScreenState extends State<RouteParameterScreen> with Ticker
         
         15.h,
 
-        SwitchListTile(
-          inactiveThumbColor: context.adaptiveDisabled,
-          activeColor: context.adaptivePrimary,
-          trackOutlineColor: WidgetStateProperty.resolveWith(getColor),
-          contentPadding: EdgeInsets.zero,
-          title: Text(context.l10n.loopCourse, style: context.bodySmall?.copyWith(color: context.adaptiveTextPrimary)),
-          subtitle: Text(
-            context.l10n.returnStartingPoint,
-            style: context.bodySmall?.copyWith(
-              color: context.adaptiveTextSecondary,
-              fontSize: 15,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-          value: state.parameters.isLoop,
-          onChanged: (value) {
+        _buildSwitchTile(
+          context.l10n.loopCourse,
+          context.l10n.returnStartingPoint,
+          state.parameters.isLoop,
+          (value) {
             context.routeParametersBloc.add(LoopToggled(value));
           },
         ),
         
         15.h,
 
-        SwitchListTile(
-          inactiveThumbColor: context.adaptiveDisabled,
-          activeColor: context.adaptivePrimary,
-          trackOutlineColor: WidgetStateProperty.resolveWith(getColor),
-          contentPadding: EdgeInsets.zero,
-          title: Text(context.l10n.avoidTraffic, style: context.bodySmall?.copyWith(color: context.adaptiveTextPrimary)),
-          subtitle: Text(
-            context.l10n.quietStreets,
-            style: context.bodySmall?.copyWith(
-              color: context.adaptiveTextSecondary,
-              fontSize: 15,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-          value: state.parameters.avoidTraffic,
-          onChanged: (value) {
+        _buildSwitchTile(
+          context.l10n.avoidTraffic,
+          context.l10n.quietStreets,
+          state.parameters.avoidTraffic,
+          (value) {
             context.routeParametersBloc.add(AvoidTrafficToggled(value));
           },
         ),
         
         15.h,
 
-        SwitchListTile(
-          inactiveThumbColor: context.adaptiveDisabled,
-          activeColor: context.adaptivePrimary,
-          trackOutlineColor: WidgetStateProperty.resolveWith(getColor),
-          contentPadding: EdgeInsets.zero,
-          title: Text(context.l10n.scenicRoute, style: context.bodySmall?.copyWith(color: context.adaptiveTextPrimary)),
-          subtitle: Text(
-            context.l10n.prioritizeLandscapes,
-            style: context.bodySmall?.copyWith(
-              color: context.adaptiveTextSecondary,
-              fontSize: 15,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-          value: state.parameters.preferScenic,
-          onChanged: (value) {
+        _buildSwitchTile(
+          context.l10n.scenicRoute,
+          context.l10n.prioritizeLandscapes,
+          state.parameters.preferScenic,
+          (value) {
             context.routeParametersBloc.add(PreferScenicToggled(value));
           },
         ),
@@ -647,148 +588,46 @@ class _RouteParameterScreenState extends State<RouteParameterScreen> with Ticker
       ],
     );
   }
-}
 
-
-class DifficultySelector extends StatelessWidget {
-  final DifficultyLevel selectedDifficulty;
-  final ValueChanged<DifficultyLevel> onDifficultySelected;
-
-  const DifficultySelector({
-    super.key,
-    required this.selectedDifficulty,
-    required this.onDifficultySelected,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          context.l10n.difficulty,
-          style: context.bodySmall?.copyWith(
-            color: context.adaptiveTextPrimary,
-          ),
+  Widget _buildSwitchTile(String title, String subtitle, bool value, Function(bool)? onChanged) {
+    return SwitchListTile(
+      inactiveThumbColor: context.adaptiveDisabled,
+      activeColor: context.adaptivePrimary,
+      contentPadding: EdgeInsets.zero,
+      trackOutlineColor: WidgetStateProperty.resolveWith(getColor),
+      title: Text(
+        title,
+        style: context.bodySmall?.copyWith(
+          fontSize: 18,
+          color: context.adaptiveTextPrimary,
         ),
-        15.h,
-        Wrap(
-          runSpacing: 8.0,
-          children: DifficultyLevel.values.map((difficulty) {
-            final isSelected = difficulty == selectedDifficulty;
-            return Padding(
-              padding: const EdgeInsets.only(right: 8.0),
-              child: Bounce(
-                onTap: () => onDifficultySelected(difficulty),
-                child: Container(
-                  padding: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                  decoration: BoxDecoration(
-                    color: isSelected ? context.adaptivePrimary : context.adaptiveBorder.withValues(alpha: 0.08),
-                    borderRadius: BorderRadius.circular(100),
-                    boxShadow: [
-                      BoxShadow(
-                        color: isSelected ? context.adaptivePrimary.withValues(alpha: 0.4) : Colors.transparent,
-                        blurRadius: 30.0,
-                        spreadRadius: 1.0,
-                        offset: const Offset(0.0, 0.0),
-                      ),
-                    ],
-                  ),
-                  child: Text(
-                    difficulty.label(context),
-                    style: context.bodySmall?.copyWith(
-                      color: isSelected ? Colors.white : context.adaptiveTextSecondary.withValues(alpha: 0.5),
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ),
-            );
-          }).toList(),
+      ),
+      subtitle: Text(
+        subtitle,
+        style: context.bodyMedium?.copyWith(
+          fontSize: 16,
+          color: context.adaptiveTextSecondary,
+          fontWeight: FontWeight.w500,
         ),
-      ],
-    );
-  }
-}
-
-class SurfacePreferenceSelector extends StatelessWidget {
-  final double currentValue;
-  final ValueChanged<double> onValueChanged;
-
-  const SurfacePreferenceSelector({
-    super.key,
-    required this.currentValue,
-    required this.onValueChanged,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final currentType = SurfaceType.fromValue(currentValue);
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          context.l10n.surfacePreference,
-          style: context.bodySmall?.copyWith(
-            color: context.adaptiveTextPrimary,
-          ),
-        ),
-        3.h,
-        Text(
-          _getDescription(context, currentType),
-          style: context.bodySmall?.copyWith(
-            color: context.adaptiveTextSecondary,
-            fontSize: 15,
-            fontWeight: FontWeight.w500
-          ),
-        ),
-        15.h,
-        Row(
-          children: SurfaceType.values.map((surface) {
-            final isSelected = surface == currentType;
-            return Padding(
-              padding: const EdgeInsets.only(right: 8.0),
-              child: Bounce(
-                onTap: () => onValueChanged(surface.value),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                  decoration: BoxDecoration(
-                    color: isSelected ? context.adaptivePrimary : context.adaptiveBorder.withValues(alpha: 0.08),
-                    borderRadius: BorderRadius.circular(100),
-                    boxShadow: [
-                      BoxShadow(
-                        color: isSelected ? context.adaptivePrimary.withValues(alpha: 0.4) : Colors.transparent,
-                        blurRadius: 30.0,
-                        spreadRadius: 1.0,
-                        offset: const Offset(0.0, 0.0),
-                      ),
-                    ],
-                  ),
-                  child: Text(
-                    surface.label(context),
-                    style: context.bodySmall?.copyWith(
-                      color: isSelected ? Colors.white : context.adaptiveTextSecondary.withValues(alpha: 0.5),
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ),
-            );
-          }).toList(),
-        ),
-      ],
+      ),
+      value: value,
+      onChanged: onChanged,
     );
   }
 
-  String _getDescription(BuildContext context, SurfaceType surface) {
-    switch (surface) {
-      case SurfaceType.asphalt:
-        return context.l10n.asphaltSurfaceDesc;
-      case SurfaceType.mixed:
-        return context.l10n.mixedSurfaceDesc;
-      case SurfaceType.natural:
-        return context.l10n.naturalSurfaceDesc;
+  Color getColor(Set<WidgetState> states) {
+    // Vérifier si le switch est désactivé
+    if (states.contains(WidgetState.disabled)) {
+      return context.adaptiveDisabled.withValues(alpha: 0.5);
     }
+    
+    // Vérifier si le switch est activé (ON)
+    if (states.contains(WidgetState.selected)) {
+      return context.adaptivePrimary; // Couleur quand activé
+    }
+    
+    // État par défaut (OFF)
+    return context.adaptiveDisabled; // Couleur quand désactivé
   }
 }
+

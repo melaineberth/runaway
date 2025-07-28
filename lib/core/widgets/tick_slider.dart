@@ -1,14 +1,14 @@
+import 'dart:ui';
+
 import 'package:animated_flip_counter/animated_flip_counter.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/physics.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
-import 'package:runaway/core/helper/config/log_config.dart';
 import 'package:runaway/core/helper/extensions/extensions.dart';
-import 'package:runaway/core/widgets/modal_sheet.dart';
-import 'package:runaway/core/widgets/squircle_btn.dart';
 import 'package:runaway/core/widgets/squircle_container.dart';
-import 'package:runaway/features/auth/presentation/widgets/auth_text_field.dart';
+import 'package:runaway/core/widgets/top_snackbar.dart';
+import 'package:top_snackbar_flutter/top_snack_bar.dart';
 
 /// Enum pour l'intensité haptique
 enum HapticIntensity {
@@ -250,6 +250,39 @@ class _TickSliderState extends State<TickSlider> with TickerProviderStateMixin {
     _spring.animateWith(SpringSimulation(spring, _overscroll, 0, 0));
   }
 
+  void _openModificator(BuildContext context) async {
+    final result = await Navigator.of(context, rootNavigator: true).push(
+      PageRouteBuilder(
+        opaque: false,
+        barrierColor: Colors.transparent,
+        transitionDuration: const Duration(milliseconds: 200),
+        reverseTransitionDuration: const Duration(milliseconds: 200),
+
+        pageBuilder: (_, Animation<double> animation, __) {
+          return _OverleyView(
+            unit: widget.unit,
+            minValue: widget.min,
+            maxValue: widget.max,
+            initialValue: _value.toStringAsFixed(0),
+            animation: animation,
+            onTap: () {
+              context.pop();
+            },
+          );
+        },
+      ),
+    );
+
+    if (result != null && mounted) {
+      final clamped = result.clamp(widget.min, widget.max);
+      setState(() {
+        _value = clamped;
+        _currentTick = _valueToTick(_value);
+      });
+      widget.onChanged(_value);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Row(
@@ -261,35 +294,7 @@ class _TickSliderState extends State<TickSlider> with TickerProviderStateMixin {
           color: context.adaptivePrimary,
           isGlow: true,
           gradient: false,
-          onTap: () async {
-            final newInput = await showModalBottomSheet<double>(
-              context: context, 
-              backgroundColor: Colors.transparent,
-              builder: (context) {
-                return SaveRouteSheet(
-                  unit: widget.unit,
-                  minValue: widget.min,
-                  maxValue: widget.max,
-                  initialValue: _value.toStringAsFixed(0),
-                );
-              },
-            );
-            
-            if (!mounted) return;
-
-            if (newInput != null) {
-              final clamped = newInput.clamp(widget.min, widget.max);
-
-              LogConfig.logDebug('Nouvelle valeur : $clamped');
-
-              setState(() {
-                _value = clamped;
-                _currentTick = _valueToTick(_value);
-              });
-
-              widget.onChanged(_value);
-            }
-          },
+          onTap: () => _openModificator(context),
           child: Center(
             child: AnimatedFlipCounter(
               duration: Duration(milliseconds: 500),
@@ -344,7 +349,7 @@ class _TickSliderState extends State<TickSlider> with TickerProviderStateMixin {
               },
               onHorizontalDragUpdate:(d) => _updateDrag(d.localPosition),
               onHorizontalDragEnd:   (_)  => _endDrag(),
-              onHorizontalDragCancel:     _endDrag,
+              onHorizontalDragCancel: _endDrag,
               child: Transform(
                 alignment: anchor,
                 transform: Matrix4.diagonal3Values(scaleFactor, 1, 1),
@@ -454,31 +459,61 @@ class _RulerPainter extends CustomPainter {
       old.minorColor  != minorColor;
 }
 
-class SaveRouteSheet extends StatefulWidget {
+class _OverleyView extends StatefulWidget {
   final String initialValue;
   final String unit;
   final double maxValue, minValue;
+  final Animation<double> animation;
+  final VoidCallback onTap;
 
-  const SaveRouteSheet({
-    super.key,
+  const _OverleyView({
     required this.unit, 
     required this.initialValue, 
     required this.minValue, 
     required this.maxValue, 
+    required this.animation,
+    required this.onTap,
   });
 
   @override
-  State<SaveRouteSheet> createState() => _SaveRouteSheetState();
+  State<_OverleyView> createState() => __OverleyViewState();
 }
 
-class _SaveRouteSheetState extends State<SaveRouteSheet> {
+class __OverleyViewState extends State<_OverleyView> with TickerProviderStateMixin {
+  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   late final TextEditingController _ctl;
-  final formKey = GlobalKey<FormState>();
+  late String _value;
+
+  bool _showError = false;
+
+  late final AnimationController _bounceController;
+  late final Animation<double> _bounceAnimation;
 
   @override
   void initState() {
     super.initState();
+    _value = widget.initialValue;
     _ctl = TextEditingController(text: widget.initialValue);
+
+    _bounceController = AnimationController(
+      duration: const Duration(milliseconds: 200),
+      vsync: this,
+    );
+    
+    _bounceAnimation = Tween<double>(
+      begin: 0.0,
+      end: 10.0,
+    ).animate(CurvedAnimation(
+      parent: _bounceController,
+      curve: Curves.elasticOut,
+    ));
+
+    // Écouteur : synchronise le champ _value si tu veux
+    _ctl.addListener(() {
+      setState(() {
+        _value = _ctl.text;
+      });
+    });
   }
 
   @override
@@ -487,56 +522,128 @@ class _SaveRouteSheetState extends State<SaveRouteSheet> {
     super.dispose();
   }
 
+  String? _validateInput(String? value) {
+    if (value == null || value.trim().isEmpty) {
+      return context.l10n.requiredField;
+    }
+    final parsed = double.tryParse(value.trim().replaceAll(',', '.'));
+    if (parsed == null) {
+      return context.l10n.enterValidNumber;
+    }
+    if (parsed <= widget.minValue) {
+      return context.l10n.greaterValue(widget.minValue.toStringAsFixed(0));
+    }
+    if (parsed > widget.maxValue) {
+      return context.l10n.lessValue(widget.maxValue.toStringAsFixed(0));
+    }
+    return null;
+  }
+
+  void _handleSubmit() {
+    final errorMessage = _validateInput(_ctl.text);
+    if (errorMessage == null) {
+      setState(() {
+        _showError = false;
+      });
+      final value = double.parse(_ctl.text.trim().replaceAll(',', '.'));
+      Navigator.of(context).pop(value);
+    } else {
+      showTopSnackBar(
+        Overlay.of(context),
+        TopSnackBar(
+          isError: true,
+          title: errorMessage,
+        ),
+      );
+      setState(() {
+        _showError = true;
+      });
+      _bounceController.forward().then((_) {
+        _bounceController.reset();
+      });
+      HapticFeedback.mediumImpact();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    return ModalSheet(
-      child: Padding(
-        padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
-        child: Form(
-          key: formKey,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
+    return AnimatedBuilder(
+      animation: widget.animation,
+      builder: (context, child) {
+        // sigma passe de 0 à 30
+        final sigma = 30 * widget.animation.value;
+        // opacité du voile passe de 0 à 0.25
+        final veilOpacity = 0.6 * widget.animation.value;
+
+        return Scaffold(
+          extendBody: true,
+          backgroundColor: Colors.transparent,
+          body: Stack(
+            alignment: Alignment.bottomCenter,
             children: [
-              AuthTextField(
-                controller: _ctl,
-                autofocus: true,
-                keyboardType: TextInputType.numberWithOptions(),
-                hint:widget.unit,
-                validator: (value) {
-                  if (value == null || value.trim().isEmpty) {
-                    return 'Champ obligatoire';
-                  }
-                  final parsed = double.tryParse(value.trim().replaceAll(',', '.'));
-                  if (parsed == null) {
-                    return 'Veuillez entrer un nombre valide';
-                  }
-                  if (parsed <= widget.minValue) {
-                    return 'La valeur doit être supérieur ou égale à ${widget.minValue.toStringAsFixed(0)}';
-                  }
-                  if (parsed > widget.maxValue) {
-                    return 'La valeur doit être inférieure ou égale à ${widget.maxValue.toStringAsFixed(0)}';
-                  }
-                  return null;
-                },
+              // fond flouté / assombri
+              Positioned.fill(
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque, // capte toute la surface
+                  onTap: _handleSubmit,
+                  child: FadeTransition(
+                    opacity: widget.animation,
+                    child: BackdropFilter(
+                      filter: ImageFilter.blur(sigmaX: sigma, sigmaY: sigma),
+                      child: Container(
+                        color: context.adaptiveTextPrimary.withValues(
+                          alpha: veilOpacity,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
               ),
-                
-              12.h,
-          
-              SquircleBtn(
-                isPrimary: true,
-                onTap: () {
-                  if (formKey.currentState?.validate() ?? false) {
-                    final value = double.parse(_ctl.text.trim().replaceAll(',', '.'));
-                    context.pop(value); // On renvoie un double, plus un String
+
+              Center(
+                child: AnimatedBuilder(
+                  animation: _bounceAnimation,
+                  builder: (context, child) {
+                    return Transform.translate(
+                      offset: Offset(_bounceAnimation.value * ((_bounceController.value * 4).round() % 2 == 0 ? 1 : -1), 0),
+                      child: Form(
+                        key: _formKey,
+                        child: TextFormField(
+                          controller: _ctl,
+                          autofocus: true,
+                          keyboardType: TextInputType.number,
+                          textAlign: TextAlign.center,
+                          style: context.bodyLarge?.copyWith(
+                            fontSize: 60,
+                            fontWeight: FontWeight.w700,
+                            color: _showError ? Colors.red : context.adaptiveBackground,
+                          ),
+                          cursorColor: _showError ? Colors.red : context.adaptivePrimary,
+                          decoration: InputDecoration(
+                            border: InputBorder.none,
+                            hintText: widget.unit,
+                            hintStyle: context.bodyLarge?.copyWith(
+                              fontSize: 60,
+                              fontWeight: FontWeight.w700,
+                              color: context.adaptiveBackground.withValues(alpha: 0.5),
+                            ),
+                          ),
+                          onChanged: (value) {
+                            final errorMessage = _validateInput(value);
+                            setState(() {
+                              _showError = errorMessage != null && _showError;
+                            });
+                          },
+                        ),
+                      ),
+                    );
                   }
-                }, // Désactiver si loading
-                label: context.l10n.save,
-              ),              
+                ),
+              )
             ],
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 }
