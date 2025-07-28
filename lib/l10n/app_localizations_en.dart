@@ -1369,7 +1369,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get updateRouteNameSubtitle => 'Choose a new name';
 
   @override
-  String get updateRouteNameHint => 'Digestive process after eating';
+  String get updateRouteNameHint => 'Digestive walk';
 
   @override
   String get initializationError => 'Initialization error';
@@ -1652,4 +1652,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String lessValue(String max) {
     return 'The value must be less than or equal to $max';
   }
+
+  @override
+  String get userSummary => 'Your summary';
 }

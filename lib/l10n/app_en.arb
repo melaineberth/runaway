@@ -1869,7 +1869,7 @@
   "@updateRouteNameSubtitle": {
     "description": "Subtitle for updating route name"
   },
-  "updateRouteNameHint": "Digestive process after eating",
+  "updateRouteNameHint": "Digestive walk",
   "@updateRouteNameHint": {
     "description": "Hint text for updating route name"
   },
@@ -2292,5 +2292,9 @@
         "type": "String"
       }
     }
+  },
+  "userSummary": "Your summary",
+  "@userSummary" : {
+    "description": "Display summary user"
   }
 }

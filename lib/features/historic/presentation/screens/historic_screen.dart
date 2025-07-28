@@ -142,8 +142,9 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
 
   /// Suppression d'un parcours avec confirmation
   Future<void> _deleteRoute(SavedRoute route) async {
+    final routeName = '"${route.name}"';
     try {
-      final confirmed = await _showDeleteConfirmationDialog(route.name);
+      final confirmed = await _showDeleteConfirmationDialog(routeName);
       if (confirmed != true) return;
 
       LogConfig.logSuccess('🗑️ Suppression via AppDataBloc: ${route.name}');
@@ -273,9 +274,7 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
   }
 
   /// 🎭 Interface principale avec animations intégrées
-  Widget _buildMainView(AppDataState appDataState, List<SavedRoute> routes) {
-    final sortedRoutes = routes.sortByCreationDate();
-    
+  Widget _buildMainView(AppDataState appDataState, List<SavedRoute> routes) {    
     // Mettre à jour les animations en fonction du nombre de routes
     if (routes.isNotEmpty) {
       _updateAnimationsForRoutes(routes.length);
@@ -284,6 +283,21 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
     return BlurryPage(
       children: [
         30.h,
+        AnimatedBuilder(
+          animation: _fadeAnimation,
+          builder: (context, child) {
+            return Opacity(
+              opacity: _fadeAnimation.value,
+              child: Transform.translate(
+                offset: Offset(0, 20 * (1 - _fadeAnimation.value)),
+                child: _buildStatsCard(routes),
+              ),
+            );
+          },
+        ),
+
+        30.h,
+
         Text(
           context.l10n.savedRoute,
           style: context.bodyMedium?.copyWith(
@@ -292,26 +306,8 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
             fontWeight: FontWeight.w600,
           ),
         ),
-
+        
         15.h,
-
-        if (sortedRoutes.length > 1) ...[
-          30.h,
-          AnimatedBuilder(
-            animation: _fadeAnimation,
-            builder: (context, child) {
-              return Opacity(
-                opacity: _fadeAnimation.value,
-                child: Transform.translate(
-                  offset: Offset(0, 20 * (1 - _fadeAnimation.value)),
-                  child: _buildStatsCard(routes),
-                ),
-              );
-            },
-          ),
-
-          20.h,
-        ],
 
         _buildAnimatedRoutesList(routes),
       ],
@@ -506,33 +502,46 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
     final totalRoutes = routes.length;
     final unsyncedCount = routes.unsyncedRoutes.length;
     
-    return SquircleContainer(
-      gradient: false,
-      radius: 40.0,
-      padding: EdgeInsets.all(20),
-      color: context.adaptiveBorder.withValues(alpha: 0.05),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
-        children: [
-          _buildStatItem(
-            icon: HugeIcons.strokeRoundedRoute01,
-            value: totalRoutes.toString(),
-            label: context.l10n.route,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          context.l10n.userSummary,
+          style: context.bodyMedium?.copyWith(
+            fontSize: 18,
+            color: context.adaptiveTextSecondary,
+            fontWeight: FontWeight.w600,
           ),
-          _buildStatItem(
-            icon: HugeIcons.strokeRoundedNavigator01,
-            value: '${totalDistance.toStringAsFixed(1)}km',
-            label: context.l10n.total,
-          ),
-          if (unsyncedCount > 0)
-          _buildStatItem(
-            icon: HugeIcons.strokeRoundedWifiOff01,
-            value: unsyncedCount.toString(),
-            label: context.l10n.unsynchronized,
-            color: Colors.orange,
-          )
-        ],
-      ),
+        ), 
+        15.h,
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceAround,
+          children: [
+            _buildStatItem(
+              icon: HugeIcons.strokeRoundedRoute01,
+              value: totalRoutes.toString(),
+              label: context.l10n.route,
+              color: Colors.blue,
+            ),
+            8.w,
+            _buildStatItem(
+              icon: HugeIcons.strokeRoundedNavigator01,
+              value: '${totalDistance.toStringAsFixed(1)}km',
+              label: context.l10n.total,
+              color: Colors.green,
+            ),
+            if (unsyncedCount > 0) ...[
+              _buildStatItem(
+                icon: HugeIcons.strokeRoundedWifiOff01,
+                value: unsyncedCount.toString(),
+                label: context.l10n.unsynchronized,
+                color: Colors.orange,
+              ),
+              8.w,
+            ]
+          ],
+        ),
+      ],
     );
   }
 
@@ -543,25 +552,33 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
     required String label,
     Color? color,
   }) {
-    return Column(
-      children: [
-        Icon(icon, color: color ?? context.adaptiveTextPrimary, size: 24),
-        4.h,
-        Text(
-          value,
-          style: context.bodyMedium?.copyWith(
-            color: color ?? context.adaptiveTextPrimary,
-            fontWeight: FontWeight.bold,
-          ),
+    return Expanded(
+      child: SquircleContainer(
+        radius: 50,
+        color: color,
+        padding: const EdgeInsets.all(15),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              value,
+              style: context.bodyMedium?.copyWith(
+                fontSize: 25,
+                fontWeight: FontWeight.w800,
+                color: Colors.white,
+              ),
+            ),
+            Text(
+              label,
+              style: context.bodyMedium?.copyWith(
+                fontSize: 17,
+                fontWeight: FontWeight.w600,
+                color: Colors.white,
+              ),
+            ),
+          ],
         ),
-        Text(
-          label,
-          style: context.bodySmall?.copyWith(
-            color: (color ?? context.adaptiveTextPrimary).withAlpha(180),
-            fontSize: 12,
-          ),
-        ),
-      ],
+      ),
     );
   }
 

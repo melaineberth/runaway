@@ -2718,7 +2718,7 @@ abstract class AppLocalizations {
   /// Hint text for updating route name
   ///
   /// In en, this message translates to:
-  /// **'Digestive process after eating'**
+  /// **'Digestive walk'**
   String get updateRouteNameHint;
 
   /// Error message displayed when the app fails to initialize properly.
@@ -3224,6 +3224,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'The value must be less than or equal to {max}'**
   String lessValue(String max);
+
+  /// Display summary user
+  ///
+  /// In en, this message translates to:
+  /// **'Your summary'**
+  String get userSummary;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

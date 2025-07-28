@@ -1484,7 +1484,7 @@
   "@missingRouteSettings": {
     "description": "Message lorsque les paramètres d'itinéraire sont manquants."
   },
-  "savedRoute": "Itinéraire sauvegardé",
+  "savedRoute": "Itinéraire(s) sauvegardé(s)",
   "@savedRoute": {
     "description": "Confirmation que l'itinéraire a été sauvegardé."
   },
@@ -1869,7 +1869,7 @@
   "@updateRouteNameSubtitle": {
     "description": "Sous-titre mise à jour nom"
   },
-  "updateRouteNameHint": "Processus digestif après avoir mangé",
+  "updateRouteNameHint": "Balade digestive",
   "@updateRouteNameHint": {
     "description": "Indice mise à jour nom"
   },
@@ -2292,5 +2292,9 @@
         "type": "String"
       }
     }
+  },
+  "userSummary": "Votre récapitulatif",
+  "@userSummary" : {
+    "description": "Display summary user"
   }
 }

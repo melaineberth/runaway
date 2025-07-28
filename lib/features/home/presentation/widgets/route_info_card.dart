@@ -58,14 +58,14 @@ class RouteInfoCard extends StatelessWidget {
                     Text(
                       routeName,
                       style: context.bodySmall?.copyWith(
-                        fontSize: 19,
+                        fontSize: 20,
                         color: context.adaptiveTextPrimary,
                       ),
                     ),
                     Text(
                       routeDesc,
                       style: context.bodySmall?.copyWith(
-                        fontSize: 17,
+                        fontSize: 18,
                         color: context.adaptiveTextSecondary,
                         fontWeight: FontWeight.w500
                       ),

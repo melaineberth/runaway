@@ -1,5 +1,6 @@
 import 'dart:ui';
 
+import 'package:blur/blur.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:runaway/core/helper/extensions/extensions.dart';
@@ -13,6 +14,11 @@ class OverleyView extends StatefulWidget {
   final Animation<double> animation;
   final VoidCallback onTap;
   final bool isNumber;
+  
+  // 🆕 Nouveaux paramètres pour le mode texte
+  final int? maxLength; // Pour limiter la longueur du texte
+  final String? Function(String?)? validator; // Validateur personnalisé
+  final TextCapitalization textCapitalization;
 
   const OverleyView({
     super.key, 
@@ -23,6 +29,10 @@ class OverleyView extends StatefulWidget {
     required this.animation,
     required this.onTap,
     this.isNumber = true,
+    // 🆕 Paramètres pour le mode texte
+    this.maxLength,
+    this.validator,
+    this.textCapitalization = TextCapitalization.none,
   });
 
   @override
@@ -58,7 +68,6 @@ class _OverleyViewState extends State<OverleyView> with TickerProviderStateMixin
       curve: Curves.elasticOut,
     ));
 
-    // Écouteur : synchronise le champ _value si tu veux
     _ctl.addListener(() {
       setState(() {
         _value = _ctl.text;
@@ -68,6 +77,7 @@ class _OverleyViewState extends State<OverleyView> with TickerProviderStateMixin
 
   @override
   void dispose() {
+    _bounceController.dispose();
     _ctl.dispose();
     super.dispose();
   }
@@ -76,6 +86,31 @@ class _OverleyViewState extends State<OverleyView> with TickerProviderStateMixin
     if (value == null || value.trim().isEmpty) {
       return context.l10n.requiredField;
     }
+
+    // 🆕 Mode texte avec validateur personnalisé
+    if (!widget.isNumber) {
+      if (widget.validator != null) {
+        return widget.validator!(value.trim());
+      }
+      
+      // Validation par défaut pour le texte
+      if (widget.maxLength != null && value.trim().length > widget.maxLength!) {
+        return context.l10n.routeNameUpdateExceptionCountCharacters;
+      }
+      
+      // Validation des caractères interdits pour les noms de fichiers
+      if (value.trim().contains(RegExp(r'[<>:"/\\|?*]'))) {
+        return context.l10n.routeNameUpdateExceptionForbiddenCharacters;
+      }
+      
+      if (value.trim().length < 2) {
+        return context.l10n.routeNameUpdateExceptionMinCharacters;
+      }
+      
+      return null;
+    }
+
+    // 🔄 Mode nombre (logique existante)
     final parsed = double.tryParse(value.trim().replaceAll(',', '.'));
     if (parsed == null) {
       return context.l10n.enterValidNumber;
@@ -95,8 +130,14 @@ class _OverleyViewState extends State<OverleyView> with TickerProviderStateMixin
       setState(() {
         _showError = false;
       });
-      final value = double.parse(_ctl.text.trim().replaceAll(',', '.'));
-      Navigator.of(context).pop(value);
+      
+      // 🆕 Retourner le bon type selon le mode
+      if (widget.isNumber) {
+        final value = double.parse(_ctl.text.trim().replaceAll(',', '.'));
+        Navigator.of(context).pop(value);
+      } else {
+        Navigator.of(context).pop(_ctl.text.trim());
+      }
     } else {
       showTopSnackBar(
         Overlay.of(context),
@@ -120,31 +161,28 @@ class _OverleyViewState extends State<OverleyView> with TickerProviderStateMixin
     return AnimatedBuilder(
       animation: widget.animation,
       builder: (context, child) {
-        // sigma passe de 0 à 30
-        final sigma = 30 * widget.animation.value;
-        // opacité du voile passe de 0 à 0.25
-        final veilOpacity = 0.6 * widget.animation.value;
+        final sigma = 20 * widget.animation.value;
+        final veilOpacity = 0.5 * widget.animation.value;
 
         return Scaffold(
           extendBody: true,
           backgroundColor: Colors.transparent,
           body: Stack(
+            clipBehavior: Clip.hardEdge,
             alignment: Alignment.bottomCenter,
             children: [
-              // fond flouté / assombri
               Positioned.fill(
                 child: GestureDetector(
-                  behavior: HitTestBehavior.opaque, // capte toute la surface
+                  behavior: HitTestBehavior.opaque,
                   onTap: _handleSubmit,
                   child: FadeTransition(
                     opacity: widget.animation,
-                    child: BackdropFilter(
-                      filter: ImageFilter.blur(sigmaX: sigma, sigmaY: sigma),
-                      child: Container(
-                        color: context.adaptiveTextPrimary.withValues(
-                          alpha: veilOpacity,
-                        ),
+                    child: Container(
+                      color: context.adaptiveDisabled.withValues(
+                        alpha: veilOpacity,
                       ),
+                    ).frosted(
+                      blur: sigma
                     ),
                   ),
                 ),
@@ -163,17 +201,20 @@ class _OverleyViewState extends State<OverleyView> with TickerProviderStateMixin
                           autofocus: true,
                           keyboardType: widget.isNumber ? TextInputType.number : TextInputType.text,
                           textAlign: TextAlign.center,
+                          textCapitalization: widget.textCapitalization,
+                          maxLength: widget.maxLength,
                           style: context.bodyLarge?.copyWith(
-                            fontSize: 60,
+                            fontSize: widget.isNumber ? 60 : 40, // 🆕 Taille adaptée selon le mode
                             fontWeight: FontWeight.w700,
                             color: _showError ? Colors.red : context.adaptiveBackground,
                           ),
                           cursorColor: _showError ? Colors.red : context.adaptivePrimary,
                           decoration: InputDecoration(
                             border: InputBorder.none,
+                            counterText: '', // 🆕 Cache le compteur de caractères
                             hintText: widget.unit,
                             hintStyle: context.bodyLarge?.copyWith(
-                              fontSize: 60,
+                              fontSize: widget.isNumber ? 60 : 40,
                               fontWeight: FontWeight.w700,
                               color: context.adaptiveBackground.withValues(alpha: 0.5),
                             ),
@@ -184,6 +225,7 @@ class _OverleyViewState extends State<OverleyView> with TickerProviderStateMixin
                               _showError = errorMessage != null && _showError;
                             });
                           },
+                          onFieldSubmitted: (_) => _handleSubmit(), // 🆕 Support Enter/Done
                         ),
                       ),
                     );

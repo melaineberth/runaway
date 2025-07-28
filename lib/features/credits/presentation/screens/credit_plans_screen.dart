@@ -30,14 +30,23 @@ class CreditPlansScreen extends StatefulWidget {
   State<CreditPlansScreen> createState() => _CreditPlansScreenState();
 }
 
-class _CreditPlansScreenState extends State<CreditPlansScreen> {
+class _CreditPlansScreenState extends State<CreditPlansScreen> with TickerProviderStateMixin {
   String? selectedPlanId;
 
   late String _screenLoadId;
 
+  // 🎭 Animation Controllers
+  late AnimationController _fadeController;
+  late AnimationController _staggerController;
+  late Animation<double> _fadeAnimation;
+
+  final List<Animation<double>> _slideAnimations = [];
+  final List<Animation<double>> _scaleAnimations = [];
+  
   @override
   void initState() {
     super.initState();
+     _initializeAnimations();
     _screenLoadId = context.trackScreenLoad('credit_plans_screen');
 
     // 🆕 Déclencher le pré-chargement si les données ne sont pas disponibles
@@ -51,6 +60,30 @@ class _CreditPlansScreenState extends State<CreditPlansScreen> {
     });
   }
 
+  /// 🎬 Initialise les contrôleurs d'animation
+  void _initializeAnimations() {
+    _fadeController = AnimationController(
+      duration: const Duration(milliseconds: 800),
+      vsync: this,
+    );
+    
+    _staggerController = AnimationController(
+      duration: const Duration(milliseconds: 1200),
+      vsync: this,
+    );
+
+    _fadeAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(
+      parent: _fadeController,
+      curve: Curves.easeOut,
+    ));
+
+    _fadeController.forward();
+    _staggerController.forward();
+  }
+
   void _trackCreditsScreenView() {
     MonitoringService.instance.recordMetric(
       'credits_screen_view',
@@ -60,6 +93,49 @@ class _CreditPlansScreenState extends State<CreditPlansScreen> {
         'has_credits': context.hasCredits.toString(),
       },
     );
+  }
+
+  void _updateAnimationsForRoutes(int itemCount) {
+    // Clear existing animations
+    _slideAnimations.clear();
+    _scaleAnimations.clear();
+
+    // Create new animations for each item
+    for (int i = 0; i < itemCount; i++) {
+      final slideAnimation = Tween<double>(
+        begin: 0.0,
+        end: 1.0,
+      ).animate(CurvedAnimation(
+        parent: _staggerController,
+        curve: Interval(
+          (i * 0.1).clamp(0.0, 1.0),
+          ((i * 0.1) + 0.3).clamp(0.0, 1.0),
+          curve: Curves.easeOut,
+        ),
+      ));
+
+      final scaleAnimation = Tween<double>(
+        begin: 0.8,
+        end: 1.0,
+      ).animate(CurvedAnimation(
+        parent: _staggerController,
+        curve: Interval(
+          (i * 0.1).clamp(0.0, 1.0),
+          ((i * 0.1) + 0.5).clamp(0.0, 1.0),
+          curve: Curves.elasticOut,
+        ),
+      ));
+
+      _slideAnimations.add(slideAnimation);
+      _scaleAnimations.add(scaleAnimation);
+    }
+  }
+
+  @override
+  void dispose() {
+    _fadeController.dispose();
+    _staggerController.dispose();
+    super.dispose();
   }
 
   @override
@@ -88,7 +164,14 @@ class _CreditPlansScreenState extends State<CreditPlansScreen> {
               BlocListener<CreditsBloc, CreditsState>(
                 listener: (context, state) {
                   if (state is CreditPurchaseSuccess) {
-                    _showPurchaseSuccessDialog(state);
+                    if (context.mounted) {
+                      showTopSnackBar(
+                        Overlay.of(context),
+                        TopSnackBar(
+                          title: "Achat réussi",
+                        ),
+                      );
+                    }
                   } else if (state is CreditsError) {
                     _showErrorSnackBar(state.message);
                   }
@@ -128,6 +211,11 @@ class _CreditPlansScreenState extends State<CreditPlansScreen> {
     final userCredits = appDataState.userCredits;
     final transactions = appDataState.creditTransactions;
 
+    // Mettre à jour les animations en fonction du nombre de routes
+    if (transactions.isNotEmpty) {
+      _updateAnimationsForRoutes(transactions.length);
+    }
+
     return Stack(
       children: [
         transactions.isEmpty 
@@ -149,22 +237,48 @@ class _CreditPlansScreenState extends State<CreditPlansScreen> {
             15.h,
             
             Expanded(
-              child: BlurryPage(
-                physics: const BouncingScrollPhysics(),
-                shrinkWrap: false,
-                children: [
-                  ...transactions.asMap().entries.map((entry) {
-                    final i = entry.key;
-                    final value = entry.value;
-                    return Padding(
-                      padding: EdgeInsets.only(bottom: i == transactions.length - 1 ? 0.0 : 12.0),
-                      child: _buildTransactionItem(value),
-                    );
-                  }),
-                  
-                  // 🚀 Espace pour le bouton en bas (éviter que le dernier élément soit caché)
-                  SizedBox(height: 100 + (Platform.isAndroid ? MediaQuery.of(context).padding.bottom : 10)),
-                ],
+              child: Builder(
+                builder: (context) {
+                  return BlurryPage(
+                    physics: const BouncingScrollPhysics(),
+                    shrinkWrap: false,
+                    children: [
+                      ...transactions.asMap().entries.map((entry) {
+                        final index = entry.key;
+                        final value = entry.value;
+                        return AnimatedBuilder(
+                          animation: _staggerController,
+                          builder: (context, child) {
+                            // Animations avec fallback sécurisé
+                            final slideValue = index < _slideAnimations.length 
+                                ? _slideAnimations[index].value 
+                                : 0.0;
+                            final scaleValue = index < _scaleAnimations.length 
+                                ? _scaleAnimations[index].value 
+                                : 1.0;
+                            
+                            return Opacity(
+                              opacity: _fadeAnimation.value,
+                              child: Transform.translate(
+                                offset: Offset(0, slideValue),
+                                child: Transform.scale(
+                                  scale: scaleValue,
+                                  child: Padding(
+                                    padding: EdgeInsets.only(bottom: index == transactions.length - 1 ? 0.0 : 12.0),
+                                    child: _buildTransactionItem(value),
+                                  ),
+                                ),
+                              ),
+                            );
+                          }
+                        );
+                      }),
+                      
+                      // 🚀 Espace pour le bouton en bas (éviter que le dernier élément soit caché)
+                      SizedBox(height: 100 + (Platform.isAndroid ? MediaQuery.of(context).padding.bottom : 10)),
+                    ],
+                  );
+                }
               ),
             ),
           ],
@@ -192,73 +306,84 @@ class _CreditPlansScreenState extends State<CreditPlansScreen> {
   }
 
   Widget _buildCreditsHeader(UserCredits? userCredits) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          context.l10n.userBalance,
-          style: context.bodyMedium?.copyWith(
-            fontSize: 18,
-            color: context.adaptiveTextSecondary,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        15.h,
-        if (userCredits != null) ...[
-          Row(
-            children: [
-              _buildStatItem(
-                context.l10n.availableCredits,
-                '${userCredits.availableCredits}',
-                Colors.blue,
-              ),
-            ],
-          ),
-          
-          // 🆕 Statistiques supplémentaires
-          if (userCredits.totalCreditsPurchased > 0) ...[
-            8.h,
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+    return AnimatedBuilder(
+      animation: _fadeAnimation,
+      builder: (context, child) {
+        return Opacity(
+          opacity: _fadeAnimation.value,
+          child: Transform.translate(
+            offset: Offset(0, 20 * (1 - _fadeAnimation.value)),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _buildStatItem(
-                  context.l10n.purchasedCredits,
-                  '${userCredits.totalCreditsPurchased}',
-                  Colors.green,
+                Text(
+                  context.l10n.userBalance,
+                  style: context.bodyMedium?.copyWith(
+                    fontSize: 18,
+                    color: context.adaptiveTextSecondary,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
-                8.w,
-                _buildStatItem(
-                  context.l10n.usedCredits,
-                  '${userCredits.totalCreditsUsed}',
-                  Colors.orange,
-                ),
+                15.h,
+                if (userCredits != null) ...[
+                  Row(
+                    children: [
+                      _buildStatItem(
+                        context.l10n.availableCredits,
+                        '${userCredits.availableCredits}',
+                        Colors.blue,
+                      ),
+                    ],
+                  ),
+                  
+                  // 🆕 Statistiques supplémentaires
+                  if (userCredits.totalCreditsPurchased > 0) ...[
+                    8.h,
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: [
+                        _buildStatItem(
+                          context.l10n.purchasedCredits,
+                          '${userCredits.totalCreditsPurchased}',
+                          Colors.green,
+                        ),
+                        8.w,
+                        _buildStatItem(
+                          context.l10n.usedCredits,
+                          '${userCredits.totalCreditsUsed}',
+                          Colors.orange,
+                        ),
+                      ],
+                    ),
+                  ],
+                ] else ...[
+                  // État de chargement pour les crédits spécifiquement
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: context.adaptiveTextSecondary,
+                        ),
+                      ),
+                      8.w,
+                      Text(
+                        context.l10n.loading,
+                        style: context.bodyMedium?.copyWith(
+                          color: context.adaptiveTextSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ],
             ),
-          ],
-        ] else ...[
-          // État de chargement pour les crédits spécifiquement
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              SizedBox(
-                width: 20,
-                height: 20,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: context.adaptiveTextSecondary,
-                ),
-              ),
-              8.w,
-              Text(
-                context.l10n.loading,
-                style: context.bodyMedium?.copyWith(
-                  color: context.adaptiveTextSecondary,
-                ),
-              ),
-            ],
           ),
-        ],
-      ],
+        );
+      }
     );
   }
 
@@ -493,35 +618,6 @@ class _CreditPlansScreenState extends State<CreditPlansScreen> {
     } else {
       return '${date.day}/${date.month}/${date.year}';
     }
-  }
-
-  void _showPurchaseSuccessDialog(CreditPurchaseSuccess state) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Row(
-          children: [
-            Icon(
-              Icons.check_circle_rounded,
-              color: Colors.green[600],
-              size: 24,
-            ),
-            8.w,
-            Text(context.l10n.purchaseSuccess),
-          ],
-        ),
-        content: Text(state.message),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.of(context).pop();
-              Navigator.of(context).pop(); // Retourner à l'écran précédent
-            },
-            child: Text(context.l10n.ok),
-          ),
-        ],
-      ),
-    );
   }
 
   String _getTransactionDisplay(CreditTransactionType type) {

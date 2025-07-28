@@ -1096,7 +1096,7 @@ class AppLocalizationsFr extends AppLocalizations {
   String get missingRouteSettings => 'Paramètres d\'itinéraire manquants';
 
   @override
-  String get savedRoute => 'Itinéraire sauvegardé';
+  String get savedRoute => 'Itinéraire(s) sauvegardé(s)';
 
   @override
   String get loginRequiredTitle => 'Connexion requise';
@@ -1369,7 +1369,7 @@ class AppLocalizationsFr extends AppLocalizations {
   String get updateRouteNameSubtitle => 'Choisissez un nouveau nom';
 
   @override
-  String get updateRouteNameHint => 'Processus digestif après avoir mangé';
+  String get updateRouteNameHint => 'Balade digestive';
 
   @override
   String get initializationError => 'Erreur d\'initialisation';
@@ -1652,4 +1652,7 @@ class AppLocalizationsFr extends AppLocalizations {
   String lessValue(String max) {
     return 'La valeur doit être inférieure ou égale à $max';
   }
+
+  @override
+  String get userSummary => 'Votre récapitulatif';
 }

@@ -1,25 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import 'package:go_router/go_router.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:pull_down_button/pull_down_button.dart';
 import 'package:runaway/core/helper/config/log_config.dart';
 import 'package:runaway/core/utils/constant/constants.dart';
 import 'package:runaway/core/helper/extensions/extensions.dart';
-import 'package:runaway/core/widgets/list_header.dart';
-import 'package:runaway/core/widgets/modal_sheet.dart';
 import 'package:runaway/core/widgets/squircle_btn.dart';
 import 'package:runaway/core/widgets/squircle_container.dart';
 import 'package:runaway/features/route_generator/data/services/reverse_geocoding_service.dart';
 import 'package:runaway/core/widgets/top_snackbar.dart';
-import 'package:runaway/features/auth/presentation/widgets/auth_text_field.dart';
 import 'package:runaway/features/home/presentation/widgets/export_format_dialog.dart';
 import 'package:runaway/features/route_generator/data/services/route_export_service.dart';
 import 'package:runaway/features/route_generator/domain/models/activity_type.dart';
 import 'package:runaway/features/route_generator/domain/models/saved_route.dart';
 import 'package:runaway/features/route_generator/domain/models/terrain_type.dart';
 import 'package:runaway/features/route_generator/domain/models/urban_density.dart';
+import 'package:runaway/features/route_generator/presentation/widgets/overlay_view.dart';
+import 'package:smooth_gradient/smooth_gradient.dart';
+import 'package:soft_edge_blur/soft_edge_blur.dart';
 import 'package:top_snackbar_flutter/top_snack_bar.dart';
 
 class HistoricCard extends StatefulWidget {
@@ -28,7 +27,7 @@ class HistoricCard extends StatefulWidget {
   final VoidCallback? onDelete;
   final Function(String)? onRename;
   final VoidCallback? onSync;
-  final VoidCallback? onShowOnMap; // Callback pour afficher sur la carte
+  final VoidCallback? onShowOnMap;
 
   const HistoricCard({
     super.key,
@@ -50,7 +49,6 @@ class _HistoricCardState extends State<HistoricCard> {
   String? _locationName;
   bool _isImageLoading = true;
   bool _hasImageError = false;
-  bool _isRenaming = false; // État de renommage
   String _originalName = ''; // Nom original pour annulation
 
   @override
@@ -80,92 +78,50 @@ class _HistoricCardState extends State<HistoricCard> {
 
   // Ouvre la modal sheet et traite le résultat
   Future<void> _showRenameSheet() async {
-    final newName = await showModalBottomSheet<String>(
-      useRootNavigator: true,
-      isScrollControlled: true,
-      isDismissible: true,
-      enableDrag: false,
-      context: context,
-      clipBehavior: Clip.antiAliasWithSaveLayer,
-      backgroundColor: Colors.transparent,
-      builder: (context) => RenameRouteSheet(initialValue: widget.route.name),
+    final newName = await Navigator.of(context, rootNavigator: true).push(
+      PageRouteBuilder(
+        opaque: false,
+        barrierColor: Colors.transparent,
+        transitionDuration: const Duration(milliseconds: 200),
+        reverseTransitionDuration: const Duration(milliseconds: 200),
+        pageBuilder: (_, Animation<double> animation, __) {
+          return OverleyView(
+            unit: context.l10n.updateRouteNameHint, // Utiliser le hint comme unit
+            initialValue: widget.route.name,
+            animation: animation,
+            onTap: () => Navigator.of(context).pop(),
+            isNumber: false, // 🆕 Mode texte
+            maxLength: 50, // 🆕 Limite de caractères
+            textCapitalization: TextCapitalization.sentences, // 🆕 Capitalisation
+            validator: (value) {
+              // 🆕 Validateur personnalisé identique à _confirmRename
+              if (value == null || value.isEmpty) {
+                return context.l10n.routeNameUpdateException;
+              }
+              
+              if (value.length > 50) {
+                return context.l10n.routeNameUpdateExceptionCountCharacters;
+              }
+
+              if (value.contains(RegExp(r'[<>:"/\\|?*]'))) {
+                return context.l10n.routeNameUpdateExceptionForbiddenCharacters;
+              }
+
+              if (value.length < 2) {
+                return context.l10n.routeNameUpdateExceptionMinCharacters;
+              }
+
+              return null; // Validation OK
+            },
+          );
+        },
+      ),
     );
 
     if (!mounted) return;
-    final trimmed = newName?.trim();
-
-    if (trimmed != null &&
-        trimmed.isNotEmpty &&
-        trimmed != widget.route.name) {
-      widget.onRename?.call(trimmed);
-    }
-  }
-
-  /// Confirme le renommage
-  void _confirmRename() {
-    final newName = _nameController.text.trim();
     
-    // Validation basique
-    if (newName.isEmpty) {
-      _showError(context.l10n.routeNameUpdateException);
-      return;
-    }
-    
-    if (newName == _originalName) {
-      _cancelRename();
-      return;
-    }
-    
-    if (newName.length > 50) {
-      _showError(context.l10n.routeNameUpdateExceptionCountCharacters);
-      return;
-    }
-
-    // 🆕 Validation des caractères interdits
-    if (newName.contains(RegExp(r'[<>:"/\\|?*]'))) {
-      _showError(context.l10n.routeNameUpdateExceptionForbiddenCharacters);
-      return;
-    }
-
-    // 🆕 Validation de la longueur minimale
-    if (newName.length < 2) {
-      _showError(context.l10n.routeNameUpdateExceptionMinCharacters);
-      return;
-    }
-
-    setState(() {
-      _isRenaming = false;
-    });
-    
-    _focusNode.unfocus();
-    
-    // Feedback haptique
-    HapticFeedback.lightImpact();
-    
-    widget.onRename?.call(newName);
-    
-    LogConfig.logInfo('✏️ Renommage confirmé: ${widget.route.id} -> $newName');
-  }
-
-  /// Annule le renommage
-  void _cancelRename() {
-    setState(() {
-      _isRenaming = false;
-      _nameController.text = _originalName;
-    });
-    _focusNode.unfocus();
-  }
-
-  /// Affiche une erreur
-  void _showError(String message) {
-    if (mounted) {
-      showTopSnackBar(
-        Overlay.of(context),
-        TopSnackBar(
-          isError: true,
-          title: message,
-        ),
-      );
+    if (newName != null && newName != widget.route.name) {
+      widget.onRename?.call(newName);
     }
   }
 
@@ -262,11 +218,8 @@ class _HistoricCardState extends State<HistoricCard> {
 
   @override
   Widget build(BuildContext context) {
-    const innerRadius = 50.0;
-    const double imgSize = 150;
+    const double imgHeight = 500;
     const double paddingValue = 15.0;
-    const padding = EdgeInsets.all(paddingValue);
-    final outerRadius = padding.calculateOuterRadius(innerRadius);
 
         // Calculer le temps estimé selon l'activité
     final int estimatedMinutes = calculateEstimatedDuration(
@@ -278,132 +231,192 @@ class _HistoricCardState extends State<HistoricCard> {
     // Formater le temps
     final String timeString = formatDuration(estimatedMinutes);
 
-    return IntrinsicHeight(
-      child: SquircleContainer(
-        onTap: widget.onShowOnMap,
-        radius: outerRadius,
-        padding: padding,
-        gradient: false,
-        color: context.adaptiveBorder.withValues(alpha: 0.05),
-        child: Column(
-          spacing: 20.0,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // Visualisation du parcours
-            SizedBox(
-              height: 250,
-              width: imgSize,
-              child: SquircleContainer(
-                radius: 50,
-                color: context.adaptiveDisabled,
-                padding: EdgeInsets.zero,
-                child: _buildRouteImage(),
+    return SquircleContainer(
+      height: imgHeight,
+      onTap: widget.onShowOnMap,
+      radius: 80,
+      gradient: false,
+      color: context.adaptiveBorder.withValues(alpha: 0.05),
+      child: Stack(
+        alignment: Alignment.bottomCenter,
+        children: [
+          Positioned.fill(child: _buildBlurredImage(imgHeight)),
+
+          Container(
+            height: MediaQuery.of(context).size.height,
+            decoration: BoxDecoration(
+              gradient: SmoothGradient(
+                from: context.adaptiveBackground.withValues(alpha: 0),
+                to: context.adaptiveBackground.withValues(alpha: 0.5),
+                curve: Curves.linear,
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
               ),
             ),
-        
-            // Titre et localisation
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  '${_getLocationName()} • ${widget.route.timeAgo}',
-                  style: context.bodySmall?.copyWith(
-                    fontSize: 15,
-                    fontStyle: FontStyle.normal,
-                    fontWeight: FontWeight.w500,
-                    color: context.adaptiveTextSecondary,
-                  ),
-                ),
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Expanded(
-                      child: _isRenaming ? _buildEditableField() : _buildDisplayName(),
-                    ),
-                    
-                    if (widget.isEdit && !_isRenaming)
-                      _buildActionMenu()
-                    else if (_isRenaming)
-                      _buildRenameActions(),
-                  ],
-                ),
-              ],
+          ),
+      
+          // Titre et localisation
+          Padding(
+            padding: const EdgeInsets.only(
+              bottom: paddingValue,
             ),
-            
-            // Chips avec détails du parcours
-            Wrap(
-              spacing: 8.0,
-              runSpacing: 8.0,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
               children: [
-                // Distance
-                _buildDetailChip(
-                  icon: HugeIcons.solidRoundedRouteBlock,
-                  text: "${widget.route.parameters.distanceKm.toStringAsFixed(0)}km",
-                ),
-                // Type d'activité
-                _buildDetailChip(
-                  icon: getActivityIcon(widget.route.parameters.activityType.id),
-                  text: widget.route.parameters.activityType.label(context),
-                ),
-                // Temps estimé
-                _buildDetailChip(
-                  icon: HugeIcons.solidRoundedTimeQuarter02,
-                  text: timeString,
-                ),
-                // Type de terrain
-                _buildDetailChip(
-                  icon: HugeIcons.solidRoundedMountain,
-                  text: widget.route.parameters.terrainType.label(context),
-                ),
-                // Densité urbaine
-                _buildDetailChip(
-                  icon: HugeIcons.solidRoundedPlant01,
-                  text: widget.route.parameters.urbanDensity.label(context),
-                ),
-                if (widget.route.parameters.elevationGain > 0)
-                  _buildDetailChip(
-                    icon: HugeIcons.solidRoundedSine02,
-                    text: '${widget.route.parameters.elevationGain.toStringAsFixed(0)}m',
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 12.0),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Expanded(
+                            child: Text.rich(
+                              TextSpan(
+                                text: widget.route.name,
+                                  style: context.bodyMedium?.copyWith(
+                                  fontSize: 20,
+                                  color: context.adaptiveTextPrimary,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                                children: <InlineSpan>[
+                                  TextSpan(
+                                    text: " • ${widget.route.timeAgo}",
+                                    style: context.bodySmall?.copyWith(
+                                      fontSize: 16,
+                                      height: 1,
+                                      fontWeight: FontWeight.w400,
+                                      color: context.adaptiveTextPrimary.withValues(alpha: 0.7),
+                                    ),
+                                  )
+                                ]
+                              )
+                            ),
+                          ),
+                          
+                          _buildActionMenu(),
+                        ],
+                      ),
+                      2.h,
+                      Text(
+                        _getLocationName(),
+                        style: context.bodySmall?.copyWith(
+                          fontSize: 18,
+                          height: 1,
+                          fontWeight: FontWeight.w400,
+                          color: context.adaptiveTextPrimary.withValues(alpha: 0.7),
+                        ),
+                      ),
+                    ],
                   ),
-                if (widget.route.parameters.isLoop)
-                  _buildDetailChip(
-                    icon: HugeIcons.solidRoundedRepeat,
-                    text: context.l10n.pathLoop,
-                  )
-                else 
-                  _buildDetailChip(
-                    icon: HugeIcons.solidRoundedNavigator01,
-                    text: context.l10n.pathSimple,
-                  ),
-                if (widget.route.timesUsed > 0)
-                  _buildDetailChip(
-                    icon: HugeIcons.solidRoundedFavourite,
-                    text: '${widget.route.timesUsed}x',
-                    color: Colors.orange,
-                  ),
-                // 🆕 AJOUT : Score paysage si supérieur à 6
-                if (widget.route.metrics.scenicScore > 6)
-                  _buildDetailChip(
-                    icon: HugeIcons.solidRoundedImage01,
-                    text: '${context.l10n.scenic} ${widget.route.metrics.scenicScore.toStringAsFixed(1)}/10',
-                  ),
-                // 🆕 AJOUT : Pente maximale si supérieure à 5%
-                if (widget.route.metrics.maxIncline > 5)
-                  _buildDetailChip(
-                    icon: HugeIcons.solidRoundedChart03,
-                    text: '${context.l10n.maxSlope} ${widget.route.metrics.maxIncline.toStringAsFixed(1)}%',
-                  ),
-              ],
-            ),
+                ),
 
-            SquircleBtn(
-              isPrimary: true,
-              onTap: _showExportDialog,
-              label: context.l10n.download,
-            ),        
-          ],
-        ),
+                12.h,
+                
+                // Chips avec détails du parcours
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  physics: const BouncingScrollPhysics(),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: paddingValue),
+                    child: Row(
+                      children: [
+                        // Distance
+                        _buildDetailChip(
+                          icon: HugeIcons.solidRoundedRouteBlock,
+                          text: "${widget.route.parameters.distanceKm.toStringAsFixed(0)}km",
+                        ),
+                        5.w,
+                        // Type d'activité
+                        _buildDetailChip(
+                          icon: getActivityIcon(widget.route.parameters.activityType.id),
+                          text: widget.route.parameters.activityType.label(context),
+                        ),
+                        5.w,
+                        // Temps estimé
+                        _buildDetailChip(
+                          icon: HugeIcons.solidRoundedTimeQuarter02,
+                          text: timeString,
+                        ),
+                        5.w,
+                        // Type de terrain
+                        _buildDetailChip(
+                          icon: HugeIcons.solidRoundedMountain,
+                          text: widget.route.parameters.terrainType.label(context),
+                        ),
+                        5.w,
+                        // Densité urbaine
+                        _buildDetailChip(
+                          icon: HugeIcons.solidRoundedPlant01,
+                          text: widget.route.parameters.urbanDensity.label(context),
+                        ),
+                        if (widget.route.parameters.elevationGain > 0) ...[
+                          _buildDetailChip(
+                            icon: HugeIcons.solidRoundedSine02,
+                            text: '${widget.route.parameters.elevationGain.toStringAsFixed(0)}m',
+                          ),
+                          5.w,
+                        ],
+                        if (widget.route.parameters.isLoop) ...[
+                          _buildDetailChip(
+                            icon: HugeIcons.solidRoundedRepeat,
+                            text: context.l10n.pathLoop,
+                          ),
+                          5.w,
+                        ]
+                        else ...[
+                          _buildDetailChip(
+                            icon: HugeIcons.solidRoundedNavigator01,
+                            text: context.l10n.pathSimple,
+                          ),
+                          5.w,
+                        ],
+                        if (widget.route.timesUsed > 0) ...[
+                          _buildDetailChip(
+                            icon: HugeIcons.solidRoundedFavourite,
+                            text: '${widget.route.timesUsed}x',
+                            color: Colors.orange,
+                          ),
+                          5.w,
+                        ],
+                        // 🆕 AJOUT : Score paysage si supérieur à 6
+                        if (widget.route.metrics.scenicScore > 6) ...[
+                          _buildDetailChip(
+                            icon: HugeIcons.solidRoundedImage01,
+                            text: '${context.l10n.scenic} ${widget.route.metrics.scenicScore.toStringAsFixed(1)}/10',
+                          ),
+                          5.w,
+                        ],
+                        // 🆕 AJOUT : Pente maximale si supérieure à 5%
+                        if (widget.route.metrics.maxIncline > 5) ...[
+                          _buildDetailChip(
+                            icon: HugeIcons.solidRoundedChart03,
+                            text: '${context.l10n.maxSlope} ${widget.route.metrics.maxIncline.toStringAsFixed(1)}%',
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ),
+
+                25.h,
+                    
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: paddingValue),
+                  child: SquircleBtn(
+                    isPrimary: true,
+                    onTap: _showExportDialog,
+                    label: context.l10n.download,
+                  ),
+                ),
+              ],
+            ),
+          ),        
+        ],
       ),
     );
   }
@@ -428,41 +441,6 @@ class _HistoricCardState extends State<HistoricCard> {
     .shimmer(
       color: context.adaptiveBackground.withValues(alpha: 0.5), 
       duration: Duration(seconds: 2)
-    );
-  }
-
-  // 🆕 Champ éditable pour le renommage
-  Widget _buildEditableField() {
-    return Container(
-      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        border: Border.all(color: context.adaptivePrimary, width: 1),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: TextField(
-        controller: _nameController,
-        focusNode: _focusNode,
-        style: context.bodyMedium!.copyWith(fontWeight: FontWeight.w600),
-        decoration: InputDecoration(
-          border: InputBorder.none,
-          isDense: true,
-          contentPadding: EdgeInsets.zero,
-        ),
-        maxLength: 50,
-        buildCounter: (context, {required currentLength, maxLength, required isFocused}) => null,
-        onSubmitted: (_) => _confirmRename(),
-        textInputAction: TextInputAction.done,
-      ),
-    );
-  }
-
-  // 🆕 Nom affiché en mode lecture
-  Widget _buildDisplayName() {
-    return Text(
-      widget.route.name,
-      style: context.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
-      maxLines: 2,
-      overflow: TextOverflow.ellipsis,
     );
   }
 
@@ -494,111 +472,49 @@ class _HistoricCardState extends State<HistoricCard> {
           HapticFeedback.mediumImpact();
         },
         child: Icon(
-          HugeIcons.strokeRoundedMoreVertical,
+          HugeIcons.solidRoundedMoreHorizontal,
+          color: context.adaptiveTextPrimary,
+          size: 28,
         ),
       ),
     );
   }
 
-  // 🆕 Actions de confirmation/annulation du renommage
-  Widget _buildRenameActions() {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        GestureDetector(
-          onTap: _cancelRename,
-          child: Container(
-            padding: EdgeInsets.all(6),
-            child: Icon(
-              HugeIcons.strokeRoundedCancel01,
-              color: context.adaptiveTextSecondary,
-              size: 20,
-            ),
-          ),
-        ),
-        8.w,
-        GestureDetector(
-          onTap: _confirmRename,
-          child: Container(
-            padding: EdgeInsets.all(6),
-            child: Icon(
-              HugeIcons.strokeRoundedTick02,
-              color: context.adaptivePrimary,
-              size: 20,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
   Widget _buildRouteImage() {
-    return Stack(
-      children: [
-        // Image principale
-        Image.network(
-          widget.route.imageUrl!,
-          width: double.infinity,
-          height: double.infinity,
-          fit: BoxFit.cover,
-          loadingBuilder: (context, child, loadingProgress) {
-            if (loadingProgress == null) {
-              // Image chargée avec succès
-              WidgetsBinding.instance.addPostFrameCallback((_) {
-                if (mounted) {
-                  setState(() {
-                    _isImageLoading = false;
-                    _hasImageError = false;
-                  });
-                }
+    return Image.network(
+      widget.route.imageUrl!,
+      width: double.infinity,
+      height: double.infinity,
+      fit: BoxFit.fitHeight,
+      loadingBuilder: (context, child, loadingProgress) {
+        if (loadingProgress == null) {
+          // Image chargée avec succès
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) {
+              setState(() {
+                _isImageLoading = false;
+                _hasImageError = false;
               });
-              return child;
             }
-            // 🆕 En cours de chargement - Afficher shimmer au lieu du CircularProgressIndicator
-            return _buildLoadingState(loadingProgress);
-          },
-          errorBuilder: (context, error, stackTrace) {
-            LogConfig.logError('❌ Erreur chargement image: $error');
-            // Marquer l'erreur et afficher le fallback
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (mounted) {
-                setState(() {
-                  _hasImageError = true;
-                  _isImageLoading = false;
-                });
-              }
+          });
+          return child;
+        }
+        // 🆕 En cours de chargement - Afficher shimmer au lieu du CircularProgressIndicator
+        return _buildLoadingState(loadingProgress);
+      },
+      errorBuilder: (context, error, stackTrace) {
+        LogConfig.logError('❌ Erreur chargement image: $error');
+        // Marquer l'erreur et afficher le fallback
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            setState(() {
+              _hasImageError = true;
+              _isImageLoading = false;
             });
-            return _buildActivityFallback();
-          },
-        ),
-
-        IgnorePointer(
-          ignoring: true,
-          child: Container(
-            height: MediaQuery.of(context).size.height,
-            color: Colors.white.withAlpha(18),
-          ),
-        ),
-    
-        // Indicator de statut sync
-        if (!widget.route.isSynced)
-          Positioned(
-            top: 8,
-            right: 8,
-            child: Container(
-              padding: EdgeInsets.all(4),
-              decoration: BoxDecoration(
-                color: Colors.orange.withValues(alpha: 0.9),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Icon(
-                HugeIcons.strokeRoundedWifiOff01,
-                color: Colors.white,
-                size: 12,
-              ),
-            ),
-          ),
-      ],
+          }
+        });
+        return _buildActivityFallback();
+      },
     );
   }
 
@@ -726,8 +642,9 @@ class _HistoricCardState extends State<HistoricCard> {
     Color? color,
   }) {
     return Container(
+      height: 40,
       decoration: BoxDecoration(
-        color: context.adaptiveBorder.withValues(alpha: 0.08),
+        color: context.adaptiveTextPrimary,
         borderRadius: BorderRadius.circular(100),
       ),
       padding: EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
@@ -736,7 +653,7 @@ class _HistoricCardState extends State<HistoricCard> {
         children: [
           Icon(
             icon,
-            color: color ?? context.adaptiveTextPrimary,
+            color: color ?? context.adaptiveBackground,
             size: 17,
           ),
           5.w,
@@ -744,7 +661,7 @@ class _HistoricCardState extends State<HistoricCard> {
             text,
             style: context.bodySmall?.copyWith(
               fontSize: 14,
-              color:context.adaptiveTextPrimary,
+              color: context.adaptiveBackground,
               fontWeight: FontWeight.w500,
             ),
           ),
@@ -752,66 +669,27 @@ class _HistoricCardState extends State<HistoricCard> {
       ),
     );
   }
-}
 
-class RenameRouteSheet extends StatefulWidget {
-  final String initialValue;                // <-- seulement la valeur
-  const RenameRouteSheet({required this.initialValue, super.key});
-
-  @override
-  State<RenameRouteSheet> createState() => _RenameRouteSheetState();
-}
-
-class _RenameRouteSheetState extends State<RenameRouteSheet> {
-  late final TextEditingController _ctl;
-
-  @override
-  void initState() {
-    super.initState();
-    _ctl = TextEditingController(text: widget.initialValue);
-  }
-
-  @override
-  void dispose() {
-    _ctl.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-
-    return ModalSheet(
-      child: Padding(
-        padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            ListHeader(
-              title: context.l10n.updateRouteNameTitle,
-              subtitle: context.l10n.updateRouteNameSubtitle,
+  SoftEdgeBlur _buildBlurredImage(double imgSize) {
+    return SoftEdgeBlur(
+      edges: [
+        EdgeBlur(
+          type: EdgeType.bottomEdge,
+          size: 300,
+          sigma: 80,
+          controlPoints: [
+            ControlPoint(
+              position: 0.5,
+              type: ControlPointType.visible,
             ),
-            AuthTextField(
-              controller: _ctl,
-              hint: context.l10n.updateRouteNameHint,
-              textCapitalization: TextCapitalization.sentences,
-              maxLines: 1,
-            ),
-              
-            12.h,
-
-            SquircleBtn(
-              isPrimary: true,
-              onTap: () {
-                final name = _ctl.text.trim();
-                if (name.isEmpty) return;
-                context.pop(name);
-              }, // 🆕 Désactiver si loading
-              label: context.l10n.save,
-            ),                 
+            ControlPoint(
+              position: 1,
+              type: ControlPointType.transparent,
+            )
           ],
-        ),
-      ),
+        )
+      ],
+      child: _buildRouteImage(),
     );
   }
 }

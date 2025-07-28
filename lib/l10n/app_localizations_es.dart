@@ -1652,4 +1652,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String lessValue(String max) {
     return 'The value must be less than or equal to $max';
   }
+
+  @override
+  String get userSummary => 'Your summary';
 }
