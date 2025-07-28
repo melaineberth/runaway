@@ -6,6 +6,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:runaway/core/blocs/theme_bloc/theme_bloc.dart';
+import 'package:runaway/core/helper/config/log_config.dart';
 import 'package:runaway/core/helper/extensions/extensions.dart';
 import 'package:runaway/core/helper/extensions/monitoring_extensions.dart';
 import 'package:runaway/core/utils/constant/constants.dart';
@@ -92,12 +93,6 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
             context.go('/email-confirmation?email=${Uri.encodeComponent(authState.email)}');
           } else if (authState is PasswordResetSent) {
             // Mot de passe réinitialisé (ancien comportement)
-            showTopSnackBar(
-              Overlay.of(context),
-              TopSnackBar(
-                title: "context.l10n.checkYourMailbox",
-              ),
-            );
           } else if (authState is PasswordResetCodeSent) {
             // Affichage du dialog de saisie 
 
@@ -105,13 +100,7 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
             // Affichage du dialog de succès
 
           } else if (authState is AuthError) {
-            showTopSnackBar(
-              Overlay.of(context),
-              TopSnackBar(
-                isError: true,
-                title: authState.message,
-              ),
-            );
+            LogConfig.logError(authState.message);
           }
         },
         child: SizedBox(

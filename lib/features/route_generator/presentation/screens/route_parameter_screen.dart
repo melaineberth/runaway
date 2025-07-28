@@ -15,7 +15,7 @@ import 'package:runaway/core/widgets/blurry_page.dart';
 import 'package:runaway/core/widgets/list_header.dart';
 import 'package:runaway/core/widgets/modal_sheet.dart';
 import 'package:runaway/core/widgets/squircle_btn.dart';
-import 'package:runaway/core/widgets/tick_slider.dart';
+import 'package:runaway/features/route_generator/presentation/widgets/tick_slider.dart';
 import 'package:runaway/features/route_generator/data/validation/route_parameters_validator.dart';
 import 'package:runaway/features/route_generator/presentation/widgets/difficulty_selector.dart';
 import 'package:runaway/features/route_generator/presentation/widgets/surface_preference_selector.dart';

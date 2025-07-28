@@ -10,6 +10,7 @@ import 'package:runaway/core/helper/extensions/extensions.dart';
 import 'package:runaway/core/utils/constant/constants.dart';
 import 'package:runaway/core/utils/injections/bloc_provider_extension.dart';
 import 'package:runaway/core/widgets/icon_btn.dart';
+import 'package:runaway/core/widgets/list_header.dart';
 import 'package:runaway/core/widgets/modal_dialog.dart';
 import 'package:runaway/core/widgets/modal_sheet.dart';
 import 'package:runaway/core/widgets/squircle_btn.dart';
@@ -282,21 +283,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> with TickerProvid
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          context.l10n.fullNameTitle, // Vous pouvez ajouter cette traduction
-          style: context.bodySmall?.copyWith(
-            color: context.adaptiveTextPrimary,
-          ),
+        ListHeader(
+          title: context.l10n.fullNameTitle,
+          subtitle: context.l10n.nonEditableUsername,
         ),
-        Text(
-          context.l10n.nonEditableUsername, // Remplacer par context.l10n.usernameCannotBeModified
-          style: context.bodySmall?.copyWith(
-            color: context.adaptiveDisabled,
-            fontSize: 14,
-            fontWeight: FontWeight.w400
-          ),
-        ),
-        8.h,
         AuthTextField(
           hint: context.l10n.fullNameHint,
           textCapitalization: TextCapitalization.words,

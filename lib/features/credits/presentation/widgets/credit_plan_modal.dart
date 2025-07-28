@@ -235,26 +235,6 @@ class _CreditPlanModalState extends State<CreditPlanModal> {
           listener: (context, state) {
             if (state is CreditPurchaseSuccess) {
               LogConfig.logInfo('✅ Achat réussi - fermeture de la modal');
-              
-              // Fermer immédiatement la modal avec un délai minimal pour s'assurer que le build est terminé
-              WidgetsBinding.instance.addPostFrameCallback((_) {
-                if (mounted && context.canPop()) {
-                  context.pop();
-                  LogConfig.logInfo('✅ Modal fermée avec succès');
-                }
-              });
-              
-              // Afficher le message de succès après fermeture
-              Future.delayed(const Duration(milliseconds: 200), () {
-                if (context.mounted) {
-                  showTopSnackBar(
-                    Overlay.of(context),
-                    TopSnackBar(
-                      title: state.message,
-                    ),
-                  );
-                }
-              });
             } else if (state is CreditsError) {
               LogConfig.logError('❌ Erreur achat: ${state.message}');
               _showErrorSnackBar(state.message);
@@ -270,6 +250,26 @@ class _CreditPlanModalState extends State<CreditPlanModal> {
             // Si les crédits ont été mis à jour suite à un achat, on peut rafraîchir l'affichage
             if (state.isCreditDataLoaded && state.userCredits != null) {
               LogConfig.logInfo('💳 Crédits mis à jour dans AppDataBloc: ${state.userCredits!.availableCredits}');
+
+              // Fermer immédiatement la modal avec un délai minimal pour s'assurer que le build est terminé
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (mounted && context.canPop()) {
+                  context.pop();
+                  LogConfig.logInfo('✅ Modal fermée avec succès');
+                }
+              });
+              
+              // Afficher le message de succès après fermeture
+              Future.delayed(const Duration(milliseconds: 200), () {
+                if (context.mounted) {
+                  showTopSnackBar(
+                    Overlay.of(context),
+                    TopSnackBar(
+                      title: "Achat réussi",
+                    ),
+                  );
+                }
+              });
             }
           },
         ),

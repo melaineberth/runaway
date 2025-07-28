@@ -7,6 +7,7 @@ import 'package:pull_down_button/pull_down_button.dart';
 import 'package:runaway/core/helper/config/log_config.dart';
 import 'package:runaway/core/utils/constant/constants.dart';
 import 'package:runaway/core/helper/extensions/extensions.dart';
+import 'package:runaway/core/widgets/list_header.dart';
 import 'package:runaway/core/widgets/modal_sheet.dart';
 import 'package:runaway/core/widgets/squircle_btn.dart';
 import 'package:runaway/core/widgets/squircle_container.dart';
@@ -472,7 +473,7 @@ class _HistoricCardState extends State<HistoricCard> {
         PullDownMenuItem(
           icon: HugeIcons.solidRoundedTypeCursor,
           title: context.l10n.renameRoute,
-          onTap: _showRenameSheet, // 🆕 Démarre le renommage
+          onTap: _showRenameSheet,
         ),
         if (widget.onSync != null)
           PullDownMenuItem(
@@ -786,22 +787,10 @@ class _RenameRouteSheetState extends State<RenameRouteSheet> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              context.l10n.updateRouteNameTitle,
-              style: context.bodySmall?.copyWith(
-                color: context.adaptiveTextPrimary,
-              ),
+            ListHeader(
+              title: context.l10n.updateRouteNameTitle,
+              subtitle: context.l10n.updateRouteNameSubtitle,
             ),
-            2.h,
-            Text(
-              context.l10n.updateRouteNameSubtitle,
-              style: context.bodySmall?.copyWith(
-                color: context.adaptiveTextSecondary,
-                fontSize: 15,
-                fontWeight: FontWeight.w500
-              ),
-            ),
-            20.h,
             AuthTextField(
               controller: _ctl,
               hint: context.l10n.updateRouteNameHint,

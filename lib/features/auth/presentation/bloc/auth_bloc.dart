@@ -520,6 +520,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
           LogConfig.logInfo('Connexion Google réussie mais pas de profil');
           emit(ProfileIncomplete(user));
         } else {
+          LogConfig.logInfo('Connexion Google échouée');
           emit(AuthError('Connexion Google échouée'));
         }
       } else {

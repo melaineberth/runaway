@@ -148,14 +148,13 @@ class GenerationLimitWidget extends StatelessWidget {
   /// Affichage quand la limite est atteinte
   Widget _buildLimitReached(BuildContext context) {
     final container = ModalDialog(
+      activeCancel: false,
       title: capability.type == GenerationType.guest 
         ? context.l10n.exhaustedFreeGenerations
         : context.l10n.exhaustedCredits, 
       subtitle: context.l10n.authForMoreGenerations, 
       validLabel: context.l10n.createFreeAccount,
       onValid: onLogin ?? () => showAuthModal(context),
-      cancelLabel: "Debug",
-      onCancel: onDebug,
     );
 
     if (!showBackground) return container;

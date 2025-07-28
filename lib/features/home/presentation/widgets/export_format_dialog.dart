@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:runaway/core/helper/extensions/extensions.dart';
+import 'package:runaway/core/widgets/list_header.dart';
 import 'package:runaway/core/widgets/modal_sheet.dart';
 import 'package:runaway/core/widgets/squircle_container.dart';
 import 'package:runaway/features/route_generator/data/services/route_export_service.dart';
@@ -22,54 +23,36 @@ class ExportFormatDialog extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            context.l10n.exportRouteTitle,
-            style: context.bodySmall?.copyWith(
-              color: context.adaptiveTextPrimary,
-            ),
+          ListHeader(
+            title: context.l10n.exportRouteTitle,
+            subtitle: context.l10n.exportRouteDesc,
           ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                context.l10n.exportRouteDesc,
-                style: context.bodySmall?.copyWith(
-                  color: context.adaptiveTextSecondary,
-                  fontSize: 15,
-                  fontWeight: FontWeight.w500
+          ...RouteExportFormat.values.asMap().entries.map(
+            (entry) {
+              final i = entry.key;
+              final format = entry.value;
+                
+              return Padding(
+                padding: EdgeInsets.only(
+                  bottom: i == RouteExportFormat.values.length - 1 ? 0 : 10,
                 ),
-              ),
-            
-              20.h,
-          
-              ...RouteExportFormat.values.asMap().entries.map(
-                (entry) {
-                  final i = entry.key;
-                  final format = entry.value;
-      
-                  return Padding(
-                    padding: EdgeInsets.only(
-                      bottom: i == RouteExportFormat.values.length - 1 ? 0 : 10,
-                    ),
-                    child: _buildFormatOption(
-                      context, 
-                      format: format, 
-                      onTap: () {
-                      Navigator.of(context).pop();
-                        switch (format) {
-                          case RouteExportFormat.gpx:
-                            onGpxSelected();
-                            break;
-                          case RouteExportFormat.kml:
-                            onKmlSelected();
-                            break;
-                        }
-                      },
-                    ),
-                  );
-                },
-              ),
-            ],
+                child: _buildFormatOption(
+                  context, 
+                  format: format, 
+                  onTap: () {
+                  Navigator.of(context).pop();
+                    switch (format) {
+                      case RouteExportFormat.gpx:
+                        onGpxSelected();
+                        break;
+                      case RouteExportFormat.kml:
+                        onKmlSelected();
+                        break;
+                    }
+                  },
+                ),
+              );
+            },
           ),
         ],
       ),

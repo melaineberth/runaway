@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:runaway/core/helper/extensions/extensions.dart';
 import 'package:runaway/core/utils/constant/constants.dart';
+import 'package:runaway/core/widgets/list_header.dart';
 import 'package:runaway/core/widgets/modal_sheet.dart';
 import 'package:runaway/core/widgets/squircle_btn.dart';
 import 'package:runaway/core/widgets/top_snackbar.dart';
@@ -226,7 +227,6 @@ class _ForgotPasswordDialogState extends State<ForgotPasswordDialog> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 _buildHeader(),
-                20.h,
                 _buildCurrentStepContent(),
                 20.h,
                 _buildSubmitButton(),
@@ -257,27 +257,9 @@ class _ForgotPasswordDialogState extends State<ForgotPasswordDialog> {
         break;
     }
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          title,
-          style: context.bodySmall?.copyWith(
-            color: context.adaptiveTextPrimary,
-            fontSize: 18,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        2.h,
-        Text(
-          subtitle,
-          style: context.bodySmall?.copyWith(
-            color: context.adaptiveTextSecondary,
-            fontSize: 15,
-            fontWeight: FontWeight.w400,
-          ),
-        ),
-      ],
+    return ListHeader(
+      title: title,
+      subtitle: subtitle,
     );
   }
 

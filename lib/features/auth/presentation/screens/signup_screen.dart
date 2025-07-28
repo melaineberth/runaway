@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:runaway/core/helper/extensions/extensions.dart';
 import 'package:runaway/core/utils/injections/bloc_provider_extension.dart';
+import 'package:runaway/core/widgets/list_header.dart';
 import 'package:runaway/core/widgets/modal_sheet.dart';
 import 'package:runaway/core/widgets/squircle_btn.dart';
 import 'package:runaway/features/auth/presentation/bloc/auth_event.dart';
@@ -90,22 +91,10 @@ class _SignupScreenState extends State<SignupScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(
-                context.l10n.signUp,
-                style: context.bodySmall?.copyWith(
-                  color: context.adaptiveTextPrimary,
-                ),
+              ListHeader(
+                title: context.l10n.signUp,
+                subtitle: context.l10n.enterAuthDetails,
               ),
-              2.h,
-              Text(
-                context.l10n.enterAuthDetails,
-                style: context.bodySmall?.copyWith(
-                  color: context.adaptiveTextSecondary,
-                  fontSize: 15,
-                  fontWeight: FontWeight.w500
-                ),
-              ),
-              20.h,
               Column(
                 children: [
                   AuthTextField(

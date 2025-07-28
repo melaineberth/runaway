@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:runaway/core/helper/extensions/extensions.dart';
 import 'package:runaway/core/utils/constant/constants.dart';
 import 'package:runaway/core/utils/injections/bloc_provider_extension.dart';
+import 'package:runaway/core/widgets/list_header.dart';
 import 'package:runaway/core/widgets/modal_sheet.dart';
 import 'package:runaway/core/widgets/squircle_btn.dart';
 import 'package:runaway/features/auth/presentation/bloc/auth_event.dart';
@@ -82,56 +83,44 @@ class _LoginScreenState extends State<LoginScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-              Text(
-                context.l10n.logIn,
-                style: context.bodySmall?.copyWith(
-                  color: context.adaptiveTextPrimary,
+                ListHeader(
+                  title: context.l10n.logIn,
+                  subtitle: context.l10n.enterAuthDetails,
                 ),
-              ),
-              2.h,
-              Text(
-                context.l10n.enterAuthDetails,
-                style: context.bodySmall?.copyWith(
-                  color: context.adaptiveTextSecondary,
-                  fontSize: 15,
-                  fontWeight: FontWeight.w500
-                ),
-              ),
-              20.h,
-              Column(
-                children: [
-                  AuthTextField(
-                    hint: context.l10n.emailHint,
-                    validator: emailValidator,
-                    controller: _emailController,
-                    enabled: !widget.isLoading,
-                  ),
-                  10.h,
-                  AuthTextField(
-                    hint: context.l10n.passwordHint,
-                    obscureText: true,
-                    validator: passwordValidator,
-                    controller: _passwordController,
-                    enabled: !widget.isLoading,
-                  ),
-                  10.h,
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: GestureDetector(
-                      onTap: widget.isLoading ? null : _showForgotPasswordDialog,
-                      child: Text(
-                        context.l10n.forgotPassword,
-                        style: context.bodySmall?.copyWith(
-                          fontSize: 14,
-                          color: context.adaptiveTextPrimary,
-                          fontWeight: FontWeight.w600,
+                Column(
+                  children: [
+                    AuthTextField(
+                      hint: context.l10n.emailHint,
+                      validator: emailValidator,
+                      controller: _emailController,
+                      enabled: !widget.isLoading,
+                    ),
+                    10.h,
+                    AuthTextField(
+                      hint: context.l10n.passwordHint,
+                      obscureText: true,
+                      validator: passwordValidator,
+                      controller: _passwordController,
+                      enabled: !widget.isLoading,
+                    ),
+                    10.h,
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: GestureDetector(
+                        onTap: widget.isLoading ? null : _showForgotPasswordDialog,
+                        child: Text(
+                          context.l10n.forgotPassword,
+                          style: context.bodySmall?.copyWith(
+                            fontSize: 14,
+                            color: context.adaptiveTextPrimary,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                ],
-              ),
-              20.h,
+                  ],
+                ),
+                20.h,
           
               _buildSignInButton(isLoading: widget.isLoading),
             ],

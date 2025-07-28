@@ -1,5 +1,3 @@
-import 'dart:ui';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -276,6 +274,8 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
 
   /// 🎭 Interface principale avec animations intégrées
   Widget _buildMainView(AppDataState appDataState, List<SavedRoute> routes) {
+    final sortedRoutes = routes.sortByCreationDate();
+    
     // Mettre à jour les animations en fonction du nombre de routes
     if (routes.isNotEmpty) {
       _updateAnimationsForRoutes(routes.length);
@@ -284,20 +284,34 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
     return BlurryPage(
       children: [
         30.h,
-        AnimatedBuilder(
-          animation: _fadeAnimation,
-          builder: (context, child) {
-            return Opacity(
-              opacity: _fadeAnimation.value,
-              child: Transform.translate(
-                offset: Offset(0, 20 * (1 - _fadeAnimation.value)),
-                child: _buildStatsCard(routes),
-              ),
-            );
-          },
+        Text(
+          context.l10n.savedRoute,
+          style: context.bodyMedium?.copyWith(
+            fontSize: 18,
+            color: context.adaptiveTextSecondary,
+            fontWeight: FontWeight.w600,
+          ),
         ),
 
-        20.h,
+        15.h,
+
+        if (sortedRoutes.length > 1) ...[
+          30.h,
+          AnimatedBuilder(
+            animation: _fadeAnimation,
+            builder: (context, child) {
+              return Opacity(
+                opacity: _fadeAnimation.value,
+                child: Transform.translate(
+                  offset: Offset(0, 20 * (1 - _fadeAnimation.value)),
+                  child: _buildStatsCard(routes),
+                ),
+              );
+            },
+          ),
+
+          20.h,
+        ],
 
         _buildAnimatedRoutesList(routes),
       ],
@@ -346,6 +360,8 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
     final sortedRoutes = routes.sortByCreationDate();
     
     return Column(
+      mainAxisAlignment: MainAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       key: const ValueKey('loaded'),
       children: [

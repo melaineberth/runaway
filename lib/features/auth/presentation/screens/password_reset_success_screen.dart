@@ -77,7 +77,7 @@ class _PasswordResetSuccessScreenState extends State<PasswordResetSuccessScreen>
           Text(
             context.l10n.passwordResetSuccess,
             style: context.bodyMedium?.copyWith(
-              fontSize: 22,
+              fontSize: 20,
               color: context.adaptiveTextPrimary,
             ),
             textAlign: TextAlign.center,
@@ -89,6 +89,7 @@ class _PasswordResetSuccessScreenState extends State<PasswordResetSuccessScreen>
           Text(
             context.l10n.passwordResetSuccessDesc,
             style: context.bodySmall?.copyWith(
+              fontSize: 18,
               color: context.adaptiveTextSecondary,
               fontWeight: FontWeight.w400,
             ),
