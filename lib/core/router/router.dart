@@ -5,6 +5,7 @@ import 'package:runaway/core/blocs/app_data/app_data_event.dart';
 import 'package:runaway/core/helper/config/log_config.dart';
 import 'package:runaway/core/utils/injections/bloc_provider_extension.dart';
 import 'package:runaway/core/widgets/conversion_listener.dart';
+import 'package:runaway/core/widgets/splash_screen.dart';
 import 'package:runaway/core/widgets/top_snackbar.dart';
 import 'package:runaway/features/account/presentation/screens/account_screen.dart';
 import 'package:runaway/features/account/presentation/screens/edit_profile_screen.dart';
@@ -40,18 +41,21 @@ final GoRouter router = GoRouter(
     
     print('🧭 Router redirect: current=$currentLocation, authState=${authState.runtimeType}');
 
+    if (authState is AuthInitial && authState is AuthLoading) {
+      // Rediriger vers le splash uniquement si on n'y est pas déjà
+      if (currentLocation != '/splash') {
+        print('⏳ Redirection vers splash - initialisation en cours');
+        return '/splash';
+      }
+      return null;
+    }
+
     // Ne pas rediriger pendant les processus de reset de mot de passe
     if (authState is PasswordResetCodeSent || 
         authState is PasswordResetCodeVerified || 
         authState is PasswordResetSuccess) {
       // Pendant le processus de reset, ne pas rediriger
       print('🔐 Processus de reset en cours - pas de redirection');
-      return null;
-    }
-    
-    // Gestion des redirections selon l'état d'authentification
-    if (authState is AuthInitial || authState is AuthLoading) {
-      // En cours d'initialisation, ne pas rediriger
       return null;
     }
     
@@ -90,6 +94,14 @@ final GoRouter router = GoRouter(
       pageBuilder: (context, state) => NoTransitionPage(
         key: state.pageKey,
         child: const OnboardingScreen(),
+      ),
+    ),
+    GoRoute(
+      path: '/splash',
+      name: 'splash',
+      pageBuilder: (context, state) => NoTransitionPage(
+        key: state.pageKey,
+        child: const SplashScreen(),
       ),
     ),
     GoRoute(

@@ -122,3 +122,4 @@ flutter:
     - assets/anim/LOCK.json
     - assets/anim/PIN.json
     - assets/anim/LOCKB.json
+    - assets/img/icon.png

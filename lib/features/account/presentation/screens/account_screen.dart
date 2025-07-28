@@ -2,6 +2,7 @@ import 'dart:io';
 import 'dart:ui';
 
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -668,19 +669,18 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
             );
           },
         ),
-        // Text.rich(
-        //   TextSpan(
-        //     text: context.l10n.termsAndPrivacy,
-        //     recognizer:
-        //         TapGestureRecognizer()
-        //           ..onTap = () => print('Open Terms & Policy'),
-        //   ),
-        //   style: context.bodySmall?.copyWith(
-        //     fontSize: 13,
-        //     fontWeight: FontWeight.w500,
-        //     color: context.adaptiveBorder.withValues(alpha: 0.2),
-        //   ),
-        // ),
+        Text.rich(
+          TextSpan(
+            text: context.l10n.termsAndPrivacy,
+            recognizer: TapGestureRecognizer()
+              ..onTap = () => launchUrl(Uri.parse("https://trailix.app")),
+          ),
+          style: context.bodySmall?.copyWith(
+            fontSize: 13,
+            fontWeight: FontWeight.w500,
+            color: context.adaptiveBorder.withValues(alpha: 0.2),
+          ),
+        ),
       ],
     );
   }

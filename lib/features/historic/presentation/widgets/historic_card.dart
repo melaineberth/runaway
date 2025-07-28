@@ -247,7 +247,7 @@ class _HistoricCardState extends State<HistoricCard> {
             decoration: BoxDecoration(
               gradient: SmoothGradient(
                 from: context.adaptiveBackground.withValues(alpha: 0),
-                to: context.adaptiveBackground.withValues(alpha: 0.5),
+                to: context.adaptiveBackground.withValues(alpha: 0.65),
                 curve: Curves.linear,
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,

@@ -375,21 +375,6 @@ class ScreenshotService {
     }
   }
 
-  /// Génère une URL de placeholder pour les routes sans screenshot
-  static String getPlaceholderImageUrl(String activityType) {
-    // Retourner une URL d'image de placeholder basée sur l'activité
-    switch (activityType.toLowerCase()) {
-      case 'running':
-        return 'https://images.unsplash.com/photo-1544717297-fa95b6ee9643?w=400&h=300&fit=crop';
-      case 'cycling':
-        return 'https://images.unsplash.com/photo-1558618047-b93c99c64c3a?w=400&h=300&fit=crop';
-      case 'walking':
-        return 'https://images.unsplash.com/photo-1511593358241-7eea1f3c84e5?w=400&h=300&fit=crop';
-      default:
-        return 'https://images.unsplash.com/photo-1551698618-1dfe5d97d256?w=400&h=300&fit=crop';
-    }
-  }
-
   /// 🆕 Enlève le logo Mapbox par recadrage de l'image
   static Future<Uint8List?> _removeMapboxLogo(Uint8List imageBytes) async {
     try {
@@ -403,7 +388,7 @@ class ScreenshotService {
       final originalHeight = originalImage.height;
       
       // Zone à recadrer (enlever ~80px en bas pour le logo/attributions)
-      const cropBottomPixels = 50;
+      const cropBottomPixels = 30;
       final newHeight = originalHeight - cropBottomPixels;
       
       if (newHeight <= 0) {

@@ -166,6 +166,7 @@ class _OverleyViewState extends State<OverleyView> with TickerProviderStateMixin
 
         return Scaffold(
           extendBody: true,
+          resizeToAvoidBottomInset: false,
           backgroundColor: Colors.transparent,
           body: Stack(
             clipBehavior: Clip.hardEdge,
