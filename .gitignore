@@ -14,6 +14,10 @@ migrate_working_dir/
 .env
 .env.example
 
+# Clés de signature
+android/key.properties
+*.jks
+
 # IntelliJ related
 *.iml
 *.ipr
