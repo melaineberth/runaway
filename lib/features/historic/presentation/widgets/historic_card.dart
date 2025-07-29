@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -422,7 +423,7 @@ class _HistoricCardState extends State<HistoricCard> {
   }
 
   /// 📱 Affiche l'état de chargement de l'image avec shimmer
-  Widget _buildLoadingState(ImageChunkEvent? loadingProgress) {
+  Widget _buildLoadingState() {
     const double innerRadius = 30.0;
     
     return SquircleContainer(
@@ -481,153 +482,69 @@ class _HistoricCardState extends State<HistoricCard> {
   }
 
   Widget _buildRouteImage() {
-    return Image.network(
-      widget.route.imageUrl!,
-      width: double.infinity,
-      height: double.infinity,
-      fit: BoxFit.fitHeight,
-      loadingBuilder: (context, child, loadingProgress) {
-        if (loadingProgress == null) {
-          // Image chargée avec succès
+    return CachedNetworkImage(
+        imageUrl: widget.route.imageUrl!,
+        width: double.infinity,
+        height: double.infinity,
+        fit: BoxFit.fitHeight,
+        progressIndicatorBuilder: (context, url, progress) {
+          return _buildLoadingState();
+        },
+        placeholder: (context, url) {
+          return Container(
+            color: Colors.red,
+            child: Icon(getActivityIcon(widget.route.parameters.activityType.id)),
+          );
+        },
+        errorListener: (value) {
+          LogConfig.logError('❌ Erreur chargement image: $value');
+          // Marquer l'erreur et afficher le fallback
           WidgetsBinding.instance.addPostFrameCallback((_) {
             if (mounted) {
               setState(() {
+                _hasImageError = true;
                 _isImageLoading = false;
-                _hasImageError = false;
               });
             }
           });
-          return child;
-        }
-        // 🆕 En cours de chargement - Afficher shimmer au lieu du CircularProgressIndicator
-        return _buildLoadingState(loadingProgress);
-      },
-      errorBuilder: (context, error, stackTrace) {
-        LogConfig.logError('❌ Erreur chargement image: $error');
-        // Marquer l'erreur et afficher le fallback
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted) {
-            setState(() {
-              _hasImageError = true;
-              _isImageLoading = false;
-            });
-          }
-        });
-        return _buildActivityFallback();
-      },
-    );
-  }
-
-  /// 🎨 Fallback avec design basé sur l'activité
-  Widget _buildActivityFallback() {
-    const double innerRadius = 30.0;
-    
-    // Si on est encore en train de charger, afficher le shimmer
-    if (_isImageLoading && !_hasImageError) {
-      return SquircleContainer(
-        radius: innerRadius,
-        color: context.adaptiveDisabled,
-        padding: EdgeInsets.zero,
-        child: Container(
-          width: double.infinity,
-          height: double.infinity,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(innerRadius),
-          ),
-        ),
-      )
-      .animate(onPlay: (controller) => controller.loop())
-      .shimmer(
-        color: context.adaptiveBackground.withValues(alpha: 0.5), 
-        duration: Duration(seconds: 2)
+        },
       );
-    }
-
-    // Sinon, afficher le fallback normal avec l'icône et les informations
-    return Container(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            context.adaptiveDisabled,
-            context.adaptiveDisabled.withValues(alpha: 0.7),
-          ],
-        ),
-        borderRadius: BorderRadius.circular(30.0),
-      ),
-      child: Stack(
-        children: [          
-          // Contenu principal
-          Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                // Icône de l'activité
-                Icon(
-                  _getActivityIcon(),
-                  color: context.adaptiveBackground,
-                  size: 40,
-                ),
-                12.h,
-                
-                // Informations sur le parcours
-                Text(
-                  widget.route.formattedDistance,
-                  style: context.titleMedium?.copyWith(
-                    color: context.adaptiveTextPrimary,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                4.h,
-                Text(
-                  widget.route.parameters.activityType.title,
-                  style: context.bodySmall?.copyWith(
-                    color: context.adaptiveTextSecondary,
-                    fontSize: 12,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          
-          // Badge "Pas d'image" si erreur
-          if (_hasImageError)
-            Positioned(
-              top: 8,
-              left: 8,
-              child: Container(
-                padding: EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-                decoration: BoxDecoration(
-                  color: context.adaptiveBackground.withValues(alpha: 0.6),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(
-                  context.l10n.imageUnavailable,
-                  style: context.bodySmall?.copyWith(
-                    color: context.adaptiveTextPrimary,
-                    fontSize: 10,
-                  ),
-                ),
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-
-   /// Icône basée sur le type d'activité
-  IconData _getActivityIcon() {
-    switch (widget.route.parameters.activityType.id) {
-      case 'running':
-        return HugeIcons.strokeRoundedBicycle01;
-      case 'cycling':
-        return HugeIcons.strokeRoundedBicycle01;
-      case 'walking':
-        return HugeIcons.strokeRoundedBicycle01;
-      default:
-        return HugeIcons.strokeRoundedRoute01;
-    }
+    
+    // return Image.network(
+    //   widget.route.imageUrl!,
+    //   width: double.infinity,
+    //   height: double.infinity,
+    //   fit: BoxFit.fitHeight,
+    //   loadingBuilder: (context, child, loadingProgress) {
+    //     if (loadingProgress == null) {
+    //       // Image chargée avec succès
+    //       WidgetsBinding.instance.addPostFrameCallback((_) {
+    //         if (mounted) {
+    //           setState(() {
+    //             _isImageLoading = false;
+    //             _hasImageError = false;
+    //           });
+    //         }
+    //       });
+    //       return child;
+    //     }
+    //     // 🆕 En cours de chargement - Afficher shimmer au lieu du CircularProgressIndicator
+    //     return _buildLoadingState(loadingProgress);
+    //   },
+    //   errorBuilder: (context, error, stackTrace) {
+    //     LogConfig.logError('❌ Erreur chargement image: $error');
+    //     // Marquer l'erreur et afficher le fallback
+    //     WidgetsBinding.instance.addPostFrameCallback((_) {
+    //       if (mounted) {
+    //         setState(() {
+    //           _hasImageError = true;
+    //           _isImageLoading = false;
+    //         });
+    //       }
+    //     });
+    //     return _buildActivityFallback();
+    //   },
+    // );
   }
 
   /// 🆕 Retourne le nom de la localisation (implémentation complète)

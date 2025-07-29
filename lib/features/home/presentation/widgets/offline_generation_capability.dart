@@ -100,12 +100,6 @@ class _OfflineGenerationCapabilityState
   }
 
   Widget _buildContent() {
-    if (_isLoading) {
-      return widget.loadingWidget ?? const Center(
-        child: CircularProgressIndicator(),
-      );
-    }
-
     if (_cachedCapability == null) {
       // Fallback de secours
       final fallbackCapability = GenerationCapability.guest(

@@ -55,16 +55,16 @@ void main() async {
     ]);
 
     try {
-      // ✅ PHASE 1 : Initialisation parallèle des services critiques
+      // Initialisation parallèle des services critiques
       await _initializeCriticalServices();
 
-      // 🆕 PHASE 1.5 : Initialisation du monitoring (avant tout le reste)
+      // Initialisation du monitoring (avant tout le reste)
       await _initializeMonitoring();
 
-      // ✅ PHASE 2 : Initialisation parallèle des services secondaires  
+      // Initialisation parallèle des services secondaires  
       await _initializeSecondaryServices();
 
-      // ✅ PHASE 3 : Finalisation
+      // Finalisation
       await _finalizeInitialization();
 
       LogConfig.logSuccess('🚀 Trailix initialisé avec succès');
@@ -74,7 +74,7 @@ void main() async {
     } catch (e, stackTrace) {
       LogConfig.logError('Erreur lors de l\'initialisation: $e');
       
-      // 🆕 Capturer l'erreur d'initialisation si le monitoring est disponible
+      // Capturer l'erreur d'initialisation si le monitoring est disponible
       try {
         await MonitoringService.instance.captureError(
           e,
@@ -91,7 +91,7 @@ void main() async {
       runApp(ErrorApp(error: e.toString()));
     }
   }, (error, stackTrace) {
-    // 🆕 Capture des erreurs non gérées au niveau de la zone
+    // Capture des erreurs non gérées au niveau de la zone
     LogConfig.logError('Erreur non gérée capturée par runZonedGuarded: $error');
     
     // Essayer de capturer l'erreur si le monitoring est disponible
@@ -111,7 +111,7 @@ void main() async {
 
 // ===== PHASE D'INITIALISATION =====
 
-/// Phase 1 : Services critiques en parallèle
+/// Services critiques en parallèle
 Future<void> _initializeCriticalServices() async {
   LogConfig.logInfo('🚀 Phase 1: Services critiques...');
   
@@ -134,7 +134,7 @@ Future<void> _initializeCriticalServices() async {
   }
 }
 
-/// Phase 1.5 : Initialisation du monitoring
+/// Initialisation du monitoring
 Future<void> _initializeMonitoring() async {  
   try {
     // Initialiser le service principal de monitoring
@@ -166,7 +166,7 @@ Future<void> _initializeMonitoring() async {
   }
 }
 
-/// Phase 2 : Services secondaires en parallèle
+/// Services secondaires en parallèle
 Future<void> _initializeSecondaryServices() async {
   LogConfig.logInfo('🚀 Phase 2: Services secondaires...');
   
@@ -201,7 +201,7 @@ Future<void> _initializeSecondaryServices() async {
   }
 }
 
-/// Phase 3 : Finalisation et DI
+/// Finalisation et DI
 Future<void> _finalizeInitialization() async {
   LogConfig.logInfo('🚀 Phase 3: Finalisation...');
   
@@ -457,7 +457,7 @@ class _TrailixState extends State<Trailix> {
   void initState() {
     super.initState();
     
-    // 🆕 Écouter les événements de session
+    // Écouter les événements de session
     _sessionSubscription = SessionManager.instance.sessionEvents.listen((event) {
       if (event.status == SessionStatus.expired || event.status == SessionStatus.error) {
         // Rediriger vers l'écran de connexion ou afficher un message
@@ -496,11 +496,11 @@ class _TrailixState extends State<Trailix> {
       child: AuthDataListener(
         child: RouteDataSyncWrapper(
           child: BlocBuilder<LocaleBloc, LocaleState>(
-            // ✅ Éviter les rebuilds inutiles pour locale
+            // Éviter les rebuilds inutiles pour locale
             buildWhen: (previous, current) => previous.locale != current.locale,
             builder: (context, localeState) {
               return BlocBuilder<ThemeBloc, ThemeState>(
-                // ✅ Éviter les rebuilds inutiles pour theme
+                // Éviter les rebuilds inutiles pour theme
                 buildWhen: (previous, current) => previous.themeMode != current.themeMode,
                 builder: (context, themeState) {
                   return AnimatedSwitcher(
