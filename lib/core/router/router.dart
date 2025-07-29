@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:runaway/core/blocs/app_data/app_data_event.dart';
 import 'package:runaway/core/helper/config/log_config.dart';
+import 'package:runaway/core/helper/services/cache_service.dart';
 import 'package:runaway/core/utils/injections/bloc_provider_extension.dart';
 import 'package:runaway/core/widgets/conversion_listener.dart';
 import 'package:runaway/core/widgets/splash_screen.dart';
@@ -29,7 +30,7 @@ final GoRouter router = GoRouter(
   initialLocation: '/home',
   
   // Redirection globale basée sur l'état d'authentification
-  redirect: (BuildContext context, GoRouterState state) {
+  redirect: (BuildContext context, GoRouterState state) async {
     final authBloc = context.authBloc;
     final authState = authBloc.state;
     
@@ -41,8 +42,24 @@ final GoRouter router = GoRouter(
     
     print('🧭 Router redirect: current=$currentLocation, authState=${authState.runtimeType}');
 
-    if (authState is AuthInitial && authState is AuthLoading) {
-      // Rediriger vers le splash uniquement si on n'y est pas déjà
+    // Vérifier la session en cache avant de rediriger vers splash
+    if (authState is AuthInitial && (authState is AuthLoading && currentLocation != '/splash')) {
+      // Vérifier s'il y a une session en cache
+      try {
+        final cacheService = CacheService.instance;
+        final hasValidSession = await cacheService.hasValidStoredSession();
+        
+        if (hasValidSession) {
+          // Si on a une session valide en cache, ne pas rediriger vers splash
+          // Laisser AuthBloc restaurer la session
+          print('📱 Session en cache détectée, éviter le splash');
+          return null;
+        }
+      } catch (e) {
+        print('⚠️ Erreur vérification session cache: $e');
+      }
+      
+      // Pas de session en cache, rediriger vers le splash uniquement si nécessaire
       if (currentLocation != '/splash') {
         print('⏳ Redirection vers splash - initialisation en cours');
         return '/splash';

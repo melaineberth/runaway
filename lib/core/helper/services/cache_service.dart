@@ -385,15 +385,22 @@ class CacheService {
   Future<bool> hasUserChanged(String newUserId) async {
     await _ensureInitialized();
     
-    final lastUserId = _prefs!.getString('last_user_id');
+    // Vérifier d'abord si on a une session en cache
+    final cachedSession = await getStoredUserSession();
+    if (cachedSession != null) {
+      final cachedUserId = cachedSession['user_id'] as String;
+      if (cachedUserId != newUserId) {
+        LogConfig.logInfo('👤 Changement utilisateur détecté (cache vs nouveau): $cachedUserId -> $newUserId');
+        return true;
+      }
+    }
     
-    // Ne pas enregistrer immédiatement le nouvel utilisateur
-    // L'enregistrement se fera seulement après le nettoyage complet
+    // Logique existante avec last_user_id
+    final lastUserId = _prefs!.getString('last_user_id');
     final hasChanged = lastUserId != null && lastUserId != newUserId;
     
     if (hasChanged) {
-      LogConfig.logInfo('👤 Changement utilisateur détecté: $lastUserId → $newUserId');
-      // Ne pas enregistrer maintenant, attendre la confirmation du nettoyage
+      LogConfig.logInfo('👤 Changement utilisateur détecté (preferences): $lastUserId -> $newUserId');
     } else if (lastUserId == null) {
       LogConfig.logInfo('👤 Premier utilisateur ou cache vide: $newUserId');
     }
@@ -405,6 +412,17 @@ class CacheService {
   Future<void> confirmUserChange(String newUserId) async {
     await _ensureInitialized();
     await _prefs!.setString('last_user_id', newUserId);
+    
+    // Nettoyer l'ancienne session en cache si l'utilisateur a changé
+    final cachedSession = await getStoredUserSession();
+    if (cachedSession != null) {
+      final cachedUserId = cachedSession['user_id'] as String;
+      if (cachedUserId != newUserId) {
+        await clearStoredUserSession();
+        LogConfig.logInfo('🧹 Ancienne session supprimée lors du changement utilisateur');
+      }
+    }
+    
     LogConfig.logInfo('✅ Nouvel utilisateur confirmé: $newUserId');
   }
 
@@ -456,6 +474,67 @@ class CacheService {
     
     // Fallback: convertir en string
     return value.toString();
+  }
+
+  // ===== MÉTHODES STOCKAGE SESSION =====
+
+  /// Stocke la session utilisateur pour une utilisation hors-ligne
+  Future<void> storeUserSession(String userId, Map<String, dynamic> userProfile) async {
+    await _ensureInitialized();
+    
+    try {
+      final sessionData = {
+        'user_id': userId,
+        'profile': userProfile,
+        'stored_at': DateTime.now().millisecondsSinceEpoch,
+        'version': 1, // Pour futures migrations
+      };
+      
+      await _prefs!.setString('cached_user_session', jsonEncode(sessionData));
+      LogConfig.logInfo('📱 Session utilisateur mise en cache: $userId');
+    } catch (e) {
+      LogConfig.logError('❌ Erreur stockage session: $e');
+    }
+  }
+
+  /// Récupère la session utilisateur en cache
+  Future<Map<String, dynamic>?> getStoredUserSession() async {
+    await _ensureInitialized();
+    
+    try {
+      final sessionJson = _prefs!.getString('cached_user_session');
+      if (sessionJson == null) return null;
+      
+      final sessionData = jsonDecode(sessionJson) as Map<String, dynamic>;
+      final storedAt = DateTime.fromMillisecondsSinceEpoch(sessionData['stored_at']);
+      
+      // Vérifier que la session n'est pas trop ancienne (7 jours max)
+      final maxAge = Duration(days: 7);
+      if (DateTime.now().difference(storedAt) > maxAge) {
+        LogConfig.logInfo('⏰ Session en cache expirée, suppression');
+        await clearStoredUserSession();
+        return null;
+      }
+      
+      LogConfig.logInfo('📱 Session utilisateur récupérée du cache: ${sessionData['user_id']}');
+      return sessionData;
+    } catch (e) {
+      LogConfig.logError('❌ Erreur récupération session: $e');
+      return null;
+    }
+  }
+
+  /// Vérifie si une session utilisateur valide est en cache
+  Future<bool> hasValidStoredSession() async {
+    final session = await getStoredUserSession();
+    return session != null;
+  }
+
+  /// Supprime la session utilisateur en cache
+  Future<void> clearStoredUserSession() async {
+    await _ensureInitialized();
+    await _prefs!.remove('cached_user_session');
+    LogConfig.logInfo('🗑️ Session utilisateur supprimée du cache');
   }
 
   // ===== MÉTHODES PRIVÉES =====

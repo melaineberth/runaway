@@ -1,3 +1,5 @@
+// ignore_for_file: unused_label
+
 import 'package:flutter/material.dart';
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart' as mp;
 import 'package:geolocator/geolocator.dart' as gl;
@@ -99,6 +101,8 @@ class _LocationAwareMapWidgetState extends State<LocationAwareMapWidget> with Ti
           setState(() {
             _initialPosition = position;
             _isPositionReady = true; // 🔧 PERMETTRE l'affichage de la carte
+            _defaultLatitude: position.longitude;
+            _defaultLongitude: position.longitude;
           });
           LogConfig.logSuccess('✅ Position trouvée depuis le service: ${position.latitude}, ${position.longitude}');
           return;

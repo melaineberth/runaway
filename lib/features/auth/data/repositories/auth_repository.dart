@@ -55,6 +55,21 @@ class AuthRepository {
         await SecureConfig.storeRefreshToken(session.refreshToken!);
         print('🔒 REFRESH TOKEN TRAITE');
       }
+
+      // Stocker aussi le profil en cache si disponible
+      if (session.user != null) {
+        try {
+          final profile = await getProfile(session.user.id);
+          if (profile != null) {
+            final cacheService = CacheService.instance;
+            await cacheService.storeUserSession(session.user.id, profile.toJson());
+            LogConfig.logInfo('💾 Session utilisateur mise en cache lors du stockage tokens');
+          }
+        } catch (e) {
+          // Ne pas faire échouer le stockage des tokens si le cache échoue
+          LogConfig.logError('⚠️ Erreur cache session lors stockage tokens: $e');
+        }
+      }
       
       print('🔒 TOKENS SESSION STOCKES AVEC SUCCES');
       LogConfig.logInfo('🔒 Tokens session stockés de façon sécurisée');
@@ -970,12 +985,13 @@ class AuthRepository {
           .from('profiles')
           .select()
           .eq('id', id)
-          .maybeSingle();
+          .maybeSingle()
+          .timeout(Duration(seconds: 10)); // Timeout pour éviter l'attente infinie
       
       if (data == null) {
         LogConfig.logInfo('Aucun profil trouvé pour: $id');
         
-        // FIX: Ne nettoyer que si explicitement demandé
+        // Ne nettoyer que si explicitement demandé
         // Cela permet aux nouveaux utilisateurs d'avoir une chance de compléter leur profil
         if (!skipCleanup) {
           LogConfig.logInfo('ℹ️ Profil non trouvé mais pas de nettoyage automatique');
@@ -983,14 +999,24 @@ class AuthRepository {
         return null;
       }
       
-      // FIX: L'email est maintenant directement dans les données de la DB
+      // L'email est maintenant directement dans les données de la DB
       final profile = Profile.fromJson(data);
       
       LogConfig.logInfo('Profil récupéré: ${profile.username}');
       return profile;
     } catch (e) {
       LogConfig.logError('❌ Erreur récupération profil: $e');
-      throw AuthExceptionHandler.handleSupabaseError(e);
+
+      // Si c'est un timeout ou problème réseau, ne pas retourner null
+      // pour permettre l'utilisation du cache
+      if (e.toString().contains('timeout') || 
+          e.toString().contains('network') ||
+          e.toString().contains('connection')) {
+        LogConfig.logInfo('🌐 Problème réseau détecté, utilisation du cache possible');
+        throw NetworkException('Problème de réseau lors de la récupération du profil');
+      }
+
+      return null;
     }
   }
 

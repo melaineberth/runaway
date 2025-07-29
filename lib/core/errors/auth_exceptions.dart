@@ -44,6 +44,24 @@ class PermissionException extends AuthException {
   PermissionException(super.message, {super.code, super.originalError});
 }
 
+class NetworkException implements Exception {
+  final String message;
+  final String? originalError;
+  
+  const NetworkException(
+    this.message, {
+    this.originalError,
+  });
+
+  @override
+  String toString() {
+    if (originalError != null) {
+      return 'NetworkException: $message (Original: $originalError)';
+    }
+    return 'NetworkException: $message';
+  }
+}
+
 /// Helper pour convertir les erreurs Supabase en exceptions typées
 class AuthExceptionHandler {
   static AppException handleSupabaseError(dynamic error) {
@@ -174,17 +192,6 @@ class AuthExceptionHandler {
       return ProfileException(
         context.l10n.profileManagementError,
         code: 'PROFILE_ERROR',
-        originalError: error,
-      );
-    }
-    
-    // Erreurs réseau
-    if (errorMessage.contains('network') ||
-        errorMessage.contains('connection') ||
-        errorMessage.contains('timeout')) {
-      return NetworkException(
-        context.l10n.connectionProblem,
-        code: 'NETWORK_ERROR',
         originalError: error,
       );
     }

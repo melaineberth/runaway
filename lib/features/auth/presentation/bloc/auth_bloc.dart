@@ -59,76 +59,6 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         emit(Unauthenticated());
       }
     });
-
-    // FIX: Nouvelle logique pour le stream listener
-    _sub = _repo.authChangesStream.listen((data) async {
-      try {
-        final user = data.session?.user;
-        if (user == null) return add(_InternalLoggedOut());
-
-        // Ignorer les changements d'auth si on est en processus de reset de mot de passe
-        if (_isInPasswordResetFlow) {
-          LogConfig.logInfo('🔒 Changement d\'auth ignoré - processus reset en cours');
-          return;
-        }
-        
-        // Utiliser skipCleanup pour éviter le nettoyage automatique
-        final p = await _repo.getProfile(user.id, skipCleanup: true);
-        
-        if (p == null) {
-          // Pas de profil trouvé - vérifier si c'est un compte vraiment corrompu
-          final isCorrupted = await _repo.isCorruptedAccount(user.id);
-          
-          if (isCorrupted) {
-            LogConfig.logInfo('🧹 Compte corrompu détecté - nettoyage');
-            await _repo.cleanupCorruptedAccount();
-            add(_InternalLoggedOut());
-          } else {
-            LogConfig.logInfo('Nouveau compte sans profil - OK pour onboarding');
-            add(_InternalProfileIncomplete(user));
-          }
-        } else {
-          // FIX: Utiliser la méthode isComplete pour vérifier
-          if (!p.isComplete) {
-            LogConfig.logInfo('Profil trouvé mais incomplet');
-            add(_InternalProfileIncomplete(user));
-          } else {
-            LogConfig.logInfo('Profil complet trouvé');
-            add(_InternalProfileLoaded(p));
-          }
-        }
-
-        // 🆕 Tracking des changements d'état d'auth
-        MonitoringService.instance.recordMetric(
-          'auth_state_change',
-          1,
-          tags: {
-            'new_state': data.runtimeType.toString(),
-            'has_user': (data is Authenticated).toString(),
-          },
-        );
-        
-        // 🆕 Configurer l'utilisateur dans le monitoring
-        if (data is Authenticated) {
-          MonitoringService.instance.setUser(
-            userId: data.session!.user.id,
-            email: data.session!.user.email,
-            username: data.session!.user.userMetadata?['username'],
-            additionalData: {
-              'provider': data.session!.user.appMetadata['provider'] ?? 'unknown',
-              'created_at': data.session!.user.createdAt,
-            },
-          );
-        } else {
-          MonitoringService.instance.clearUser();
-        }
-      } catch (e, stackTrace) {
-        captureError(e, stackTrace, extra: {
-          'context': 'auth_state_stream',
-          'auth_state': data.runtimeType.toString(),
-        });
-      }
-    });
   }
 
   /// 🆕 Gère le changement de session utilisateur
@@ -364,24 +294,144 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     print('🔔 Paramètres de notification modifiés: ${event.enabled}');
   }
 
-  Future<void> _onStart(AppStarted e, Emitter<AuthState> emit) async {
-    final user = supabase.Supabase.instance.client.auth.currentUser;
-    if (user == null) return emit(Unauthenticated());
+  Future<void> _onStart(AppStarted event, Emitter<AuthState> emit) async {
+    LogConfig.logInfo('🚀 Démarrage de l\'authentification...');
     
-    // FIX: Utiliser skipCleanup au démarrage aussi
-    final p = await _repo.getProfile(user.id, skipCleanup: true);
+    // Vérifier d'abord la session en cache pour un démarrage rapide
+    final cacheService = CacheService.instance;
+    final cachedSession = await cacheService.getStoredUserSession();
     
-    if (p == null) {
-      // Vérifier si c'est un compte corrompu avant de nettoyer
-      final isCorrupted = await _repo.isCorruptedAccount(user.id);
-      if (isCorrupted) {
-        await _repo.cleanupCorruptedAccount();
-        emit(Unauthenticated());
-      } else {
-        emit(ProfileIncomplete(user));
+    if (cachedSession != null) {
+      LogConfig.logInfo('📱 Session en cache trouvée, restauration rapide...');
+      
+      try {
+        // Créer un profil temporaire depuis le cache
+        final profileData = cachedSession['profile'] as Map<String, dynamic>;
+        final tempProfile = Profile.fromJson(profileData);
+        
+        // Émettre immédiatement l'état authentifié depuis le cache
+        emit(Authenticated(tempProfile));
+        LogConfig.logInfo('⚡ Utilisateur authentifié depuis le cache: ${tempProfile.email}');
+        
+        // Déclencher le pré-chargement des données
+        if (AppDataInitializationService.isInitialized) {
+          Future.delayed(Duration(milliseconds: 100), () {
+            AppDataInitializationService.startDataPreloading();
+          });
+        }
+        
+        // Vérifier la session en arrière-plan sans bloquer l'UI
+        _verifySessionInBackground(tempProfile.id, emit);
+        
+        return; // Sortir ici pour éviter le splash screen
+      } catch (e) {
+        LogConfig.logError('❌ Erreur restauration session cache: $e');
+        // Continuer avec la logique normale si le cache est corrompu
+        await cacheService.clearStoredUserSession();
       }
-    } else {
-      emit(Authenticated(p));
+    }
+    
+    // Logique existante si pas de session en cache
+    LogConfig.logInfo('🔍 Pas de session en cache, vérification normale...');
+    emit(AuthLoading());
+    
+    _sub = _repo.authChangesStream.listen((data) async {
+      LogConfig.logInfo('📡 Changement d\'état auth: ${data.event}');
+      
+      try {
+        if (data.session?.user != null) {
+          final user = data.session!.user;
+          final profile = await _repo.getProfile(user.id);
+          
+          if (profile != null) {
+            // Stocker la session dans le cache
+            await _storeSessionInCache(user.id, profile);
+            
+            add(_InternalProfileLoaded(profile));
+          } else {
+            add(_InternalProfileIncomplete(user));
+          }
+          
+          // Monitoring
+          MonitoringService.instance.setUser(
+            userId: user.id,
+            email: user.email,
+            additionalData: {
+              'provider': data.session!.user.appMetadata['provider'] ?? 'unknown',
+              'created_at': data.session!.user.createdAt,
+            },
+          );
+        } else {
+          MonitoringService.instance.clearUser();
+          add(_InternalLoggedOut());
+        }
+      } catch (e) {
+        LogConfig.logError('❌ Erreur stream auth: $e');
+        emit(AuthError('Erreur de connexion: $e'));
+      }
+    });
+  }
+
+  /// Vérification de session en arrière-plan
+  Future<void> _verifySessionInBackground(String cachedUserId, Emitter<AuthState> emit) async {
+    try {
+      LogConfig.logInfo('🔄 Vérification session en arrière-plan...');
+      
+      // Attendre un peu pour laisser l'UI se charger
+      await Future.delayed(Duration(seconds: 1));
+      
+      final currentUser = _repo.currentUser;
+      if (currentUser == null) {
+        LogConfig.logInfo('❌ Session expirée, déconnexion...');
+        await CacheService.instance.clearStoredUserSession();
+        emit(Unauthenticated());
+        return;
+      }
+      
+      // Vérifier que c'est le même utilisateur
+      if (currentUser.id != cachedUserId) {
+        LogConfig.logInfo('👤 Utilisateur différent détecté, mise à jour...');
+        await _handleUserSessionChange(currentUser.id);
+        
+        // Récupérer le nouveau profil
+        final newProfile = await _repo.getProfile(currentUser.id);
+        if (newProfile != null) {
+          await _storeSessionInCache(currentUser.id, newProfile);
+          emit(Authenticated(newProfile));
+        }
+      } else {
+        // Même utilisateur, rafraîchir le profil si nécessaire
+        final updatedProfile = await _repo.getProfile(currentUser.id);
+        if (updatedProfile != null) {
+          await _storeSessionInCache(currentUser.id, updatedProfile);
+          // Ne re-émettre que si les données ont changé
+          if (state is Authenticated) {
+            final currentProfile = (state as Authenticated).profile;
+            if (currentProfile != updatedProfile) {
+              emit(Authenticated(updatedProfile));
+              LogConfig.logInfo('📝 Profil mis à jour depuis le serveur');
+            }
+          }
+        }
+      }
+      
+      LogConfig.logInfo('✅ Vérification session arrière-plan terminée');
+    } catch (e) {
+      LogConfig.logError('❌ Erreur vérification arrière-plan: $e');
+      // Ne pas déconnecter l'utilisateur si c'est juste un problème réseau
+      // Garder la session en cache pour qu'il reste connecté
+    }
+  }
+
+  /// Stockage de session dans le cache
+  Future<void> _storeSessionInCache(String userId, Profile profile) async {
+    try {
+      final cacheService = CacheService.instance;
+      final profileJson = profile.toJson();
+      await cacheService.storeUserSession(userId, profileJson);
+      LogConfig.logInfo('💾 Session stockée en cache: ${profile.email}');
+    } catch (e) {
+      LogConfig.logError('❌ Erreur stockage session cache: $e');
     }
   }
 
@@ -611,6 +661,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     );
 
     try {
+      LogConfig.logInfo('👋 Déconnexion en cours...');
       emit(AuthLoading());
 
       // 🆕 1. Nettoyer explicitement les données via le CreditsBloc si disponible
@@ -630,6 +681,9 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       }
 
       await _repo.signOut();
+
+      // Nettoyer la session en cache
+      await CacheService.instance.clearStoredUserSession();
 
       emit(Unauthenticated());
 

@@ -672,12 +672,12 @@ class CreditsRepository {
       // Forcer le refresh pour les utilisateurs créés dans les dernières 24h
       final userCreationResp = await _supabase
           .from('profiles')
-          .select('id, created_at')
+          .select('id, updated_at')
           .eq('id', userId)
           .maybeSingle();
           
       if (userCreationResp != null) {
-        final createdAt = DateTime.parse(userCreationResp['created_at']);
+        final createdAt = DateTime.parse(userCreationResp['updated_at']);
         final now = DateTime.now();
         final accountAge = now.difference(createdAt);
         
