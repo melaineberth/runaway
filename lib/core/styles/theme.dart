@@ -21,30 +21,33 @@ ThemeData getAppTheme(Brightness brightness) {
       onError: Colors.white,
     ),
     textTheme: TextTheme(
-      headlineLarge: GoogleFonts.roboto(
+      headlineLarge: GoogleFonts.inter(
         fontSize: 32,
         fontWeight: FontWeight.bold,
         color: isDark ? AppColorsDark.textPrimary : AppColors.textPrimary,
       ),
-      titleLarge: GoogleFonts.roboto(
+      titleLarge: GoogleFonts.inter(
         fontSize: 24,
         fontWeight: FontWeight.w600,
         color: isDark ? AppColorsDark.textPrimary : AppColors.textPrimary,
       ),
-      bodyLarge: GoogleFonts.roboto(
+      bodyLarge: GoogleFonts.inter(
         fontSize: 35,
         fontWeight: FontWeight.w600,
+        letterSpacing: -0.15,
         height: 1.2,
         color: isDark ? AppColorsDark.textPrimary : AppColors.textPrimary,
       ),
-      bodyMedium: GoogleFonts.roboto(
+      bodyMedium: GoogleFonts.inter(
         fontSize: 20,
         fontWeight: FontWeight.w600,
+        letterSpacing: -0.15,
         color: isDark ? AppColorsDark.textPrimary : AppColors.textPrimary,
       ),
-      bodySmall: GoogleFonts.roboto(
+      bodySmall: GoogleFonts.inter(
         fontSize: 17,
         fontWeight: FontWeight.w600,
+        letterSpacing: -0.15,
         color: isDark ? AppColorsDark.textPrimary : AppColors.textPrimary,
       ),
     ),
