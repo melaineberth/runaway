@@ -1,20 +1,23 @@
-import 'dart:ui';
-
 import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:runaway/core/helper/extensions/extensions.dart';
+import 'package:runaway/core/widgets/icon_btn.dart';
 import 'package:runaway/core/widgets/squircle_container.dart';
 
 class TopSnackBar extends StatelessWidget {
   final String title;
   final bool isError;
   final bool isWarning;
+  final Function()? onPressed;
+  final bool action;
 
   const TopSnackBar({
     super.key,
     required this.title,
     this.isError = false,
     this.isWarning = false,
+    this.action = false,
+    this.onPressed,
   });
 
   Color get _getBorderColor {
@@ -54,6 +57,7 @@ class TopSnackBar extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
+          if (!action)
           Icon(
             _getIcon,
             size: 25,
@@ -71,6 +75,16 @@ class TopSnackBar extends StatelessWidget {
               maxLines: 2,
             ),
           ),
+          if (action) ...[
+            8.w,
+            IconBtn(
+              padding: 12.0,
+              label: "Modifier",
+              backgroundColor: _getBorderColor,
+              labelColor: _getBackgroundColor,
+              onPressed: onPressed,
+            ),
+          ],
         ],
       ),
     );

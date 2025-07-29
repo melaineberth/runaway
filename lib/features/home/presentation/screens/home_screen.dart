@@ -9,6 +9,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lottie/lottie.dart';
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart' as mp;
+import 'package:permission_handler/permission_handler.dart';
 import 'package:runaway/core/utils/constant/constants.dart';
 import 'package:runaway/core/blocs/app_data/app_data_bloc.dart';
 import 'package:runaway/core/blocs/app_data/app_data_event.dart';
@@ -54,6 +55,7 @@ import 'package:runaway/core/helper/config/log_config.dart';
 import 'package:runaway/features/route_generator/presentation/blocs/route_generation/route_generation_state.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' as su;
 import 'package:top_snackbar_flutter/top_snack_bar.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../../route_generator/presentation/screens/route_parameter_screen.dart'
     as gen;
 import '../blocs/route_parameters_event.dart';
@@ -135,6 +137,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
 
   // 🆕 Temps minimum de loading (configurable)
   static const Duration _minimumLoadingDuration = Duration(milliseconds: 1500);
+  Timer? _permissionCheckTimer;
+  bool _lastPermissionStatus = true; // État précédent des permissions
+  bool _hasShownPermissionDeniedSnackbar = false;
+  Timer? _permissionSnackbarResetTimer;
 
   @override
   void initState() {
@@ -150,6 +156,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
     _preloadLocationInBackground();
     _setupRouteGenerationListener();
     _initializeMapStyle();
+    _startPermissionListener();
 
     // 🆕 Marquer l'écran comme chargé après l'initialisation
     WidgetsBinding.instance.addPostFrameCallback((_) async {
@@ -174,6 +181,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
     _positionStream?.cancel();
     _lottieController.dispose();
     _loadingMinimumTimer?.cancel();
+    _permissionCheckTimer?.cancel();
+    _permissionSnackbarResetTimer?.cancel(); // 🆕 NETTOYER le timer
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
@@ -338,6 +347,47 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
     });
   }
 
+  void _startPermissionListener() {
+    // 🔧 DÉLAI initial pour éviter les conflits avec l'initialisation
+    Timer(Duration(seconds: 3), () {
+      if (!mounted) return;
+      
+      // Vérifier les permissions toutes les 2 secondes
+      _permissionCheckTimer = Timer.periodic(Duration(seconds: 2), (timer) async {
+        if (!mounted) {
+          timer.cancel();
+          return;
+        }
+
+        try {
+          // Vérifier le statut actuel des permissions
+          final permission = await gl.Geolocator.checkPermission();
+          final hasPermission = permission == gl.LocationPermission.always || 
+                              permission == gl.LocationPermission.whileInUse;
+
+          // Détecter un changement de statut
+          if (_lastPermissionStatus && !hasPermission) {
+            // Permissions viennent d'être révoquées
+            LogConfig.logError('🚨 Permissions géolocalisation révoquées détectées par timer');
+            _handleLocationPermissionRevoked();
+          } else if (!_lastPermissionStatus && hasPermission) {
+            // Permissions viennent d'être réactivées
+            LogConfig.logSuccess('✅ Permissions géolocalisation réactivées détectées par timer');
+            _handleLocationPermissionRestored();
+          }
+
+          // Sauvegarder le nouvel état
+          _lastPermissionStatus = hasPermission;
+
+        } catch (e) {
+          LogConfig.logError('❌ Erreur vérification permissions: $e');
+        }
+      });
+    });
+
+    LogConfig.logInfo('🔍 Listener permissions géolocalisation démarré (délai 3s)');
+  }
+
   Future<void> _startLocationTrackingWhenMapReady() async {
     try {
       // La carte est déjà prête car on vient de _onMapCreated
@@ -359,12 +409,19 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
         _onLocationUpdate,
         onError: (e) {
           LogConfig.logError('❌ Erreur stream position: $e');
+          // Plus besoin de gestion complexe - le listener s'en charge
         },
       );
 
       LogConfig.logInfo('Stream de position démarré');
     } catch (e) {
       LogConfig.logError('❌ Erreur démarrage tracking: $e');
+
+      // Gérer aussi les erreurs lors du démarrage du stream
+      final errorMessage = e.toString().toLowerCase();
+      if (errorMessage.contains('permission')) {
+        _handleLocationPermissionRevoked();
+      }
     }
   }
 
@@ -383,7 +440,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
       _userLongitude = newLng;
     });
 
-    // 💾 Sauvegarder toujours la position utilisateur dans le service
+    // Sauvegarder toujours la position utilisateur dans le service
     _mapStateService.saveUserPosition(newLat, newLng);
 
     // Mettre à jour la position sélectionnée si on est en mode user tracking
@@ -1301,10 +1358,64 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
 
   /// Active le mode suivi utilisateur
   void _activateUserTracking() async {
-    // Vérifier qu'on a une position GPS
+    // 🔧 Si on n'a pas de position GPS, essayer d'en obtenir une
     if (_userLatitude == null || _userLongitude == null) {
-      LogConfig.logInfo('❌ Position utilisateur non disponible pour le tracking');
-      return;
+      LogConfig.logInfo('⚠️ Position utilisateur non disponible, tentative récupération...');
+      
+      // Essayer de récupérer la position
+      await _tryGetCurrentPosition();
+      
+      // Vérifier si on a maintenant une position
+      if (_userLatitude == null || _userLongitude == null) {
+        LogConfig.logError('❌ Impossible d\'obtenir position pour le tracking');
+        
+        // Afficher un message informatif à l'utilisateur
+        if (mounted) {
+          showTopSnackBar(
+            Overlay.of(context),
+            TopSnackBar(
+              action: true,
+              isWarning: true,
+              title: 'Position GPS non disponible. Vérifiez vos paramètres.',
+              onPressed: _openLocationSettings,
+            ),
+          );
+        }
+
+        // Forcer le mode manuel si pas de position
+        setState(() {
+          _trackingMode = TrackingMode.manual;
+        });
+        _mapStateService.saveTrackingMode(_trackingMode);
+
+        return;
+      }
+    }
+
+    // Double vérification les coordonnées doivent être valides
+    if (_userLatitude == 0.0 || _userLongitude == 0.0) {
+      LogConfig.logError('❌ Position invalide (0,0) détectée');
+      
+      // Essayer de récupérer une nouvelle position
+      await _tryGetCurrentPosition();
+      
+      if (_userLatitude == null || _userLongitude == null || 
+          _userLatitude == 0.0 || _userLongitude == 0.0) {
+        LogConfig.logError('❌ Impossible d\'obtenir position valide');
+        
+        if (mounted) {
+          showTopSnackBar(
+            Overlay.of(context),
+            TopSnackBar(
+              action: true,
+              isWarning: true,
+              title: 'Position GPS non disponible. Vérifiez vos paramètres.',
+              onPressed: _openLocationSettings,
+            ),
+          );
+        }
+        return; // ARRÊT COMPLET
+      }
     }
 
     bool? shouldContinue = true;
@@ -1321,10 +1432,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
         );
       });
 
-      // L’utilisateur annule ou ferme la feuille : on arrête tout
+      // L'utilisateur annule ou ferme la feuille : on arrête tout
       if (shouldContinue != true) return;
 
-      // 🔐 Ajoute ça AVANT de remettre l’état à zéro
+      // 🔐 Ajoute ça AVANT de remettre l'état à zéro
       _dismissRouteInfoModal();
     }
 
@@ -1370,7 +1481,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
     );
   }
 
-  // 🔧 MÉTHODE FALLBACK : En cas d'erreur, utiliser la position utilisateur
+  // En cas d'erreur, utiliser la position utilisateur
   Future<void> _setManualPositionFallback(
     double longitude,
     double latitude,
@@ -2522,6 +2633,275 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
     }
   }
 
+  /// ✅ Gestion des permissions réactivées
+  void _handleLocationPermissionRestored() async {
+    LogConfig.logSuccess('✅ Permissions géolocalisation réactivées');
+    
+    // Réinitialiser le flag de notification
+    _hasShownPermissionDeniedSnackbar = false;
+    _permissionSnackbarResetTimer?.cancel();
+    
+    // Récuperer la position utilisateur depuis le service
+    try {
+      final position = LocationPreloadService.instance.lastKnownPosition;
+      if (position != null) {
+        setState(() {
+          _userLatitude = position.latitude;
+          _userLongitude = position.longitude;
+        });
+        
+        // Sauvegarder dans le service
+        _mapStateService.saveUserPosition(position.latitude, position.longitude);
+        
+        LogConfig.logSuccess('Position utilisateur récupérée: ${position.latitude}, ${position.longitude}');
+      } else {
+        // Si pas de position en cache, essayer d'en obtenir une nouvelle
+        LogConfig.logInfo('Aucune position en cache, tentative géolocalisation...');
+        await _tryGetCurrentPosition();
+      }
+    } catch (e) {
+      LogConfig.logError('❌ Erreur récupération position: $e');
+      // Essayer quand même d'obtenir une nouvelle position
+      await _tryGetCurrentPosition();
+    }
+    
+    // Redémarrer le tracking si on était en mode userTracking
+    if (_trackingMode == TrackingMode.userTracking) {
+      await _startLocationTrackingWhenMapReady();
+      
+      // Afficher notification de réactivation (UNE SEULE FOIS)
+      if (mounted && !_hasShownPermissionDeniedSnackbar) {
+        showTopSnackBar(
+          Overlay.of(context),
+          TopSnackBar(
+            title: 'Localisation réactivée. Suivi GPS restauré.',
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _tryGetCurrentPosition() async {
+    try {
+      LogConfig.logInfo('🎯 Tentative obtention position actuelle...');
+      
+      final position = await LocationPreloadService.instance.initializeLocation()
+          .timeout(Duration(seconds: 5));
+      
+      if (mounted) {
+        setState(() {
+          _userLatitude = position.latitude;
+          _userLongitude = position.longitude;
+        });
+        
+        // Sauvegarder dans le service
+        _mapStateService.saveUserPosition(position.latitude, position.longitude);
+        
+        LogConfig.logSuccess('✅ Nouvelle position obtenue: ${position.latitude}, ${position.longitude}');
+      }
+      
+    } catch (e) {
+      LogConfig.logError('❌ Impossible d\'obtenir position actuelle: $e');
+      // La position restera null, ce qui désactivera le bouton de suivi
+
+      // Vider explicitement les positions en cas d'échec
+      if (mounted) {
+        setState(() {
+          _userLatitude = null;
+          _userLongitude = null;
+        });
+        
+        // Marquer comme invalide dans le service aussi
+        _mapStateService.saveUserPosition(0.0, 0.0);
+      }
+    }
+  }
+
+  /// 🚨 Gestion des permissions de géolocalisation refusées
+  void _handleLocationPermissionRevoked() {
+    // Éviter l'affichage multiple de la même notification
+    if (_hasShownPermissionDeniedSnackbar) {
+      LogConfig.logInfo('🔄 Notification permissions déjà affichée, ignorée');
+      return;
+    }
+
+    LogConfig.logError('🚨 Permissions refusées - basculement en mode manuel');
+    
+    // Basculer automatiquement en mode manuel (désactive le bouton de suivi)
+    setState(() {
+      _trackingMode = TrackingMode.manual;
+      _userLatitude = null;     // 🆕 VIDER la position utilisateur
+      _userLongitude = null;    // 🆕 VIDER la position utilisateur
+    });
+
+    // Nettoyer les positions dans le service
+    _mapStateService.saveUserPosition(0.0, 0.0); // Position invalide pour marquer comme vide
+    
+    // Arrêter le stream de position pour éviter les erreurs répétées
+    _positionStream?.cancel();
+    _positionStream = null;
+    
+    // Sauvegarder le nouveau mode
+    _mapStateService.saveTrackingMode(_trackingMode);
+
+    // Marquer comme affiché et programmer la réinitialisation
+    _hasShownPermissionDeniedSnackbar = true;
+    _permissionSnackbarResetTimer?.cancel();
+    _permissionSnackbarResetTimer = Timer(Duration(seconds: 10), () {
+      if (mounted) {
+        _hasShownPermissionDeniedSnackbar = false;
+        LogConfig.logInfo('🔄 Flag notification permissions réinitialisé');
+      }
+    });
+    
+    // Afficher un snackbar informatif avec action
+    showTopSnackBar(
+      Overlay.of(context),
+      TopSnackBar(
+        action: true,
+        isWarning: true,
+        title: 'Position GPS non disponible. Vérifiez vos paramètres.',
+        onPressed: _openLocationSettings,
+      ),
+    );
+    
+    LogConfig.logInfo('✅ Mode manuel activé suite à révocation permissions - bouton de suivi désactivé');
+  }
+
+  /// 🔧 Ouvre les paramètres de localisation
+  Future<void> _openLocationSettings() async {
+    try {
+      LogConfig.logInfo('📱 Ouverture des paramètres de localisation');
+      
+      // 🔧 UTILISER permission_handler directement pour éviter la récursion
+      bool opened = false;
+      
+      try {
+        opened = await Permission.location.request().then((status) async {
+          if (status.isPermanentlyDenied) {
+            // Si refusé définitivement, ouvrir les paramètres de l'app
+            return await openAppSettings();
+          }
+          // Sinon, demander à nouveau la permission
+          return status.isGranted;
+        });
+      } catch (e) {
+        LogConfig.logError('❌ Erreur permission_handler: $e');
+        opened = false;
+      }
+      
+      // 🔧 Si échec, essayer les deep links spécifiques iOS/Android
+      if (!opened) {
+        await _openSystemLocationSettings();
+      }
+      
+    } catch (e) {
+      LogConfig.logError('❌ Erreur ouverture paramètres: $e');
+      
+      // Fallback : dialog informatif simple
+      if (mounted) {
+        _showLocationSettingsDialog();
+      }
+    }
+  }
+
+  /// 🆕 Ouvre les paramètres système de localisation via deep link
+  Future<void> _openSystemLocationSettings() async {
+    try {
+      if (Platform.isIOS) {
+        // Deep link vers les paramètres de localisation iOS
+        const iosSettingsUrl = 'app-settings:';
+        if (await canLaunchUrl(Uri.parse(iosSettingsUrl))) {
+          await launchUrl(
+            Uri.parse(iosSettingsUrl),
+            mode: LaunchMode.externalApplication,
+          );
+          LogConfig.logSuccess('✅ Paramètres iOS ouverts via deep link');
+        } else {
+          throw Exception('Impossible d\'ouvrir les paramètres iOS');
+        }
+      } else if (Platform.isAndroid) {
+        // Deep link vers les paramètres de localisation Android
+        const androidSettingsUrl = 'package:com.android.settings';
+        if (await canLaunchUrl(Uri.parse(androidSettingsUrl))) {
+          await launchUrl(
+            Uri.parse(androidSettingsUrl),
+            mode: LaunchMode.externalApplication,
+          );
+          LogConfig.logSuccess('✅ Paramètres Android ouverts via deep link');
+        } else {
+          // Fallback: paramètres généraux Android
+          const androidGeneralSettings = 'package:com.android.settings/.Settings';
+          await launchUrl(
+            Uri.parse(androidGeneralSettings),
+            mode: LaunchMode.externalApplication,
+          );
+        }
+      }
+    } catch (e) {
+      LogConfig.logError('❌ Erreur deep link paramètres: $e');
+      
+      // Dernière chance : dialog informatif
+      if (mounted) {
+        _showLocationSettingsDialog();
+      }
+    }
+  }
+
+  /// 🆕 Affiche un dialog informatif pour guider l'utilisateur
+  void _showLocationSettingsDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Paramètres de localisation'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              Platform.isIOS 
+                ? 'Pour activer la localisation :'
+                : 'Pour activer la localisation :',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            SizedBox(height: 8),
+            if (Platform.isIOS) ...[
+              Text('1. Allez dans Réglages'),
+              Text('2. Confidentialité et sécurité'),
+              Text('3. Services de localisation'),
+              Text('4. Activez pour Trailix'),
+            ] else ...[
+              Text('1. Allez dans Paramètres'),
+              Text('2. Applications'),
+              Text('3. Trailix'),
+              Text('4. Autorisations'),
+              Text('5. Activez la localisation'),
+            ],
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text('Compris'),
+          ),
+          if (Platform.isIOS || Platform.isAndroid)
+            TextButton(
+              onPressed: () async {
+                Navigator.of(context).pop();
+                // Réessayer d'ouvrir les paramètres
+                try {
+                  await openAppSettings();
+                } catch (e) {
+                  LogConfig.logError('❌ Erreur réessai paramètres: $e');
+                }
+              },
+              child: Text('Réessayer'),
+            ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return MonitoredScreen(
@@ -2560,25 +2940,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
       resizeToAvoidBottomInset: false,
       body: OfflineGenerationCapability(
         timeout: const Duration(seconds: 2), // Timeout court pour éviter les blocages
-        loadingWidget: Container(
-          color: Theme.of(context).scaffoldBackgroundColor,
-          child: const Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                CircularProgressIndicator(),
-                SizedBox(height: 16),
-                Text(
-                  'Initialisation...',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
         builder: (capability) {      
           return Stack(
             alignment: Alignment.bottomCenter,
@@ -2588,10 +2949,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
                 width: MediaQuery.of(context).size.width,
                 height: MediaQuery.of(context).size.height,
                 child: LocationAwareMapWidget(
-                  key: ValueKey("locationAwareMapWidget"),
                   styleUri: _mapStateService.getCurrentStyleUri(),
                   onMapCreated: _onMapCreated,
                   restoreFromCache: _mapStateService.isMapInitialized,
+                  onLocationPermissionDenied: _handleLocationPermissionRevoked,
                 ),
               ),
     

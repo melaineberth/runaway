@@ -26,7 +26,6 @@ import 'package:runaway/core/helper/services/monitoring_service.dart';
 import 'package:runaway/core/helper/services/notification_service.dart';
 import 'package:runaway/core/helper/services/route_data_sync_wrapper.dart';
 import 'package:runaway/core/helper/services/session_manager.dart';
-import 'package:runaway/core/widgets/offline_indicator.dart';
 import 'package:runaway/features/auth/presentation/widgets/auth_data_listener.dart';
 import 'package:runaway/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:runaway/features/credits/data/services/iap_service.dart';
@@ -520,7 +519,7 @@ class _TrailixState extends State<Trailix> {
                         return MediaQuery(
                           data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(1.0)),
                           child: child ?? Container(),
-                        ).withOfflineIndicator();
+                        );
                       },
                     ),
                   );

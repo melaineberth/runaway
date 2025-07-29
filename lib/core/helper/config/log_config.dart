@@ -10,7 +10,7 @@ class LogConfig {
     if (SecureConfig.kIsProduction) return false;
     
     // En debug: configurable via environnement
-    return _getBoolFromEnv('VERBOSE_LOGS', defaultValue: false);
+    return _getBoolFromEnv('VERBOSE_LOGS', defaultValue: true);
   }
   
   // 🔧 LOGGING PAR CATÉGORIE

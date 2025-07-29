@@ -4,7 +4,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:runaway/core/helper/config/log_config.dart';
 
 class SecureConfig {
-  static const bool kIsProduction = bool.fromEnvironment('PRODUCTION');
+  static const bool kIsProduction = false;
   
   // 🔒 Configuration améliorée pour éviter les conflits
   static const FlutterSecureStorage _secureStorage = FlutterSecureStorage(
