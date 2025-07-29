@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:runaway/core/helper/extensions/extensions.dart';
+import 'package:runaway/core/utils/connectivity_helper.dart';
 import 'package:runaway/core/utils/constant/constants.dart';
 import 'package:runaway/core/utils/injections/bloc_provider_extension.dart';
 import 'package:runaway/core/widgets/icon_btn.dart';
@@ -97,6 +98,11 @@ class _EditProfileScreenState extends State<EditProfileScreen> with TickerProvid
   }
 
   void _saveProfile() {
+    // Vérifier la connexion avant la connexion Apple
+    if (!ConnectivityHelper.checkConnectionAndShowModal(context)) {
+      return;
+    }
+    
     if (!_formKey.currentState!.validate()) return;
 
     final fullName = _fullNameController.text.trim();

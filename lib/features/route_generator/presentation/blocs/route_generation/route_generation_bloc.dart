@@ -145,20 +145,20 @@ class RouteGenerationBloc extends HydratedBloc<RouteGenerationEvent, RouteGenera
       await ConnectivityService.instance.waitForInitialization(
         timeout: const Duration(seconds: 2)
       );
-      
+
       // Vérifier si on est hors ligne
       if (ConnectivityService.instance.isOffline) {
         LogConfig.logError('❌ Mode hors-ligne détecté');
         emit(state.copyWith(
           isGeneratingRoute: false,
-          errorMessage: 'Génération hors-ligne indisponible. Vérifiez votre connexion internet.',
+          errorMessage: 'Vérifiez votre connexion internet pour générer un parcours.',
           stateId: '$generationId-offline',
         ));
-        
+
         MonitoringService.instance.finishOperation(
           operationId,
           success: false,
-          errorMessage: 'Offline mode detected',
+          errorMessage: 'Génération impossible - mode hors ligne',
         );
         return;
       }

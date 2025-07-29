@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:runaway/core/helper/extensions/extensions.dart';
+import 'package:runaway/core/utils/connectivity_helper.dart';
 import 'package:runaway/core/utils/constant/constants.dart';
 import 'package:runaway/core/widgets/list_header.dart';
 import 'package:runaway/core/widgets/modal_sheet.dart';
@@ -117,6 +118,11 @@ class _ForgotPasswordDialogState extends State<ForgotPasswordDialog> {
   }
 
   void _handleSubmit() {
+    // Vérifier la connexion avant la connexion Apple
+    if (!ConnectivityHelper.checkConnectionAndShowModal(context)) {
+      return;
+    }
+    
     if (!(_formKey.currentState?.validate() ?? false)) return;
 
     switch (_currentStep) {

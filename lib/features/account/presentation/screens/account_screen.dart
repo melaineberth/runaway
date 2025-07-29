@@ -15,6 +15,7 @@ import 'package:runaway/core/helper/extensions/extensions.dart';
 import 'package:runaway/core/blocs/app_data/app_data_bloc.dart';
 import 'package:runaway/core/blocs/app_data/app_data_state.dart';
 import 'package:runaway/core/blocs/theme_bloc/theme_bloc.dart';
+import 'package:runaway/core/utils/connectivity_helper.dart';
 import 'package:runaway/core/utils/constant/constants.dart';
 import 'package:runaway/core/utils/injections/bloc_provider_extension.dart';
 import 'package:runaway/core/helper/extensions/monitoring_extensions.dart';
@@ -929,6 +930,11 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
   }
 
   void _showDeleteAccountDialog(BuildContext context) {
+    // Vérifier la connexion avant la connexion Apple
+    if (!ConnectivityHelper.checkConnectionAndShowModal(context)) {
+      return;
+    }
+    
     _trackAccountAction('delete_account_dialog_opened');
     showModalSheet(
       context: context,

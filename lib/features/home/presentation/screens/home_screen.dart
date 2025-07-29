@@ -10,6 +10,7 @@ import 'package:go_router/go_router.dart';
 import 'package:lottie/lottie.dart';
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart' as mp;
 import 'package:permission_handler/permission_handler.dart';
+import 'package:runaway/core/utils/connectivity_helper.dart';
 import 'package:runaway/core/utils/constant/constants.dart';
 import 'package:runaway/core/blocs/app_data/app_data_bloc.dart';
 import 'package:runaway/core/blocs/app_data/app_data_event.dart';
@@ -1376,7 +1377,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
             TopSnackBar(
               action: true,
               isWarning: true,
-              title: 'Position GPS non disponible. Vérifiez vos paramètres.',
+              title: context.l10n.notAvailablePosition,
               onPressed: _openLocationSettings,
             ),
           );
@@ -1409,7 +1410,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
             TopSnackBar(
               action: true,
               isWarning: true,
-              title: 'Position GPS non disponible. Vérifiez vos paramètres.',
+              title: context.l10n.notAvailablePosition,
               onPressed: _openLocationSettings,
             ),
           );
@@ -2003,6 +2004,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
 
   // Gestionnaire de génération de route
   void _handleGenerateRoute() async {
+    // Vérifier la connexion avant la connexion Google  
+    if (!ConnectivityHelper.checkConnectionAndShowModal(context)) {
+      return;
+    }
+    
     final operationId = MonitoringService.instance.trackOperation(
       'route_generation_from_home',
       description: 'Génération de parcours depuis l\'écran principal',
@@ -2667,17 +2673,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
     
     // Redémarrer le tracking si on était en mode userTracking
     if (_trackingMode == TrackingMode.userTracking) {
-      await _startLocationTrackingWhenMapReady();
-      
-      // Afficher notification de réactivation (UNE SEULE FOIS)
-      if (mounted && !_hasShownPermissionDeniedSnackbar) {
-        showTopSnackBar(
-          Overlay.of(context),
-          TopSnackBar(
-            title: 'Localisation réactivée. Suivi GPS restauré.',
-          ),
-        );
-      }
+      await _startLocationTrackingWhenMapReady();      
     }
   }
 
@@ -2760,7 +2756,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
       TopSnackBar(
         action: true,
         isWarning: true,
-        title: 'Position GPS non disponible. Vérifiez vos paramètres.',
+        title: context.l10n.notAvailablePosition,
         onPressed: _openLocationSettings,
       ),
     );

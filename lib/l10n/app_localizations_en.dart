@@ -1429,7 +1429,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get noInternetConnection => 'No internet connection. Check your network.';
+  String get noInternetConnection => 'No internet connection';
 
   @override
   String get timeoutRetry => 'Timeout exceeded. Try again.';
@@ -1655,4 +1655,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get userSummary => 'Your summary';
+
+  @override
+  String get noPositionEnable => 'GPS position not available. Check your settings.';
+
+  @override
+  String get checkNetwork => 'Please check your internet connection to access this feature';
 }

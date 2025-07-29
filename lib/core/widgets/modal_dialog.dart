@@ -73,6 +73,7 @@ class ModalDialog extends StatelessWidget {
                   fontSize: 20,
                   color: context.adaptiveTextPrimary,
                 ),
+                textAlign: TextAlign.center,
               ),
               10.h,
               Text(

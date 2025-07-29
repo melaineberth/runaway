@@ -79,7 +79,7 @@ class TopSnackBar extends StatelessWidget {
             8.w,
             IconBtn(
               padding: 12.0,
-              label: "Modifier",
+              label: context.l10n.modify,
               backgroundColor: _getBorderColor,
               labelColor: _getBackgroundColor,
               onPressed: onPressed,

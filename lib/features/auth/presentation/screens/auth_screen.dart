@@ -9,6 +9,7 @@ import 'package:runaway/core/blocs/theme_bloc/theme_bloc.dart';
 import 'package:runaway/core/helper/config/log_config.dart';
 import 'package:runaway/core/helper/extensions/extensions.dart';
 import 'package:runaway/core/helper/extensions/monitoring_extensions.dart';
+import 'package:runaway/core/utils/connectivity_helper.dart';
 import 'package:runaway/core/utils/constant/constants.dart';
 import 'package:runaway/core/utils/injections/service_locator.dart';
 import 'package:runaway/core/widgets/squircle_btn.dart';
@@ -45,6 +46,11 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
   }
 
   void showEmailSignIn({required bool isLoading}) {
+    // Vérifier la connexion avant d'afficher le modal d'inscription
+    if (!ConnectivityHelper.checkConnectionAndShowModal(context)) {
+      return; // Arrêter si hors ligne
+    }
+
     showModalSheet(
       context: context, 
       backgroundColor: Colors.transparent,
@@ -55,6 +61,11 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
   }
 
   void showEmailSignUp({required bool isLoading}) {
+    // Vérifier la connexion avant d'afficher le modal d'inscription
+    if (!ConnectivityHelper.checkConnectionAndShowModal(context)) {
+      return; // Arrêter si hors ligne
+    }
+
     showModalSheet(
       context: context, 
       backgroundColor: Colors.transparent,
@@ -62,6 +73,24 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
         isLoading: isLoading, 
       ),
     );
+  }
+
+   void _handleGoogleSignIn() {
+    // Vérifier la connexion avant la connexion Apple
+    if (!ConnectivityHelper.checkConnectionAndShowModal(context)) {
+      return;
+    }
+
+    context.authBloc.add(GoogleSignInRequested());
+  }
+
+  void _handleAppleSignIn() {
+    // Vérifier la connexion avant la connexion Apple
+    if (!ConnectivityHelper.checkConnectionAndShowModal(context)) {
+      return;
+    }
+    
+    context.authBloc.add(AppleSignInRequested());
   }
 
   @override
@@ -323,13 +352,5 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
         ),
       ],
     );
-  }
-
-  void _handleGoogleSignIn() {
-    context.authBloc.add(GoogleSignInRequested());
-  }
-
-  void _handleAppleSignIn() {
-    context.authBloc.add(AppleSignInRequested());
   }
 }

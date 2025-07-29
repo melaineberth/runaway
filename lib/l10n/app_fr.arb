@@ -1963,7 +1963,7 @@
       }
     }
   },
-  "noInternetConnection": "Pas de connexion internet. Vérifiez votre réseau.",
+  "noInternetConnection": "Pas de connexion internet",
   "@noInternetConnection": {
     "description": "Message d'erreur lorsqu'il n'y a pas de connexion internet."
   },
@@ -2296,5 +2296,14 @@
   "userSummary": "Votre récapitulatif",
   "@userSummary" : {
     "description": "Display summary user"
+  },
+  "noPositionEnable": "Position GPS non disponible. Vérifiez vos paramètres.",
+  "@noPositionEnable": {
+    "description": "Show message when user location not enable"
+  },
+
+  "checkNetwork": "Veuillez vérifier votre connexion internet pour accéder à cette fonctionnalité",
+  "@checkNetwork": {
+    "description": "Message during an attempt to access services requiring internet"
   }
 }

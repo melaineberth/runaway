@@ -1963,7 +1963,7 @@
       }
     }
   },
-  "noInternetConnection": "No internet connection. Check your network.",
+  "noInternetConnection": "No internet connection",
   "@noInternetConnection": {
     "description": "Error message when there is no internet connection."
   },
@@ -2296,5 +2296,15 @@
   "userSummary": "Your summary",
   "@userSummary" : {
     "description": "Display summary user"
+  },
+
+
+  "noPositionEnable": "GPS position not available. Check your settings.",
+  "@noPositionEnable": {
+    "description": "Show message when user location not enable"
+  },
+  "checkNetwork": "Please check your internet connection to access this feature",
+  "@checkNetwork": {
+    "description": "Message during an attempt to access services requiring internet"
   }
 }

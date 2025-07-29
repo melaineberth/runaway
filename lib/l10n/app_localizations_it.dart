@@ -1655,4 +1655,10 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get userSummary => 'Your summary';
+
+  @override
+  String get noPositionEnable => 'GPS position not available. Check your settings.';
+
+  @override
+  String get checkNetwork => 'Please check your internet connection to access this feature';
 }

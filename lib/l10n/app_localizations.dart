@@ -2826,7 +2826,7 @@ abstract class AppLocalizations {
   /// Error message when there is no internet connection.
   ///
   /// In en, this message translates to:
-  /// **'No internet connection. Check your network.'**
+  /// **'No internet connection'**
   String get noInternetConnection;
 
   /// Error message for timeout with retry instruction.
@@ -3230,6 +3230,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Your summary'**
   String get userSummary;
+
+  /// Show message when user location not enable
+  ///
+  /// In en, this message translates to:
+  /// **'GPS position not available. Check your settings.'**
+  String get noPositionEnable;
+
+  /// Message during an attempt to access services requiring internet
+  ///
+  /// In en, this message translates to:
+  /// **'Please check your internet connection to access this feature'**
+  String get checkNetwork;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {
