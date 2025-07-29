@@ -1,4 +1,4 @@
-package com.example.runaway
+package app.trailix
 
 import android.content.Context
 import android.os.Build
@@ -19,10 +19,7 @@ class MainActivity : FlutterActivity() {
     }
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
-        super.configureFlutterEngine(flutterEngine)
-        
-        // Configuration Trailix spécifique si nécessaire
-        // Exemple: méthodes natives futures
+        super.configureFlutterEngine(flutterEngine)        
     }
 
     override fun attachBaseContext(newBase: Context?) {
