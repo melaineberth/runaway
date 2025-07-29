@@ -110,7 +110,11 @@ class RoutesRepository {
   }
 
   /// Récupère tous les parcours de l'utilisateur
-  Future<List<SavedRoute>> getUserRoutes({bool forceRefresh = false}) async {
+  Future<List<SavedRoute>> getUserRoutes({
+    bool forceRefresh = false,
+    int? limit,
+    int? offset,
+  }) async {
     return await withValidSession(() async {
       final user = _supabase.auth.currentUser;
       if (user == null) throw Exception('Utilisateur non connecté');
@@ -118,8 +122,8 @@ class RoutesRepository {
       final stopwatch = Stopwatch()..start();
       
       try {
-        // Niveau 1: Cache rapide (si pas de forceRefresh)
-        if (!forceRefresh) {
+        // Cache rapide (si pas de forceRefresh ET pas de pagination)
+        if (!forceRefresh && limit == null && offset == null) {
           final cachedRoutes = await _getRoutesFromFastCache();
           if (cachedRoutes.isNotEmpty && !await _needsSync()) {
             stopwatch.stop();
@@ -128,8 +132,16 @@ class RoutesRepository {
           }
         }
 
-        // Niveau 2: Vérifier la connectivité pour le cache cloud
+        // Vérifier la connectivité pour le cache cloud
         if (await _isConnected()) {
+          // Si pagination demandée, récupérer directement depuis Supabase
+          if (limit != null || offset != null) {
+            final routes = await _getRoutesFromSupabasePaginated(user.id, limit: limit, offset: offset);
+            stopwatch.stop();
+            LogConfig.logInfo('Routes paginées depuis Supabase: ${routes.length} (${stopwatch.elapsedMilliseconds}ms)');
+            return routes;
+          }
+
           // Synchroniser d'abord les routes en attente
           await _syncPendingRoutes();
           
@@ -164,7 +176,7 @@ class RoutesRepository {
           return routes;
 
         } else {
-          // Niveau 3: Cache local (mode hors ligne)
+          // Cache local (mode hors ligne)
           final localRoutes = await _getLocalRoutes();
           stopwatch.stop();
           
@@ -199,6 +211,89 @@ class RoutesRepository {
         return await _getLocalRoutes();
       }
     });
+  }
+
+  /// Récupère les routes depuis Supabase avec pagination
+  Future<List<SavedRoute>> _getRoutesFromSupabasePaginated(String userId, {int? limit, int? offset}) async {
+    try {
+      var query = _supabase
+          .from('user_routes')
+          .select()
+          .eq('user_id', userId)
+          .order('created_at', ascending: false);
+
+      if (limit != null) {
+        query = query.limit(limit);
+      }
+      if (offset != null) {
+        query = query.range(offset, offset + (limit ?? 20) - 1);
+      }
+
+      final response = await query;
+      final List<dynamic> data = response as List<dynamic>;
+
+      return data.map((item) {
+        final createdAtUtc = DateTime.parse(item['created_at']).toUtc();
+        final createdAt = createdAtUtc.toLocal();
+
+        DateTime? lastUsedAt;
+        if (item['last_used_at'] != null) {
+          final lastUsedUtc = DateTime.parse(item['last_used_at']).toUtc();
+          lastUsedAt = lastUsedUtc.toLocal();
+        }
+
+        // 🆕 Construire ElevationRange depuis les nouvelles colonnes ou fallback ancien
+        ElevationRange elevationRange;
+        if (item['elevation_range_min'] != null && item['elevation_range_max'] != null) {
+          elevationRange = ElevationRange(
+            min: (item['elevation_range_min'] as num).toDouble(),
+            max: (item['elevation_range_max'] as num).toDouble(),
+          );
+        } else {
+          // Fallback vers elevation_gain pour compatibilité
+          final elevationGain = (item['elevation_gain'] as num?)?.toDouble() ?? 0.0;
+          elevationRange = ElevationRange(min: 0, max: elevationGain);
+        }
+
+        return SavedRoute(
+          id: item['id'],
+          name: item['name'],
+          parameters: RouteParameters(
+            activityType: _parseActivityType(item['activity_type']),
+            terrainType: _parseTerrainType(item['terrain_type']),
+            urbanDensity: _parseUrbanDensity(item['urban_density']),
+            distanceKm: (item['distance_km'] as num).toDouble(),
+            elevationRange: elevationRange,
+            difficulty: _parseDifficulty(item['difficulty'] as String?),
+            maxInclinePercent: (item['max_incline_percent'] as num?)?.toDouble() ?? 12.0,
+            preferredWaypoints: item['preferred_waypoints'] as int? ?? 3,
+            avoidHighways: item['avoid_highways'] as bool? ?? true,
+            prioritizeParks: item['prioritize_parks'] as bool? ?? false,
+            surfacePreference: (item['surface_preference'] as num?)?.toDouble() ?? 0.5,
+            startLongitude: (item['start_longitude'] as num).toDouble(),
+            startLatitude: (item['start_latitude'] as num).toDouble(),
+            isLoop: item['is_loop'] ?? true,
+            avoidTraffic: item['avoid_traffic'] ?? true,
+            preferScenic: item['prefer_scenic'] ?? true,
+          ),
+          coordinates: List<List<double>>.from(
+            (item['coordinates'] as List).map((coord) => 
+              List<double>.from(coord)
+            )
+          ),
+          createdAt: createdAt,
+          actualDistance: item['actual_distance_km']?.toDouble(),
+          actualDuration: item['estimated_duration_minutes'],
+          isSynced: true,
+          timesUsed: item['times_used'] ?? 0,
+          lastUsedAt: lastUsedAt,
+          imageUrl: item['image_url'],
+        );
+      }).toList();
+    } catch (e) {
+      LogConfig.logError('❌ Erreur _getRoutesFromSupabasePaginated: $e');
+      throw Exception('Erreur lors du chargement paginé: $e');
+    }
   }
 
   /// Supprime un parcours
@@ -698,26 +793,38 @@ class RoutesRepository {
   }
 
   /// 🆕 Récupération locale avec support image_url
-  Future<List<SavedRoute>> _getLocalRoutes() async {
+  Future<List<SavedRoute>> _getLocalRoutes({int? limit, int? offset}) async {
     try {
       final prefs = await SharedPreferences.getInstance();
       final routesJson = prefs.getString(_localCacheKey);
       
       if (routesJson == null) return [];
+
+      final List<dynamic> data = jsonDecode(routesJson);
+      final allRoutes = data.map((item) => SavedRoute.fromJson(item)).toList();
       
-      final routesList = jsonDecode(routesJson) as List;
-      return routesList.map((json) {
-        try {
-          return SavedRoute.fromJson(json);
-        } catch (e) {
-          LogConfig.logError('❌ Erreur parsing route locale: $e');
-          print('📄 JSON problématique: $json');
-          // Retourner null pour filtrer cette route corrompue
-          return null;
-        }
-      }).whereType<SavedRoute>().toList(); // 🔧 Filtrer les nulls
+      // Trier par date de création (plus récent en premier)
+      allRoutes.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      
+      // Appliquer la pagination si demandée
+      if (offset != null) {
+        if (offset >= allRoutes.length) return [];
+        
+        final endIndex = limit != null 
+            ? (offset + limit).clamp(0, allRoutes.length)
+            : allRoutes.length;
+        
+        return allRoutes.sublist(offset, endIndex);
+      }
+      
+      // Si limit seul est spécifié
+      if (limit != null) {
+        return allRoutes.take(limit).toList();
+      }
+      
+      return allRoutes;
     } catch (e) {
-      LogConfig.logError('❌ Erreur lecture cache local: $e');
+      LogConfig.logError('❌ Erreur _getLocalRoutes: $e');
       return [];
     }
   }

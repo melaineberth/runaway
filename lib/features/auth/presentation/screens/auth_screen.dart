@@ -154,14 +154,17 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
                 final isLoading = authState is AuthLoading;
                 
                 return BlocBuilder<ThemeBloc, ThemeState>(
-                  // ✅ Éviter les rebuilds inutiles pour theme
+                  // Éviter les rebuilds inutiles pour theme
                   buildWhen: (previous, current) => previous.themeMode != current.themeMode,
                   builder: (context, themeState) {
+                    // Utiliser la nouvelle méthode qui gère correctement le mode auto
+                    final shouldUseDark = themeState.themeMode.shouldUseDarkMode(context);
+                    
                     return Column(
                       children: [
                         Expanded(
                           child: Image.asset(
-                            themeState.themeMode == AppThemeMode.dark ? "assets/img/onboard_black.png" : "assets/img/onboard_white.png",
+                            shouldUseDark ? "assets/img/onboard_black.png" : "assets/img/onboard_white.png",
                             fit: BoxFit.cover,
                           ),
                         ),

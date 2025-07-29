@@ -41,11 +41,14 @@ class ModalDialog extends StatelessWidget {
     if (imgPath == null) return const SizedBox.shrink();
         
     return BlocBuilder<ThemeBloc, ThemeState>(
-      // ✅ Éviter les rebuilds inutiles pour theme
+      // Éviter les rebuilds inutiles pour theme
       buildWhen: (previous, current) => previous.themeMode != current.themeMode,
       builder: (context, themeState) {
+        // Utiliser la nouvelle méthode qui gère correctement le mode auto
+        final shouldUseDark = themeState.themeMode.shouldUseDarkMode(context);
+        
         return Lottie.asset(
-          themeState.themeMode == AppThemeMode.dark ? "assets/anim/LOCKB.json" : "assets/anim/LOCK.json",
+          shouldUseDark ? "assets/anim/LOCKB.json" : "assets/anim/LOCK.json",
           width: 100,
           repeat: false,
           fit: BoxFit.fill,
@@ -54,6 +57,7 @@ class ModalDialog extends StatelessWidget {
       }
     );
   }
+
 
   @override
   Widget build(BuildContext context) {

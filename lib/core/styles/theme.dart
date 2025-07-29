@@ -34,20 +34,17 @@ ThemeData getAppTheme(Brightness brightness) {
       bodyLarge: GoogleFonts.roboto(
         fontSize: 35,
         fontWeight: FontWeight.w600,
-        letterSpacing: -0.15,
         height: 1.2,
         color: isDark ? AppColorsDark.textPrimary : AppColors.textPrimary,
       ),
       bodyMedium: GoogleFonts.roboto(
         fontSize: 20,
         fontWeight: FontWeight.w600,
-        letterSpacing: -0.15,
         color: isDark ? AppColorsDark.textPrimary : AppColors.textPrimary,
       ),
       bodySmall: GoogleFonts.roboto(
         fontSize: 17,
         fontWeight: FontWeight.w600,
-        letterSpacing: -0.15,
         color: isDark ? AppColorsDark.textPrimary : AppColors.textPrimary,
       ),
     ),

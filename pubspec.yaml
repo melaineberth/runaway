@@ -2,7 +2,7 @@ name: runaway
 description: "A new Flutter project."
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 
-version: 1.1.0+5
+version: 1.2.0+6
 
 environment:
   sdk: ^3.7.0
@@ -55,7 +55,6 @@ dependencies:
   pull_down_button: ^0.10.2
   cupertino_rounded_corners: ^2.1.1
   google_nav_bar: ^5.0.7
-  liquid_glass_renderer: ^0.1.1-dev.9
   flutter_svg: ^2.2.0
   url_launcher: ^6.3.1
   open_mail_launcher: ^0.1.0

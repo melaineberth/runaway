@@ -119,6 +119,8 @@ class MockRoutesRepository extends _i1.Mock implements _i6.RoutesRepository {
   @override
   _i7.Future<List<_i2.SavedRoute>> getUserRoutes({
     bool? forceRefresh = false,
+    int? limit,
+    int? offset,
   }) =>
       (super.noSuchMethod(
             Invocation.method(#getUserRoutes, [], {

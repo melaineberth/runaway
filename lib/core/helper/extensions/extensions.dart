@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:runaway/core/blocs/theme_bloc/theme_bloc.dart';
 import 'package:runaway/core/styles/colors.dart';
 import 'package:runaway/core/helper/services/session_manager.dart';
 import 'package:runaway/features/route_generator/data/services/route_export_service.dart';
@@ -164,6 +165,21 @@ extension RouteFormatDescL10n on RouteExportFormat {
         return l10n.gpxFormatDescription; // clé ARB : "statusPending"
       case RouteExportFormat.kml:
         return l10n.kmlFormatDescription;
+    }
+  }
+}
+
+extension AppThemeModeExtension on AppThemeMode {
+  /// Détermine si ce mode de thème doit utiliser l'apparence sombre
+  /// en tenant compte du thème système pour le mode auto
+  bool shouldUseDarkMode(BuildContext context) {
+    switch (this) {
+      case AppThemeMode.dark:
+        return true;
+      case AppThemeMode.light:
+        return false;
+      case AppThemeMode.auto:
+        return context.isDarkMode;
     }
   }
 }

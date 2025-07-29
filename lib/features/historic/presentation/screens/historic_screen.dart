@@ -47,6 +47,14 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
   
   final List<Animation<double>> _slideAnimations = [];
   final List<Animation<double>> _scaleAnimations = [];
+
+  // 🆕 Variables pour LazyLoading
+  static const int _itemsPerPage = 8;
+  static const int _initialItemCount = 5;
+  List<SavedRoute> _allRoutes = [];
+  List<SavedRoute> _displayedRoutes = [];
+  bool _isLoadingMore = false;
+  bool _hasMoreData = true;
   
   // ⏱️ Gestion du loading minimum
   final bool _shouldShowLoading = false;
@@ -138,6 +146,44 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
   void _loadSavedRoutes() {
     LogConfig.logInfo('🔄 Chargement manuel des parcours via AppDataBloc');
     context.appDataBloc.add(const HistoricDataRefreshRequested());
+  }
+
+  // 🆕 Méthode pour charger plus d'éléments
+  void _loadMoreRoutes() {
+    if (_isLoadingMore || !_hasMoreData) return;
+
+    setState(() => _isLoadingMore = true);
+
+    // Simuler un délai de chargement léger pour l'UX
+    Future.delayed(const Duration(milliseconds: 300), () {
+      if (!mounted) return;
+
+      final currentCount = _displayedRoutes.length;
+      final remainingRoutes = _allRoutes.length - currentCount;
+      
+      if (remainingRoutes <= 0) {
+        setState(() {
+          _hasMoreData = false;
+          _isLoadingMore = false;
+        });
+        return;
+      }
+
+      final nextBatchSize = _itemsPerPage.clamp(0, remainingRoutes);
+      final nextBatch = _allRoutes
+          .skip(currentCount)
+          .take(nextBatchSize)
+          .toList();
+
+      setState(() {
+        _displayedRoutes.addAll(nextBatch);
+        _hasMoreData = _displayedRoutes.length < _allRoutes.length;
+        _isLoadingMore = false;
+      });
+
+      // Mettre à jour les animations pour les nouveaux éléments
+      _updateAnimationsForRoutes(_displayedRoutes.length);
+    });
   }
 
   /// Suppression d'un parcours avec confirmation
@@ -275,12 +321,30 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
 
   /// 🎭 Interface principale avec animations intégrées
   Widget _buildMainView(AppDataState appDataState, List<SavedRoute> routes) {    
-    // Mettre à jour les animations en fonction du nombre de routes
-    if (routes.isNotEmpty) {
-      _updateAnimationsForRoutes(routes.length);
+    // 🆕 Initialiser les routes pour LazyLoading si nécessaire
+    if (_allRoutes != routes) {
+      _allRoutes = routes;
+      _displayedRoutes = routes.take(_initialItemCount).toList();
+      _hasMoreData = routes.length > _initialItemCount;
+    }
+
+    // Déterminer si on doit utiliser LazyLoading (seuil : 12 routes)
+    final shouldUseLazyLoading = routes.length > 12;
+    final routesToDisplay = shouldUseLazyLoading ? _displayedRoutes : routes;
+
+    // Mettre à jour les animations en fonction du nombre de routes affichées
+    if (routesToDisplay.isNotEmpty) {
+      _updateAnimationsForRoutes(routesToDisplay.length);
     }
 
     return BlurryPage(
+      // 🆕 Paramètres LazyLoading
+      enableLazyLoading: shouldUseLazyLoading,
+      initialItemCount: _initialItemCount,
+      itemsPerPage: _itemsPerPage,
+      onLoadMore: _loadMoreRoutes,
+      isLoading: _isLoadingMore,
+      hasMoreData: _hasMoreData,
       children: [
         30.h,
         AnimatedBuilder(
@@ -309,7 +373,7 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
         
         15.h,
 
-        _buildAnimatedRoutesList(routes),
+        _buildAnimatedRoutesList(routesToDisplay),
       ],
     );
   }

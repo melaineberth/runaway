@@ -13,6 +13,14 @@ class BlurryPage extends StatefulWidget {
   final ScrollPhysics? physics;
   final Axis scrollDirection;
 
+  // 🆕 Paramètres pour LazyLoading
+  final bool enableLazyLoading;
+  final int initialItemCount;
+  final int itemsPerPage;
+  final VoidCallback? onLoadMore;
+  final bool isLoading;
+  final bool hasMoreData;
+
   /// Callback appelé quand l'état de scroll change (true = scrollé, false = en haut)
   final ValueChanged<bool>? onScrollStateChanged;
 
@@ -31,6 +39,13 @@ class BlurryPage extends StatefulWidget {
     this.onScrollStateChanged,
     this.onScrollControllerReady,
     this.scrollDirection = Axis.vertical,
+    // 🆕 Paramètres LazyLoading par défaut
+    this.enableLazyLoading = false,
+    this.initialItemCount = 10,
+    this.itemsPerPage = 10,
+    this.onLoadMore,
+    this.isLoading = false,
+    this.hasMoreData = true,
   });
 
   @override
@@ -46,9 +61,18 @@ class _BlurryPageState extends State<BlurryPage> with TickerProviderStateMixin {
   bool _isCutByLeft = false; // 🆕 si scroll horizontal
   bool _isCutByRight = false; // 🆕 si scroll horizontal
 
+  // 🆕 Variables pour LazyLoading
+  int _currentItemCount = 0;
+  bool _isLoadingMore = false;
+
   @override
   void initState() {
     super.initState();
+
+    // 🆕 Initialiser le nombre d'éléments pour LazyLoading
+    _currentItemCount = widget.enableLazyLoading 
+      ? widget.initialItemCount 
+      : widget.children.length;
 
     // Animation controller pour la transition graduelle du flou
     _blurAnimationController = AnimationController(
@@ -66,14 +90,52 @@ class _BlurryPageState extends State<BlurryPage> with TickerProviderStateMixin {
       ),
     );
 
-    _scrollController = ScrollController()
-      ..addListener(() => _updateEdgeState(_scrollController.position));
+    _scrollController = ScrollController();
+    
+    // 🆕 Listener pour détection fin de liste
+    if (widget.enableLazyLoading) {
+      _scrollController.addListener(_checkForLoadMore);
+    }
 
-    // Exposer le controller au parent après l'initialisation
+    _scrollController.addListener(_onScroll);
+
+    widget.onScrollControllerReady?.call(_scrollController);
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _updateEdgeState(_scrollController.position);
-      widget.onScrollControllerReady?.call(_scrollController);
+      if (mounted) {
+        _updateEdgeState(_scrollController.position);
+      }
     });
+  }
+
+  // 🆕 Méthode pour détecter quand charger plus d'éléments
+  void _checkForLoadMore() {
+    if (!widget.enableLazyLoading || 
+        _isLoadingMore || 
+        !widget.hasMoreData || 
+        widget.onLoadMore == null) {
+      return;
+    }
+
+    final scrollController = _scrollController;
+    const threshold = 200.0; // Déclencher le chargement 200px avant la fin
+
+    if (scrollController.position.pixels >= 
+        scrollController.position.maxScrollExtent - threshold) {
+      
+      setState(() => _isLoadingMore = true);
+      
+      // Déclencher le chargement avec un délai pour éviter les doublons
+      Future.delayed(const Duration(milliseconds: 100), () {
+        if (mounted && !widget.isLoading) {
+          widget.onLoadMore?.call();
+        }
+      });
+    }
+  }
+
+  void _onScroll() {
+    _updateEdgeState(_scrollController.position);
   }
 
   @override
@@ -81,6 +143,26 @@ class _BlurryPageState extends State<BlurryPage> with TickerProviderStateMixin {
     _scrollController.dispose();
     _blurAnimationController.dispose();
     super.dispose();
+  }
+
+  @override
+  void didUpdateWidget(BlurryPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    
+    // 🆕 Mettre à jour le compteur d'éléments
+    if (widget.enableLazyLoading) {
+      final newCount = (_currentItemCount + widget.itemsPerPage)
+          .clamp(0, widget.children.length);
+      
+      if (oldWidget.isLoading && !widget.isLoading) {
+        setState(() {
+          _currentItemCount = newCount;
+          _isLoadingMore = false;
+        });
+      }
+    } else {
+      _currentItemCount = widget.children.length;
+    }
   }
 
   // Calcule la visibilité des bords
@@ -125,6 +207,45 @@ class _BlurryPageState extends State<BlurryPage> with TickerProviderStateMixin {
     }
   }
 
+  // 🆕 Construire la liste avec LazyLoading
+  Widget _buildLazyLoadingList() {
+    final displayItemCount = _currentItemCount.clamp(0, widget.children.length);
+    final displayItems = widget.children.take(displayItemCount).toList();
+
+    // Ajouter un indicateur de chargement si nécessaire
+    if (widget.hasMoreData && displayItemCount < widget.children.length) {
+      displayItems.add(_buildLoadingIndicator());
+    }
+
+    return ListView(
+      controller: _scrollController,
+      scrollDirection: widget.scrollDirection,
+      physics: widget.physics,
+      shrinkWrap: widget.shrinkWrap,
+      padding: widget.contentPadding,
+      children: displayItems,
+    );
+  }
+
+  // 🆕 Indicateur de chargement simple
+  Widget _buildLoadingIndicator() {
+    return Container(
+      padding: const EdgeInsets.all(16.0),
+      child: Center(
+        child: SizedBox(
+          width: 24,
+          height: 24,
+          child: CircularProgressIndicator(
+            strokeWidth: 2,
+            valueColor: AlwaysStoppedAnimation<Color>(
+              context.adaptivePrimary.withValues(alpha: 0.7),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Stack(
@@ -146,14 +267,18 @@ class _BlurryPageState extends State<BlurryPage> with TickerProviderStateMixin {
                       _updateEdgeState(n.metrics); // <— met à jour même sans déplacement
                       return false;
                     },
-                    child: widget.child ??
-                    ListView(
-                      controller: _scrollController,
-                      scrollDirection: widget.scrollDirection,
-                      physics: widget.physics,
-                      shrinkWrap: widget.shrinkWrap,
-                      padding: widget.contentPadding,
-                      children: widget.children,
+                    child: widget.child ?? 
+                    // 🆕 Utiliser la liste LazyLoading si activée
+                    (widget.enableLazyLoading 
+                      ? _buildLazyLoadingList()
+                      : ListView(
+                          controller: _scrollController,
+                          scrollDirection: widget.scrollDirection,
+                          physics: widget.physics,
+                          shrinkWrap: widget.shrinkWrap,
+                          padding: widget.contentPadding,
+                          children: widget.children,
+                        )
                     ),
                   ),
                 ),

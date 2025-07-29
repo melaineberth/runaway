@@ -1149,14 +1149,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "5.1.1"
-  liquid_glass_renderer:
-    dependency: "direct main"
-    description:
-      name: liquid_glass_renderer
-      sha256: "060c29c804fb7aa7dd73901eaaedb5ba89cd431ca663c4fe7b8d6eefca685977"
-      url: "https://pub.dev"
-    source: hosted
-    version: "0.1.1-dev.9"
   loading_animation_widget:
     dependency: "direct main"
     description:
@@ -2204,4 +2196,4 @@ packages:
     version: "2.1.0"
 sdks:
   dart: ">=3.8.0 <4.0.0"
-  flutter: ">=3.32.4"
+  flutter: ">=3.30.0"

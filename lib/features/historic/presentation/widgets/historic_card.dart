@@ -355,6 +355,7 @@ class _HistoricCardState extends State<HistoricCard> {
                           icon: HugeIcons.solidRoundedPlant01,
                           text: widget.route.parameters.urbanDensity.label(context),
                         ),
+                        5.w,
                         if (widget.route.parameters.elevationGain > 0) ...[
                           _buildDetailChip(
                             icon: HugeIcons.solidRoundedSine02,
@@ -384,7 +385,7 @@ class _HistoricCardState extends State<HistoricCard> {
                           ),
                           5.w,
                         ],
-                        // 🆕 AJOUT : Score paysage si supérieur à 6
+                        // Score paysage si supérieur à 6
                         if (widget.route.metrics.scenicScore > 6) ...[
                           _buildDetailChip(
                             icon: HugeIcons.solidRoundedImage01,
@@ -392,7 +393,7 @@ class _HistoricCardState extends State<HistoricCard> {
                           ),
                           5.w,
                         ],
-                        // 🆕 AJOUT : Pente maximale si supérieure à 5%
+                        // Pente maximale si supérieure à 5%
                         if (widget.route.metrics.maxIncline > 5) ...[
                           _buildDetailChip(
                             icon: HugeIcons.solidRoundedChart03,
@@ -422,7 +423,7 @@ class _HistoricCardState extends State<HistoricCard> {
     );
   }
 
-  /// 📱 Affiche l'état de chargement de l'image avec shimmer
+  /// Affiche l'état de chargement de l'image avec shimmer
   Widget _buildLoadingState() {
     const double innerRadius = 30.0;
     
@@ -445,7 +446,7 @@ class _HistoricCardState extends State<HistoricCard> {
     );
   }
 
-  // 🆕 Menu d'actions (existant)
+  // Menu d'actions (existant)
   Widget _buildActionMenu() {
     return PullDownButton(
       itemBuilder: (context) => [
@@ -483,71 +484,29 @@ class _HistoricCardState extends State<HistoricCard> {
 
   Widget _buildRouteImage() {
     return CachedNetworkImage(
-        imageUrl: widget.route.imageUrl!,
-        width: double.infinity,
-        height: double.infinity,
-        fit: BoxFit.fitHeight,
-        progressIndicatorBuilder: (context, url, progress) {
-          return _buildLoadingState();
-        },
-        placeholder: (context, url) {
-          return Container(
-            color: Colors.red,
-            child: Icon(getActivityIcon(widget.route.parameters.activityType.id)),
-          );
-        },
-        errorListener: (value) {
-          LogConfig.logError('❌ Erreur chargement image: $value');
-          // Marquer l'erreur et afficher le fallback
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (mounted) {
-              setState(() {
-                _hasImageError = true;
-                _isImageLoading = false;
-              });
-            }
-          });
-        },
-      );
-    
-    // return Image.network(
-    //   widget.route.imageUrl!,
-    //   width: double.infinity,
-    //   height: double.infinity,
-    //   fit: BoxFit.fitHeight,
-    //   loadingBuilder: (context, child, loadingProgress) {
-    //     if (loadingProgress == null) {
-    //       // Image chargée avec succès
-    //       WidgetsBinding.instance.addPostFrameCallback((_) {
-    //         if (mounted) {
-    //           setState(() {
-    //             _isImageLoading = false;
-    //             _hasImageError = false;
-    //           });
-    //         }
-    //       });
-    //       return child;
-    //     }
-    //     // 🆕 En cours de chargement - Afficher shimmer au lieu du CircularProgressIndicator
-    //     return _buildLoadingState(loadingProgress);
-    //   },
-    //   errorBuilder: (context, error, stackTrace) {
-    //     LogConfig.logError('❌ Erreur chargement image: $error');
-    //     // Marquer l'erreur et afficher le fallback
-    //     WidgetsBinding.instance.addPostFrameCallback((_) {
-    //       if (mounted) {
-    //         setState(() {
-    //           _hasImageError = true;
-    //           _isImageLoading = false;
-    //         });
-    //       }
-    //     });
-    //     return _buildActivityFallback();
-    //   },
-    // );
+      imageUrl: widget.route.imageUrl!,
+      width: double.infinity,
+      height: double.infinity,
+      fit: BoxFit.fitHeight,
+      placeholder: (context, url) {
+        return _buildLoadingState();
+      },
+      errorListener: (value) {
+        LogConfig.logError('❌ Erreur chargement image: $value');
+        // Marquer l'erreur et afficher le fallback
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            setState(() {
+              _hasImageError = true;
+              _isImageLoading = false;
+            });
+          }
+        });
+      },
+    );    
   }
 
-  /// 🆕 Retourne le nom de la localisation (implémentation complète)
+  /// Retourne le nom de la localisation (implémentation complète)
   String _getLocationName() {
     return _locationName ?? 'Mars';
   }
