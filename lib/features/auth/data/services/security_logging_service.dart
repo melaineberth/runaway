@@ -40,6 +40,7 @@ class SecurityLoggingService {
       tags: {
         'success': success.toString(),
         'has_reason': (reason != null).toString(),
+        'data': logData,
       },
     );
   }
@@ -70,6 +71,7 @@ class SecurityLoggingService {
       tags: {
         'success': success.toString(),
         'has_reason': (reason != null).toString(),
+        'data': logData,
       },
     );
   }
