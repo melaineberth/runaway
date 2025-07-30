@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:runaway/core/helper/extensions/extensions.dart';
 
@@ -18,6 +19,8 @@ class RoundedTextField extends StatefulWidget {
   final String? suffixText;
   final String? initialValue;
   final FocusNode? focusNode;
+  final TextAlign textAlign;
+  final List<TextInputFormatter>? inputFormatters;
   
   const RoundedTextField({
     super.key,
@@ -36,6 +39,8 @@ class RoundedTextField extends StatefulWidget {
     this.maxLines = 1,
     this.suffixText,
     this.initialValue,
+    this.inputFormatters,
+    this.textAlign = TextAlign.start,
   });
 
   @override
@@ -64,6 +69,8 @@ class _RoundedTextFieldState extends State<RoundedTextField> {
             onTapOutside: (event) {
               FocusManager.instance.primaryFocus?.unfocus();
             },
+            inputFormatters: widget.inputFormatters,
+            textAlign: widget.textAlign,
             controller: widget.controller,
             style: context.bodyMedium?.copyWith(
               fontWeight: FontWeight.w400,

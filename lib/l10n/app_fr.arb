@@ -1631,7 +1631,7 @@
   "@checkEmail": {
     "description": "Invite à vérifier la boîte mail"
   },
-  "successSentConfirmationLink": "Nous avons envoyé un lien de confirmation à {email}. Cliquez sur le lien pour activer votre compte.",
+  "successSentConfirmationLink": "Nous avons envoyé un code de vérification à l'adresse {email}",
   "@successSentConfirmationLink": {
     "placeholders": {
       "email": {

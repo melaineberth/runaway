@@ -14,11 +14,13 @@ import 'package:runaway/core/utils/constant/constants.dart';
 import 'package:runaway/core/utils/injections/service_locator.dart';
 import 'package:runaway/core/widgets/squircle_btn.dart';
 import 'package:runaway/core/widgets/squircle_container.dart';
+import 'package:runaway/core/widgets/top_snackbar.dart';
 import 'package:runaway/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:runaway/features/auth/presentation/bloc/auth_event.dart';
 import 'package:runaway/features/auth/presentation/bloc/auth_state.dart';
 import 'package:runaway/features/auth/presentation/screens/login_screen.dart';
 import 'package:runaway/features/auth/presentation/screens/signup_screen.dart';
+import 'package:top_snackbar_flutter/top_snack_bar.dart';
 
 class AuthScreen extends StatefulWidget {
   final int initialIndex;
@@ -128,6 +130,13 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
 
           } else if (authState is AuthError) {
             LogConfig.logError(authState.message);
+            showTopSnackBar(
+              Overlay.of(context), 
+              TopSnackBar(
+                isError: true,
+                title: authState.message,
+              )
+            );
           }
         },
         child: SizedBox(

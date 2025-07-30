@@ -1202,7 +1202,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String successSentConfirmationLink(String email) {
-    return 'We have sent a confirmation link to $email. Click on the link in the email to activate your account.';
+    return 'We have sent a verification code to $email';
   }
 
   @override

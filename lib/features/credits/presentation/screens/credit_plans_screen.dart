@@ -168,7 +168,7 @@ class _CreditPlansScreenState extends State<CreditPlansScreen> with TickerProvid
                       showTopSnackBar(
                         Overlay.of(context),
                         TopSnackBar(
-                          title: "Achat réussi",
+                          title: context.l10n.purchaseSuccess,
                         ),
                       );
                     }

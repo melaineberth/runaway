@@ -387,7 +387,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         }
       } catch (e) {
         LogConfig.logError('❌ Erreur stream auth: $e');
-        emit(AuthError('Erreur de connexion: $e'));
+        emit(AuthError(e.toString()));
       }
     });
   }

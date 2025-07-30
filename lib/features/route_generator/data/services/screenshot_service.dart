@@ -1,6 +1,5 @@
-import 'dart:convert'; // 🆕 Import manquant pour jsonEncode
+import 'dart:convert'; 
 import 'dart:typed_data';
-import 'dart:ui' as ui;
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart';
@@ -104,15 +103,15 @@ class ScreenshotService {
           return null;
         }
 
-        // 🆕 Post-traitement pour enlever le logo Mapbox (optionnel)
-        final processedImageBytes = await _removeMapboxLogo(rawImageBytes);
-        final imageBytes = processedImageBytes ?? rawImageBytes;
+        // // 🆕 Post-traitement pour enlever le logo Mapbox (optionnel)
+        // final processedImageBytes = await _removeMapboxLogo(rawImageBytes);
+        // final imageBytes = processedImageBytes ?? rawImageBytes;
 
-        LogConfig.logInfo('Image capturée: ${imageBytes.length} bytes');
+        LogConfig.logInfo('Image capturée: ${rawImageBytes.length} bytes');
 
         // 11. Upload vers Supabase Storage
         final imageUrl = await _uploadScreenshotToStorage(
-          imageBytes: imageBytes,
+          imageBytes: rawImageBytes,
           routeId: routeId,
           userId: realUserId,
         );
@@ -372,61 +371,6 @@ class ScreenshotService {
     } catch (e) {
       LogConfig.logError('❌ Erreur suppression screenshot: $e');
       return false;
-    }
-  }
-
-  /// 🆕 Enlève le logo Mapbox par recadrage de l'image
-  static Future<Uint8List?> _removeMapboxLogo(Uint8List imageBytes) async {
-    try {
-      // Décoder l'image
-      final codec = await ui.instantiateImageCodec(imageBytes);
-      final frame = await codec.getNextFrame();
-      final originalImage = frame.image;
-      
-      // Dimensions originales
-      final originalWidth = originalImage.width;
-      final originalHeight = originalImage.height;
-      
-      // Zone à recadrer (enlever ~80px en bas pour le logo/attributions)
-      const cropBottomPixels = 30;
-      final newHeight = originalHeight - cropBottomPixels;
-      
-      if (newHeight <= 0) {
-        LogConfig.logInfo('Image trop petite pour recadrage');
-        return null;
-      }
-      
-      // Créer une nouvelle image recadrée
-      final recorder = ui.PictureRecorder();
-      final canvas = Canvas(recorder);
-      
-      // Dessiner la partie de l'image sans le logo
-      canvas.drawImageRect(
-        originalImage,
-        Rect.fromLTWH(0, 0, originalWidth.toDouble(), newHeight.toDouble()),
-        Rect.fromLTWH(0, 0, originalWidth.toDouble(), newHeight.toDouble()),
-        Paint(),
-      );
-      
-      final picture = recorder.endRecording();
-      final croppedImage = await picture.toImage(originalWidth, newHeight);
-      
-      // Convertir en bytes PNG
-      final byteData = await croppedImage.toByteData(format: ui.ImageByteFormat.png);
-      if (byteData == null) return null;
-      
-      final croppedBytes = byteData.buffer.asUint8List();
-      
-      // Nettoyer les ressources
-      originalImage.dispose();
-      croppedImage.dispose();
-      
-      LogConfig.logInfo('Logo Mapbox retiré par recadrage ($originalHeight -> ${newHeight}px)');
-      return croppedBytes;
-      
-    } catch (e) {
-      LogConfig.logError('❌ Erreur recadrage image: $e');
-      return null;
     }
   }
 }

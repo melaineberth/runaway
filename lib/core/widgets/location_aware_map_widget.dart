@@ -1,5 +1,3 @@
-// ignore_for_file: unused_label
-
 import 'package:flutter/material.dart';
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart' as mp;
 import 'package:geolocator/geolocator.dart' as gl;
@@ -40,6 +38,9 @@ class _LocationAwareMapWidgetState extends State<LocationAwareMapWidget> with Ti
   // Animations
   late AnimationController _fadeController;
   late Animation<double> _fadeAnimation;
+
+  // 🆕 Référence à la carte pour recentrer après récupération position
+  mp.MapboxMap? _mapboxMap;
 
   @override
   void initState() {
@@ -101,9 +102,11 @@ class _LocationAwareMapWidgetState extends State<LocationAwareMapWidget> with Ti
           setState(() {
             _initialPosition = position;
             _isPositionReady = true; // 🔧 PERMETTRE l'affichage de la carte
-            _defaultLatitude: position.longitude;
-            _defaultLongitude: position.longitude;
           });
+          
+          // 🆕 RECENTRER la carte si elle existe déjà
+          _recenterMapOnPosition(position);
+          
           LogConfig.logSuccess('✅ Position trouvée depuis le service: ${position.latitude}, ${position.longitude}');
           return;
         }
@@ -131,6 +134,10 @@ class _LocationAwareMapWidgetState extends State<LocationAwareMapWidget> with Ti
           _initialPosition = position;
           _isPositionReady = true; // 🔧 PERMETTRE l'affichage de la carte
         });
+        
+        // 🆕 RECENTRER la carte si elle existe déjà
+        _recenterMapOnPosition(position);
+        
         LogConfig.logSuccess('✅ Géolocalisation directe réussie: ${position.latitude}, ${position.longitude}');
       }
       
@@ -145,19 +152,22 @@ class _LocationAwareMapWidgetState extends State<LocationAwareMapWidget> with Ti
     }
   }
 
-  /// Gestion des erreurs de géolocalisation avec détection des permissions
-  void _handleLocationError(dynamic error) {
-    final errorMessage = error.toString().toLowerCase();
-    
-    // Détecter spécifiquement les erreurs de permissions
-    if (errorMessage.contains('permission') && 
-        (errorMessage.contains('refusée') || errorMessage.contains('denied'))) {
-      
-      LogConfig.logError('🚨 Permissions géolocalisation refusées - notification du parent');
-      
-      // Notifier le parent que les permissions sont refusées
-      if (widget.onLocationPermissionDenied != null) {
-        widget.onLocationPermissionDenied!();
+  /// 🆕 Recentrer la carte sur une position donnée
+  Future<void> _recenterMapOnPosition(gl.Position position) async {
+    if (_mapboxMap != null) {
+      try {
+        await _mapboxMap!.flyTo(
+          mp.CameraOptions(
+            center: mp.Point(
+              coordinates: mp.Position(position.longitude, position.latitude),
+            ),
+            zoom: 12.0,
+          ),
+          mp.MapAnimationOptions(duration: 1000),
+        );
+        LogConfig.logInfo('🎯 Carte recentrée sur position utilisateur: ${position.latitude}, ${position.longitude}');
+      } catch (e) {
+        LogConfig.logError('❌ Erreur lors du recentrage de la carte: $e');
       }
     }
   }
@@ -181,6 +191,37 @@ class _LocationAwareMapWidgetState extends State<LocationAwareMapWidget> with Ti
     });
     
     LogConfig.logInfo('📍 Position par défaut définie: Paris ($_defaultLatitude, $_defaultLongitude)');
+  }
+
+  /// Gestion des erreurs de géolocalisation avec détection des permissions
+  void _handleLocationError(dynamic error) {
+    final errorMessage = error.toString().toLowerCase();
+    
+    // Détecter spécifiquement les erreurs de permissions
+    if (errorMessage.contains('permission') && 
+        (errorMessage.contains('refusée') || errorMessage.contains('denied'))) {
+      
+      LogConfig.logError('🚨 Permissions géolocalisation refusées - notification du parent');
+      
+      // Notifier le parent que les permissions sont refusées
+      if (widget.onLocationPermissionDenied != null) {
+        widget.onLocationPermissionDenied!();
+      }
+    }
+  }
+
+  /// 🆕 Callback quand la carte est créée
+  void _onMapCreated(mp.MapboxMap mapboxMap) {
+    _mapboxMap = mapboxMap;
+    
+    // Si on a déjà une position utilisateur, recentrer dessus
+    if (_initialPosition != null && 
+        (_initialPosition!.latitude != _defaultLatitude || _initialPosition!.longitude != _defaultLongitude)) {
+      _recenterMapOnPosition(_initialPosition!);
+    }
+    
+    // Appeler le callback parent
+    widget.onMapCreated(mapboxMap);
   }
 
   @override
@@ -209,7 +250,7 @@ class _LocationAwareMapWidgetState extends State<LocationAwareMapWidget> with Ti
           pitch: 0.0,
           bearing: 0.0,
         ),
-        onMapCreated: widget.onMapCreated,
+        onMapCreated: _onMapCreated, // 🆕 Utiliser notre callback
       ),
     );
   }

@@ -461,6 +461,7 @@ class _CreditPlanModalState extends State<CreditPlanModal> {
         SquircleBtn(
           isPrimary: true,
           isLoading: _isPurchaseInProgress,
+          isDisabled: selectedPlanId == null,
           onTap: selectedPlanId != null && !_isPurchaseInProgress ? () {
             // Récupérer le plan sélectionné depuis appDataState
             final selectedPlan = appDataState.activePlans.firstWhere(

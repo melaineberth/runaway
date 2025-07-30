@@ -7,7 +7,9 @@ import 'package:runaway/core/utils/connectivity_helper.dart';
 import 'package:runaway/core/utils/constant/constants.dart';
 import 'package:runaway/core/widgets/list_header.dart';
 import 'package:runaway/core/widgets/modal_sheet.dart';
+import 'package:runaway/core/widgets/rounded_text_field.dart';
 import 'package:runaway/core/widgets/squircle_btn.dart';
+import 'package:runaway/core/widgets/squircle_container.dart';
 import 'package:runaway/core/widgets/top_snackbar.dart';
 import 'package:runaway/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:runaway/features/auth/presentation/bloc/auth_state.dart';
@@ -282,106 +284,32 @@ class _ForgotPasswordDialogState extends State<ForgotPasswordDialog> {
       case ForgotPasswordStep.code:
         return Column(
           children: [
-            TextField(
-              controller: _codeController,
-              keyboardType: TextInputType.number,
-              textAlign: TextAlign.center,
-              maxLength: 6,
-              inputFormatters: [
-                FilteringTextInputFormatter.digitsOnly,
-              ],
-              style: context.bodyMedium?.copyWith(
-                fontSize: 24,
-                fontWeight: FontWeight.w600,
-                letterSpacing: 8,
+            SquircleContainer(
+              radius: 50.0,
+              gradient: false,
+              padding: EdgeInsets.symmetric(
+                horizontal: 15.0,
+                vertical: 5.0,
               ),
-              decoration: InputDecoration(
-                counterText: '',
-                hintText: '000000',
-                hintStyle: context.bodyMedium?.copyWith(
-                  fontSize: 24,
-                  fontWeight: FontWeight.w300,
-                  letterSpacing: 8,
-                  color: context.adaptiveTextSecondary.withValues(alpha: 0.3),
-                ),
-                filled: true,
-                fillColor: context.adaptiveTextSecondary.withValues(alpha: 0.05),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide.none,
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(
-                    color: context.adaptivePrimary,
-                    width: 2,
-                  ),
-                ),
-                errorBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(
-                    color: context.colorScheme.error,
-                    width: 2,
-                  ),
-                ),
-              ),
-              onChanged: (value) {
-                // Effacer l'erreur quand l'utilisateur tape
-                if (_codeError != null) {
-                  setState(() {
-                    _codeError = null;
-                  });
-                }
-              },
-            ),
-            if (_codeVerifying) ...[
-              8.h,
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      valueColor: AlwaysStoppedAnimation<Color>(
-                        context.adaptivePrimary,
-                      ),
-                    ),
-                  ),
-                  8.w,
-                  Text(
-                    context.l10n.verfyPasswordInProgress,
-                    style: context.bodySmall?.copyWith(
-                      color: context.adaptiveTextSecondary,
-                      fontStyle: FontStyle.italic,
-                    ),
-                  ),
+              color: context.adaptiveDisabled.withValues(alpha: 0.08),
+              child: RoundedTextField(
+                controller: _codeController,
+                keyboardType: TextInputType.number,
+                textAlign: TextAlign.center,
+                inputFormatters: [
+                  FilteringTextInputFormatter.digitsOnly,
                 ],
-                
-              ),
-            ],
-            10.h,
-            // 🆕 Option pour redemander un code si expiré
-            if (_showRetryOption) ...[
-              TextButton(
-                onPressed: () {
-                  setState(() {
-                    _currentStep = ForgotPasswordStep.email;
-                    _showRetryOption = false;
-                    _codeController.clear();
-                  });
+                hint: '000000',
+                onChanged: (value) {
+                  // Effacer l'erreur quand l'utilisateur tape
+                  if (_codeError != null) {
+                    setState(() {
+                      _codeError = null;
+                    });
+                  }
                 },
-                child: Text(
-                  context.l10n.requestNewCode,
-                  style: context.bodySmall?.copyWith(
-                    color: context.adaptivePrimary,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
               ),
-              5.h,
-            ],
+            ),
           ],
         );
       case ForgotPasswordStep.newPassword:
@@ -423,8 +351,8 @@ class _ForgotPasswordDialogState extends State<ForgotPasswordDialog> {
         
         return SquircleBtn(
           isPrimary: true,
-          isLoading: isLoading,
-          onTap: isLoading ? null : _handleSubmit,
+          isLoading: (isLoading || _codeVerifying),
+          onTap: (isLoading || _codeVerifying) ? null : _handleSubmit,
           label: buttonText,
         );
       },

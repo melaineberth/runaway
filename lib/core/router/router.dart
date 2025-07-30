@@ -303,21 +303,21 @@ class AuthWrapper extends StatelessWidget {
           // Erreur d'authentification, afficher un message
           LogConfig.logError('❌ Erreur d\'authentification: ${authState.message}');
           
-          // 🔧 CORRECTION: Délai pour éviter les conflits avec la navigation
+          // Délai pour éviter les conflits avec la navigation
           Future.delayed(const Duration(milliseconds: 200), () {
             if (context.mounted) {
               showTopSnackBar(
                 Overlay.of(context),
                 TopSnackBar(
                   isError: true,
-                  title: 'Erreur d\'authentification: ${authState.message}',
+                  title: authState.message,
                 ),
               );
             }
           });
         }
         
-        // 🔧 CORRECTION: Gérer l'état de chargement
+        // Gérer l'état de chargement
         if (authState is AuthLoading) {
           LogConfig.logInfo('⏳ Authentification en cours...');
         }

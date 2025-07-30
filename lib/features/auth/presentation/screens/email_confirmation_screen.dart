@@ -5,7 +5,9 @@ import 'package:go_router/go_router.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:runaway/core/helper/extensions/extensions.dart';
 import 'package:runaway/core/utils/injections/bloc_provider_extension.dart';
+import 'package:runaway/core/widgets/rounded_text_field.dart';
 import 'package:runaway/core/widgets/squircle_btn.dart';
+import 'package:runaway/core/widgets/squircle_container.dart';
 import 'package:runaway/core/widgets/top_snackbar.dart';
 import 'package:runaway/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:runaway/features/auth/presentation/bloc/auth_event.dart';
@@ -67,16 +69,6 @@ class _EmailConfirmationScreenState extends State<EmailConfirmationScreen> {
       }
     }
   }
-
-  // void _resendEmail() {
-  //   if (_canResend && !_isResending) {
-  //     setState(() {
-  //       _isResending = true;
-  //     });
-      
-  //     context.authBloc.add(ResendConfirmationRequested(email: widget.email));
-  //   }
-  // }
 
   // Validation et vérification OTP
   void _verifyOTP() {
@@ -178,9 +170,8 @@ class _EmailConfirmationScreenState extends State<EmailConfirmationScreen> {
                 _buildSubtitle(),
                 32.h,
                 _buildOTPField(),
-                16.h,
+                const Spacer(),
                 _buildVerifyButton(),
-                const Spacer(flex: 2),
               ],
             ),
           ),
@@ -190,17 +181,14 @@ class _EmailConfirmationScreenState extends State<EmailConfirmationScreen> {
   }
 
   Widget _buildEmailIcon() {
-    return Container(
-      width: 80,
-      height: 80,
-      decoration: BoxDecoration(
-        color: context.adaptivePrimary.withValues(alpha: 0.1),
-        shape: BoxShape.circle,
-      ),
+    return SquircleContainer(     
+      isGlow: true,         
+      color: context.adaptivePrimary,
+      padding: EdgeInsets.all(30.0),
       child: Icon(
         HugeIcons.strokeRoundedMail01,
-        size: 40,
-        color: context.adaptivePrimary,
+        size: 50,
+        color: Colors.white,
       ),
     );
   }
@@ -242,69 +230,35 @@ class _EmailConfirmationScreenState extends State<EmailConfirmationScreen> {
           ),
         ),
         8.h,
-        TextField(
-          controller: _otpController,
-          focusNode: _otpFocusNode,
-          keyboardType: TextInputType.number,
-          textAlign: TextAlign.center,
-          maxLength: 6,
-          inputFormatters: [
-            FilteringTextInputFormatter.digitsOnly,
-          ],
-          style: context.bodyMedium?.copyWith(
-            fontSize: 24,
-            fontWeight: FontWeight.w600,
-            letterSpacing: 8,
+        SquircleContainer(
+          radius: 50.0,
+          gradient: false,
+          padding: EdgeInsets.symmetric(
+            horizontal: 15.0,
+            vertical: 5.0,
           ),
-          decoration: InputDecoration(
-            counterText: '',
-            hintText: '000000',
-            hintStyle: context.bodyMedium?.copyWith(
-              fontSize: 24,
-              fontWeight: FontWeight.w300,
-              letterSpacing: 8,
-              color: context.adaptiveTextSecondary.withValues(alpha: 0.3),
-            ),
-            filled: true,
-            fillColor: context.adaptiveTextSecondary.withValues(alpha: 0.05),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide.none,
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(
-                color: context.adaptivePrimary,
-                width: 2,
-              ),
-            ),
-            errorBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(
-                color: context.colorScheme.error,
-                width: 2,
-              ),
-            ),
-            focusedErrorBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(
-                color: context.colorScheme.error,
-                width: 2,
-              ),
-            ),
-            errorText: _otpError,
+          color: context.adaptiveDisabled.withValues(alpha: 0.08),
+          child: RoundedTextField(
+            controller: _otpController,
+            focusNode: _otpFocusNode,
+            keyboardType: TextInputType.number,
+            textAlign: TextAlign.center,
+            inputFormatters: [
+              FilteringTextInputFormatter.digitsOnly,
+            ],
+            hint: '000000',
+            onChanged: (value) {
+              if (_otpError != null) {
+                setState(() {
+                  _otpError = null;
+                });
+              }
+              // Auto-vérification quand 6 chiffres sont saisis
+              if (value.length == 6) {
+                _verifyOTP();
+              }
+            },
           ),
-          onChanged: (value) {
-            if (_otpError != null) {
-              setState(() {
-                _otpError = null;
-              });
-            }
-            // Auto-vérification quand 6 chiffres sont saisis
-            if (value.length == 6) {
-              _verifyOTP();
-            }
-          },
         ),
       ],
     );
@@ -320,6 +274,7 @@ class _EmailConfirmationScreenState extends State<EmailConfirmationScreen> {
         return SquircleBtn(
           isPrimary: true,
           isLoading: isLoading,
+          isDisabled: !hasValidCode,
           onTap: (hasValidCode && !isLoading) ? _verifyOTP : null,
           label: context.l10n.verify,
         );

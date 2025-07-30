@@ -17,33 +17,33 @@ import 'app_data_state.dart';
 /// BLoC principal pour orchestrer le pré-chargement et la gestion des données de l'application
 class AppDataBloc extends Bloc<AppDataEvent, AppDataState> {
   final RoutesRepository _routesRepository;
-  final MapStateService _mapStateService; // 🆕 Injection du service
-  final CreditsRepository _creditsRepository; // 🆕 Ajout du repository crédits
+  final MapStateService _mapStateService; // Injection du service
+  final CreditsRepository _creditsRepository; // Ajout du repository crédits
   
   // Cache avec expiration optimisé
   static const Duration _cacheExpiration = Duration(minutes: 30);
   DateTime? _lastCacheUpdate;
   DateTime? _lastHistoricUpdate;
-  DateTime? _lastCreditUpdate; // 🆕
+  DateTime? _lastCreditUpdate;
   
   // 🛡️ Protection contre les synchronisations multiples
   bool _isHistoricSyncInProgress = false;
-  bool _isCreditSyncInProgress = false; // 🆕
+  bool _isCreditSyncInProgress = false;
   bool _isFullSyncInProgress = false;
   
   // 🕒 Timing pour éviter les appels trop fréquents
   static const Duration _minSyncInterval = Duration(seconds: 5);
   DateTime? _lastHistoricSync;
-  DateTime? _lastCreditSync; // 🆕
+  DateTime? _lastCreditSync;
   DateTime? _lastFullSync;
 
   AppDataBloc({
     required RoutesRepository routesRepository,
     required MapStateService mapStateService,
-    required CreditsRepository creditsRepository, // 🆕 Paramètre requis
+    required CreditsRepository creditsRepository, // Paramètre requis
   })  : _routesRepository = routesRepository,
         _mapStateService = mapStateService,
-        _creditsRepository = creditsRepository, // 🆕
+        _creditsRepository = creditsRepository,
         super(const AppDataState()) {
     on<AppDataPreloadRequested>(_onPreloadRequested);
     on<AppDataRefreshRequested>(_onRefreshRequested);
@@ -59,7 +59,7 @@ class AppDataBloc extends Bloc<AppDataEvent, AppDataState> {
     on<SavedRouteDeletedFromAppData>(_onRouteDeleted);
     on<SavedRouteUsageUpdatedInAppData>(_onRouteUsageUpdated);
 
-    // 🆕 Handlers pour les crédits
+    // Handlers pour les crédits
     on<CreditDataRefreshRequested>(_onCreditDataRefresh);
     on<CreditDataPreloadRequested>(_onCreditDataPreload);
     on<CreditUsageCompletedInAppData>(_onCreditUsageCompleted);
@@ -79,7 +79,7 @@ class AppDataBloc extends Bloc<AppDataEvent, AppDataState> {
     await _onUserSessionChanged(event.newUserId, emit);
   }
 
-  /// 🆕 Nettoyage complet lors d'un changement d'utilisateur
+  /// Nettoyage complet lors d'un changement d'utilisateur
   Future<void> _onUserSessionChanged(
     String newUserId,
     Emitter<AppDataState> emit,
@@ -105,7 +105,7 @@ class AppDataBloc extends Bloc<AppDataEvent, AppDataState> {
     LogConfig.logInfo('✅ État AppDataBloc réinitialisé pour nouveau utilisateur');
   }
 
-  /// 🆕 Handler pour la synchronisation forcée
+  /// Handler pour la synchronisation forcée
   Future<void> _onCreditsForceSyncRequested(
     CreditsForceSyncRequested event,
     Emitter<AppDataState> emit,
@@ -325,7 +325,7 @@ class AppDataBloc extends Bloc<AppDataEvent, AppDataState> {
       final creditPlans = futures[1] as List<CreditPlan>;
       final transactions = futures[2] as List<CreditTransaction>;
 
-      // 🆕 Pré-charger les produits IAP pour les achats
+      // Pré-charger les produits IAP pour les achats
       try {
         await IAPService.preloadProducts(creditPlans);
         LogConfig.logInfo('Produits IAP pré-chargés pour ${creditPlans.length} plans');
@@ -525,11 +525,11 @@ class AppDataBloc extends Bloc<AppDataEvent, AppDataState> {
       // Charger les données en parallèle
       final futures = await Future.wait([
         _loadHistoricData(),
-        _loadCreditData(), // 🆕 Ajout des crédits
+        _loadCreditData(), // Ajout des crédits
       ]);
       
       final historicData = futures[0] as List<SavedRoute>?;
-      final creditData = futures[1] as CreditDataResult?; // 🆕
+      final creditData = futures[1] as CreditDataResult?;
 
       // Mettre à jour le cache
       final now = DateTime.now();
@@ -542,7 +542,7 @@ class AppDataBloc extends Bloc<AppDataEvent, AppDataState> {
         // Historique
         savedRoutes: historicData ?? [],
         
-        // 🆕 Crédits
+        // Crédits
         userCredits: creditData?.userCredits,
         creditPlans: creditData?.creditPlans ?? [],
         creditTransactions: creditData?.transactions ?? [],
@@ -562,7 +562,7 @@ class AppDataBloc extends Bloc<AppDataEvent, AppDataState> {
 
       MonitoringService.instance.finishOperation(operationId, success: true);
 
-      // 🆕 Métriques de performance des données
+      // Métriques de performance des données
       MonitoringService.instance.recordMetric(
         'app_data_loaded',
         1,
@@ -605,7 +605,7 @@ class AppDataBloc extends Bloc<AppDataEvent, AppDataState> {
       // Rafraîchir toutes les données
       await Future.wait([
         _refreshHistoricData(emit, showLoading: false),
-        _refreshCreditData(emit, showLoading: false), // 🆕
+        _refreshCreditData(emit, showLoading: false),
       ]);
 
       _lastCacheUpdate = DateTime.now();
@@ -629,7 +629,7 @@ class AppDataBloc extends Bloc<AppDataEvent, AppDataState> {
     }
   }
 
-  /// 🆕 Rafraîchissement optimisé des données d'historique
+  /// Rafraîchissement optimisé des données d'historique
   Future<void> _onHistoricDataRefresh(
     HistoricDataRefreshRequested event,
     Emitter<AppDataState> emit,
@@ -668,7 +668,7 @@ class AppDataBloc extends Bloc<AppDataEvent, AppDataState> {
     }
   }
 
-  /// 🆕 Synchronisation optimisée lors d'ajout de route
+  /// Synchronisation optimisée lors d'ajout de route
   Future<void> _onRouteAddedSync(
     RouteAddedDataSync event,
     Emitter<AppDataState> emit,
@@ -676,7 +676,7 @@ class AppDataBloc extends Bloc<AppDataEvent, AppDataState> {
     print('➕ Sync optimisée - Route ajoutée: ${event.routeName}');
   }
 
-  /// 🆕 Synchronisation optimisée lors de suppression de route
+  /// Synchronisation optimisée lors de suppression de route
   Future<void> _onRouteDeletedSync(
     RouteDeletedDataSync event,
     Emitter<AppDataState> emit,
@@ -701,7 +701,7 @@ class AppDataBloc extends Bloc<AppDataEvent, AppDataState> {
     }
   }
 
-  /// 🆕 Synchronisation forcée avec nettoyage complet
+  /// Synchronisation forcée avec nettoyage complet
   Future<void> _onForceDataSync(
     ForceDataSyncRequested event,
     Emitter<AppDataState> emit,
@@ -750,9 +750,9 @@ class AppDataBloc extends Bloc<AppDataEvent, AppDataState> {
     // Nettoyer tous les timestamps et verrous
     _lastCacheUpdate = null;
     _lastHistoricUpdate = null;
-    _lastCreditUpdate = null; // 🆕
+    _lastCreditUpdate = null;
     _lastHistoricSync = null;
-    _lastCreditSync = null; // 🆕
+    _lastCreditSync = null;
     _lastFullSync = null;
     _isHistoricSyncInProgress = false;
     _isFullSyncInProgress = false;
@@ -780,14 +780,14 @@ class AppDataBloc extends Bloc<AppDataEvent, AppDataState> {
   /// Vérifie si l'état contient des données complètes
   bool _hasCompleteData() {
     return state.hasHistoricData && 
-           state.isCreditDataLoaded; // 🆕
+           state.isCreditDataLoaded;
   }
 
   /// Accesseur pour vérifier si les données sont prêtes
   bool get isDataReady => state.isDataLoaded && !state.isLoading;
 }
 
-/// 🆕 Classe helper pour les résultats de crédits
+/// Classe helper pour les résultats de crédits
 class CreditDataResult {
   final UserCredits userCredits;
   final List<CreditPlan> creditPlans;

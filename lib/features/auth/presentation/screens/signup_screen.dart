@@ -206,52 +206,6 @@ class _SignupScreenState extends State<SignupScreen> {
                     controller: _confirmPasswordController,
                     enabled: !widget.isLoading && !_isAccountLocked,
                   ),
-
-                  // 🆕 Conseils de sécurité pour le mot de passe
-                  if (_showPasswordStrength) ...[
-                    10.h,
-                    Container(
-                      padding: EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: _getPasswordStrengthColor().withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: _getPasswordStrengthColor().withValues(alpha: 0.3)),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Icon(
-                                _getPasswordStrengthIcon(),
-                                color: _getPasswordStrengthColor(),
-                                size: 16,
-                              ),
-                              8.w,
-                              Text(
-                                _getPasswordStrengthText(),
-                                style: context.bodySmall?.copyWith(
-                                  fontWeight: FontWeight.w600,
-                                  color: _getPasswordStrengthColor(),
-                                  fontSize: 13,
-                                ),
-                              ),
-                            ],
-                          ),
-                          if (_passwordStrength == PasswordStrength.weak) ...[
-                            4.h,
-                            Text(
-                              'Recommandations: 8+ caractères, majuscules, minuscules, chiffres et symboles',
-                              style: context.bodySmall?.copyWith(
-                                color: context.adaptiveTextSecondary,
-                                fontSize: 12,
-                              ),
-                            ),
-                          ],
-                        ],
-                      ),
-                    ),
-                  ],
                 ],
               ),
               10.h,
@@ -315,40 +269,6 @@ class _SignupScreenState extends State<SignupScreen> {
           ),
         );
       }
-    }
-  }
-
-  // 🆕 Helpers pour l'indicateur de force de mot de passe
-  Color _getPasswordStrengthColor() {
-    switch (_passwordStrength) {
-      case PasswordStrength.weak:
-        return Colors.red;
-      case PasswordStrength.medium:
-        return Colors.orange;
-      case PasswordStrength.strong:
-        return Colors.green;
-    }
-  }
-
-  IconData _getPasswordStrengthIcon() {
-    switch (_passwordStrength) {
-      case PasswordStrength.weak:
-        return Icons.security;
-      case PasswordStrength.medium:
-        return Icons.security_outlined;
-      case PasswordStrength.strong:
-        return Icons.verified_user;
-    }
-  }
-
-  String _getPasswordStrengthText() {
-    switch (_passwordStrength) {
-      case PasswordStrength.weak:
-        return 'Mot de passe faible';
-      case PasswordStrength.medium:
-        return 'Mot de passe moyen';
-      case PasswordStrength.strong:
-        return 'Mot de passe fort';
     }
   }
 }

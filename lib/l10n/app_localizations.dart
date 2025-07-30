@@ -2406,7 +2406,7 @@ abstract class AppLocalizations {
   /// Message confirming confirmation link sent
   ///
   /// In en, this message translates to:
-  /// **'We have sent a confirmation link to {email}. Click on the link in the email to activate your account.'**
+  /// **'We have sent a verification code to {email}'**
   String successSentConfirmationLink(String email);
 
   /// Action to resend the code
