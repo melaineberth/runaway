@@ -1710,4 +1710,152 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get offlineGenerationError => 'Check your internet connection to generate a route.';
+
+  @override
+  String get validationError => 'Validation error';
+
+  @override
+  String get accessDenied => 'Access denied';
+
+  @override
+  String get resourceNotFound => 'Resource not found';
+
+  @override
+  String get tooManyRequests => 'Too many requests, please wait';
+
+  @override
+  String get internalServerError => 'Internal server error';
+
+  @override
+  String get badGateway => 'Bad gateway';
+
+  @override
+  String get gatewayTimeout => 'Gateway timeout';
+
+  @override
+  String get signupDisabled => 'Registration temporarily disabled';
+
+  @override
+  String get userNotFound => 'User not found';
+
+  @override
+  String get sessionExpired => 'Session expired, please log in again';
+
+  @override
+  String get duplicateEntry => 'This entry already exists';
+
+  @override
+  String get databaseError => 'Database error';
+
+  @override
+  String get storageError => 'Storage error';
+
+  @override
+  String get serverFunctionError => 'Server function error';
+
+  @override
+  String get fileAccessError => 'File access error';
+
+  @override
+  String get routeGenerationFailed => 'Route generation failed';
+
+  @override
+  String get locationServicesDisabled => 'Location services disabled';
+
+  @override
+  String get locationPermissionDenied => 'Location permission denied';
+
+  @override
+  String get locationPermissionPermanentlyDenied => 'Location permission permanently denied';
+
+  @override
+  String get insufficientCredits => 'Insufficient credits';
+
+  @override
+  String get purchaseFailed => 'Purchase failed';
+
+  @override
+  String get purchaseValidationFailed => 'Purchase validation failed';
+
+  @override
+  String get notificationPermissionDenied => 'Notification permission denied';
+
+  @override
+  String get shareError => 'Share error';
+
+  @override
+  String get cacheError => 'Cache error';
+
+  @override
+  String get configurationError => 'Configuration error';
+
+  @override
+  String get serviceInitializationError => 'Service initialization error';
+
+  @override
+  String get noRouteFound => 'No route found';
+
+  @override
+  String get routeCalculationError => 'Route calculation error';
+
+  @override
+  String get mapLoadingError => 'Map loading error';
+
+  @override
+  String get coordinatesInvalid => 'Invalid coordinates';
+
+  @override
+  String get exportError => 'Export error';
+
+  @override
+  String get importError => 'Import error';
+
+  @override
+  String get syncError => 'Synchronization error';
+
+  @override
+  String get offlineMode => 'Offline mode active';
+
+  @override
+  String get connectionRestored => 'Connection restored';
+
+  @override
+  String get retryAction => 'Retry';
+
+  @override
+  String get cancelAction => 'Cancel';
+
+  @override
+  String get closeAction => 'Close';
+
+  @override
+  String get errorDialogTitle => 'Error';
+
+  @override
+  String get warningDialogTitle => 'Warning';
+
+  @override
+  String get infoDialogTitle => 'Information';
+
+  @override
+  String get errorDetails => 'Error details';
+
+  @override
+  String get technicalDetails => 'Technical details';
+
+  @override
+  String errorCode(String code) {
+    return 'Error code: $code';
+  }
+
+  @override
+  String errorTime(String time) {
+    return 'Time: $time';
+  }
+
+  @override
+  String get reportError => 'Report error';
+
+  @override
+  String get errorReported => 'Error reported successfully';
 }

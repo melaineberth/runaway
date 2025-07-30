@@ -2101,20 +2101,12 @@
   },
   "notEmailFound": "Email address not found",
   "@notEmailFound": {
-    "description":  "Error when the email address does not exist in the database"
+    "description": "Error when the email address does not exist in the database"
   },
   "resetPasswordImpossible": "Unable to reset password",
   "@resetPasswordImpossible": {
-    "description":  "Error when the provider auth is Google or Apple"
+    "description": "Error when the provider auth is Google or Apple"
   },
-
-  
-
-
-  
-
-
-
   "enterVerificationCode": "Enter the 6-digit code",
   "@enterVerificationCode": {
     "description": "Instructions to enter OTP code"
@@ -2264,15 +2256,12 @@
   "@requestNewCode": {
     "description": "Action to request a new code during the verification of the password recovery code"
   },
-
-
-
   "requiredField": "Required field",
-  "@requiredField" : {
+  "@requiredField": {
     "description": "Message during the verification of sending number"
   },
   "enterValidNumber": "Please enter a valid number",
-  "@enterValidNumber" : {
+  "@enterValidNumber": {
     "description": "Message during the verification of sending number"
   },
   "greaterValue": "The value must be greater than or equal to {min}",
@@ -2294,11 +2283,9 @@
     }
   },
   "userSummary": "Your summary",
-  "@userSummary" : {
+  "@userSummary": {
     "description": "Display summary user"
   },
-
-
   "noPositionEnable": "GPS position not available. Check your settings.",
   "@noPositionEnable": {
     "description": "Show message when user location not enable"
@@ -2323,9 +2310,6 @@
   "@purchaseAlreadyInProgress": {
     "description": "Erreur achat multiple"
   },
-  
-
-
   "purschaseTimeout": "Timeout during the purchase",
   "@purschaseTimeout": {
     "description": "Timeout lors de l'achat"
@@ -2356,9 +2340,6 @@
       }
     }
   },
-
-
-
   "creditVerificationFailed": "Unable to check your credits",
   "@creditVerificationFailed": {
     "description": "Erreur lors de la vérification des crédits"
@@ -2382,5 +2363,209 @@
   "offlineGenerationError": "Check your internet connection to generate a route.",
   "@offlineGenerationError": {
     "description": "Message d'erreur hors ligne"
+  },
+  "validationError": "Validation error",
+  "@validationError": {
+    "description": "Generic error message for validation errors."
+  },
+  "accessDenied": "Access denied",
+  "@accessDenied": {
+    "description": "Error message when user doesn't have necessary permissions."
+  },
+  "resourceNotFound": "Resource not found",
+  "@resourceNotFound": {
+    "description": "Error message when a requested resource doesn't exist."
+  },
+  "tooManyRequests": "Too many requests, please wait",
+  "@tooManyRequests": {
+    "description": "Error message when request rate limit is exceeded."
+  },
+  "internalServerError": "Internal server error",
+  "@internalServerError": {
+    "description": "Error message for 500 server errors."
+  },
+  "badGateway": "Bad gateway",
+  "@badGateway": {
+    "description": "Error message for 502 gateway errors."
+  },
+  "gatewayTimeout": "Gateway timeout",
+  "@gatewayTimeout": {
+    "description": "Error message for 504 gateway timeouts."
+  },
+  "signupDisabled": "Registration temporarily disabled",
+  "@signupDisabled": {
+    "description": "Error message when registrations are disabled."
+  },
+  "userNotFound": "User not found",
+  "@userNotFound": {
+    "description": "Error message when the requested user doesn't exist."
+  },
+  "sessionExpired": "Session expired, please log in again",
+  "@sessionExpired": {
+    "description": "Error message when user session has expired."
+  },
+  "duplicateEntry": "This entry already exists",
+  "@duplicateEntry": {
+    "description": "Error message when trying to create a duplicate."
+  },
+  "databaseError": "Database error",
+  "@databaseError": {
+    "description": "Generic error message for database problems."
+  },
+  "storageError": "Storage error",
+  "@storageError": {
+    "description": "Error message for file storage problems."
+  },
+  "serverFunctionError": "Server function error",
+  "@serverFunctionError": {
+    "description": "Error message for Supabase Edge functions."
+  },
+  "fileAccessError": "File access error",
+  "@fileAccessError": {
+    "description": "Error message when accessing local files."
+  },
+  "routeGenerationFailed": "Route generation failed",
+  "@routeGenerationFailed": {
+    "description": "Error message when route generation fails."
+  },
+  "locationServicesDisabled": "Location services disabled",
+  "@locationServicesDisabled": {
+    "description": "Error message when geolocation is disabled."
+  },
+  "locationPermissionDenied": "Location permission denied",
+  "@locationPermissionDenied": {
+    "description": "Error message when location permission is denied."
+  },
+  "locationPermissionPermanentlyDenied": "Location permission permanently denied",
+  "@locationPermissionPermanentlyDenied": {
+    "description": "Error message when location permission is permanently denied."
+  },
+  "insufficientCredits": "Insufficient credits",
+  "@insufficientCredits": {
+    "description": "Error message when user doesn't have enough credits."
+  },
+  "purchaseFailed": "Purchase failed",
+  "@purchaseFailed": {
+    "description": "Error message when in-app purchase fails."
+  },
+  "purchaseValidationFailed": "Purchase validation failed",
+  "@purchaseValidationFailed": {
+    "description": "Error message when purchase validation fails."
+  },
+  "notificationPermissionDenied": "Notification permission denied",
+  "@notificationPermissionDenied": {
+    "description": "Error message when notification permission is denied."
+  },
+  "shareError": "Share error",
+  "@shareError": {
+    "description": "Error message when sharing content."
+  },
+  "cacheError": "Cache error",
+  "@cacheError": {
+    "description": "Error message for cache problems."
+  },
+  "configurationError": "Configuration error",
+  "@configurationError": {
+    "description": "Error message for configuration problems."
+  },
+  "serviceInitializationError": "Service initialization error",
+  "@serviceInitializationError": {
+    "description": "Error message when initializing a service."
+  },
+  "noRouteFound": "No route found",
+  "@noRouteFound": {
+    "description": "Error message when no route is found."
+  },
+  "routeCalculationError": "Route calculation error",
+  "@routeCalculationError": {
+    "description": "Error message during route calculation."
+  },
+  "mapLoadingError": "Map loading error",
+  "@mapLoadingError": {
+    "description": "Error message when loading the map."
+  },
+  "coordinatesInvalid": "Invalid coordinates",
+  "@coordinatesInvalid": {
+    "description": "Error message for invalid geographic coordinates."
+  },
+  "exportError": "Export error",
+  "@exportError": {
+    "description": "Error message during data export."
+  },
+  "importError": "Import error",
+  "@importError": {
+    "description": "Error message during data import."
+  },
+  "syncError": "Synchronization error",
+  "@syncError": {
+    "description": "Error message during data synchronization."
+  },
+  "offlineMode": "Offline mode active",
+  "@offlineMode": {
+    "description": "Info message when app is working offline."
+  },
+  "connectionRestored": "Connection restored",
+  "@connectionRestored": {
+    "description": "Info message when internet connection is restored."
+  },
+  "retryAction": "Retry",
+  "@retryAction": {
+    "description": "Button text to retry an action."
+  },
+  "cancelAction": "Cancel",
+  "@cancelAction": {
+    "description": "Button text to cancel an action."
+  },
+  "closeAction": "Close",
+  "@closeAction": {
+    "description": "Button text to close a dialog."
+  },
+  "errorDialogTitle": "Error",
+  "@errorDialogTitle": {
+    "description": "Title of error dialog."
+  },
+  "warningDialogTitle": "Warning",
+  "@warningDialogTitle": {
+    "description": "Title of warning dialog."
+  },
+  "infoDialogTitle": "Information",
+  "@infoDialogTitle": {
+    "description": "Title of info dialog."
+  },
+  "errorDetails": "Error details",
+  "@errorDetails": {
+    "description": "Label to show error details."
+  },
+  "technicalDetails": "Technical details",
+  "@technicalDetails": {
+    "description": "Label to show technical error details."
+  },
+  "errorCode": "Error code: {code}",
+  "@errorCode": {
+    "description": "Format for displaying error code.",
+    "placeholders": {
+      "code": {
+        "type": "String",
+        "example": "NET_001"
+      }
+    }
+  },
+  "errorTime": "Time: {time}",
+  "@errorTime": {
+    "description": "Format for displaying error time.",
+    "placeholders": {
+      "time": {
+        "type": "String",
+        "example": "2:30:25 PM"
+      }
+    }
+  },
+  "reportError": "Report error",
+  "@reportError": {
+    "description": "Button text to report an error."
+  },
+  "errorReported": "Error reported successfully",
+  "@errorReported": {
+    "description": "Confirmation message after reporting error."
   }
 }

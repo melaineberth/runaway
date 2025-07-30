@@ -2310,11 +2310,6 @@
   "@purchaseAlreadyInProgress": {
     "description": "Erreur achat multiple"
   },
-
-
-
-
-
   "purschaseTimeout": "Timeout lors de l'achat",
   "@purschaseTimeout": {
     "description": "Timeout lors de l'achat"
@@ -2345,7 +2340,6 @@
       }
     }
   },
-
   "creditVerificationFailed": "Impossible de vérifier vos crédits",
   "@creditVerificationFailed": {
     "description": "Erreur lors de la vérification des crédits"
@@ -2369,5 +2363,209 @@
   "offlineGenerationError": "Vérifiez votre connexion internet pour générer un parcours.",
   "@offlineGenerationError": {
     "description": "Message d'erreur hors ligne"
+  },
+  "validationError": "Erreur de validation",
+  "@validationError": {
+    "description": "Message d'erreur générique pour les erreurs de validation."
+  },
+  "accessDenied": "Accès refusé",
+  "@accessDenied": {
+    "description": "Message d'erreur lorsque l'utilisateur n'a pas les permissions nécessaires."
+  },
+  "resourceNotFound": "Ressource non trouvée",
+  "@resourceNotFound": {
+    "description": "Message d'erreur lorsqu'une ressource demandée n'existe pas."
+  },
+  "tooManyRequests": "Trop de requêtes, veuillez patienter",
+  "@tooManyRequests": {
+    "description": "Message d'erreur lorsque la limite de requêtes est dépassée."
+  },
+  "internalServerError": "Erreur serveur interne",
+  "@internalServerError": {
+    "description": "Message d'erreur pour les erreurs serveur 500."
+  },
+  "badGateway": "Passerelle défaillante",
+  "@badGateway": {
+    "description": "Message d'erreur pour les erreurs de passerelle 502."
+  },
+  "gatewayTimeout": "Délai d'attente de la passerelle",
+  "@gatewayTimeout": {
+    "description": "Message d'erreur pour les timeouts de passerelle 504."
+  },
+  "signupDisabled": "Inscription temporairement désactivée",
+  "@signupDisabled": {
+    "description": "Message d'erreur lorsque les inscriptions sont désactivées."
+  },
+  "userNotFound": "Utilisateur non trouvé",
+  "@userNotFound": {
+    "description": "Message d'erreur lorsque l'utilisateur demandé n'existe pas."
+  },
+  "sessionExpired": "Session expirée, veuillez vous reconnecter",
+  "@sessionExpired": {
+    "description": "Message d'erreur lorsque la session utilisateur a expiré."
+  },
+  "duplicateEntry": "Cette entrée existe déjà",
+  "@duplicateEntry": {
+    "description": "Message d'erreur lorsqu'on tente de créer un doublon."
+  },
+  "databaseError": "Erreur de base de données",
+  "@databaseError": {
+    "description": "Message d'erreur générique pour les problèmes de base de données."
+  },
+  "storageError": "Erreur de stockage",
+  "@storageError": {
+    "description": "Message d'erreur pour les problèmes de stockage de fichiers."
+  },
+  "serverFunctionError": "Erreur de fonction serveur",
+  "@serverFunctionError": {
+    "description": "Message d'erreur pour les fonctions Edge de Supabase."
+  },
+  "fileAccessError": "Erreur d'accès au fichier",
+  "@fileAccessError": {
+    "description": "Message d'erreur lors de l'accès aux fichiers locaux."
+  },
+  "routeGenerationFailed": "Échec de la génération du parcours",
+  "@routeGenerationFailed": {
+    "description": "Message d'erreur lorsque la génération de parcours échoue."
+  },
+  "locationServicesDisabled": "Services de localisation désactivés",
+  "@locationServicesDisabled": {
+    "description": "Message d'erreur lorsque la géolocalisation est désactivée."
+  },
+  "locationPermissionDenied": "Permission de localisation refusée",
+  "@locationPermissionDenied": {
+    "description": "Message d'erreur lorsque l'autorisation de localisation est refusée."
+  },
+  "locationPermissionPermanentlyDenied": "Permission de localisation définitivement refusée",
+  "@locationPermissionPermanentlyDenied": {
+    "description": "Message d'erreur lorsque l'autorisation de localisation est définitivement refusée."
+  },
+  "insufficientCredits": "Crédits insuffisants",
+  "@insufficientCredits": {
+    "description": "Message d'erreur lorsque l'utilisateur n'a pas assez de crédits."
+  },
+  "purchaseFailed": "Échec de l'achat",
+  "@purchaseFailed": {
+    "description": "Message d'erreur lorsqu'un achat intégré échoue."
+  },
+  "purchaseValidationFailed": "Échec de la validation de l'achat",
+  "@purchaseValidationFailed": {
+    "description": "Message d'erreur lorsque la validation d'un achat échoue."
+  },
+  "notificationPermissionDenied": "Permission de notification refusée",
+  "@notificationPermissionDenied": {
+    "description": "Message d'erreur lorsque l'autorisation de notification est refusée."
+  },
+  "shareError": "Erreur lors du partage",
+  "@shareError": {
+    "description": "Message d'erreur lors du partage de contenu."
+  },
+  "cacheError": "Erreur de cache",
+  "@cacheError": {
+    "description": "Message d'erreur pour les problèmes de cache."
+  },
+  "configurationError": "Erreur de configuration",
+  "@configurationError": {
+    "description": "Message d'erreur pour les problèmes de configuration."
+  },
+  "serviceInitializationError": "Erreur d'initialisation du service",
+  "@serviceInitializationError": {
+    "description": "Message d'erreur lors de l'initialisation d'un service."
+  },
+  "noRouteFound": "Aucun parcours trouvé",
+  "@noRouteFound": {
+    "description": "Message d'erreur lorsqu'aucun parcours n'est trouvé."
+  },
+  "routeCalculationError": "Erreur de calcul du parcours",
+  "@routeCalculationError": {
+    "description": "Message d'erreur lors du calcul d'un parcours."
+  },
+  "mapLoadingError": "Erreur de chargement de la carte",
+  "@mapLoadingError": {
+    "description": "Message d'erreur lors du chargement de la carte."
+  },
+  "coordinatesInvalid": "Coordonnées invalides",
+  "@coordinatesInvalid": {
+    "description": "Message d'erreur pour des coordonnées géographiques invalides."
+  },
+  "exportError": "Erreur d'export",
+  "@exportError": {
+    "description": "Message d'erreur lors de l'export de données."
+  },
+  "importError": "Erreur d'import",
+  "@importError": {
+    "description": "Message d'erreur lors de l'import de données."
+  },
+  "syncError": "Erreur de synchronisation",
+  "@syncError": {
+    "description": "Message d'erreur lors de la synchronisation des données."
+  },
+  "offlineMode": "Mode hors ligne actif",
+  "@offlineMode": {
+    "description": "Message informatif lorsque l'application fonctionne hors ligne."
+  },
+  "connectionRestored": "Connexion rétablie",
+  "@connectionRestored": {
+    "description": "Message informatif lorsque la connexion internet est rétablie."
+  },
+  "retryAction": "Réessayer",
+  "@retryAction": {
+    "description": "Texte du bouton pour réessayer une action."
+  },
+  "cancelAction": "Annuler",
+  "@cancelAction": {
+    "description": "Texte du bouton pour annuler une action."
+  },
+  "closeAction": "Fermer",
+  "@closeAction": {
+    "description": "Texte du bouton pour fermer une dialog."
+  },
+  "errorDialogTitle": "Erreur",
+  "@errorDialogTitle": {
+    "description": "Titre de la boîte de dialogue d'erreur."
+  },
+  "warningDialogTitle": "Attention",
+  "@warningDialogTitle": {
+    "description": "Titre de la boîte de dialogue d'avertissement."
+  },
+  "infoDialogTitle": "Information",
+  "@infoDialogTitle": {
+    "description": "Titre de la boîte de dialogue d'information."
+  },
+  "errorDetails": "Détails de l'erreur",
+  "@errorDetails": {
+    "description": "Libellé pour afficher les détails d'une erreur."
+  },
+  "technicalDetails": "Détails techniques",
+  "@technicalDetails": {
+    "description": "Libellé pour afficher les détails techniques d'une erreur."
+  },
+  "errorCode": "Code d'erreur : {code}",
+  "@errorCode": {
+    "description": "Format d'affichage du code d'erreur.",
+    "placeholders": {
+      "code": {
+        "type": "String",
+        "example": "NET_001"
+      }
+    }
+  },
+  "errorTime": "Heure : {time}",
+  "@errorTime": {
+    "description": "Format d'affichage de l'heure d'erreur.",
+    "placeholders": {
+      "time": {
+        "type": "String",
+        "example": "14:30:25"
+      }
+    }
+  },
+  "reportError": "Signaler l'erreur",
+  "@reportError": {
+    "description": "Texte du bouton pour signaler une erreur."
+  },
+  "errorReported": "Erreur signalée avec succès",
+  "@errorReported": {
+    "description": "Message de confirmation après signalement d'erreur."
   }
 }

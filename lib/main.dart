@@ -8,8 +8,9 @@ import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:runaway/core/blocs/connectivity/connectivity_cubit.dart';
+import 'package:runaway/core/errors/app_exceptions.dart';
+import 'package:runaway/core/errors/error_handler.dart';
 import 'package:runaway/core/helper/config/log_config.dart';
-import 'package:runaway/core/helper/extensions/extensions.dart';
 import 'package:runaway/core/helper/services/connectivity_service.dart';
 import 'package:runaway/core/helper/services/logging_service.dart';
 import 'package:runaway/core/router/router.dart';
@@ -32,23 +33,23 @@ import 'package:runaway/features/credits/data/services/iap_service.dart';
 import 'package:runaway/features/credits/presentation/blocs/credits_bloc.dart';
 import 'package:runaway/l10n/app_localizations.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
-import 'core/blocs/app_bloc_observer.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' hide StorageException;
 import 'features/home/presentation/blocs/route_parameters_bloc.dart';
 import 'features/route_generator/presentation/blocs/route_generation/route_generation_bloc.dart';
 
 void main() async {
   // 🆕 Capture des erreurs Dart avant l'initialisation Flutter
   runZonedGuarded(() async {
-    // 🆕 Utiliser SentryWidgetsFlutterBinding pour éviter les warnings Sentry
-    SentryWidgetsFlutterBinding.ensureInitialized();
-
     LogConfig.logInfo('🚀 Démarrage Trailix...');
+
+    // === INITIALISATION FLUTTER ===
+    SentryWidgetsFlutterBinding.ensureInitialized();
 
     SystemChrome.setEnabledSystemUIMode(
       SystemUiMode.edgeToEdge,
     );
 
+    // === CONFIGURATION DES ORIENTATIONS ===
     SystemChrome.setPreferredOrientations([
       DeviceOrientation.portraitUp,
       DeviceOrientation.portraitDown
@@ -71,41 +72,13 @@ void main() async {
       
       runApp(const Trailix());
       
-    } catch (e, stackTrace) {
-      LogConfig.logError('Erreur lors de l\'initialisation: $e');
-      
-      // Capturer l'erreur d'initialisation si le monitoring est disponible
-      try {
-        await MonitoringService.instance.captureError(
-          e,
-          stackTrace,
-          context: 'main.initialization',
-          extra: {'phase': 'app_initialization'},
-          isCritical: true,
-        );
-      } catch (monitoringError) {
-        LogConfig.logError('Impossible de capturer l\'erreur d\'initialisation: $monitoringError');
-      }
-      
-      SessionManager.instance.stopSessionMonitoring();
-      runApp(ErrorApp(error: e.toString()));
+    } catch (error, stackTrace) {
+      // Gestion des erreurs critiques d'initialisation
+      await _handleCriticalError(error, stackTrace);
     }
-  }, (error, stackTrace) {
-    // Capture des erreurs non gérées au niveau de la zone
-    LogConfig.logError('Erreur non gérée capturée par runZonedGuarded: $error');
-    
-    // Essayer de capturer l'erreur si le monitoring est disponible
-    try {
-      MonitoringService.instance.captureError(
-        error,
-        stackTrace,
-        context: 'uncaught_error',
-        extra: {'source': 'runZonedGuarded'},
-        isCritical: true,
-      );
-    } catch (monitoringError) {
-      LogConfig.logError('Impossible de capturer l\'erreur non gérée: $monitoringError');
-    }
+  }, (error, stackTrace) async {
+    // Zone guard pour capturer toutes les erreurs non gérées
+    await _handleUnhandledError(error, stackTrace);
   });
 }
 
@@ -129,8 +102,11 @@ Future<void> _initializeCriticalServices() async {
     LogConfig.logSuccess('✅ Services critiques OK');
 
   } catch (e) {
-    LogConfig.logError('❌ Erreur services critiques: $e');
-    rethrow;
+    throw ConfigurationException(
+      'Erreur lors du chargement de la configuration',
+      code: 'CONFIG_LOAD_ERROR',
+      originalError: e,
+    );
   }
 }
 
@@ -159,10 +135,11 @@ Future<void> _initializeMonitoring() async {
   } catch (e) {
     LogConfig.logWarning('Monitoring échoué: $e');
     
-    // Bloc observer simplifié seulement si verbeux activé
-    if (LogConfig.enableBlocLogs) {
-      Bloc.observer = AppBlocObserver();
-    }
+    // Non critique, on continue
+    ErrorHandler.instance.handleSilentError(
+      e,
+      contextInfo: 'Monitoring Initialization',
+    );
   }
 }
 
@@ -227,10 +204,65 @@ Future<void> _finalizeInitialization() async {
     
   } catch (e) {
     LogConfig.logWarning('⚠️ Erreurs non-critiques en finalisation: $e');
+
+    await ErrorHandler.instance.handleError(
+      e,
+      contextInfo: 'Application Initialization',
+      config: const ErrorDisplayConfig(
+        type: ErrorDisplayType.dialog,
+        showDetails: true,
+      ),
+    );
   }
 }
 
 // ===== SERVICES INDIVIDUELS =====
+
+/// Gère les erreurs critiques d'initialisation
+Future<void> _handleCriticalError(dynamic error, StackTrace stackTrace) async {
+  LogConfig.logError('❌ ERREUR CRITIQUE D\'INITIALISATION: $error');
+  print('Stack trace: $stackTrace');
+  
+  try {
+    // Tentative de log via le service de monitoring
+    await MonitoringService.instance.captureError(
+      error,
+      stackTrace,
+      context: 'Critical Initialization Error',
+    );
+  } catch (e) {
+    LogConfig.logError('❌ Impossible de logger l\'erreur critique: $e');
+  }
+  
+  // Lancement de l'app d'erreur
+  runApp(ErrorApp(error: error.toString()));
+}
+
+/// Gère les erreurs non gérées
+Future<void> _handleUnhandledError(dynamic error, StackTrace stackTrace) async {
+  LogConfig.logError('❌ ERREUR NON GÉRÉE: $error');
+  
+  try {
+    // Log de l'erreur
+    await MonitoringService.instance.captureError(
+      error,
+      stackTrace,
+      context: 'Unhandled Error',
+    );
+    
+    // Gestion via ErrorHandler si disponible
+    await ErrorHandler.instance.handleError(
+      error,
+      contextInfo: 'Unhandled Application Error',
+      config: const ErrorDisplayConfig(
+        type: ErrorDisplayType.dialog,
+        showDetails: true,
+      ),
+    );
+  } catch (e) {
+    LogConfig.logError('❌ Erreur lors de la gestion d\'erreur non gérée: $e');
+  }
+}
 
 Future<void> _loadEnvironmentConfig() async {
   final operationId = MonitoringService.instance.trackOperation(
@@ -283,12 +315,12 @@ Future<void> _initializeHydratedStorage() async {
     MonitoringService.instance.finishOperation(operationId, success: true);
   } catch (e) {
     LogConfig.logError('Erreur HydratedStorage: $e');
-    MonitoringService.instance.finishOperation(
-      operationId, 
-      success: false, 
-      errorMessage: e.toString(),
+    
+    throw StorageException(
+      'Impossible d\'initialiser le stockage persistant',
+      code: 'HYDRATED_STORAGE_ERROR',
+      originalError: e,
     );
-    rethrow;
   }
 }
 
@@ -310,7 +342,7 @@ Future<void> _initializeSupabase() async {
     );
     LogConfig.logDebug('Supabase initialisé');
     
-    // 🆕 Maintenant vérifier les tables de monitoring
+    // Maintenant vérifier les tables de monitoring
     await MonitoringService.instance.checkSupabaseTablesLater();
     
     MonitoringService.instance.finishOperation(operationId, success: true);
@@ -326,18 +358,23 @@ Future<void> _initializeSupabase() async {
 }
 
 Future<void> _initializeConnectivityServiceEarly() async {
-  final opId = MonitoringService.instance.trackOperation(
-      'init_connectivity_early',
-      description: 'Initialisation prioritaire du service de connectivité');
   try {
     await ConnectivityService.instance.initialize();
-    LogConfig.logDebug('ConnectivityService initialisé');
-    MonitoringService.instance.finishOperation(opId, success: true);
+    LogConfig.logDebug('Connectivité initialisée');
+    
+    LoggingService.instance.info(
+      'ConnectivityService',
+      'Service de connectivité initialisé',
+    );
   } catch (e) {
     LogConfig.logError('ConnectivityService échoué: $e');
-    MonitoringService.instance.finishOperation(
-        opId, success: false, errorMessage: e.toString());
-    // Ne pas rethrow - on continue même si la connectivité échoue
+    
+    // Critique pour le fonctionnement
+    throw NetworkException(
+      'Impossible d\'initialiser la connectivité',
+      code: 'CONNECTIVITY_INIT_ERROR',
+      originalError: e,
+    );
   }
 }
 
@@ -373,10 +410,9 @@ Future<void> _initializeIAP() async {
   } catch (e) {
     LogConfig.logWarning('IAP échoué: $e');
     
-    LoggingService.instance.warning(
-      'IAPService',
-      'Erreur initialisation IAP',
-      data: {'error': e.toString()},
+    ErrorHandler.instance.handleSilentError(
+      e,
+      contextInfo: 'IAP Initialization',
     );
   }
 }
@@ -393,10 +429,9 @@ Future<void> _initializeNotificationServices() async {
   } catch (e) {
     LogConfig.logWarning('Notifications échouées: $e');
     
-    LoggingService.instance.warning(
-      'NotificationService',
-      'Erreur initialisation notifications',
-      data: {'error': e.toString()},
+    ErrorHandler.instance.handleSilentError(
+      e,
+      contextInfo: 'Notification Service Initialization',
     );
   }
 }
@@ -413,10 +448,9 @@ Future<void> _configureMapbox() async {
   } catch (e) {
     LogConfig.logWarning('Mapbox échoué: $e');
     
-    LoggingService.instance.warning(
-      'MapboxService',
-      'Erreur configuration Mapbox',
-      data: {'error': e.toString()},
+    ErrorHandler.instance.handleSilentError(
+      e,
+      contextInfo: 'Mapbox Configuration',
     );
   }
 }
@@ -433,10 +467,9 @@ Future<void> _initializeConversionService() async {
   } catch (e) {
     LogConfig.logWarning('ConversionService échoué: $e');
     
-    LoggingService.instance.warning(
-      'ConversionService',
-      'Erreur initialisation service conversion',
-      data: {'error': e.toString()},
+    ErrorHandler.instance.handleSilentError(
+      e,
+      contextInfo: 'Conversion Service Initialization',
     );
   }
 }
@@ -450,30 +483,89 @@ class Trailix extends StatefulWidget {
   State<Trailix> createState() => _TrailixState();
 }
 
-class _TrailixState extends State<Trailix> {
+class _TrailixState extends State<Trailix> with WidgetsBindingObserver {
   StreamSubscription<SessionEvent>? _sessionSubscription;
 
   @override
   void initState() {
     super.initState();
-    
-    // Écouter les événements de session
-    _sessionSubscription = SessionManager.instance.sessionEvents.listen((event) {
-      if (event.status == SessionStatus.expired || event.status == SessionStatus.error) {
-        // Rediriger vers l'écran de connexion ou afficher un message
-        LogConfig.logInfo('⚠️ Session ${event.status}: ${event.reason}');
-      }
-    });
+    WidgetsBinding.instance.addObserver(this);
+    _setupSessionListener();
   }
 
   @override
   void dispose() {
-    // Nettoyer les services
     _sessionSubscription?.cancel();
-    SessionManager.instance.dispose();
-    NotificationService.instance.dispose();
-    ServiceLocator.dispose();
+    WidgetsBinding.instance.removeObserver(this);
     super.dispose();
+  }
+
+
+  /// Configure l'écoute des événements de session
+  void _setupSessionListener() {
+    try {
+      _sessionSubscription = SessionManager.instance.sessionEvents.listen(
+        (event) => _handleSessionEvent(event),
+        onError: (error) async {
+          ErrorHandler.instance.handleSilentError(
+            error,
+            contextInfo: 'Session Event Stream',
+          );
+        },
+      );
+    } catch (e) {
+      ErrorHandler.instance.handleSilentError(
+        e,
+        contextInfo: 'Session Listener Setup',
+      );
+    }
+  }
+
+  /// Gère les événements de session
+  void _handleSessionEvent(SessionEvent event) {
+    // Gestion des événements de session selon vos besoins
+    LogConfig.logInfo('📡 Événement de session: ${event.reason}');
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    
+    try {
+      switch (state) {
+        case AppLifecycleState.resumed:
+          _handleAppResumed();
+          break;
+        case AppLifecycleState.paused:
+          _handleAppPaused();
+          break;
+        case AppLifecycleState.detached:
+          _handleAppDetached();
+          break;
+        default:
+          break;
+      }
+    } catch (e) {
+      ErrorHandler.instance.handleSilentError(
+        e,
+        contextInfo: 'App Lifecycle Change',
+      );
+    }
+  }
+
+  void _handleAppResumed() {
+    LogConfig.logInfo('📱 App resumed');
+    // Vérification de la connectivité, refresh des tokens, etc.
+  }
+
+  void _handleAppPaused() {
+    LogConfig.logInfo('📱 App paused');
+    // Sauvegarde des données, nettoyage, etc.
+  }
+
+  void _handleAppDetached() {
+    LogConfig.logInfo('📱 App detached');
+    // Nettoyage final
   }
 
   @override
@@ -516,9 +608,14 @@ class _TrailixState extends State<Trailix> {
                       localizationsDelegates: AppLocalizations.localizationsDelegates,
                       supportedLocales: AppLocalizations.supportedLocales,
                       builder: (context, child) {
-                        return MediaQuery(
-                          data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(1.0)),
-                          child: child ?? Container(),
+                        // Global error boundary pour l'UI
+                        return _AppErrorBoundary(
+                          child: MediaQuery(
+                            data: MediaQuery.of(context).copyWith(
+                              textScaler: TextScaler.linear(1.0),
+                            ),
+                            child: child ?? Container(),
+                          ),
                         );
                       },
                     ),
@@ -533,7 +630,19 @@ class _TrailixState extends State<Trailix> {
   }
 }
 
-// ===== CAS D'ERREUR =====
+/// Widget de gestion d'erreurs globale pour l'UI
+class _AppErrorBoundary extends StatelessWidget {
+  final Widget child;
+  
+  const _AppErrorBoundary({required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    return child;
+  }
+}
+
+// ===== APPLICATION D'ERREUR CRITIQUE =====
 
 class ErrorApp extends StatelessWidget {
   final String error;
@@ -543,18 +652,76 @@ class ErrorApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      title: 'Trailix - Erreur',
       debugShowCheckedModeBanner: false,
       home: Scaffold(
-        body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(Icons.error, size: 64, color: Colors.red),
-              const SizedBox(height: 16),
-              Text(context.l10n.initializationError),
-              const SizedBox(height: 8),
-              Text(error, textAlign: TextAlign.center),
-            ],
+        body: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(
+                  Icons.error_outline,
+                  size: 80,
+                  color: Colors.red,
+                ),
+                const SizedBox(height: 24),
+                const Text(
+                  'Erreur d\'initialisation',
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.red,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'L\'application n\'a pas pu démarrer correctement. Veuillez redémarrer l\'application.',
+                  style: TextStyle(fontSize: 16),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 24),
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade100,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Détails techniques:',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        error,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontFamily: 'monospace',
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 32),
+                ElevatedButton.icon(
+                  onPressed: () {
+                    // Tentative de redémarrage
+                    SystemNavigator.pop();
+                  },
+                  icon: const Icon(Icons.refresh),
+                  label: const Text('Redémarrer'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.red,
+                    foregroundColor: Colors.white,
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),

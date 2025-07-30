@@ -124,7 +124,7 @@ class _LocationAwareMapWidgetState extends State<LocationAwareMapWidget> with Ti
   /// Tentative de géolocalisation directe
   Future<void> _loadLocationDirectly() async {
     try {
-      final position = await LocationPreloadService.instance.initializeLocation().timeout(Duration(seconds: 2));
+      final position = await LocationPreloadService.instance.initializeLocation().timeout(Duration(seconds: 10));
       
       if (mounted) {
         setState(() {

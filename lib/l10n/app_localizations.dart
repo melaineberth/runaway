@@ -3332,6 +3332,294 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Check your internet connection to generate a route.'**
   String get offlineGenerationError;
+
+  /// Generic error message for validation errors.
+  ///
+  /// In en, this message translates to:
+  /// **'Validation error'**
+  String get validationError;
+
+  /// Error message when user doesn't have necessary permissions.
+  ///
+  /// In en, this message translates to:
+  /// **'Access denied'**
+  String get accessDenied;
+
+  /// Error message when a requested resource doesn't exist.
+  ///
+  /// In en, this message translates to:
+  /// **'Resource not found'**
+  String get resourceNotFound;
+
+  /// Error message when request rate limit is exceeded.
+  ///
+  /// In en, this message translates to:
+  /// **'Too many requests, please wait'**
+  String get tooManyRequests;
+
+  /// Error message for 500 server errors.
+  ///
+  /// In en, this message translates to:
+  /// **'Internal server error'**
+  String get internalServerError;
+
+  /// Error message for 502 gateway errors.
+  ///
+  /// In en, this message translates to:
+  /// **'Bad gateway'**
+  String get badGateway;
+
+  /// Error message for 504 gateway timeouts.
+  ///
+  /// In en, this message translates to:
+  /// **'Gateway timeout'**
+  String get gatewayTimeout;
+
+  /// Error message when registrations are disabled.
+  ///
+  /// In en, this message translates to:
+  /// **'Registration temporarily disabled'**
+  String get signupDisabled;
+
+  /// Error message when the requested user doesn't exist.
+  ///
+  /// In en, this message translates to:
+  /// **'User not found'**
+  String get userNotFound;
+
+  /// Error message when user session has expired.
+  ///
+  /// In en, this message translates to:
+  /// **'Session expired, please log in again'**
+  String get sessionExpired;
+
+  /// Error message when trying to create a duplicate.
+  ///
+  /// In en, this message translates to:
+  /// **'This entry already exists'**
+  String get duplicateEntry;
+
+  /// Generic error message for database problems.
+  ///
+  /// In en, this message translates to:
+  /// **'Database error'**
+  String get databaseError;
+
+  /// Error message for file storage problems.
+  ///
+  /// In en, this message translates to:
+  /// **'Storage error'**
+  String get storageError;
+
+  /// Error message for Supabase Edge functions.
+  ///
+  /// In en, this message translates to:
+  /// **'Server function error'**
+  String get serverFunctionError;
+
+  /// Error message when accessing local files.
+  ///
+  /// In en, this message translates to:
+  /// **'File access error'**
+  String get fileAccessError;
+
+  /// Error message when route generation fails.
+  ///
+  /// In en, this message translates to:
+  /// **'Route generation failed'**
+  String get routeGenerationFailed;
+
+  /// Error message when geolocation is disabled.
+  ///
+  /// In en, this message translates to:
+  /// **'Location services disabled'**
+  String get locationServicesDisabled;
+
+  /// Error message when location permission is denied.
+  ///
+  /// In en, this message translates to:
+  /// **'Location permission denied'**
+  String get locationPermissionDenied;
+
+  /// Error message when location permission is permanently denied.
+  ///
+  /// In en, this message translates to:
+  /// **'Location permission permanently denied'**
+  String get locationPermissionPermanentlyDenied;
+
+  /// Error message when user doesn't have enough credits.
+  ///
+  /// In en, this message translates to:
+  /// **'Insufficient credits'**
+  String get insufficientCredits;
+
+  /// Error message when in-app purchase fails.
+  ///
+  /// In en, this message translates to:
+  /// **'Purchase failed'**
+  String get purchaseFailed;
+
+  /// Error message when purchase validation fails.
+  ///
+  /// In en, this message translates to:
+  /// **'Purchase validation failed'**
+  String get purchaseValidationFailed;
+
+  /// Error message when notification permission is denied.
+  ///
+  /// In en, this message translates to:
+  /// **'Notification permission denied'**
+  String get notificationPermissionDenied;
+
+  /// Error message when sharing content.
+  ///
+  /// In en, this message translates to:
+  /// **'Share error'**
+  String get shareError;
+
+  /// Error message for cache problems.
+  ///
+  /// In en, this message translates to:
+  /// **'Cache error'**
+  String get cacheError;
+
+  /// Error message for configuration problems.
+  ///
+  /// In en, this message translates to:
+  /// **'Configuration error'**
+  String get configurationError;
+
+  /// Error message when initializing a service.
+  ///
+  /// In en, this message translates to:
+  /// **'Service initialization error'**
+  String get serviceInitializationError;
+
+  /// Error message when no route is found.
+  ///
+  /// In en, this message translates to:
+  /// **'No route found'**
+  String get noRouteFound;
+
+  /// Error message during route calculation.
+  ///
+  /// In en, this message translates to:
+  /// **'Route calculation error'**
+  String get routeCalculationError;
+
+  /// Error message when loading the map.
+  ///
+  /// In en, this message translates to:
+  /// **'Map loading error'**
+  String get mapLoadingError;
+
+  /// Error message for invalid geographic coordinates.
+  ///
+  /// In en, this message translates to:
+  /// **'Invalid coordinates'**
+  String get coordinatesInvalid;
+
+  /// Error message during data export.
+  ///
+  /// In en, this message translates to:
+  /// **'Export error'**
+  String get exportError;
+
+  /// Error message during data import.
+  ///
+  /// In en, this message translates to:
+  /// **'Import error'**
+  String get importError;
+
+  /// Error message during data synchronization.
+  ///
+  /// In en, this message translates to:
+  /// **'Synchronization error'**
+  String get syncError;
+
+  /// Info message when app is working offline.
+  ///
+  /// In en, this message translates to:
+  /// **'Offline mode active'**
+  String get offlineMode;
+
+  /// Info message when internet connection is restored.
+  ///
+  /// In en, this message translates to:
+  /// **'Connection restored'**
+  String get connectionRestored;
+
+  /// Button text to retry an action.
+  ///
+  /// In en, this message translates to:
+  /// **'Retry'**
+  String get retryAction;
+
+  /// Button text to cancel an action.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel'**
+  String get cancelAction;
+
+  /// Button text to close a dialog.
+  ///
+  /// In en, this message translates to:
+  /// **'Close'**
+  String get closeAction;
+
+  /// Title of error dialog.
+  ///
+  /// In en, this message translates to:
+  /// **'Error'**
+  String get errorDialogTitle;
+
+  /// Title of warning dialog.
+  ///
+  /// In en, this message translates to:
+  /// **'Warning'**
+  String get warningDialogTitle;
+
+  /// Title of info dialog.
+  ///
+  /// In en, this message translates to:
+  /// **'Information'**
+  String get infoDialogTitle;
+
+  /// Label to show error details.
+  ///
+  /// In en, this message translates to:
+  /// **'Error details'**
+  String get errorDetails;
+
+  /// Label to show technical error details.
+  ///
+  /// In en, this message translates to:
+  /// **'Technical details'**
+  String get technicalDetails;
+
+  /// Format for displaying error code.
+  ///
+  /// In en, this message translates to:
+  /// **'Error code: {code}'**
+  String errorCode(String code);
+
+  /// Format for displaying error time.
+  ///
+  /// In en, this message translates to:
+  /// **'Time: {time}'**
+  String errorTime(String time);
+
+  /// Button text to report an error.
+  ///
+  /// In en, this message translates to:
+  /// **'Report error'**
+  String get reportError;
+
+  /// Confirmation message after reporting error.
+  ///
+  /// In en, this message translates to:
+  /// **'Error reported successfully'**
+  String get errorReported;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

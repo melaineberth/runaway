@@ -20,7 +20,7 @@ import 'route_generation_state.dart';
 /// BLoC pour gérer l'analyse de zone et la génération de parcours
 class RouteGenerationBloc extends HydratedBloc<RouteGenerationEvent, RouteGenerationState> {
   final RoutesRepository _routesRepository;
-  final CreditVerificationService _creditService; // 🆕 Service dédié aux crédits
+  final CreditVerificationService _creditService;
   final AppDataBloc? _appDataBloc;
 
   // Constantes pour le retry
@@ -29,13 +29,14 @@ class RouteGenerationBloc extends HydratedBloc<RouteGenerationEvent, RouteGenera
 
   RouteGenerationBloc({
     RoutesRepository? routesRepository,
-    required CreditVerificationService creditService, // 🆕 Injection du service
+    required CreditVerificationService creditService,
     AppDataBloc? appDataBloc,
   }) : _routesRepository = routesRepository ?? RoutesRepository(),
-       _creditService = creditService, // 🆕 Service injecté
+       _creditService = creditService,
        _appDataBloc = appDataBloc,
        super(const RouteGenerationState()) {
     
+    // === GESTION DES ÉVÉNEMENTS ===
     on<ZoneAnalysisRequested>(_onZoneAnalysisRequested);
     on<RouteGenerationRequested>(_onRouteGenerationRequested);
     on<GeneratedRouteSaved>(_onGeneratedRouteSaved);
@@ -47,17 +48,6 @@ class RouteGenerationBloc extends HydratedBloc<RouteGenerationEvent, RouteGenera
     on<SyncPendingRoutesRequested>(_onSyncPendingRoutesRequested);
     on<RouteStateReset>(_onRouteStateReset);
   }
-
-  // ===== MÉTHODES PUBLIQUES SIMPLIFIÉES =====
-
-  /// Vérifie si l'utilisateur peut générer une route
-  Future<bool> canGenerateRoute() => _creditService.canGenerateRoute();
-
-  /// Récupère le nombre de crédits disponibles
-  Future<int> getAvailableCredits() => _creditService.getAvailableCredits();
-
-  /// Déclenche le pré-chargement des crédits si nécessaire
-  void ensureCreditDataLoaded() => _creditService.ensureCreditDataLoaded();
 
   // ===== HANDLERS D'ÉVÉNEMENTS =====
 
@@ -99,7 +89,7 @@ class RouteGenerationBloc extends HydratedBloc<RouteGenerationEvent, RouteGenera
     }
   }
 
-  /// 🆕 Génération avec architecture UI First pour les crédits
+  /// Génération avec architecture UI First pour les crédits
   Future<void> _onRouteGenerationRequested(
     RouteGenerationRequested event,
     Emitter<RouteGenerationState> emit,
@@ -137,7 +127,7 @@ class RouteGenerationBloc extends HydratedBloc<RouteGenerationEvent, RouteGenera
         stateId: '$generationId-start',
       ));
 
-      // ===== 🆕 VÉRIFICATION DE CONNECTIVITÉ AVANT TOUT =====
+      // ===== VÉRIFICATION DE CONNECTIVITÉ AVANT TOUT =====
       
       LogConfig.logInfo('🌐 === VÉRIFICATION CONNECTIVITÉ ===');
       
@@ -239,7 +229,7 @@ class RouteGenerationBloc extends HydratedBloc<RouteGenerationEvent, RouteGenera
         LogConfig.logError('❌ Erreur de génération: ${e.message}');
         emit(state.copyWith(
           isGeneratingRoute: false,
-          errorMessage: 'Erreur de génération: ${e.message}',
+          errorMessage: e.message,
           stateId: '$generationId-generation-error',
         ));
         
@@ -347,7 +337,7 @@ class RouteGenerationBloc extends HydratedBloc<RouteGenerationEvent, RouteGenera
 
       emit(state.copyWith(
         isGeneratingRoute: false,
-        errorMessage: 'Erreur lors de la génération: $err',
+        errorMessage: err.toString(),
         stateId: '$generationId-error',
       ));
 
@@ -680,6 +670,17 @@ class RouteGenerationBloc extends HydratedBloc<RouteGenerationEvent, RouteGenera
     
     LogConfig.logInfo('=== FIN RESET COMPLET ÉTAT (RESET: $resetId-reset) ===');
   }
+
+  // ===== MÉTHODES PUBLIQUES =====
+
+  /// Vérifie si l'utilisateur peut générer une route
+  Future<bool> canGenerateRoute() => _creditService.canGenerateRoute();
+
+  /// Récupère le nombre de crédits disponibles
+  Future<int> getAvailableCredits() => _creditService.getAvailableCredits();
+
+  /// Déclenche le pré-chargement des crédits si nécessaire
+  void ensureCreditDataLoaded() => _creditService.ensureCreditDataLoaded();
 
   // ===== MÉTHODE UTILITAIRE POUR LE RETRY =====
   

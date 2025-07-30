@@ -1710,4 +1710,152 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get offlineGenerationError => 'Vérifiez votre connexion internet pour générer un parcours.';
+
+  @override
+  String get validationError => 'Erreur de validation';
+
+  @override
+  String get accessDenied => 'Accès refusé';
+
+  @override
+  String get resourceNotFound => 'Ressource non trouvée';
+
+  @override
+  String get tooManyRequests => 'Trop de requêtes, veuillez patienter';
+
+  @override
+  String get internalServerError => 'Erreur serveur interne';
+
+  @override
+  String get badGateway => 'Passerelle défaillante';
+
+  @override
+  String get gatewayTimeout => 'Délai d\'attente de la passerelle';
+
+  @override
+  String get signupDisabled => 'Inscription temporairement désactivée';
+
+  @override
+  String get userNotFound => 'Utilisateur non trouvé';
+
+  @override
+  String get sessionExpired => 'Session expirée, veuillez vous reconnecter';
+
+  @override
+  String get duplicateEntry => 'Cette entrée existe déjà';
+
+  @override
+  String get databaseError => 'Erreur de base de données';
+
+  @override
+  String get storageError => 'Erreur de stockage';
+
+  @override
+  String get serverFunctionError => 'Erreur de fonction serveur';
+
+  @override
+  String get fileAccessError => 'Erreur d\'accès au fichier';
+
+  @override
+  String get routeGenerationFailed => 'Échec de la génération du parcours';
+
+  @override
+  String get locationServicesDisabled => 'Services de localisation désactivés';
+
+  @override
+  String get locationPermissionDenied => 'Permission de localisation refusée';
+
+  @override
+  String get locationPermissionPermanentlyDenied => 'Permission de localisation définitivement refusée';
+
+  @override
+  String get insufficientCredits => 'Crédits insuffisants';
+
+  @override
+  String get purchaseFailed => 'Échec de l\'achat';
+
+  @override
+  String get purchaseValidationFailed => 'Échec de la validation de l\'achat';
+
+  @override
+  String get notificationPermissionDenied => 'Permission de notification refusée';
+
+  @override
+  String get shareError => 'Erreur lors du partage';
+
+  @override
+  String get cacheError => 'Erreur de cache';
+
+  @override
+  String get configurationError => 'Erreur de configuration';
+
+  @override
+  String get serviceInitializationError => 'Erreur d\'initialisation du service';
+
+  @override
+  String get noRouteFound => 'Aucun parcours trouvé';
+
+  @override
+  String get routeCalculationError => 'Erreur de calcul du parcours';
+
+  @override
+  String get mapLoadingError => 'Erreur de chargement de la carte';
+
+  @override
+  String get coordinatesInvalid => 'Coordonnées invalides';
+
+  @override
+  String get exportError => 'Erreur d\'export';
+
+  @override
+  String get importError => 'Erreur d\'import';
+
+  @override
+  String get syncError => 'Erreur de synchronisation';
+
+  @override
+  String get offlineMode => 'Mode hors ligne actif';
+
+  @override
+  String get connectionRestored => 'Connexion rétablie';
+
+  @override
+  String get retryAction => 'Réessayer';
+
+  @override
+  String get cancelAction => 'Annuler';
+
+  @override
+  String get closeAction => 'Fermer';
+
+  @override
+  String get errorDialogTitle => 'Erreur';
+
+  @override
+  String get warningDialogTitle => 'Attention';
+
+  @override
+  String get infoDialogTitle => 'Information';
+
+  @override
+  String get errorDetails => 'Détails de l\'erreur';
+
+  @override
+  String get technicalDetails => 'Détails techniques';
+
+  @override
+  String errorCode(String code) {
+    return 'Code d\'erreur : $code';
+  }
+
+  @override
+  String errorTime(String time) {
+    return 'Heure : $time';
+  }
+
+  @override
+  String get reportError => 'Signaler l\'erreur';
+
+  @override
+  String get errorReported => 'Erreur signalée avec succès';
 }

@@ -68,6 +68,7 @@ class SquircleContainer extends StatelessWidget {
           margin: margin,
           decoration: BoxDecoration(
             color: borderColor ?? Colors.grey,
+            boxShadow: boxShadow,
           ),
           child: Container(
             margin: EdgeInsets.all(borderWidth ?? 2.0),

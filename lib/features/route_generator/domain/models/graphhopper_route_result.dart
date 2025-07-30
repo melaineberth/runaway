@@ -83,6 +83,41 @@ class GraphHopperRouteResult {
     }
   }
 
+  factory GraphHopperRouteResult.fromJson(Map<String, dynamic> json) {
+    try {
+      LogConfig.logInfo('📄 Parsing GraphHopperRouteResult from JSON...');
+
+      final coordinatesRaw = json['coordinates'] as List<dynamic>? ?? [];
+      final coordinates = coordinatesRaw.map<List<double>>((coord) {
+        if (coord is! List || coord.length < 2) {
+          throw Exception('Invalid coordinate format: $coord');
+        }
+        return coord.map((e) => (e as num).toDouble()).toList();
+      }).toList();
+
+      final instructionsRaw = json['instructions'] as List<dynamic>? ?? [];
+      final instructions = instructionsRaw.map<RouteInstruction>((inst) {
+        return RouteInstruction.fromJson(Map<String, dynamic>.from(inst));
+      }).toList();
+
+      final bboxRaw = json['bbox'] as List<dynamic>? ?? [];
+      final bbox = bboxRaw.map<double>((e) => (e as num).toDouble()).toList();
+
+      return GraphHopperRouteResult(
+        coordinates: coordinates,
+        distanceKm: (json['distanceKm'] as num?)?.toDouble() ?? 0.0,
+        durationMinutes: json['durationMinutes'] as int? ?? 0,
+        elevationGain: (json['elevationGain'] as num?)?.toDouble() ?? 0.0,
+        instructions: instructions,
+        metadata: Map<String, dynamic>.from(json['metadata'] ?? {}),
+        bbox: bbox,
+      );
+    } catch (e) {
+      LogConfig.logError('❌ Error parsing GraphHopperRouteResult.fromJson: $e');
+      rethrow;
+    }
+  }
+
   /// Conversion vers le format attendu par l'UI existante
   List<List<double>> get coordinatesForUI {
     // Retourner seulement [lon, lat] pour la compatibilité

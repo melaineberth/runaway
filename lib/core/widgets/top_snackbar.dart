@@ -47,13 +47,18 @@ class TopSnackBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SquircleContainer(
-      isBorder: true,
       radius: 50.0,
       gradient: false,
       padding: EdgeInsets.all(20.0),
-      borderWidth: 2.0,
-      borderColor: _getBorderColor,
       color: _getBackgroundColor,
+      boxShadow: [
+        BoxShadow(
+          color: Colors.black.withValues(alpha: 0.15),
+          spreadRadius: 2,
+          blurRadius: 30,
+          offset: Offset(0, 0), // changes position of shadow
+        ),
+      ],
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
