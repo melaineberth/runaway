@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:runaway/core/blocs/app_data/app_data_bloc.dart';
 import 'package:runaway/core/blocs/app_data/app_data_event.dart';
+import 'package:runaway/core/helper/config/secure_config.dart';
 import 'package:runaway/core/helper/extensions/monitoring_extensions.dart';
 import 'package:runaway/core/helper/services/app_data_initialization_service.dart';
 import 'package:runaway/core/helper/services/cache_service.dart';
@@ -12,6 +13,8 @@ import 'package:runaway/core/router/router.dart';
 import 'package:runaway/core/utils/injections/bloc_provider_extension.dart';
 import 'package:runaway/core/utils/injections/service_locator.dart';
 import 'package:runaway/features/auth/data/repositories/auth_repository.dart';
+import 'package:runaway/features/auth/data/services/brute_force_protection_service.dart';
+import 'package:runaway/features/auth/data/services/security_logging_service.dart';
 import 'package:runaway/features/auth/domain/models/profile.dart';
 import 'package:runaway/features/credits/presentation/blocs/credits_bloc.dart';
 import 'package:runaway/features/credits/presentation/blocs/credits_event.dart';
@@ -233,11 +236,13 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     if (state is! Authenticated) return;
     
     emit(AuthLoading());
+
+    bool shouldForceCleanupOnError = false;
     
     try {
       LogConfig.logInfo('🗑️ Suppression du compte demandée...');
 
-      // 🆕 1. Nettoyer explicitement TOUS les blocs avant la suppression
+      // Nettoyer explicitement tous les blocs avant la suppression
       try {
         _creditsBloc?.add(const CreditsReset());
         LogConfig.logInfo('💳 CreditsBloc reseté avant suppression');
@@ -245,13 +250,16 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         LogConfig.logError('❌ Erreur reset CreditsBloc avant suppression: $e');
       }
 
-      // 🆕 2. Nettoyer le monitoring
+      // Nettoyer le monitoring
       try {
         MonitoringService.instance.clearUser();
         LogConfig.logInfo('📊 Données monitoring nettoyées avant suppression');
       } catch (e) {
         LogConfig.logError('❌ Erreur nettoyage monitoring avant suppression: $e');
       }
+
+      // Préparer le nettoyage complet du cache en cas de succès ou d'erreur
+      shouldForceCleanupOnError = true;
       
       // Utiliser la méthode existante du repository
       await _repo.deleteAccount();
@@ -261,15 +269,6 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     } catch (e) {
       LogConfig.logError('❌ Erreur suppression compte: $e');
 
-      // 🆕 En cas d'erreur, forcer le nettoyage quand même
-      try {
-        _creditsBloc?.add(const CreditsReset());
-        MonitoringService.instance.clearUser();
-        LogConfig.logInfo('🔒 Nettoyage forcé après erreur suppression');
-      } catch (cleanupError) {
-        LogConfig.logError('❌ Erreur nettoyage forcé après suppression: $cleanupError');
-      }
-      
       // Retourner à l'état précédent en cas d'erreur
       final currentState = state;
       if (currentState is Authenticated) {
@@ -279,9 +278,30 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       }
       
       // Propager l'erreur pour l'affichage dans l'UI
-      emit(AuthError(
-        e.toString(),
-      ));
+      emit(AuthError(e.toString()));
+    } finally {
+      // Garantir le nettoyage complet du cache dans TOUS les cas
+      if (shouldForceCleanupOnError) {
+        try {
+          LogConfig.logInfo('🧹 Démarrage nettoyage complet final...');
+          
+          // Nettoyage complet via CacheService
+          await CacheService.instance.forceCompleteClearing();
+          
+          // Nettoyage des tokens sécurisés
+          await SecureConfig.clearStoredTokens();
+          
+          // Nettoyage des données du ServiceLocator
+          ServiceLocator.clearUserData();
+          
+          // Nettoyage cache images
+          await CachedNetworkImage.evictFromCache('');
+          
+          LogConfig.logInfo('🧹 Nettoyage complet final terminé');
+        } catch (cleanupError) {
+          LogConfig.logError('❌ Erreur nettoyage complet final: $cleanupError');
+        }
+      }
     }
   }
 
@@ -461,32 +481,117 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   }
 
   Future<void> _onSignUpBasic(SignUpBasicRequested e, Emitter<AuthState> emit) async {
+    // 🆕 Vérification de sécurité avant tentative
+    final canAttempt = await BruteForceProtectionService.instance.canAttemptLogin();
+    if (!canAttempt) {
+      final lockoutMinutes = await BruteForceProtectionService.instance.getRemainingLockoutMinutes();
+      
+      SecurityLoggingService.instance.logSignUpAttempt(
+        email: e.email,
+        success: false,
+        reason: 'account_locked',
+      );
+      
+      emit(AuthError('Inscription temporairement suspendue. Réessayez dans $lockoutMinutes minute${lockoutMinutes > 1 ? 's' : ''}.'));
+      return;
+    }
+
     emit(AuthLoading());
     try {
-      final user = await _repo.signUpWithEmail(email: e.email, password: e.password);
-      if (user == null) {
-        return emit(AuthError('Échec de création de compte'));
-      }
+      LogConfig.logInfo('📝 Tentative d\'inscription: ${e.email}');
+    
+      final user = await _repo.signUpWithEmail(
+        email: e.email,
+        password: e.password,
+      );
 
-      LogConfig.logInfo('Inscription réussie pour: ${user.email}');
-      print('📧 Email confirmé: ${user.emailConfirmedAt != null}');
+      if (user == null) {
+        LogConfig.logError('❌ Inscription échouée: utilisateur null');
       
-      // Toujours rediriger vers la confirmation d'email si configuré dans Supabase
-      // Supabase n'aura pas emailConfirmedAt si la confirmation est requise
-      if (user.emailConfirmedAt == null) {
-        print('📧 Email de confirmation requis pour: ${e.email}');
-        emit(EmailConfirmationRequired(e.email));
+        // 🆕 Enregistrer l'échec
+        await BruteForceProtectionService.instance.recordFailedAttempt(e.email);
+        
+        SecurityLoggingService.instance.logSignUpAttempt(
+          email: e.email,
+          success: false,
+          reason: 'signup_failed',
+        );
+        
+        emit(AuthError('Impossible de créer le compte'));
       } else {
-        LogConfig.logInfo('Inscription réussie, transition vers ProfileIncomplete');
-        emit(ProfileIncomplete(user));
+        LogConfig.logInfo('Inscription réussie pour: ${user.email}');
+        print('📧 Email confirmé: ${user.emailConfirmedAt != null}');
+
+        LogConfig.logInfo('✅ Inscription réussie: ${e.email}');
+      
+        // 🆕 Nettoyer les tentatives échouées en cas de succès
+        await BruteForceProtectionService.instance.clearFailedAttempts();
+        
+        // 🆕 Logger le succès
+        SecurityLoggingService.instance.logSignUpAttempt(
+          email: e.email,
+          success: true,
+        );
+        
+        // Toujours rediriger vers la confirmation d'email si configuré dans Supabase
+        // Supabase n'aura pas emailConfirmedAt si la confirmation est requise
+        if (user.emailConfirmedAt == null) {
+          print('📧 Email de confirmation requis pour: ${e.email}');
+          emit(EmailConfirmationRequired(e.email));
+        } else {
+          LogConfig.logInfo('Inscription réussie, transition vers ProfileIncomplete');
+          emit(ProfileIncomplete(user));
+        }
       }
     } catch (err) {
-      LogConfig.logError('❌ Erreur inscription: $err');
-      emit(AuthError(err.toString()));
+      LogConfig.logError('❌ Erreur inscription: $e');
+    
+      // 🆕 Enregistrer l'échec selon le type d'erreur
+      String reason = 'unknown_error';
+      String userMessage = 'Erreur lors de la création du compte';
+      
+      if (e.toString().toLowerCase().contains('already')) {
+        reason = 'email_already_exists';
+        userMessage = 'Un compte existe déjà avec cet email';
+      } else if (e.toString().toLowerCase().contains('weak')) {
+        reason = 'weak_password';
+        userMessage = 'Mot de passe trop faible';
+      } else if (e.toString().toLowerCase().contains('invalid')) {
+        reason = 'invalid_email';
+        userMessage = 'Adresse email invalide';
+        await BruteForceProtectionService.instance.recordFailedAttempt(e.email);
+      } else if (e.toString().toLowerCase().contains('network')) {
+        reason = 'network_error';
+        userMessage = 'Erreur de connexion réseau';
+      }
+      
+      SecurityLoggingService.instance.logSignUpAttempt(
+        email: e.email,
+        success: false,
+        reason: reason,
+      );
+      
+      emit(AuthError(userMessage));
+
     }
   }
 
   Future<void> _onLogin(LogInRequested e, Emitter<AuthState> emit) async {
+    // 🆕 Vérification de sécurité avant tentative
+    final canAttempt = await BruteForceProtectionService.instance.canAttemptLogin();
+    if (!canAttempt) {
+      final lockoutMinutes = await BruteForceProtectionService.instance.getRemainingLockoutMinutes();
+      
+      SecurityLoggingService.instance.logLoginAttempt(
+        email: e.email,
+        success: false,
+        reason: 'account_locked',
+      );
+      
+      emit(AuthError('Compte temporairement verrouillé. Réessayez dans $lockoutMinutes minute${lockoutMinutes > 1 ? 's' : ''}.'));
+      return;
+    }
+
     trackEvent(e, data: {
       'has_email': e.email != null,
     });
@@ -502,9 +607,16 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     try {
       emit(AuthLoading());
       
-      final p = await _repo.signInWithEmail(email: e.email, password: e.password);
+      LogConfig.logInfo('🔐 Tentative de connexion: ${e.email}');
+    
+      final p = await _repo.signInWithEmail(
+        email: e.email,
+        password: e.password,
+      );
       
       if (p == null) {
+        LogConfig.logError('❌ Connexion échouée: profil null');
+
         // Connexion réussie mais pas de profil - vérifier si corrompu
         final user = supabase.Supabase.instance.client.auth.currentUser;
         if (user != null) {
@@ -516,10 +628,43 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
             emit(ProfileIncomplete(user));
           }
         } else {
+          // 🆕 Enregistrer l'échec
+          await BruteForceProtectionService.instance.recordFailedAttempt(e.email);
+          
+          SecurityLoggingService.instance.logLoginAttempt(
+            email: e.email,
+            success: false,
+            reason: 'invalid_credentials',
+          );
+          
+          emit(AuthError('Email ou mot de passe incorrect'));
+
           emit(Unauthenticated());
         }
       } else {
+        LogConfig.logInfo('✅ Connexion réussie: ${e.email}');
+
+        // 🆕 Nettoyer les tentatives échouées en cas de succès
+        await BruteForceProtectionService.instance.clearFailedAttempts();
+        
+        // 🆕 Logger le succès
+        SecurityLoggingService.instance.logLoginAttempt(
+          email: e.email,
+          success: true,
+        );
+
+        // Gérer le changement d'utilisateur si nécessaire
+        await _handleUserSessionChange(p.id);
+
         emit(Authenticated(p));
+
+        // Déclencher le pré-chargement des données
+        if (AppDataInitializationService.isInitialized) {
+          Future.delayed(Duration(milliseconds: 300), () {
+            AppDataInitializationService.startDataPreloading();
+          });
+        }
+
         MonitoringService.instance.finishOperation(operationId, success: true);
 
         // 🆕 Métrique business - nouvel utilisateur connecté
@@ -536,7 +681,31 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         'operation_id': operationId,
       });
 
-      emit(AuthError(err.toString()));
+      LogConfig.logError('❌ Erreur connexion: $e');
+    
+      // 🆕 Enregistrer l'échec selon le type d'erreur
+      String reason = 'unknown_error';
+      String userMessage = 'Erreur de connexion';
+      
+      if (e.toString().toLowerCase().contains('invalid')) {
+        reason = 'invalid_credentials';
+        userMessage = 'Email ou mot de passe incorrect';
+        await BruteForceProtectionService.instance.recordFailedAttempt(e.email);
+      } else if (e.toString().toLowerCase().contains('network')) {
+        reason = 'network_error';
+        userMessage = 'Erreur de connexion réseau';
+      } else if (e.toString().toLowerCase().contains('rate')) {
+        reason = 'rate_limited';
+        userMessage = 'Trop de tentatives. Veuillez patienter.';
+      }
+      
+      SecurityLoggingService.instance.logLoginAttempt(
+        email: e.email,
+        success: false,
+        reason: reason,
+      );
+      
+      emit(AuthError(userMessage));
 
       MonitoringService.instance.finishOperation(
         operationId,
@@ -662,9 +831,21 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
 
     try {
       LogConfig.logInfo('👋 Déconnexion en cours...');
+
+      final currentUser = _repo.currentUser;
+      final userEmail = currentUser?.email ?? 'unknown';
+      
+      // Logger la déconnexion
+      SecurityLoggingService.instance.logLogout(
+        email: userEmail,
+        forced: false,
+      );
+      
+      LogConfig.logInfo('👋 Déconnexion: $userEmail');
+      
       emit(AuthLoading());
 
-      // 🆕 1. Nettoyer explicitement les données via le CreditsBloc si disponible
+      // Nettoyer explicitement les données via le CreditsBloc si disponible
       try {
         _creditsBloc?.add(const CreditsReset());
         LogConfig.logInfo('💳 CreditsBloc reseté');
@@ -672,7 +853,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         LogConfig.logError('❌ Erreur reset CreditsBloc: $e');
       }
 
-      // 🆕 2. Nettoyer les données de monitoring avant déconnexion
+      // Nettoyer les données de monitoring avant déconnexion
       try {
         MonitoringService.instance.clearUser();
         LogConfig.logInfo('📊 Données monitoring nettoyées');
@@ -680,16 +861,20 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         LogConfig.logError('❌ Erreur nettoyage monitoring: $e');
       }
 
+      // Déconnexion via le repository (qui gère Supabase et le nettoyage)
       await _repo.signOut();
 
-      // Nettoyer la session en cache
-      await CacheService.instance.clearStoredUserSession();
+      // Nettoyer le cache utilisateur
+      final cacheService = CacheService.instance;
+      await cacheService.clearStoredUserSession();
+      await cacheService.forceCompleteClearing();
 
-      emit(Unauthenticated());
+      // Nettoyer le monitoring
+      MonitoringService.instance.clearUser();
 
-      MonitoringService.instance.finishOperation(operationId, success: true);
-      
+      emit(Unauthenticated());      
       LogConfig.logInfo('✅ Déconnexion complète réussie');
+
     } catch (err, stackTrace) {
       captureError(err, stackTrace, event: e, state: state);
       
@@ -699,19 +884,22 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         errorMessage: err.toString(),
       );
 
-      // 🆕 En cas d'erreur, forcer le nettoyage et l'état déconnecté
+      // En cas d'erreur de déconnexion, nettoyer quand même localement
       try {
-        _creditsBloc?.add(const CreditsReset());
-        MonitoringService.instance.clearUser();
-        LogConfig.logInfo('🔒 Nettoyage forcé en cas d\'erreur de déconnexion');
+        LogConfig.logInfo('🧹 Nettoyage local forcé après erreur déconnexion...');
+        
+        // Nettoyage local minimal mais suffisant pour la déconnexion
+        await CacheService.instance.clearStoredUserSession();
+        ServiceLocator.clearUserData();
+        
+        LogConfig.logInfo('🧹 Nettoyage local forcé terminé');
+        
+        // Forcer l'état Unauthenticated même en cas d'erreur
+        emit(Unauthenticated());
       } catch (cleanupError) {
-        LogConfig.logError('❌ Erreur nettoyage forcé: $cleanupError');
+        LogConfig.logError('❌ Erreur nettoyage local forcé: $cleanupError');
+        emit(AuthError('Erreur lors de la déconnexion: ${err.toString()}'));
       }
-      
-      // Forcer l'état déconnecté même en cas d'erreur
-      emit(Unauthenticated());
-      
-      LogConfig.logError('❌ Erreur déconnexion mais état forcé à déconnecté: $err');
     }
   }
 
@@ -740,8 +928,18 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   }
 
   Future<void> _onForgotPassword(ForgotPasswordRequested e, Emitter<AuthState> emit) async {
+    // 🆕 Vérification de sécurité avant tentative
+    final canAttempt = await BruteForceProtectionService.instance.canAttemptLogin();
+    if (!canAttempt) {
+      final lockoutMinutes = await BruteForceProtectionService.instance.getRemainingLockoutMinutes();
+      emit(AuthError('Trop de tentatives. Réessayez dans $lockoutMinutes minute${lockoutMinutes > 1 ? 's' : ''}.'));
+      return;
+    }
+
     emit(AuthLoading());
     try {
+      LogConfig.logInfo('🔄 Demande réinitialisation mot de passe: ${e.email}');
+
       // Marquer le début du processus de reset
       _isInPasswordResetFlow = true;
 
@@ -758,12 +956,32 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       
       // Envoyer le code de réinitialisation
       await _repo.sendPasswordResetCode(e.email);
+
+      // 🆕 Logger la tentative
+      SecurityLoggingService.instance.logPasswordResetAttempt(
+        email: e.email,
+        success: true,
+      );
       
       emit(PasswordResetCodeSent(e.email));
       LogConfig.logInfo('✅ Code de réinitialisation envoyé à: ${e.email}');
     } catch (err) {
       _isInPasswordResetFlow = false; // Reset en cas d'erreur
       LogConfig.logError('❌ Erreur envoi code réinitialisation: $err');
+
+      // 🆕 Logger l'échec
+      SecurityLoggingService.instance.logPasswordResetAttempt(
+        email: e.email,
+        success: false,
+        reason: e.toString(),
+      );
+      
+      // 🆕 Enregistrer comme tentative échouée selon le contexte
+      if (e.toString().toLowerCase().contains('invalid') || 
+          e.toString().toLowerCase().contains('not found')) {
+        await BruteForceProtectionService.instance.recordFailedAttempt(e.email);
+      }
+
       emit(AuthError('Erreur lors de l\'envoi du code'));
     }
   }

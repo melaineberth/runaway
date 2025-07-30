@@ -165,22 +165,21 @@ class RouteGenerationBloc extends HydratedBloc<RouteGenerationEvent, RouteGenera
       
       LogConfig.logInfo('Connectivité confirmée');
 
-      // ===== VÉRIFICATION DES CRÉDITS (SEULEMENT SI NÉCESSAIRE) =====
-      
+      // ===== VÉRIFICATION DES CRÉDITS (SANS CONSOMMER) =====
+    
       if (!event.bypassCreditCheck) {
-        LogConfig.logInfo('💳 === VÉRIFICATION CRÉDITS POUR UTILISATEUR AUTHENTIFIÉ ===');
-        
-        // Utiliser le service dédié pour la vérification
-        final creditCheck = await _creditService.verifyCreditsForGeneration(
+        LogConfig.logInfo('💳 === VÉRIFICATION CRÉDITS (SANS CONSOMMER) ===');
+
+        final creditVerification = await _creditService.verifyCreditsForGeneration(
           requiredCredits: REQUIRED_CREDITS,
         );
 
-        if (!creditCheck.isValid) {
+        if (!creditVerification.isValid) {
+          LogConfig.logError('❌ Crédits insuffisants: ${creditVerification.errorMessage}');
           emit(state.copyWith(
             isGeneratingRoute: false,
-            errorMessage: creditCheck.errorMessage ?? 
-              'Crédits insuffisants pour générer un parcours. Vous avez ${creditCheck.availableCredits} crédits, mais il en faut ${creditCheck.requiredCredits}.',
-            stateId: '$generationId-credit-error',
+            errorMessage: creditVerification.errorMessage ?? 'Crédits insuffisants',
+            stateId: '$generationId-insufficient-credits',
           ));
 
           MonitoringService.instance.finishOperation(
@@ -188,14 +187,14 @@ class RouteGenerationBloc extends HydratedBloc<RouteGenerationEvent, RouteGenera
             success: false,
             errorMessage: 'Insufficient credits',
           );
-
           return;
         }
 
-        LogConfig.logInfo('Crédits validés: ${creditCheck.availableCredits}/${creditCheck.requiredCredits}');
+        LogConfig.logInfo('✅ Crédits suffisants (${creditVerification.availableCredits} disponibles)');
       }
       
       // ===== GÉNÉRATION DU PARCOURS =====
+      LogConfig.logInfo('🛣️ === GÉNÉRATION DE ROUTE AVEC RETRY ===');
 
       // 🆕 Tracking du début de génération
       MonitoringService.instance.recordMetric(
@@ -207,10 +206,6 @@ class RouteGenerationBloc extends HydratedBloc<RouteGenerationEvent, RouteGenera
           'terrain': event.parameters.terrainType,
         },
       );
-
-      // ===== 🆕 GÉNÉRATION AVEC RETRY AUTOMATIQUE =====
-      
-      LogConfig.logInfo('🛣️ === GÉNÉRATION DE ROUTE AVEC RETRY ===');
       
       late GraphHopperRouteResult result;
       
@@ -220,8 +215,11 @@ class RouteGenerationBloc extends HydratedBloc<RouteGenerationEvent, RouteGenera
           GraphHopperApiService.generateRoute(parameters: event.parameters)
         );
         
-        LogConfig.logInfo('Route générée avec succès: ${result.coordinates.length} points, ${result.distanceKm}km');
-        
+        LogConfig.logInfo('✅ Parcours généré avec succès');
+        LogConfig.logInfo('Distance: ${result.distanceKm} km');
+        LogConfig.logInfo('Durée: ${result.durationMinutes} min');
+        LogConfig.logInfo('Points: ${result.coordinates.length}');
+
       } on NetworkException catch (e) {
         LogConfig.logError('❌ Erreur réseau lors de la génération: ${e.message}');
         emit(state.copyWith(
@@ -256,6 +254,7 @@ class RouteGenerationBloc extends HydratedBloc<RouteGenerationEvent, RouteGenera
       // ===== CONSOMMATION DES CRÉDITS (SEULEMENT POUR UTILISATEURS AUTHENTIFIÉS) =====
       
       if (!event.bypassCreditCheck) {
+        LogConfig.logInfo('💳 === CONSOMMATION CRÉDITS (APRÈS GÉNÉRATION RÉUSSIE) ===');
         LogConfig.logInfo('💳 Consommation de $REQUIRED_CREDITS crédit(s)...');
 
         final consumptionResult = await _creditService.consumeCreditsForGeneration(
@@ -266,6 +265,9 @@ class RouteGenerationBloc extends HydratedBloc<RouteGenerationEvent, RouteGenera
             'distance_km': event.parameters.distanceKm,
             'terrain_type': event.parameters.terrainType.name,
             'urban_density': event.parameters.urbanDensity.name,
+            'actual_distance_km': result.distanceKm,
+            'actual_duration_min': result.durationMinutes,
+            'points_count': result.coordinates.length,
           },
         );
 

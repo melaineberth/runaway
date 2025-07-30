@@ -229,7 +229,7 @@ class _ForgotPasswordDialogState extends State<ForgotPasswordDialog> {
           child: Form(
             key: _formKey,
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.center,
               mainAxisSize: MainAxisSize.min,
               children: [
                 _buildHeader(),
@@ -266,6 +266,8 @@ class _ForgotPasswordDialogState extends State<ForgotPasswordDialog> {
     return ListHeader(
       title: title,
       subtitle: subtitle,
+      textAlign: TextAlign.center,
+      crossAxisAlignment: CrossAxisAlignment.center,
     );
   }
 

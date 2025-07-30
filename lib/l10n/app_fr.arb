@@ -2101,17 +2101,12 @@
   },
   "notEmailFound": "Adresse e-mail introuvable",
   "@notEmailFound": {
-    "description":  "Erreur lorsque l’adresse email n’existe pas dans la base de données"
+    "description": "Erreur lorsque l’adresse email n’existe pas dans la base de données"
   },
   "resetPasswordImpossible": "Impossible de réinitialiser le mot de passe",
   "@resetPasswordImpossible": {
-    "description":  "Erreur lorsque l’auth provider est Google ou Apple"
+    "description": "Erreur lorsque l’auth provider est Google ou Apple"
   },
-
-
-
-
-
   "enterVerificationCode": "Saisissez le code à 6 chiffres",
   "@enterVerificationCode": {
     "description": "Instructions pour saisir le code OTP"
@@ -2157,9 +2152,6 @@
   "@passwordResetSuccessDesc": {
     "description": "Description affichée quand la réinitialisation du mot de passe réussit"
   },
-
-
-
   "saveRoutesTitle": "Sauvegarde de vos parcours",
   "@saveRoutesTitle": {
     "description": "Conversation beneifts saving route title"
@@ -2264,15 +2256,12 @@
   "@requestNewCode": {
     "description": "Action to request a new code during the verification of the password recovery code"
   },
-
-
-
   "requiredField": "Champ obligatoire",
-  "@requiredField" : {
+  "@requiredField": {
     "description": "Message during the verification of sending number"
   },
   "enterValidNumber": "Veuillez entrer un nombre valide",
-  "@enterValidNumber" : {
+  "@enterValidNumber": {
     "description": "Message during the verification of sending number"
   },
   "greaterValue": "La valeur doit être supérieur ou égale à {min}",
@@ -2294,16 +2283,91 @@
     }
   },
   "userSummary": "Votre récapitulatif",
-  "@userSummary" : {
+  "@userSummary": {
     "description": "Display summary user"
   },
   "noPositionEnable": "Position GPS non disponible. Vérifiez vos paramètres.",
   "@noPositionEnable": {
     "description": "Show message when user location not enable"
   },
-
   "checkNetwork": "Veuillez vérifier votre connexion internet pour accéder à cette fonctionnalité",
   "@checkNetwork": {
     "description": "Message during an attempt to access services requiring internet"
+  },
+  "processing": "Traitement...",
+  "@processing": {
+    "description": "Indicateur de traitement en cours"
+  },
+  "purchaseInProgress": "Achat en cours...",
+  "@purchaseInProgress": {
+    "description": "Message achat en cours"
+  },
+  "testEnvironmentWarning": "Environnement de test - Achat simulé",
+  "@testEnvironmentWarning": {
+    "description": "Avertissement environnement test"
+  },
+  "purchaseAlreadyInProgress": "Un achat est déjà en cours",
+  "@purchaseAlreadyInProgress": {
+    "description": "Erreur achat multiple"
+  },
+
+
+
+
+
+  "purschaseTimeout": "Timeout lors de l'achat",
+  "@purschaseTimeout": {
+    "description": "Timeout lors de l'achat"
+  },
+  "purschaseImpossible": "Impossible de lancer le processus d'achat",
+  "@purschaseImpossible": {
+    "description": "Processus d'achat impossible"
+  },
+  "disabledInAppPurchase": "Les achats in-app ne sont pas disponibles",
+  "@disabledInAppPurchase": {
+    "description": "Achats in-app indisponible"
+  },
+  "notFoundProduct": "Produit {id} non trouvé dans le store",
+  "@notFoundProduct": {
+    "description": "Le produit selectionné n'est pas trouvé",
+    "placeholders": {
+      "id": {
+        "type": "String"
+      }
+    }
+  },
+  "errorRestoredPurchase": "Erreur traitement achat restauré: {error}",
+  "@errorRestoredPurchase": {
+    "description": "Erreur de traitement",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+
+  "creditVerificationFailed": "Impossible de vérifier vos crédits",
+  "@creditVerificationFailed": {
+    "description": "Erreur lors de la vérification des crédits"
+  },
+  "routeGenerationNetworkError": "Problème de connexion. Vérifiez votre internet et réessayez.",
+  "@routeGenerationNetworkError": {
+    "description": "Erreur réseau pendant la génération"
+  },
+  "routeGenerationProtected": "Vos crédits sont protégés - ils ne seront débités qu'en cas de génération réussie",
+  "@routeGenerationProtected": {
+    "description": "Information sur la protection des crédits"
+  },
+  "creditConsumptionAfterSuccess": "Génération réussie ! 1 crédit utilisé",
+  "@creditConsumptionAfterSuccess": {
+    "description": "Confirmation d'utilisation de crédit après succès"
+  },
+  "sessionExpiredLogin": "Session expirée. Veuillez vous reconnecter.",
+  "@sessionExpiredLogin": {
+    "description": "Message quand la session a expiré"
+  },
+  "offlineGenerationError": "Vérifiez votre connexion internet pour générer un parcours.",
+  "@offlineGenerationError": {
+    "description": "Message d'erreur hors ligne"
   }
 }

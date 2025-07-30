@@ -358,6 +358,14 @@ class CacheService {
       }
     }
     _listeners.clear();
+
+    // Nettoyer explicitement la session utilisateur avant tout
+    try {
+      await clearStoredUserSession();
+      LogConfig.logInfo('🗑️ Session utilisateur explicitement supprimée');
+    } catch (e) {
+      LogConfig.logError('❌ Erreur suppression session explicite: $e');
+    }
     
     // Supprimer TOUTES les clés liées aux données utilisateur
     final allKeys = _prefs!.getKeys().toList();
@@ -372,9 +380,27 @@ class CacheService {
           key.contains('activity') ||
           key.contains('transaction') ||
           key.contains('plan') ||
+          key.contains('session') ||  
+          key.contains('profile') ||  
           key.startsWith('last_')) {
         await _prefs!.remove(key);
         removedCount++;
+      }
+    }
+
+    // Nettoyage spécifique des clés critiques (au cas où elles n'auraient pas été catchées)
+    final criticalKeys = [
+      'cached_user_session',
+      'last_user_id',
+      'last_seen_credits',
+    ];
+    
+    for (final key in criticalKeys) {
+      try {
+        await _prefs!.remove(key);
+        LogConfig.logInfo('🔑 Clé critique supprimée: $key');
+      } catch (e) {
+        LogConfig.logError('❌ Erreur suppression clé critique $key: $e');
       }
     }
     

@@ -3242,6 +3242,96 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Please check your internet connection to access this feature'**
   String get checkNetwork;
+
+  /// Indicateur de traitement en cours
+  ///
+  /// In en, this message translates to:
+  /// **'Processing...'**
+  String get processing;
+
+  /// Message achat en cours
+  ///
+  /// In en, this message translates to:
+  /// **'Current purchase...'**
+  String get purchaseInProgress;
+
+  /// Avertissement environnement test
+  ///
+  /// In en, this message translates to:
+  /// **'Test environment - Simulated purchase'**
+  String get testEnvironmentWarning;
+
+  /// Erreur achat multiple
+  ///
+  /// In en, this message translates to:
+  /// **'A purchase is already in progress'**
+  String get purchaseAlreadyInProgress;
+
+  /// Timeout lors de l'achat
+  ///
+  /// In en, this message translates to:
+  /// **'Timeout during the purchase'**
+  String get purschaseTimeout;
+
+  /// Processus d'achat impossible
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to launch the purchase process'**
+  String get purschaseImpossible;
+
+  /// Achats in-app indisponible
+  ///
+  /// In en, this message translates to:
+  /// **'In-app purchases are not available'**
+  String get disabledInAppPurchase;
+
+  /// Le produit selectionné n'est pas trouvé
+  ///
+  /// In en, this message translates to:
+  /// **'Product {id} not found in the store'**
+  String notFoundProduct(String id);
+
+  /// Erreur de traitement
+  ///
+  /// In en, this message translates to:
+  /// **'Purchase processing error restored: {error}'**
+  String errorRestoredPurchase(String error);
+
+  /// Erreur lors de la vérification des crédits
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to check your credits'**
+  String get creditVerificationFailed;
+
+  /// Erreur réseau pendant la génération
+  ///
+  /// In en, this message translates to:
+  /// **'Connection problem. Check your internet and try again.'**
+  String get routeGenerationNetworkError;
+
+  /// Information sur la protection des crédits
+  ///
+  /// In en, this message translates to:
+  /// **'Your credits are protected, they will only be debited in case of a successful generation'**
+  String get routeGenerationProtected;
+
+  /// Confirmation d'utilisation de crédit après succès
+  ///
+  /// In en, this message translates to:
+  /// **'Successful generation! 1 credit used'**
+  String get creditConsumptionAfterSuccess;
+
+  /// Message quand la session a expiré
+  ///
+  /// In en, this message translates to:
+  /// **'Session expired. Please log in again.'**
+  String get sessionExpiredLogin;
+
+  /// Message d'erreur hors ligne
+  ///
+  /// In en, this message translates to:
+  /// **'Check your internet connection to generate a route.'**
+  String get offlineGenerationError;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

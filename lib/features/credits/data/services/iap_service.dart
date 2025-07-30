@@ -2,6 +2,9 @@ import 'dart:async';
 import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
+import 'package:runaway/core/helper/config/secure_config.dart';
+import 'package:runaway/core/helper/extensions/extensions.dart';
+import 'package:runaway/core/router/router.dart';
 import 'package:runaway/features/credits/data/services/iap_validation_service.dart';
 import 'package:runaway/features/credits/domain/models/credit_plan.dart';
 import 'package:runaway/core/helper/config/log_config.dart';
@@ -23,6 +26,8 @@ class IAPService {
   static bool _isAvailable = false;
   static StreamSubscription<List<PurchaseDetails>>? _subscription;
   static final IapValidationService _validator = IapValidationService();
+
+  static final context = rootNavigatorKey.currentContext!;
 
   /// Cache des produits : { productId → ProductDetails }
   static final Map<String, ProductDetails> _products = {};
@@ -110,15 +115,27 @@ class IAPService {
   static Future<PurchaseResult> makePurchase(CreditPlan plan) async {
     await _ensureInitialized();
     if (!_isAvailable) {
-      throw const PaymentException('Les achats in-app ne sont pas disponibles');
+      throw PaymentException(context.l10n.disabledInAppPurchase);
     }
 
     final productDetails = _products[plan.iapId];
     if (productDetails == null) {
-      throw PaymentException('Produit ${plan.iapId} non trouvé dans le store');
+      throw PaymentException(context.l10n.notFoundProduct(plan.iapId));
     }
 
     debugPrint('🛒 Début processus d\'achat IAP pour plan: ${plan.iapId}');
+
+    // Pas d'achat multiple simultané
+    final existingPendingKeys = _pendingPurchases.keys
+        .where((key) => key.startsWith(plan.iapId))
+        .toList();
+    
+    if (existingPendingKeys.isNotEmpty) {
+      if (context.mounted) {
+        LogConfig.logWarning('⚠️ Achat déjà en cours pour ${plan.iapId}');
+        throw PaymentException(context.l10n.purchaseAlreadyInProgress);
+      }
+    }
 
     // Simple nettoyage
     _cleanupPendingPurchasesForProduct(plan.iapId);
@@ -126,10 +143,14 @@ class IAPService {
     final purchaseParam = PurchaseParam(productDetails: productDetails);
     final completer = Completer<PurchaseResult>();
 
-    final purchaseKey = '${plan.iapId}_${DateTime.now().millisecondsSinceEpoch}';
+    // Timestamp pour traçabilité
+    final timestamp = DateTime.now().millisecondsSinceEpoch;
+    final purchaseKey = '${plan.iapId}_$timestamp';
     _pendingPurchases[purchaseKey] = completer;
 
     try {
+      LogConfig.logInfo('🚀 Lancement achat pour ${plan.iapId} avec clé: $purchaseKey');
+
       final launched = await _iap.buyConsumable(
         purchaseParam: purchaseParam,
         autoConsume: !kIsWeb,
@@ -137,7 +158,7 @@ class IAPService {
 
       if (!launched) {
         _pendingPurchases.remove(purchaseKey);
-        throw const PaymentException('Impossible de lancer le processus d\'achat');
+        throw PaymentException(context.l10n.purschaseImpossible);
       }
 
       LogConfig.logInfo('Processus d\'achat lancé pour ${plan.iapId}');
@@ -146,11 +167,13 @@ class IAPService {
         const Duration(minutes: 2),
         onTimeout: () {
           _pendingPurchases.remove(purchaseKey);
-          throw const PaymentException('Timeout lors de l\'achat');
+          LogConfig.logError('⏰ Timeout achat pour ${plan.iapId}');
+          throw PaymentException(context.l10n.purschaseTimeout);
         },
       );
     } catch (e) {
       _pendingPurchases.remove(purchaseKey);
+      LogConfig.logError('❌ Erreur lancement achat: $e');
       rethrow;
     }
   }
@@ -217,7 +240,6 @@ class IAPService {
     }
   }
 
-  // CORRIGÉE - Traiter les "restored" comme des achats si on les attend
   static Future<void> _handleRestoredPurchase(PurchaseDetails details) async {
     try {
       LogConfig.logInfo('🔄 Gestion achat restauré: ${details.productID}');
@@ -226,10 +248,32 @@ class IAPService {
           .any((key) => key.startsWith(details.productID));
 
       if (hasPendingPurchase) {
-        // C'est un nouvel achat qui arrive comme "restored" (comportement Sandbox)
-        debugPrint('🎯 Restored attendu = NOUVEL ACHAT (comportement Sandbox normal)');
-        await _handleSuccessfulPurchase(details);
-        return;
+        // S'assurer que c'est vraiment un nouvel achat
+        final purchaseTime = details.transactionDate;
+        final now = DateTime.now().millisecondsSinceEpoch;
+
+        // Vérifier si l'achat est récent (moins de 5 minutes)
+        final isRecentPurchase = purchaseTime != null && (now - int.parse(purchaseTime)) < 300000; // 5 minutes
+
+        // Vérifier l'environnement
+        final isTestEnvironment = kDebugMode || !SecureConfig.kIsProduction;
+
+        if (isRecentPurchase && isTestEnvironment) {
+          debugPrint('🎯 Restored récent en test = NOUVEL ACHAT (Sandbox)');
+          LogConfig.logInfo('✅ Achat restored validé comme nouveau (récent + test env)');
+          await _handleSuccessfulPurchase(details);
+          return;
+        } else {
+          // Rejeter si pas récent ou pas en environnement de test
+          debugPrint('🚫 Restored rejeté - Pas récent ou env production');
+          LogConfig.logInfo('❌ Achat restored rejeté (${isRecentPurchase ? "récent" : "ancien"}, ${isTestEnvironment ? "test" : "prod"})');
+          
+          // Annuler la pending purchase
+          _completePurchaseWithResult(
+            details.productID,
+            PurchaseResult.canceled(),
+          );
+        }
       } else {
         // Vraie restauration silencieuse
         debugPrint('🔕 Restauration silencieuse ignorée pour ${details.productID}');
@@ -245,6 +289,12 @@ class IAPService {
       if (details.pendingCompletePurchase) {
         await _iap.completePurchase(details);
       }
+
+      // Échouer toutes les pending purchases pour ce produit
+      _completePurchaseWithError(
+        details.productID, 
+        PaymentException('Erreur traitement achat restauré: $e')
+      );
     }
   }
 
@@ -323,7 +373,6 @@ class IAPService {
     }
   }
 
-  // SIMPLE nettoyage
   static Future<void> cleanupPendingTransactions() async {
     await _ensureInitialized();
     if (!_isAvailable) return;

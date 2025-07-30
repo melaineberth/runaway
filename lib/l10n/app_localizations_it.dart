@@ -1661,4 +1661,53 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get checkNetwork => 'Please check your internet connection to access this feature';
+
+  @override
+  String get processing => 'Processing...';
+
+  @override
+  String get purchaseInProgress => 'Current purchase...';
+
+  @override
+  String get testEnvironmentWarning => 'Test environment - Simulated purchase';
+
+  @override
+  String get purchaseAlreadyInProgress => 'A purchase is already in progress';
+
+  @override
+  String get purschaseTimeout => 'Timeout during the purchase';
+
+  @override
+  String get purschaseImpossible => 'Unable to launch the purchase process';
+
+  @override
+  String get disabledInAppPurchase => 'In-app purchases are not available';
+
+  @override
+  String notFoundProduct(String id) {
+    return 'Product $id not found in the store';
+  }
+
+  @override
+  String errorRestoredPurchase(String error) {
+    return 'Purchase processing error restored: $error';
+  }
+
+  @override
+  String get creditVerificationFailed => 'Unable to check your credits';
+
+  @override
+  String get routeGenerationNetworkError => 'Connection problem. Check your internet and try again.';
+
+  @override
+  String get routeGenerationProtected => 'Your credits are protected, they will only be debited in case of a successful generation';
+
+  @override
+  String get creditConsumptionAfterSuccess => 'Successful generation! 1 credit used';
+
+  @override
+  String get sessionExpiredLogin => 'Session expired. Please log in again.';
+
+  @override
+  String get offlineGenerationError => 'Check your internet connection to generate a route.';
 }

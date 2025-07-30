@@ -1,4 +1,7 @@
 import 'package:runaway/core/helper/config/log_config.dart';
+import 'package:runaway/core/helper/extensions/extensions.dart';
+import 'package:runaway/core/router/router.dart';
+import 'package:runaway/features/credits/domain/models/user_credits.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' as su;
 import 'package:runaway/core/blocs/app_data/app_data_bloc.dart';
 import 'package:runaway/core/blocs/app_data/app_data_event.dart';
@@ -56,6 +59,7 @@ class CreditVerificationService {
   Future<CreditVerificationResult> verifyCreditsForGeneration({
     int requiredCredits = 1,
   }) async {
+    final context = rootNavigatorKey.currentContext!;
     try {
       LogConfig.logInfo('💳 === VÉRIFICATION CRÉDITS ===');
       LogConfig.logInfo('💳 Crédits requis: $requiredCredits');
@@ -67,41 +71,41 @@ class CreditVerificationService {
           hasEnoughCredits: false,
           availableCredits: 0,
           requiredCredits: requiredCredits,
-          errorMessage: 'Session expirée. Veuillez vous reconnecter.',
+          errorMessage: context.l10n.sessionExpiredLogin,
         );
       }
 
-      // Récupérer les crédits via la logique UI First
-      int availableCredits;
+      // Récupérer les crédits SANS les modifier
+      UserCredits? userCredits;
       
-      // Priorité 1: AppDataBloc si données chargées
+      // Essayer d'abord depuis AppDataBloc si disponible
       if (_appDataBloc != null && _appDataBloc.state.isCreditDataLoaded) {
-        availableCredits = _appDataBloc.state.availableCredits;
-        LogConfig.logInfo('💳 Crédits depuis AppDataBloc: $availableCredits');
-      } 
-      // Priorité 2: CreditsBloc local
-      else {
-        final hasEnough = await _creditsBloc.hasEnoughCredits(requiredCredits);
-        if (!hasEnough) {
-          // Récupérer le nombre exact via API
-          final userCredits = await _creditsRepository.getUserCredits();
-          availableCredits = userCredits.availableCredits;
-        } else {
-          // Si suffisant, récupérer quand même le nombre exact
-          final userCredits = await _creditsRepository.getUserCredits();
-          availableCredits = userCredits.availableCredits;
-        }
-        LogConfig.logInfo('💳 Crédits depuis API: $availableCredits');
+        userCredits = _appDataBloc.state.userCredits;
+        LogConfig.logInfo('💳 Crédits depuis AppDataBloc: ${userCredits?.availableCredits ?? 0}');
+      } else {
+        // Sinon, récupérer via API (lecture seule)
+        userCredits = await _creditsRepository.getUserCredits();
+        LogConfig.logInfo('💳 Crédits depuis API: ${userCredits.availableCredits}');
       }
 
-      final hasEnough = availableCredits >= requiredCredits;
-      
-      LogConfig.logInfo('💳 Résultat: ${hasEnough ? "✅" : "❌"} ($availableCredits >= $requiredCredits)');
+      if (userCredits == null) {
+        return CreditVerificationResult(
+          hasEnoughCredits: false,
+          availableCredits: 0,
+          requiredCredits: requiredCredits,
+          errorMessage: context.l10n.creditVerificationFailed,
+        );
+      }
+
+      final hasEnough = userCredits.availableCredits >= requiredCredits;
+      LogConfig.logInfo('💳 Résultat vérification: ${hasEnough ? "✅ Suffisant" : "❌ Insuffisant"}');
+      LogConfig.logInfo('💳 Disponible: ${userCredits.availableCredits}, Requis: $requiredCredits');
 
       return CreditVerificationResult(
         hasEnoughCredits: hasEnough,
-        availableCredits: availableCredits,
+        availableCredits: userCredits.availableCredits,
         requiredCredits: requiredCredits,
+        errorMessage: hasEnough ? null : 'Crédits insuffisants (${userCredits.availableCredits}/$requiredCredits)',
       );
 
     } catch (e) {

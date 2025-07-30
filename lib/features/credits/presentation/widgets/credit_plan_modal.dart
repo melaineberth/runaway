@@ -2,12 +2,11 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:runaway/core/helper/config/secure_config.dart';
 import 'package:runaway/core/helper/extensions/extensions.dart';
 import 'package:runaway/core/blocs/app_data/app_data_bloc.dart';
 import 'package:runaway/core/blocs/app_data/app_data_state.dart';
 import 'package:runaway/core/utils/injections/bloc_provider_extension.dart';
-import 'package:runaway/core/errors/api_exceptions.dart';
-import 'package:runaway/core/helper/extensions/monitoring_extensions.dart';
 import 'package:runaway/core/helper/services/monitoring_service.dart';
 import 'package:runaway/core/widgets/modal_sheet.dart';
 import 'package:runaway/core/widgets/squircle_btn.dart';
@@ -31,12 +30,13 @@ class CreditPlanModal extends StatefulWidget {
 
 class _CreditPlanModalState extends State<CreditPlanModal> {
   String? selectedPlanId;
+  bool _isPurchaseInProgress = false; // État d'achat
 
   @override
   void initState() {
     super.initState();
     
-    // 🆕 Déclencher le pré-chargement si les données ne sont pas disponibles
+    // Déclencher le pré-chargement si les données ne sont pas disponibles
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!context.isCreditDataLoaded) {
         LogConfig.logInfo('💳 Pré-chargement des plans depuis CreditPlanModal');
@@ -46,7 +46,12 @@ class _CreditPlanModalState extends State<CreditPlanModal> {
   }
 
   void _handlePurchase(String planId, int credits, double price) async {
-    if (selectedPlanId == null) return;
+    if (selectedPlanId == null || _isPurchaseInProgress) return;
+
+    // Empêcher les achats multiples
+    setState(() {
+      _isPurchaseInProgress = true;
+    });
 
     final operationId = MonitoringService.instance.trackOperation(
       'credit_purchase',
@@ -76,10 +81,20 @@ class _CreditPlanModalState extends State<CreditPlanModal> {
       
       LogConfig.logInfo('Plan trouvé: ${selectedPlan.name} (${selectedPlan.credits} crédits)');
 
+      // Environnement et logs détaillés
+      final isTestEnv = kDebugMode || !SecureConfig.kIsProduction;
+      LogConfig.logInfo('🏪 Environnement: ${isTestEnv ? "TEST/SANDBOX" : "PRODUCTION"}');
+      LogConfig.logInfo('📱 Produit IAP: ${selectedPlan.iapId}');
+
       // Déclencher l'achat via CreditsBloc d'abord pour gérer l'état
       context.creditsBloc.add(
         CreditPurchaseRequested(selectedPlan.id),
       );
+
+      // Feedback utilisateur immédiat
+      if (isTestEnv) {
+        _showInfoSnackBar(context.l10n.testEnvironmentWarning);
+      }
 
       // Effectuer l'achat - chaque achat doit être un NOUVEAU achat (consommable)
       final purchaseResult = await IAPService.makePurchase(selectedPlan);
@@ -113,6 +128,12 @@ class _CreditPlanModalState extends State<CreditPlanModal> {
             },
           );
 
+          // Fermer la modal automatiquement après succès
+          if (mounted) {
+            _showSuccessSnackBar(context.l10n.purchaseSuccess);
+            Navigator.of(context).pop();
+          }
+
         } else {
           if (mounted) {
             _showErrorSnackBar(context.l10n.missingTransactionID);
@@ -120,110 +141,61 @@ class _CreditPlanModalState extends State<CreditPlanModal> {
           }
         }
       } else if (purchaseResult.isCanceled) {
-        // 🚫 Achat annulé par l'utilisateur
+        // Achat annulé par l'utilisateur
         LogConfig.logInfo('🚫 Achat annulé par l\'utilisateur');
         if (mounted) {
           _showErrorSnackBar(context.l10n.purchaseCanceled);
         }
       } else {
-        // ❌ Erreur lors de l'achat
+        // Erreur lors de l'achat
         if (mounted) {
-          final errorMessage = purchaseResult.errorMessage ?? context.l10n.unknownError;
-          LogConfig.logError('❌ Erreur achat: $errorMessage');
-          
-          // Gestion spéciale pour les problèmes de restauration/finalisation
-          if (errorMessage.contains('restauré au lieu de nouveau')) {
-            _showSystemErrorDialog();
-          } else {
-            _showErrorSnackBar(errorMessage);
-          }
+          final errorMessage = purchaseResult.errorMessage ?? context.l10n.duringPaymentError;
+          _showErrorSnackBar(errorMessage);
+          MonitoringService.instance.finishOperation(operationId, success: false);
         }
-      }
-      
-    } catch (e, stackTrace) {
-      LogConfig.logError('❌ Erreur processus achat: $e');
-      
+      }  
+    } on PaymentException catch (e) {
+      LogConfig.logError('💳 Erreur achat: ${e.message}');
       if (mounted) {
-        
-        String errorMessage = context.l10n.duringPaymentError;
-
-        if (e is PaymentException) {
-          errorMessage = e.message;
-        } else if (e is NetworkException) {
-          errorMessage = context.l10n.networkException;
-        } else if (e.toString().contains('Plan non trouvé')) {
-          errorMessage = context.l10n.retryNotAvailablePlans;
-          if (mounted) {
-            context.refreshCreditData();
-          }
-        }
-      
-        _showErrorSnackBar(errorMessage);
-
-        context.captureError(e, stackTrace, extra: {
-          'operation': 'credit_purchase',
-          'plan_id': planId,
-          'credits': credits,
-          'price': price,
+        _showErrorSnackBar(e.message);
+        MonitoringService.instance.finishOperation(operationId, success: false);
+      }
+    } catch (e) {
+      LogConfig.logError('❌ Erreur inattendue: $e');
+      if (mounted) {
+        _showErrorSnackBar(context.l10n.unknownError);
+        MonitoringService.instance.finishOperation(operationId, success: false);
+      }
+    } finally {
+      // Réactiver le bouton
+      if (mounted) {
+        setState(() {
+          _isPurchaseInProgress = false;
         });
-        
-        MonitoringService.instance.finishOperation(
-          operationId, 
-          success: false, 
-          errorMessage: e.toString(),
-        );
       }
     }
   }
 
-  // Méthode pour gérer les erreurs système
-  void _showSystemErrorDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Row(
-          children: [
-            Icon(
-              Icons.warning,
-              color: Colors.orange[600],
-              size: 24,
-            ),
-            8.w,
-            Text(context.l10n.systemIssueDetectedTitle),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(context.l10n.systemIssueDetectedSubtitle),
-            16.h,
-            Text(
-              context.l10n.systemIssueDetectedDesc,
-              style: TextStyle(fontSize: 14, color: Colors.grey[600], fontWeight: FontWeight.w600),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: Text(context.l10n.close),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              Navigator.of(context).pop();
-              try {
-                // Forcer un nettoyage complet
-                await IAPService.cleanupPendingTransactions();
-                if (context.mounted) _showErrorSnackBar(context.l10n.cleaningDone);
-              } catch (e) {
-                if (context.mounted) _showErrorSnackBar(context.l10n.cleaningError(e.toString()));
-              }
-            },
-            child: Text(context.l10n.cleaning),
-          ),
-        ],
-      ),
+  // ✅ AJOUT - Feedback positif pour l'utilisateur
+  void _showSuccessSnackBar(String message) {
+    showTopSnackBar(
+      Overlay.of(context),
+      TopSnackBar(title: message),
+    );
+  }
+
+  // ✅ AJOUT - Feedback informatif
+  void _showInfoSnackBar(String message) {
+    showTopSnackBar(
+      Overlay.of(context),
+      TopSnackBar(isWarning: true, title: message),
+    );
+  }
+
+  void _showErrorSnackBar(String message) {
+    showTopSnackBar(
+      Overlay.of(context),
+      TopSnackBar(isError: true, title: message),
     );
   }
 
@@ -488,7 +460,8 @@ class _CreditPlanModalState extends State<CreditPlanModal> {
     
         SquircleBtn(
           isPrimary: true,
-          onTap: selectedPlanId != null ? () {
+          isLoading: _isPurchaseInProgress,
+          onTap: selectedPlanId != null && !_isPurchaseInProgress ? () {
             // Récupérer le plan sélectionné depuis appDataState
             final selectedPlan = appDataState.activePlans.firstWhere(
               (plan) => plan.id == selectedPlanId,
@@ -506,9 +479,11 @@ class _CreditPlanModalState extends State<CreditPlanModal> {
               actualPrice,   // double price
             );
           } : null,
-          label: selectedPlanId != null 
-            ? context.l10n.buySelectedPlan
-            : context.l10n.selectPlan,
+          label: _isPurchaseInProgress 
+            ? context.l10n.processing // Vous devez ajouter cette traduction
+            : (selectedPlanId != null 
+              ? context.l10n.buySelectedPlan
+              : context.l10n.selectPlan),
         ),
     
         // 🆕 Bouton de rafraîchissement si pas de plans
@@ -608,16 +583,6 @@ class _CreditPlanModalState extends State<CreditPlanModal> {
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  void _showErrorSnackBar(String message) {
-    showTopSnackBar(
-      Overlay.of(context),
-      TopSnackBar(
-        isError: true,
-        title: message,
       ),
     );
   }

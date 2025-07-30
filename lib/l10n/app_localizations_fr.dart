@@ -1661,4 +1661,53 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get checkNetwork => 'Veuillez vérifier votre connexion internet pour accéder à cette fonctionnalité';
+
+  @override
+  String get processing => 'Traitement...';
+
+  @override
+  String get purchaseInProgress => 'Achat en cours...';
+
+  @override
+  String get testEnvironmentWarning => 'Environnement de test - Achat simulé';
+
+  @override
+  String get purchaseAlreadyInProgress => 'Un achat est déjà en cours';
+
+  @override
+  String get purschaseTimeout => 'Timeout lors de l\'achat';
+
+  @override
+  String get purschaseImpossible => 'Impossible de lancer le processus d\'achat';
+
+  @override
+  String get disabledInAppPurchase => 'Les achats in-app ne sont pas disponibles';
+
+  @override
+  String notFoundProduct(String id) {
+    return 'Produit $id non trouvé dans le store';
+  }
+
+  @override
+  String errorRestoredPurchase(String error) {
+    return 'Erreur traitement achat restauré: $error';
+  }
+
+  @override
+  String get creditVerificationFailed => 'Impossible de vérifier vos crédits';
+
+  @override
+  String get routeGenerationNetworkError => 'Problème de connexion. Vérifiez votre internet et réessayez.';
+
+  @override
+  String get routeGenerationProtected => 'Vos crédits sont protégés - ils ne seront débités qu\'en cas de génération réussie';
+
+  @override
+  String get creditConsumptionAfterSuccess => 'Génération réussie ! 1 crédit utilisé';
+
+  @override
+  String get sessionExpiredLogin => 'Session expirée. Veuillez vous reconnecter.';
+
+  @override
+  String get offlineGenerationError => 'Vérifiez votre connexion internet pour générer un parcours.';
 }

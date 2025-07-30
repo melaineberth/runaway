@@ -2306,5 +2306,81 @@
   "checkNetwork": "Please check your internet connection to access this feature",
   "@checkNetwork": {
     "description": "Message during an attempt to access services requiring internet"
+  },
+  "processing": "Processing...",
+  "@processing": {
+    "description": "Indicateur de traitement en cours"
+  },
+  "purchaseInProgress": "Current purchase...",
+  "@purchaseInProgress": {
+    "description": "Message achat en cours"
+  },
+  "testEnvironmentWarning": "Test environment - Simulated purchase",
+  "@testEnvironmentWarning": {
+    "description": "Avertissement environnement test"
+  },
+  "purchaseAlreadyInProgress": "A purchase is already in progress",
+  "@purchaseAlreadyInProgress": {
+    "description": "Erreur achat multiple"
+  },
+  
+
+
+  "purschaseTimeout": "Timeout during the purchase",
+  "@purschaseTimeout": {
+    "description": "Timeout lors de l'achat"
+  },
+  "purschaseImpossible": "Unable to launch the purchase process",
+  "@purschaseImpossible": {
+    "description": "Processus d'achat impossible"
+  },
+  "disabledInAppPurchase": "In-app purchases are not available",
+  "@disabledInAppPurchase": {
+    "description": "Achats in-app indisponible"
+  },
+  "notFoundProduct": "Product {id} not found in the store",
+  "@notFoundProduct": {
+    "description": "Le produit selectionné n'est pas trouvé",
+    "placeholders": {
+      "id": {
+        "type": "String"
+      }
+    }
+  },
+  "errorRestoredPurchase": "Purchase processing error restored: {error}",
+  "@errorRestoredPurchase": {
+    "description": "Erreur de traitement",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+
+
+
+  "creditVerificationFailed": "Unable to check your credits",
+  "@creditVerificationFailed": {
+    "description": "Erreur lors de la vérification des crédits"
+  },
+  "routeGenerationNetworkError": "Connection problem. Check your internet and try again.",
+  "@routeGenerationNetworkError": {
+    "description": "Erreur réseau pendant la génération"
+  },
+  "routeGenerationProtected": "Your credits are protected, they will only be debited in case of a successful generation",
+  "@routeGenerationProtected": {
+    "description": "Information sur la protection des crédits"
+  },
+  "creditConsumptionAfterSuccess": "Successful generation! 1 credit used",
+  "@creditConsumptionAfterSuccess": {
+    "description": "Confirmation d'utilisation de crédit après succès"
+  },
+  "sessionExpiredLogin": "Session expired. Please log in again.",
+  "@sessionExpiredLogin": {
+    "description": "Message quand la session a expiré"
+  },
+  "offlineGenerationError": "Check your internet connection to generate a route.",
+  "@offlineGenerationError": {
+    "description": "Message d'erreur hors ligne"
   }
 }

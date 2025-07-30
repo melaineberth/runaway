@@ -10,6 +10,8 @@ import 'package:runaway/core/helper/services/app_data_initialization_service.dar
 import 'package:runaway/core/helper/services/connectivity_service.dart';
 import 'package:runaway/core/helper/services/guest_limitation_service.dart';
 import 'package:runaway/features/auth/data/repositories/auth_repository.dart';
+import 'package:runaway/features/auth/data/services/brute_force_protection_service.dart';
+import 'package:runaway/features/auth/data/services/security_logging_service.dart';
 import 'package:runaway/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:runaway/features/auth/presentation/bloc/auth_event.dart';
 import 'package:runaway/features/credits/data/repositories/credits_repository.dart';
@@ -47,6 +49,15 @@ class ServiceLocator {
         appDataBloc: sl<AppDataBloc>(),
       );
     });
+
+    // ===== SERVICES DE SÉCURITÉ =====
+    sl.registerLazySingleton<BruteForceProtectionService>(
+      () => BruteForceProtectionService.instance,
+    );
+
+    sl.registerLazySingleton<SecurityLoggingService>(
+      () => SecurityLoggingService.instance,
+    );
 
     // --- Connectivité ----------------------
     // Utiliser l'instance déjà initialisée

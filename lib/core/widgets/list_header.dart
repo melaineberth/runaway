@@ -6,6 +6,8 @@ class ListHeader extends StatelessWidget {
   final String? subtitle;
   final TextStyle? titleStyle;
   final TextStyle? subtitleStyle;
+  final CrossAxisAlignment? crossAxisAlignment;
+  final TextAlign? textAlign;
 
   const ListHeader({
     super.key,
@@ -13,12 +15,14 @@ class ListHeader extends StatelessWidget {
     this.subtitle,
     this.titleStyle,
     this.subtitleStyle,
+    this.crossAxisAlignment,
+    this.textAlign,
   });
 
   @override
   Widget build(BuildContext context) {
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: crossAxisAlignment ?? CrossAxisAlignment.start,
       children: [
         Text(
           title,
@@ -26,6 +30,7 @@ class ListHeader extends StatelessWidget {
             fontSize: 18,
             color: context.adaptiveTextPrimary,
           ),
+          textAlign: textAlign ?? TextAlign.start,
         ),
         if (subtitle != null) ...[
           Text(
@@ -35,6 +40,7 @@ class ListHeader extends StatelessWidget {
               color: context.adaptiveTextSecondary,
               fontWeight: FontWeight.w500,
             ),
+            textAlign: textAlign ?? TextAlign.start,
           ),
         ],
         15.h,
