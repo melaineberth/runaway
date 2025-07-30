@@ -2567,5 +2567,21 @@
   "errorReported": "Erreur signalée avec succès",
   "@errorReported": {
     "description": "Message de confirmation après signalement d'erreur."
+  },
+  "logoutSuccess": "Déconnexion réussie",
+  "@logoutSuccess": {
+    "description": "Message de succès affiché après une déconnexion réussie."
+  },
+  "deleteAccountSuccess": "Compte supprimé avec succès",
+  "@deleteAccountSuccess": {
+    "description": "Message de succès affiché après une suppression de compte réussie."
+  },
+  "emailAlreadyInUse": "Cette adresse email est déjà utilisée",
+  "@emailAlreadyInUse": {
+    "description": "Message d'erreur lorsqu'un email est déjà associé à un compte existant."
+  },
+  "tooManyAttempts": "Trop de tentatives de connexion. Réessayez dans quelques minutes",
+  "@tooManyAttempts": {
+    "description": "Message d'erreur lorsque l'utilisateur a fait trop de tentatives de connexion."
   }
 }

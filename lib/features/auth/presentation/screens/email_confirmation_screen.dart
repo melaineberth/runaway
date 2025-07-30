@@ -157,7 +157,7 @@ class _EmailConfirmationScreenState extends State<EmailConfirmationScreen> {
                 Row(
                   children: [
                     IconButton(
-                      onPressed: () => context.go('/login'),
+                      onPressed: () => context.pop(),
                       icon: Icon(HugeIcons.strokeStandardArrowLeft02),
                     ),
                   ],

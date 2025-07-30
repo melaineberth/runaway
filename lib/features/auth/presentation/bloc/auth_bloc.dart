@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:runaway/core/blocs/app_data/app_data_bloc.dart';
 import 'package:runaway/core/blocs/app_data/app_data_event.dart';
+import 'package:runaway/core/errors/auth_exceptions.dart';
 import 'package:runaway/core/helper/config/secure_config.dart';
 import 'package:runaway/core/helper/extensions/monitoring_extensions.dart';
 import 'package:runaway/core/helper/services/app_data_initialization_service.dart';
@@ -221,7 +222,8 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       
     } catch (err) {
       LogConfig.logError('❌ Erreur mise à jour profil: $err');
-      emit(AuthError(err.toString()));
+      // Utiliser la méthode helper pour une gestion d'erreur améliorée
+      _handleAuthError(err, emit);
       // Retourner à l'état précédent après l'erreur
       Future.delayed(const Duration(seconds: 2), () {
         emit(Authenticated(currentState.profile));
@@ -476,7 +478,8 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       emit(Authenticated(p));
     } catch (err) {
       LogConfig.logError('❌ Erreur complétion profil: $err');
-      emit(AuthError(err.toString()));
+      // Utiliser la méthode helper pour une gestion d'erreur améliorée
+      _handleAuthError(err, emit);
     }
   }
 
@@ -546,32 +549,17 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     } catch (err) {
       LogConfig.logError('❌ Erreur inscription: $e');
     
-      // 🆕 Enregistrer l'échec selon le type d'erreur
-      String reason = 'unknown_error';
-      String userMessage = 'Erreur lors de la création du compte';
+      // Utiliser la méthode helper pour une gestion d'erreur améliorée
+      _handleAuthError(err, emit);
       
-      if (e.toString().toLowerCase().contains('already')) {
-        reason = 'email_already_exists';
-        userMessage = 'Un compte existe déjà avec cet email';
-      } else if (e.toString().toLowerCase().contains('weak')) {
-        reason = 'weak_password';
-        userMessage = 'Mot de passe trop faible';
-      } else if (e.toString().toLowerCase().contains('invalid')) {
-        reason = 'invalid_email';
-        userMessage = 'Adresse email invalide';
-        await BruteForceProtectionService.instance.recordFailedAttempt(e.email);
-      } else if (e.toString().toLowerCase().contains('network')) {
-        reason = 'network_error';
-        userMessage = 'Erreur de connexion réseau';
-      }
+      // Enregistrer l'échec pour la protection contre la force brute
+      await BruteForceProtectionService.instance.recordFailedAttempt(e.email);
       
       SecurityLoggingService.instance.logSignUpAttempt(
         email: e.email,
         success: false,
-        reason: reason,
+        reason: 'signup_error: ${err.toString()}',
       );
-      
-      emit(AuthError(userMessage));
 
     }
   }
@@ -683,29 +671,17 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
 
       LogConfig.logError('❌ Erreur connexion: $e');
     
-      // 🆕 Enregistrer l'échec selon le type d'erreur
-      String reason = 'unknown_error';
-      String userMessage = 'Erreur de connexion';
+      // 🆕 Utiliser la méthode helper pour une gestion d'erreur améliorée
+      _handleAuthError(err, emit);
       
-      if (e.toString().toLowerCase().contains('invalid')) {
-        reason = 'invalid_credentials';
-        userMessage = 'Email ou mot de passe incorrect';
-        await BruteForceProtectionService.instance.recordFailedAttempt(e.email);
-      } else if (e.toString().toLowerCase().contains('network')) {
-        reason = 'network_error';
-        userMessage = 'Erreur de connexion réseau';
-      } else if (e.toString().toLowerCase().contains('rate')) {
-        reason = 'rate_limited';
-        userMessage = 'Trop de tentatives. Veuillez patienter.';
-      }
+      // Enregistrer l'échec pour la protection contre la force brute
+      await BruteForceProtectionService.instance.recordFailedAttempt(e.email);
       
       SecurityLoggingService.instance.logLoginAttempt(
         email: e.email,
         success: false,
-        reason: reason,
+        reason: 'login_error: ${err.toString()}',
       );
-      
-      emit(AuthError(userMessage));
 
       MonitoringService.instance.finishOperation(
         operationId,
@@ -748,7 +724,8 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       }
     } catch (err) {
       LogConfig.logError('❌ Erreur Google Sign-In: $err');
-      emit(AuthError(err.toString()));
+      // Utiliser la méthode helper pour une gestion d'erreur améliorée
+      _handleAuthError(err, emit);
     }
   }
 
@@ -775,7 +752,8 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       }
     } catch (err) {
       LogConfig.logError('❌ Erreur Apple Sign-In: $err');
-      emit(AuthError(err.toString()));
+      // Utiliser la méthode helper pour une gestion d'erreur améliorée
+      _handleAuthError(err, emit);
     }
   }
 
@@ -1047,6 +1025,14 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         emit(AuthError('Erreur lors de la réinitialisation'));
       }
     }
+  }
+
+  void _handleAuthError(dynamic error, Emitter<AuthState> emit) {
+    LogConfig.logError('❌ Erreur auth: $error');
+    
+    // Utiliser AuthExceptionHandler pour convertir l'erreur en exception typée avec message localisé
+    final appException = AuthExceptionHandler.handleSupabaseError(error);
+    emit(AuthError(appException.toString()));
   }
 
   @override

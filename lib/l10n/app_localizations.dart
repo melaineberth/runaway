@@ -3620,6 +3620,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Error reported successfully'**
   String get errorReported;
+
+  /// Success message displayed after successful logout.
+  ///
+  /// In en, this message translates to:
+  /// **'Successfully logged out'**
+  String get logoutSuccess;
+
+  /// Success message displayed after successful account deletion.
+  ///
+  /// In en, this message translates to:
+  /// **'Account successfully deleted'**
+  String get deleteAccountSuccess;
+
+  /// Error message when email is already associated with an existing account.
+  ///
+  /// In en, this message translates to:
+  /// **'This email address is already in use'**
+  String get emailAlreadyInUse;
+
+  /// Error message when user has made too many login attempts.
+  ///
+  /// In en, this message translates to:
+  /// **'Too many login attempts. Please try again in a few minutes'**
+  String get tooManyAttempts;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:hugeicons/hugeicons.dart';
 import 'package:runaway/core/helper/extensions/extensions.dart';
 import 'package:runaway/core/utils/constant/constants.dart';
 import 'package:runaway/core/utils/injections/bloc_provider_extension.dart';
@@ -126,62 +127,51 @@ class _LoginScreenState extends State<LoginScreen> {
                   subtitle: context.l10n.enterAuthDetails,
                 ),
 
-                // 🆕 Affichage des alertes de sécurité
+                // Affichage des alertes de sécurité
                 if (_isAccountLocked) ...[
-                  Container(
-                    padding: EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Colors.red.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.red.withValues(alpha: 0.3)),
-                    ),
-                    child: Column(
-                      children: [
-                        Icon(Icons.lock_outline, color: Colors.red, size: 24),
-                        8.h,
-                        Text(
-                          'Compte temporairement verrouillé',
-                          style: context.bodySmall?.copyWith(
-                            fontWeight: FontWeight.w600,
-                            color: Colors.red,
-                          ),
-                        ),
-                        4.h,
-                        Text(
-                          'Réessayez dans $_remainingLockoutMinutes minute${_remainingLockoutMinutes > 1 ? 's' : ''}',
-                          style: context.bodySmall?.copyWith(
-                            color: Colors.red.withValues(alpha: 0.8),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  20.h,
-                ] else if (_remainingAttempts < 5) ...[
-                  Container(
-                    padding: EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.orange.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Colors.orange.withValues(alpha: 0.3)),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(Icons.warning_amber, color: Colors.orange, size: 20),
-                        8.w,
-                        Expanded(
-                          child: Text(
-                            'Attention: $_remainingAttempts tentative${_remainingAttempts > 1 ? 's' : ''} restante${_remainingAttempts > 1 ? 's' : ''}',
+                  Row(
+                    children: [
+                      Icon(HugeIcons.solidRoundedSquareLock02, color: Colors.red, size: 20),
+                      8.w,
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Compte temporairement verrouillé',
                             style: context.bodySmall?.copyWith(
-                              color: Colors.orange.withValues(alpha: 0.9),
+                              color: Colors.red,
                               fontSize: 14,
                             ),
                           ),
-                        ),
-                      ],
-                    ),
+                          Text(
+                            'Réessayez dans $_remainingLockoutMinutes minute${_remainingLockoutMinutes > 1 ? 's' : ''}',
+                            style: context.bodySmall?.copyWith(
+                              color: Colors.red,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
-                  15.h,
+                  20.h,
+                ] else if (_remainingAttempts < 5) ...[
+                  Row(
+                    children: [
+                      Icon(HugeIcons.solidRoundedAlert01, color: Colors.orange, size: 20),
+                      8.w,
+                      Expanded(
+                        child: Text(
+                          'Attention: $_remainingAttempts tentative${_remainingAttempts > 1 ? 's' : ''} restante${_remainingAttempts > 1 ? 's' : ''}',
+                          style: context.bodySmall?.copyWith(
+                            color: Colors.orange.withValues(alpha: 0.9),
+                            fontSize: 14,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  10.h,
                 ],
 
                 Column(

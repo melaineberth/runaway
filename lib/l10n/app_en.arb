@@ -2567,5 +2567,21 @@
   "errorReported": "Error reported successfully",
   "@errorReported": {
     "description": "Confirmation message after reporting error."
+  },
+  "logoutSuccess": "Successfully logged out",
+  "@logoutSuccess": {
+    "description": "Success message displayed after successful logout."
+  },
+  "deleteAccountSuccess": "Account successfully deleted",
+  "@deleteAccountSuccess": {
+    "description": "Success message displayed after successful account deletion."
+  },
+  "emailAlreadyInUse": "This email address is already in use",
+  "@emailAlreadyInUse": {
+    "description": "Error message when email is already associated with an existing account."
+  },
+  "tooManyAttempts": "Too many login attempts. Please try again in a few minutes",
+  "@tooManyAttempts": {
+    "description": "Error message when user has made too many login attempts."
   }
 }

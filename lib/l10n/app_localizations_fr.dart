@@ -1858,4 +1858,16 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get errorReported => 'Erreur signalée avec succès';
+
+  @override
+  String get logoutSuccess => 'Déconnexion réussie';
+
+  @override
+  String get deleteAccountSuccess => 'Compte supprimé avec succès';
+
+  @override
+  String get emailAlreadyInUse => 'Cette adresse email est déjà utilisée';
+
+  @override
+  String get tooManyAttempts => 'Trop de tentatives de connexion. Réessayez dans quelques minutes';
 }

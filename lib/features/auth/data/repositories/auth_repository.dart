@@ -2025,6 +2025,31 @@ class AuthRepository {
     }
   }
 
+  /// Vérifie si un email est déjà utilisé en consultant la table des profils
+  Future<bool> isEmailAlreadyUsed(String email) async {
+    try {
+      LogConfig.logInfo('🔍 Vérification existence email: $email');
+      
+      // Rechercher dans la table des profils si l'email existe déjà
+      final response = await _supabase
+          .from('profiles')
+          .select('email')
+          .eq('email', email.trim().toLowerCase())
+          .maybeSingle()
+          .timeout(Duration(seconds: 5));
+      
+      final exists = response != null;
+      LogConfig.logInfo('📧 Email $email ${exists ? 'existe déjà' : 'disponible'}');
+      
+      return exists;
+    } catch (e) {
+      LogConfig.logError('❌ Erreur vérification email: $e');
+      
+      // En cas d'erreur, on laisse l'inscription se faire pour ne pas bloquer l'utilisateur
+      return false;
+    }
+  }
+
   /// Helper pour analyser et formater les erreurs Supabase
   String _parseSupabaseError(dynamic error) {
     final errorString = error.toLowerCase();

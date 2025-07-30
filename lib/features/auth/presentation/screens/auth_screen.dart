@@ -130,12 +130,29 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
 
           } else if (authState is AuthError) {
             LogConfig.logError(authState.message);
+  
+            // Déterminer le type d'erreur pour personnaliser l'affichage
+            bool isWarning = _isEmailError(authState.message) && _isCredentialsError(authState.message);
+            bool isNetworkIssue = _isNetworkError(authState.message);
+            
             showTopSnackBar(
               Overlay.of(context), 
               TopSnackBar(
-                isError: true,
+                isError: !isWarning,
+                isWarning: isWarning,
+                // 🆕 Utiliser une icône différente selon le type d'erreur
+                // icon: isNetworkIssue ? Icons.wifi_off : (isWarning ? Icons.email : Icons.error),
                 title: authState.message,
-              )
+                // 🆕 Ajouter une action pour les erreurs réseau
+                action: isNetworkIssue,
+                onPressed: isNetworkIssue ? () {
+                  // Réessayer automatiquement après un délai
+                  Future.delayed(Duration(seconds: 1), () {
+                    // Déclencher une nouvelle tentative si l'utilisateur était en train de se connecter
+                    // Cette logique dépend de votre état actuel dans l'écran
+                  });
+                } : null,
+              ),
             );
           }
         },
@@ -364,5 +381,27 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
         ),
       ],
     );
+  }
+
+  bool _isNetworkError(String errorMessage) {
+    final lowerMessage = errorMessage.toLowerCase();
+    return lowerMessage.contains('connexion') || 
+          lowerMessage.contains('internet') || 
+          lowerMessage.contains('timeout') ||
+          lowerMessage.contains('réseau');
+  }
+
+  bool _isCredentialsError(String errorMessage) {
+    final lowerMessage = errorMessage.toLowerCase();
+    return lowerMessage.contains('incorrect') || 
+          lowerMessage.contains('invalide') ||
+          lowerMessage.contains('identifiants');
+  }
+
+  bool _isEmailError(String errorMessage) {
+    final lowerMessage = errorMessage.toLowerCase();
+    return lowerMessage.contains('email') || 
+          lowerMessage.contains('confirmation') ||
+          lowerMessage.contains('confirmer');
   }
 }

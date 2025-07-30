@@ -47,8 +47,12 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
   late AnimationController _fadeController;
   late Animation<double> _fadeAnimation;
 
-  // 🆕 Ajouter cette variable pour gérer le chargement
+  // Ajouter cette variable pour gérer le chargement
   bool _isProfileUpdating = false;
+
+  // Variables pour tracker les opérations en cours
+  bool _isLoggingOut = false;
+  bool _isDeletingAccount = false;
 
   late String _screenLoadId;
   
@@ -145,7 +149,7 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
     }
   }
 
-  // 🆕 Méthodes pour tracker les actions du compte
+  // Méthodes pour tracker les actions du compte
   void _trackAccountAction(String action, {Map<String, dynamic>? data}) {
     MonitoringService.instance.recordMetric(
       'account_action',
@@ -164,18 +168,68 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
       screenName: 'account_screen',
       child: BlocListener<AuthBloc, AuthState>(
         listener: (context, authState) {
-          // 🆕 Gérer la fin du chargement du profil
+          // Gérer la fin du chargement du profil
           if (authState is Authenticated && _isProfileUpdating) {
             setState(() {
               _isProfileUpdating = false;
             });
           }
 
-          // Redirection automatique après déconnexion/suppression
-          if (authState is Unauthenticated) {
-            print('🧭 Utilisateur déconnecté, redirection vers HomeScreen');
+          // Gérer le succès de la déconnexion
+          if (authState is Unauthenticated && _isLoggingOut) {
+            setState(() {
+              _isLoggingOut = false;
+            });
+            
+            // Afficher le snackbar de succès pour la déconnexion
+            if (context.mounted) {
+              showTopSnackBar(
+                Overlay.of(context),
+                TopSnackBar(
+                  title: context.l10n.logoutSuccess,
+                ),
+              );
+            }
 
-            // 1️⃣ Fermer la modal AccountScreen d'abord
+            // Redirection vers la page d'accueil avec délai pour voir le snackbar
+            Future.delayed(const Duration(milliseconds: 1500), () {
+              if (context.mounted) {
+                context.go('/home');
+              }
+            });
+            return; // empêcher l'exécution du bloc générique
+          }
+
+          // Gérer le succès de la suppression de compte
+          if (authState is Unauthenticated && _isDeletingAccount) {
+            setState(() {
+              _isDeletingAccount = false;
+            });
+            
+            // Afficher le snackbar de succès pour la suppression
+            if (context.mounted) {
+              showTopSnackBar(
+                Overlay.of(context),
+                TopSnackBar(
+                  title: context.l10n.deleteAccountSuccess,
+                ),
+              );
+            }
+
+            // Redirection vers la page d'accueil avec délai pour voir le snackbar
+            Future.delayed(const Duration(milliseconds: 1500), () {
+              if (context.mounted) {
+                context.go('/home');
+              }
+            });
+            return; //empêcher l'exécution du bloc générique
+          }
+
+          // Redirection automatique si ce n'est pas une déconnexion/suppression intentionnelle
+          if (authState is Unauthenticated && !_isLoggingOut && !_isDeletingAccount) {
+            print('🧭 Utilisateur déconnecté (autre raison), redirection vers HomeScreen');
+
+            // Fermer la modal AccountScreen si elle existe
             if (context.mounted && Navigator.canPop(context)) {
               context.pop();
             }
@@ -186,6 +240,21 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
                 context.go('/home');
               }
             });
+          }
+
+          // Gérer les erreurs d'authentification
+          if (authState is AuthError) {
+            // Réinitialiser les états de chargement en cas d'erreur
+            if (_isLoggingOut) {
+              setState(() {
+                _isLoggingOut = false;
+              });
+            }
+            if (_isDeletingAccount) {
+              setState(() {
+                _isDeletingAccount = false;
+              });
+            }
           }
         },
         child: ClipRRect(
@@ -200,7 +269,7 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
             ),
             color: context.adaptiveBackground,
             child: BlocBuilder<AuthBloc, AuthState>(
-              // 🆕 Empêcher le rebuild pendant la mise à jour du profil
+              // Empêcher le rebuild pendant la mise à jour du profil
               buildWhen: (previous, current) {
                 if (_isProfileUpdating) return false;
                 return true;
@@ -910,6 +979,7 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
 
   void _showLogoutDialog(BuildContext context) {
     _trackAccountAction('logout_dialog_opened');
+
     showModalSheet(
       context: context,
       backgroundColor: Colors.transparent,
@@ -920,8 +990,20 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
         onValid: () {
           HapticFeedback.mediumImpact();
 
+          // Fermer immédiatement la modal de confirmation
           context.pop();
 
+          // Fermer immédiatement la modal AccountScreen
+          if (context.mounted && Navigator.canPop(context)) {
+            context.pop();
+          }
+
+          // Marquer qu'on est en train de se déconnecter
+          setState(() {
+            _isLoggingOut = true;
+          });
+
+          // Déclencher la déconnexion
           context.authBloc.add(LogOutRequested());
         },
       ),
@@ -947,8 +1029,20 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
         onValid: () {
           HapticFeedback.mediumImpact();
 
+          // Fermer immédiatement la modal de confirmation
           context.pop();
 
+          // Fermer immédiatement la modal AccountScreen
+          if (context.mounted && Navigator.canPop(context)) {
+            context.pop();
+          }
+
+          // Marquer qu'on est en train de supprimer le compte
+          setState(() {
+            _isDeletingAccount = true;
+          });
+
+          // Déclencher la suppression du compte
           context.authBloc.add(DeleteAccountRequested());
         },
       ),

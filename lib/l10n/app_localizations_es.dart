@@ -1858,4 +1858,16 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get errorReported => 'Error reported successfully';
+
+  @override
+  String get logoutSuccess => 'Successfully logged out';
+
+  @override
+  String get deleteAccountSuccess => 'Account successfully deleted';
+
+  @override
+  String get emailAlreadyInUse => 'This email address is already in use';
+
+  @override
+  String get tooManyAttempts => 'Too many login attempts. Please try again in a few minutes';
 }

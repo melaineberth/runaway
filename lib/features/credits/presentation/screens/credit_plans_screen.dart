@@ -1,6 +1,8 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:runaway/core/helper/config/log_config.dart';
@@ -32,7 +34,8 @@ class CreditPlansScreen extends StatefulWidget {
 
 class _CreditPlansScreenState extends State<CreditPlansScreen> with TickerProviderStateMixin {
   String? selectedPlanId;
-
+  String? _errorMessage;
+  
   late String _screenLoadId;
 
   // 🎭 Animation Controllers
@@ -40,24 +43,72 @@ class _CreditPlansScreenState extends State<CreditPlansScreen> with TickerProvid
   late AnimationController _staggerController;
   late Animation<double> _fadeAnimation;
 
+  late List<AnimationController> _itemControllers;
+  late List<Animation<Offset>> _itemSlideAnimations;
+  late List<Animation<double>> _itemFadeAnimations;
+
   final List<Animation<double>> _slideAnimations = [];
   final List<Animation<double>> _scaleAnimations = [];
+
+  // 🆕 Gestion du délai minimum et transition
+  Timer? _minimumLoadingTimer;
+  bool _minimumLoadingCompleted = false;
+  bool _canShowContent = false;
+  static const Duration _minimumLoadingDuration = Duration(milliseconds: 300);
   
   @override
   void initState() {
     super.initState();
-     _initializeAnimations();
+    _initializeAnimations();
     _screenLoadId = context.trackScreenLoad('credit_plans_screen');
 
-    // 🆕 Déclencher le pré-chargement si les données ne sont pas disponibles
+    // Déclencher le pré-chargement si les données ne sont pas disponibles
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!context.isCreditDataLoaded) {
+      final isDataLoaded = context.isCreditDataLoaded;
+      LogConfig.logInfo('💳 État initial - données chargées: $isDataLoaded');
+      
+      if (!isDataLoaded) {
         LogConfig.logInfo('💳 Pré-chargement des données de crédits depuis CreditPlansScreen');
         context.preloadCreditData();
+        _startMinimumLoadingTimer();
+      } else {
+        // Les données sont déjà chargées, pas de shimmer
+        LogConfig.logInfo('💳 Données déjà disponibles, affichage direct');
+        _minimumLoadingCompleted = true;
+        _canShowContent = true;
       }
       context.finishScreenLoad(_screenLoadId);
       _trackCreditsScreenView();
     });
+  }
+
+  /// Démarre le timer de délai minimum
+  void _startMinimumLoadingTimer() {
+    _minimumLoadingTimer = Timer(_minimumLoadingDuration, () {
+      if (mounted) {
+        LogConfig.logInfo('⏰ Délai minimum écoulé');
+        setState(() {
+          _minimumLoadingCompleted = true;
+        });
+        _checkIfCanShowContent();
+      }
+    });
+  }
+
+  /// Vérifie si on peut afficher le contenu (données + délai minimum)
+  void _checkIfCanShowContent() {
+    final appDataState = context.read<AppDataBloc>().state;
+    final hasData = appDataState.isCreditDataLoaded;
+    final delayCompleted = _minimumLoadingCompleted;
+    
+    LogConfig.logInfo('🔍 Check transition - hasData: $hasData, delayCompleted: $delayCompleted, canShow: $_canShowContent');
+    
+    if (_minimumLoadingCompleted && appDataState.isCreditDataLoaded && !_canShowContent) {
+      LogConfig.logInfo('🎯 Transition shimmer → contenu autorisée');
+      setState(() {
+        _canShowContent = true;
+      });
+    }
   }
 
   /// 🎬 Initialise les contrôleurs d'animation
@@ -133,6 +184,7 @@ class _CreditPlansScreenState extends State<CreditPlansScreen> with TickerProvid
 
   @override
   void dispose() {
+    _minimumLoadingTimer?.cancel();
     _fadeController.dispose();
     _staggerController.dispose();
     super.dispose();
@@ -160,7 +212,7 @@ class _CreditPlansScreenState extends State<CreditPlansScreen> with TickerProvid
           color: context.adaptiveBackground,
           child: MultiBlocListener(
             listeners: [
-              // 🆕 Écouter les succès d'achat depuis CreditsBloc
+              // Écouter les succès d'achat depuis CreditsBloc
               BlocListener<CreditsBloc, CreditsState>(
                 listener: (context, state) {
                   if (state is CreditPurchaseSuccess) {
@@ -180,6 +232,11 @@ class _CreditPlansScreenState extends State<CreditPlansScreen> with TickerProvid
             ],
             child: BlocBuilder<AppDataBloc, AppDataState>(
               builder: (context, appDataState) {
+                // Vérifier si on peut montrer le contenu quand les données arrivent
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  _checkIfCanShowContent();
+                });
+
                 return _buildMainContent(appDataState);
               },
             ),
@@ -189,25 +246,122 @@ class _CreditPlansScreenState extends State<CreditPlansScreen> with TickerProvid
     );
   }
 
-  /// 🆕 Construction du contenu principal basé sur AppDataState
+  /// Construction du contenu principal avec transition fluide
   Widget _buildMainContent(AppDataState appDataState) {
-    // État de chargement
-    if (!appDataState.isCreditDataLoaded && appDataState.isLoading) {
-      return const Center(child: CircularProgressIndicator());
-    }
-
-    // État d'erreur
-    if (appDataState.lastError != null && !appDataState.hasCreditData) {
-      return _buildErrorState(appDataState.lastError!);
-    }
-
-    // Données disponibles ou état initial
-    return _buildLoadedContent(appDataState);
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 600), // Durée de la transition
+      switchInCurve: Curves.easeInOut,
+      switchOutCurve: Curves.easeInOut,
+      transitionBuilder: (Widget child, Animation<double> animation) {
+        // Transition de fondu avec léger décalage vertical
+        return FadeTransition(
+          opacity: animation,
+          child: SlideTransition(
+            position: Tween<Offset>(
+              begin: const Offset(0, 0.05),
+              end: Offset.zero,
+            ).animate(CurvedAnimation(
+              parent: animation,
+              curve: Curves.easeOutCubic,
+            )),
+            child: child,
+          ),
+        );
+      },
+      child: _shouldShowShimmer(appDataState) 
+        ? _buildShimmerLoadingState()
+        : _shouldShowError(appDataState)
+          ? _buildErrorState(appDataState.lastError!)
+          : _buildLoadedContent(appDataState),
+    );
   }
 
-  /// 🆕 Contenu avec données chargées (UI First)
+  /// Détermine si on doit afficher le shimmer
+  bool _shouldShowShimmer(AppDataState appDataState) {
+    // Afficher le shimmer si on ne peut pas encore afficher le contenu
+    final hasData = appDataState.isCreditDataLoaded;
+    final isLoading = appDataState.isLoading;
+    
+    LogConfig.logInfo('🔍 Shimmer check - hasData: $hasData, isLoading: $isLoading, canShow: $_canShowContent');
+    
+    return !hasData && isLoading && !_canShowContent;
+  }
+
+  /// Détermine si on doit afficher l'erreur
+  bool _shouldShowError(AppDataState appDataState) {
+    return appDataState.lastError != null && 
+      !appDataState.hasCreditData && 
+      _canShowContent; // Seulement après le délai minimum
+  }
+
+  Widget _buildShimmerLoadingState() {
+    return Column(
+      key: const ValueKey('shimmer'), // Clé pour AnimatedSwitcher
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildShimmerContainer(radius: 30, height: 24, width: 100),
+        15.h,
+        _buildShimmerContainer(radius: 40, height: 85),
+        
+        // Statistiques supplémentaires
+        8.h,
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          children: [
+            Expanded(child: _buildShimmerContainer(radius: 40, height: 85)),
+            8.w,
+            Expanded(child: _buildShimmerContainer(radius: 40, height: 85)),
+          ],
+        ),
+
+        30.h,
+
+        _buildShimmerContainer(radius: 30, height: 24, width: 250),
+        15.h,
+
+        Expanded(
+          child: BlurryPage(
+            physics: const BouncingScrollPhysics(),
+            shrinkWrap: false,
+            children: [
+              ...List.generate(10, (index) {
+                return Padding(
+                  padding: EdgeInsets.only(bottom: index == 10 - 1 ? 0.0 : 12.0),
+                  child: _buildShimmerContainer(radius: 50, height: 70),
+                );
+              })
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildShimmerContainer({required double radius, required double height, double? width}) {
+    return ClipPath(
+      clipper: ShapeBorderClipper(
+        shape: ContinuousRectangleBorder(
+          borderRadius: BorderRadius.all(
+            Radius.circular(radius),
+          ),
+        ),
+      ),
+      child: Container(
+        height: height,
+        width: width,
+        // radius: 20,
+        // gradient: false,
+        decoration: BoxDecoration(
+          // borderRadius: BorderRadius.circular(15),
+          color: context.adaptiveDisabled.withValues(alpha: 0.05),
+        ),
+      ).animate(onPlay: (controller) => controller.loop()).shimmer(color: context.adaptiveBorder.withValues(alpha: 0.05), duration: Duration(seconds: 2), blendMode: BlendMode.dstOver),
+    );
+  }
+
+  /// Contenu avec données chargées (UI First)
   Widget _buildLoadedContent(AppDataState appDataState) {
-    // 🎯 Données immédiatement disponibles depuis AppDataBloc
+    // Données immédiatement disponibles depuis AppDataBloc
     final userCredits = appDataState.userCredits;
     final transactions = appDataState.creditTransactions;
 
@@ -217,6 +371,7 @@ class _CreditPlansScreenState extends State<CreditPlansScreen> with TickerProvid
     }
 
     return Stack(
+      key: const ValueKey('content'), // Clé pour AnimatedSwitcher
       children: [
         transactions.isEmpty 
           ? _buildEmptyState() 
@@ -421,6 +576,7 @@ class _CreditPlansScreenState extends State<CreditPlansScreen> with TickerProvid
 
   Widget _buildErrorState(String message) {
     return Center(
+      key: const ValueKey('error'), // Clé pour AnimatedSwitcher
       child: Padding(
         padding: const EdgeInsets.all(20),
         child: Column(
@@ -444,7 +600,15 @@ class _CreditPlansScreenState extends State<CreditPlansScreen> with TickerProvid
               onTap: () {
                 // 🆕 Utiliser AppDataBloc pour le retry
                 LogConfig.logInfo('🔄 Retry: rafraîchissement des données de crédits');
+                
+                // 🆕 Redémarrer complètement le processus
+                setState(() {
+                  _minimumLoadingCompleted = false;
+                  _canShowContent = false;
+                });
+                
                 context.refreshCreditData();
+                _startMinimumLoadingTimer();
               },
               height: 44,
               color: context.adaptivePrimary,

@@ -64,13 +64,14 @@ class NetworkException implements Exception {
 
 /// Helper pour convertir les erreurs Supabase en exceptions typées
 class AuthExceptionHandler {
-  static AppException handleSupabaseError(dynamic error) {
+  static Exception handleSupabaseError(dynamic error) {
     final context = rootNavigatorKey.currentContext!;
     final errorMessage = error.toString().toLowerCase();
     
     // Erreurs de connexion
     if (errorMessage.contains('invalid login credentials') ||
-        errorMessage.contains('invalid email or password')) {
+        errorMessage.contains('invalid email or password') ||
+        errorMessage.contains('email not confirmed') && errorMessage.contains('invalid login')) {
       return LoginException(
        context.l10n.invalidCredentials,
         code: 'INVALID_CREDENTIALS',
@@ -78,7 +79,7 @@ class AuthExceptionHandler {
       );
     }
 
-    // 🆕 Gestion des annulations utilisateur
+    // Gestion des annulations utilisateur
     if (errorMessage.contains('canceled') || 
         errorMessage.contains('cancelled') ||
         errorMessage.contains('user canceled') ||
@@ -91,7 +92,7 @@ class AuthExceptionHandler {
       );
     }
 
-    // 🆕 Erreurs de mot de passe faible - gestion plus spécifique
+    // Erreurs de mot de passe faible - gestion plus spécifique
     if (errorMessage.contains('password is too weak') ||
         errorMessage.contains('weak password') ||
         errorMessage.contains('password does not meet') ||
@@ -113,10 +114,11 @@ class AuthExceptionHandler {
       );
     }
 
+    // Email non confirmé spécifiquement
     if (errorMessage.contains('email not confirmed') ||
-        errorMessage.contains('email address not confirmed') ||
-        errorMessage.contains('confirm your email')) {
-      return AuthException(
+        errorMessage.contains('email_not_confirmed') ||
+        errorMessage.contains('unconfirmed')) {
+      return LoginException(
         context.l10n.notConfirmedEmail,
         code: 'EMAIL_NOT_CONFIRMED',
         originalError: error,
@@ -141,6 +143,16 @@ class AuthExceptionHandler {
         originalError: error,
       );
     }
+
+    // Utilisateur non trouvé
+    if (errorMessage.contains('user not found') ||
+        errorMessage.contains('user does not exist')) {
+      return LoginException(
+        context.l10n.invalidCredentials, // On reste vague pour la sécurité
+        code: 'USER_NOT_FOUND',
+        originalError: error,
+      );
+    }
     
     if (errorMessage.contains('email not confirmed')) {
       return LoginException(
@@ -150,11 +162,14 @@ class AuthExceptionHandler {
       );
     }
     
-    // Erreurs d'inscription
-    if (errorMessage.contains('user already registered')) {
+    // Erreurs liées aux emails déjà utilisés
+    if (errorMessage.contains('user already registered') ||
+        errorMessage.contains('email already exists') ||
+        errorMessage.contains('duplicate key') ||
+        errorMessage.contains('already registered')) {
       return SignUpException(
-        context.l10n.emailAlreadyUsed,
-        code: 'USER_ALREADY_EXISTS',
+        context.l10n.emailAlreadyInUse,
+        code: 'EMAIL_ALREADY_IN_USE',
         originalError: error,
       );
     }
@@ -182,6 +197,68 @@ class AuthExceptionHandler {
       return SessionException(
         context.l10n.pleaseReconnect,
         code: 'SESSION_EXPIRED',
+        originalError: error,
+      );
+    }
+
+    if (errorMessage.contains('invalid refresh token') ||
+        errorMessage.contains('refresh token not found') ||
+        errorMessage.contains('jwt expired') ||
+        errorMessage.contains('session expired')) {
+      return SessionException(
+        context.l10n.sessionExpired,
+        code: 'SESSION_EXPIRED',
+        originalError: error,
+      );
+    }
+
+    // Erreurs de connexion réseau
+    if (errorMessage.contains('failed host lookup') ||
+        errorMessage.contains('network error') ||
+        errorMessage.contains('connection timeout') ||
+        errorMessage.contains('connection failed')) {
+      return NetworkException(
+        context.l10n.connectionProblem,
+        originalError: error.toString(),
+      );
+    }
+
+    // Erreurs de timeout
+    if (errorMessage.contains('timeout') ||
+        errorMessage.contains('timed out')) {
+      return NetworkException(
+        context.l10n.timeoutError,
+        originalError: error.toString(),
+      );
+    }
+
+    // Service temporairement indisponible
+    if (errorMessage.contains('service unavailable') ||
+        errorMessage.contains('503') ||
+        errorMessage.contains('temporarily unavailable')) {
+      return NetworkException(
+        context.l10n.serviceUnavailable,
+        originalError: error.toString(),
+      );
+    }
+
+    // Inscription désactivée
+    if (errorMessage.contains('signup disabled') ||
+        errorMessage.contains('signups not allowed')) {
+      return SignUpException(
+        context.l10n.signupDisabled,
+        code: 'SIGNUP_DISABLED',
+        originalError: error,
+      );
+    }
+
+    // Trop de tentatives de connexion
+    if (errorMessage.contains('too many requests') ||
+        errorMessage.contains('rate limit exceeded') ||
+        errorMessage.contains('429')) {
+      return LoginException(
+        context.l10n.tooManyAttempts,
+        code: 'TOO_MANY_ATTEMPTS',
         originalError: error,
       );
     }

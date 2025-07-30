@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:runaway/core/helper/config/log_config.dart';
 import 'package:runaway/core/helper/extensions/extensions.dart';
 import 'package:runaway/core/utils/injections/bloc_provider_extension.dart';
+import 'package:runaway/core/utils/injections/service_locator.dart';
 import 'package:runaway/core/widgets/list_header.dart';
 import 'package:runaway/core/widgets/modal_sheet.dart';
 import 'package:runaway/core/widgets/squircle_btn.dart';
@@ -35,6 +37,9 @@ class _SignupScreenState extends State<SignupScreen> {
   bool _isAccountLocked = false;
   int _remainingLockoutMinutes = 0;
 
+  bool _isCheckingEmail = false;
+  String? _emailError;
+
   @override
   void initState() {
     super.initState();
@@ -54,6 +59,38 @@ class _SignupScreenState extends State<SignupScreen> {
       setState(() {
         _isAccountLocked = !canAttempt;
         _remainingLockoutMinutes = lockoutMinutes;
+      });
+    }
+  }
+
+  Future<void> _checkEmailExists(String email) async {
+    if (email.isEmpty || !AuthInputValidator.validateEmail(email).isValid) {
+      return;
+    }
+
+    setState(() {
+      _isCheckingEmail = true;
+      _emailError = null;
+    });
+
+    try {
+      // Utiliser le service locator pour accéder au repository
+      final emailExists = await context.authRepository.isEmailAlreadyUsed(email);
+
+      if (emailExists) {
+        setState(() {
+          _emailError = context.l10n.emailAlreadyInUse;
+        });
+        
+        // Déclencher la validation du champ pour afficher l'erreur
+        _formKey.currentState?.validate();
+      }
+    } catch (e) {
+      LogConfig.logInfo('Erreur vérification email: $e');
+      // En cas d'erreur, on ne bloque pas l'utilisateur
+    } finally {
+      setState(() {
+        _isCheckingEmail = false;
       });
     }
   }
@@ -92,6 +129,11 @@ class _SignupScreenState extends State<SignupScreen> {
         email: value,
       );
       return validationResult.errorMessage;
+    }
+    
+    // Retourner l'erreur d'email existant si elle a été détectée
+    if (_emailError != null) {
+      return _emailError;
     }
     
     return null;
@@ -234,6 +276,18 @@ class _SignupScreenState extends State<SignupScreen> {
     if (!canAttempt) {
       await _checkSecurityStatus();
       return;
+    }
+
+    // 🆕 Vérifier une dernière fois l'email avant inscription
+    final email = _emailController.text.trim();
+    if (email.isNotEmpty) {
+      await _checkEmailExists(email);
+      
+      // Si l'email existe déjà, ne pas procéder à l'inscription
+      if (_emailError != null) {
+        _formKey.currentState?.validate();
+        return;
+      }
     }
 
     if (_formKey.currentState!.validate()) {
