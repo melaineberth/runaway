@@ -54,6 +54,9 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
   bool _isLoggingOut = false;
   bool _isDeletingAccount = false;
 
+  bool _isImageLoading = true;
+  bool _hasImageError = false;
+
   late String _screenLoadId;
   
   @override
@@ -742,7 +745,7 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
           TextSpan(
             text: context.l10n.termsAndPrivacy,
             recognizer: TapGestureRecognizer()
-              ..onTap = () => launchUrl(Uri.parse("https://trailix.app")),
+              ..onTap = () => launchUrl(Uri.parse("https://trailix.app/fr/legal/terms/site.html")),
           ),
           style: context.bodySmall?.copyWith(
             fontSize: 13,
@@ -838,6 +841,18 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
             child: CachedNetworkImage(
               imageUrl: user.avatarUrl!,
               fit: BoxFit.cover,
+              errorListener: (value) {
+                LogConfig.logError('❌ Erreur chargement image: $value');
+                // Marquer l'erreur et afficher le fallback
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (mounted) {
+                    setState(() {
+                      _hasImageError = true;
+                      _isImageLoading = false;
+                    });
+                  }
+                });
+              },
             ),
           )
           : Center(

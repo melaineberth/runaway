@@ -3,7 +3,6 @@ import 'dart:io';
 import 'dart:math' as math;
 import 'dart:ui' as ui;
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -22,9 +21,7 @@ import 'package:runaway/core/helper/extensions/monitoring_extensions.dart';
 import 'package:runaway/core/helper/services/conversion_triggers.dart';
 import 'package:runaway/core/helper/services/monitoring_service.dart';
 import 'package:runaway/core/widgets/full_screen_loader.dart';
-import 'package:runaway/core/widgets/modal_sheet.dart';
 import 'package:runaway/core/widgets/route_info_tracker.dart';
-import 'package:runaway/core/widgets/squircle_btn.dart';
 import 'package:runaway/features/account/presentation/screens/account_screen.dart';
 import 'package:runaway/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:runaway/features/credits/presentation/screens/credit_plans_screen.dart';
@@ -93,9 +90,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
   late AnimationController _fadeController;
   // late Animation<double> _fadeAnimation;
 
-  bool _showLottieMarker = false; // 🆕 Contrôle l'affichage du Lottie
-  double? _lottieMarkerLat; // 🆕 Position du marqueur Lottie
-  double? _lottieMarkerLng; // 🆕 Position du marqueur Lottie
+  bool _showLottieMarker = false; // Contrôle l'affichage du Lottie
+  double? _lottieMarkerLat; // Position du marqueur Lottie
+  double? _lottieMarkerLng; // Position du marqueur Lottie
   final double _markerSize = 70.0;
 
   // === INTERACTIONS MAPBOX ===
@@ -1031,19 +1028,20 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
       final lineCoordinates =
           coordinates.map((coord) => mp.Position(coord[0], coord[1])).toList();
 
-      // Créer une ligne simple et visible
+      // Créer une ligne simple et visible avec z-index bas
       final routeLine = mp.PolylineAnnotationOptions(
         geometry: mp.LineString(coordinates: lineCoordinates),
-        lineColor: AppColors.primary.toARGB32(), // Rouge vif pour le debug
+        lineColor: AppColors.primary.toARGB32(),
         lineWidth: 5.0,
         lineOpacity: 1.0,
         lineJoin: mp.LineJoin.MITER,
+        // 🆕 IMPORTANT: Définir un z-index bas pour que le parcours reste sous les marqueurs
+        lineSortKey: 0.0, // Plus bas = arrière-plan
       );
 
       await routeLineManager!.create(routeLine);
-      LogConfig.logInfo('Route simple créée (rouge, 8px, opacité 1.0)');
     } catch (e) {
-      LogConfig.logError('❌ Erreur _drawRouteSimple: $e');
+      LogConfig.logError('❌ Erreur lors du tracé de route: $e');
     }
   }
 
@@ -1101,29 +1099,40 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
 
   // Fallback : affichage direct (en cas d'erreur)
   Future<void> _displayRouteDirectly(List<List<double>> coordinates) async {
-    // Supprimer l'ancienne route si elle existe
-    if (routeLineManager != null) {
-      await mapboxMap!.annotations.removeAnnotationManager(routeLineManager!);
+    if (mapboxMap == null || coordinates.isEmpty) {
+      LogConfig.logError('❌ Impossible d\'afficher la route');
+      return;
     }
 
-    // Créer le gestionnaire de lignes
-    routeLineManager =
-        await mapboxMap!.annotations.createPolylineAnnotationManager();
+    try {
+      // Supprimer l'ancien tracé s'il existe
+      if (routeLineManager != null) {
+        await routeLineManager!.deleteAll();
+      } else {
+        // Créer le gestionnaire de lignes
+        routeLineManager =
+            await mapboxMap!.annotations.createPolylineAnnotationManager();
+      }
 
-    // Convertir les coordonnées pour Mapbox
-    final lineCoordinates =
-        coordinates.map((coord) => mp.Position(coord[0], coord[1])).toList();
+      // Convertir les coordonnées pour Mapbox
+      final lineCoordinates =
+          coordinates.map((coord) => mp.Position(coord[0], coord[1])).toList();
 
-    // Créer la ligne de parcours
-    final routeLine = mp.PolylineAnnotationOptions(
-      geometry: mp.LineString(coordinates: lineCoordinates),
-      lineColor: AppColors.primary.toARGB32(),
-      lineWidth: 4.0,
-      lineOpacity: 0.8,
-    );
+      // Créer la ligne de parcours avec z-index bas
+      final routeLine = mp.PolylineAnnotationOptions(
+        geometry: mp.LineString(coordinates: lineCoordinates),
+        lineColor: AppColors.primary.toARGB32(),
+        lineWidth: 4.0,
+        lineOpacity: 0.8,
+        // 🆕 IMPORTANT: Z-index bas pour rester derrière les marqueurs
+        lineSortKey: 0.0,
+      );
 
-    await routeLineManager!.create(routeLine);
-    await _fitMapToRoute(coordinates);
+      await routeLineManager!.create(routeLine);
+      await _fitMapToRoute(coordinates);
+    } catch (e) {
+      LogConfig.logError('❌ Erreur affichage direct route: $e');
+    }
   }
 
   // Ajustement de la vue de la carte
@@ -1240,7 +1249,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
       // 3️⃣ Masquer Lottie
       setState(() => _showLottieMarker = false);
 
-      // 4️⃣ Créer un *vrai* marqueur Mapbox – parfaitement stable
+      // 4️⃣ Créer un *vrai* marqueur Mapbox avec z-index élevé
       await _ensureCustomMarkerImage();
       markerPointManager ??=
           await mapboxMap!.annotations.createPointAnnotationManager();
@@ -1251,6 +1260,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
           iconImage: 'custom-pin',
           iconSize: 1,
           iconOffset: [0, -_markerSize / 2],
+          // 🆕 IMPORTANT: Définir un z-index élevé pour que le marqueur soit au premier plan
+          symbolSortKey: 10.0, // Plus haut = premier plan
         ),
       );
 
@@ -1264,7 +1275,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
     } catch (e) {
       LogConfig.logError('❌ Erreur ajout marqueur personnalisé: $e');
 
-      // Fallback: utiliser l'icône par défaut de Mapbox
+      // Fallback: utiliser l'icône par défaut de Mapbox avec z-index élevé
       try {
         markerPointManager ??=
             await mapboxMap!.annotations.createPointAnnotationManager();
@@ -1272,6 +1283,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
           mp.PointAnnotationOptions(
             geometry: mp.Point(coordinates: mp.Position(lon, lat)),
             iconSize: 1.0,
+            // 🆕 IMPORTANT: Z-index élevé même pour le fallback
+            symbolSortKey: 10.0,
           ),
         );
         locationMarkers.add(marker);
@@ -2912,107 +2925,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
                               spacing: 8.0,
                               mainAxisAlignment: MainAxisAlignment.end,
                               children: [    
-                              if (kDebugMode) 
-                              // Bouton debug
-                              Container(
-                                padding: EdgeInsets.symmetric(
-                                  horizontal: 5.0,
-                                  vertical: 5.0,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: context.adaptiveBackground,
-                                  borderRadius: BorderRadius.circular(100),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.black.withValues(alpha: 0.15),
-                                      spreadRadius: 2,
-                                      blurRadius: 30,
-                                      offset: Offset(0, 0), // changes position of shadow
-                                    ),
-                                  ],
-                                ),
-                                child: IconButton(
-                                  icon: Icon(
-                                    HugeIcons.solidStandardBug01,
-                                    size: 25.0,
-                                  ),
-                                  onPressed: () {
-                                    showModalSheet(
-                                      context: context, 
-                                      backgroundColor: Colors.transparent,
-                                      child: ModalSheet(
-                                        child: Column(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            SquircleBtn(
-                                              label: "Tutorial direct",
-                                              labelColor: Colors.white,
-                                              backgroundColor: Colors.blue.withValues(alpha: 0.9),
-                                              onTap: () {
-                                                showCoachTutorialForDebug();
-
-                                                if (context.mounted) {
-                                                  context.pop();
-                                                }
-                                              },
-                                            ),
-
-                                            6.h,
-
-                                            SquircleBtn(
-                                              label: "Forcer la complétion",
-                                              labelColor: Colors.white,
-                                              backgroundColor: Colors.green.withValues(alpha: 0.9),
-                                              onTap: () async {
-                                                await completeTutorialForDebug();
-                                                
-                                                if (context.mounted) {
-                                                  ScaffoldMessenger.of(context).showSnackBar(
-                                                    SnackBar(
-                                                      content: Text('✅ Tutoriel marqué comme terminé'),
-                                                      duration: Duration(seconds: 2),
-                                                      backgroundColor: Colors.green,
-                                                    ),
-                                                  );
-
-                                                  context.pop();
-                                                }
-                                              },
-                                            ),
-
-                                            6.h,
-
-                                            SquircleBtn(
-                                              label: "Reset",
-                                              labelColor: Colors.white,
-                                              backgroundColor: Colors.red.withValues(alpha: 0.9),
-                                              onTap: () async {
-                                                await resetTutorialForDebug();
-                                                
-                                                if (context.mounted) {
-                                                  ScaffoldMessenger.of(context).showSnackBar(
-                                                    SnackBar(
-                                                      content: Text('🔧 Tutoriel réinitialisé'),
-                                                      duration: Duration(seconds: 2),
-                                                      backgroundColor: Colors.orange,
-                                                    ),
-                                                  );
-
-                                                  context.pop();
-                                                }
-                                              },
-                                            ),
-
-                                            6.h,
-                                          ],
-                                        ),
-                                      ),
-                                    );
-                                  }),
-                                ),
-
-                                const Spacer(),
-
                                 // Bouton gauche
                                 Container(
                                   key: historyButtonKey,
