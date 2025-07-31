@@ -561,7 +561,7 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
   Widget _buildStatsCard(List<SavedRoute> routes) {
     final totalDistance = routes.fold<double>(
       0, 
-      (sum, route) => sum + (route.actualDistance ?? route.parameters.distanceKm),
+      (sum, route) => sum + (route.parameters.distanceKm),
     );
     final totalRoutes = routes.length;
     final unsyncedCount = routes.unsyncedRoutes.length;
@@ -590,7 +590,7 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
             8.w,
             _buildStatItem(
               icon: HugeIcons.strokeRoundedNavigator01,
-              value: '${totalDistance.toStringAsFixed(1)}km',
+              value: '${totalDistance.toStringAsFixed(0)}km',
               label: context.l10n.total,
               color: Colors.green,
             ),

@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_keyboard_visibility/flutter_keyboard_visibility.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:runaway/core/helper/config/log_config.dart';
 import 'package:runaway/core/helper/extensions/extensions.dart';
@@ -923,9 +924,9 @@ class _FloatingLocationSearchSheetState extends State<FloatingLocationSearchShee
           2.h,
           Text(
             parts.skip(1).join(',').trim(),
-            style: context.bodyMedium?.copyWith(
+            style: GoogleFonts.inter(
               fontSize: 16,
-              fontWeight: FontWeight.w600,
+              fontWeight: FontWeight.w500,
               color: context.adaptiveTextSecondary,
             ),
             maxLines: 1,

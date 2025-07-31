@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:runaway/core/helper/config/log_config.dart';
 import 'package:runaway/core/helper/extensions/extensions.dart';
@@ -714,9 +715,10 @@ class _CreditPlansScreenState extends State<CreditPlansScreen> with TickerProvid
                 ),
                 Text(
                   _formatDate(transaction.createdAt),
-                  style: context.bodySmall?.copyWith(
+                  style: GoogleFonts.inter(
                     color: context.adaptiveTextSecondary,
                     fontSize: 14,
+                    fontWeight: FontWeight.w500
                   ),
                 ),
               ],

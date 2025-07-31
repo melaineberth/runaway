@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:lottie/lottie.dart';
 import 'package:runaway/core/blocs/theme_bloc/theme_bloc.dart';
@@ -82,10 +83,10 @@ class ModalDialog extends StatelessWidget {
               10.h,
               Text(
                 subtitle,
-                style: context.bodySmall?.copyWith(
+                style: GoogleFonts.inter(
                   fontSize: 18,
                   color: context.adaptiveTextSecondary,
-                  fontWeight: FontWeight.w400,
+                  fontWeight: FontWeight.w500,
                 ),
                 textAlign: TextAlign.center,
               ),

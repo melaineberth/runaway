@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:runaway/core/helper/extensions/extensions.dart';
 
@@ -85,8 +86,8 @@ class _RoundedTextFieldState extends State<RoundedTextField> {
               hintText: widget.hint,
               border: InputBorder.none,
               suffixText: widget.suffixText,
-              hintStyle: context.bodyMedium?.copyWith(
-                fontWeight: FontWeight.w400,
+              hintStyle: GoogleFonts.inter(
+                fontWeight: FontWeight.w500,
                 fontSize: 18,
                 color: widget.enabled ? context.adaptiveDisabled : context.adaptiveTextSecondary,
               ),

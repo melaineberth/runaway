@@ -262,6 +262,7 @@ class _TickSliderState extends State<TickSlider> with TickerProviderStateMixin {
             maxValue: widget.max,
             initialValue: _value.toStringAsFixed(0),
             animation: animation,
+            maxLength: 6,
             onTap: () {
               context.pop();
             },

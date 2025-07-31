@@ -19,6 +19,7 @@ import 'package:runaway/core/utils/injections/bloc_provider_extension.dart';
 import 'package:runaway/core/helper/extensions/monitoring_extensions.dart';
 import 'package:runaway/core/helper/services/conversion_triggers.dart';
 import 'package:runaway/core/helper/services/monitoring_service.dart';
+import 'package:runaway/core/widgets/full_screen_loader.dart';
 import 'package:runaway/core/widgets/route_info_tracker.dart';
 import 'package:runaway/features/account/presentation/screens/account_screen.dart';
 import 'package:runaway/features/auth/presentation/bloc/auth_bloc.dart';
@@ -127,17 +128,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
   bool _isSaveDialogOpen = false;
   final LoadingOverlay _loading = LoadingOverlay();
   OverlayEntry? _routeInfoEntry;
-
-  // 🆕 Variables pour le loading avec temps minimum 
-  Timer? _loadingMinimumTimer;
-  DateTime? _loadingStartTime;
-  bool _isMinimumLoadingTimeElapsed = false;
-  bool _isPendingRouteInfoDisplay = false;
-  bool _isLoadingOverlayVisible = false;
   bool _isHistoricRouteActive = false;
 
-  // 🆕 Temps minimum de loading (configurable)
-  static const Duration _minimumLoadingDuration = Duration(milliseconds: 1500);
   Timer? _permissionCheckTimer;
   bool _lastPermissionStatus = true; // État précédent des permissions
   bool _hasShownPermissionDeniedSnackbar = false;
@@ -148,7 +140,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
     super.initState();
     WidgetsBinding.instance.addObserver(this);
 
-    // 🆕 Démarrer le tracking de chargement d'écran
+    // Démarrer le tracking de chargement d'écran
     _screenLoadId = context.trackScreenLoad('home_screen');
 
     _initializeAnimationControllers();
@@ -159,11 +151,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
     _initializeMapStyle();
     _startPermissionListener();
 
-    // 🆕 Marquer l'écran comme chargé après l'initialisation
+    // Marquer l'écran comme chargé après l'initialisation
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       context.finishScreenLoad(_screenLoadId);
       
-      // 🆕 Métrique d'engagement utilisateur
+      // Métrique d'engagement utilisateur
       context.recordMetric('screen_view', 1, unit: 'count');
 
       try {
@@ -181,9 +173,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
     _fadeController.dispose();
     _positionStream?.cancel();
     _lottieController.dispose();
-    _loadingMinimumTimer?.cancel();
     _permissionCheckTimer?.cancel();
-    _permissionSnackbarResetTimer?.cancel(); // 🆕 NETTOYER le timer
+    _permissionSnackbarResetTimer?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
@@ -209,7 +200,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
     }
   }
 
-  /// 🎨 Initialiser le style de carte au démarrage
+  /// Initialiser le style de carte au démarrage
   Future<void> _initializeMapStyle() async {
     try {
       // Charger le style depuis SharedPreferences
@@ -244,7 +235,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
     );
   }
 
-  /// 🔄 Restaurer l'état depuis le service
+  /// Restaurer l'état depuis le service
   void _restoreStateFromService() {
     LogConfig.logInfo('🔄 Restauration de l\'état depuis le service...');
 
@@ -2391,81 +2382,17 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
     }
   }
 
-  // 🆕 Démarre le timer de temps minimum pour le loading
-  void _startMinimumLoadingTimer() {
-    _loadingMinimumTimer?.cancel();
-    _loadingStartTime = DateTime.now();
-    _isMinimumLoadingTimeElapsed = false;
-    _isPendingRouteInfoDisplay = false;
-    _isLoadingOverlayVisible = true; // 🆕 AJOUT
-    
-    _loadingMinimumTimer = Timer(_minimumLoadingDuration, () {
-      if (mounted) {
-        setState(() {
-          _isMinimumLoadingTimeElapsed = true;
-        });
-        
-        // Vérifier si on peut fermer l'overlay et afficher le RouteInfoCard
-        _checkAndCompleteLoading();
-      }
-    });
-  }
-
-  void _checkAndCompleteLoading() {
-    if (_isMinimumLoadingTimeElapsed && _isPendingRouteInfoDisplay && _isLoadingOverlayVisible) {
-      // Fermer l'overlay d'abord
-      _loading.hide();
-      _isLoadingOverlayVisible = false;
-      
-      // Attendre un frame pour s'assurer que l'overlay est fermé, puis afficher le RouteInfoCard
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) {
-          _showRouteInfoModal();
-          _isPendingRouteInfoDisplay = false;
-        }
-      });
-    }
-  }
-
-  // 🆕 Gère l'affichage du RouteInfoCard avec respect du temps minimum
-  void _handleRouteInfoDisplay() {
-    if (_isMinimumLoadingTimeElapsed && !_isLoadingOverlayVisible) {
-      // Le temps minimum est écoulé et l'overlay n'est pas visible, on peut afficher immédiatement
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) _showRouteInfoModal();
-      });
-    } else {
-      // Le temps minimum n'est pas écoulé ou l'overlay est visible, on marque comme en attente
-      _isPendingRouteInfoDisplay = true;
-      _checkAndCompleteLoading(); // Vérifier si on peut déjà compléter
-    }
-  }
-
-  void _toggleLoader(BuildContext context, bool show, String msg) {
+  void _toggleLoader(BuildContext context, bool show, LoadingType? loadingType, {VoidCallback? onHidden}) {
     if (show) {
-      // 🆕 Démarrer le timer quand on affiche le loader
-      _startMinimumLoadingTimer();
-      _loading.show(context, msg);
+      print('🟢 Affichage loader: $loadingType');
+      _loading.show(
+        context, 
+        loadingType: loadingType,
+        minDisplay: const Duration(milliseconds: 1200),
+      );
     } else {
-      // 🆕 Marquer que le loading doit se terminer mais respecter le temps minimum
-      if (_isMinimumLoadingTimeElapsed) {
-        _loading.hide();
-        _isLoadingOverlayVisible = false;
-        _loadingMinimumTimer?.cancel();
-        
-        // Si on a un RouteInfoCard en attente, l'afficher maintenant
-        if (_isPendingRouteInfoDisplay) {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (mounted) {
-              _showRouteInfoModal();
-              _isPendingRouteInfoDisplay = false;
-            }
-          });
-        }
-      } else {
-        // Le temps minimum n'est pas écoulé, on va attendre
-        _checkAndCompleteLoading();
-      }
+      print('🔴 Masquage loader demandé');
+      _loading.hide(onHidden: onHidden);
     }
   }
 
@@ -2473,61 +2400,58 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
     BuildContext context,
     RouteGenerationState state,
   ) {
-    // gestion du loader plein-écran
-    final msg = state.isGeneratingRoute
-      ? context.l10n.generateInProgress
-      : null; // ici pas de sauvegarde (gérée par AppDataBloc)
+    // Gestion du loader pour la génération
+    if (state.isGeneratingRoute) {
+      _toggleLoader(context, true, LoadingType.generation);
+    } else if (!state.isGeneratingRoute && _loading.isVisible) {
+      
+      // Callback exécuté quand le loader est vraiment fermé
+      _toggleLoader(context, false, null, onHidden: () {
+        // Cette fonction sera appelée UNIQUEMENT quand le loader est complètement fermé
+        if (state.hasGeneratedRoute && (state.isNewlyGenerated || state.isLoadedFromHistory)) {
+          if (mounted && generatedRouteCoordinates != null) {
+            print('🎯 Affichage RouteInfoModal après fermeture complète du loader');
+            _showRouteInfoModal();
+          }
+        }
+      });
+    }
 
-    _toggleLoader(context, msg != null, msg ?? '');
-
-    // succès de génération : on stocke & on affiche (avec respect du temps minimum)
+    // Gestion des routes (logique existante inchangée)
     if (state.hasGeneratedRoute && state.isNewlyGenerated && !state.isGeneratingRoute) {
-      // Marquer qu'aucun parcours historique n'est actif (nouveau parcours généré)
       _isHistoricRouteActive = false;
-
       setState(() {
         generatedRouteCoordinates = state.generatedRoute;
         routeMetadata = state.routeMetadata;
       });
-      if (state.generatedRoute case final coords?) _displayRouteOnMap(coords);
-      
-      // Utiliser la nouvelle méthode qui respecte le temps minimum
-      _handleRouteInfoDisplay();
+      if (state.generatedRoute != null) {
+        _displayRouteOnMap(state.generatedRoute!);
+      }
     }
 
-    // Parcours chargé depuis l'historique (avec respect du temps minimum)
     if (state.hasGeneratedRoute && state.isLoadedFromHistory && !state.isGeneratingRoute) {
-      // Marquer qu'un parcours historique est maintenant actif
       _isHistoricRouteActive = true;
-
       setState(() {
         generatedRouteCoordinates = state.generatedRoute;
         routeMetadata = state.routeMetadata;
-        // Passer en mode manual pour éviter le recentrage automatique
         _trackingMode = TrackingMode.manual;
       });
 
-      if (state.generatedRoute case final coords?) {
-        _displayRouteOnMap(coords);
-
-        // Centrer la caméra sur le parcours historique sans tracking automatique
-        _centerCameraOnRoute(coords);
-
-        // Pour l'historique, pas de temps minimum (affichage immédiat)
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted) {
+      if (state.generatedRoute != null) {
+        _displayRouteOnMap(state.generatedRoute!);
+        _centerCameraOnRoute(state.generatedRoute!);
+        
+        // Afficher le RouteInfoModal après un court délai
+        Future.delayed(const Duration(milliseconds: 500), () {
+          if (mounted && generatedRouteCoordinates != null) {
+            print('🎯 Affichage RouteInfoModal pour route historique');
             _showRouteInfoModal();
-            LogConfig.logInfo('RouteInfoCard affiché pour parcours historique');
           }
         });
       }
-
-      // Sauvegarder le nouveau mode de tracking
       _mapStateService.saveTrackingMode(_trackingMode);
-      LogConfig.logInfo('🔒 Mode tracking passé en manual pour parcours historique');
     }
 
-    // erreur éventuelle
     if (state.errorMessage != null && !state.isGeneratingRoute) {
       _showRouteGenerationError(state.errorMessage!);
     }
@@ -2639,7 +2563,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
     }
   }
 
-  /// ✅ Gestion des permissions réactivées
+  /// Gestion des permissions réactivées
   void _handleLocationPermissionRestored() async {
     LogConfig.logSuccess('✅ Permissions géolocalisation réactivées');
     
@@ -2713,7 +2637,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
     }
   }
 
-  /// 🚨 Gestion des permissions de géolocalisation refusées
+  /// Gestion des permissions de géolocalisation refusées
   void _handleLocationPermissionRevoked() {
     // Éviter l'affichage multiple de la même notification
     if (_hasShownPermissionDeniedSnackbar) {
@@ -2764,7 +2688,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
     LogConfig.logInfo('✅ Mode manuel activé suite à révocation permissions - bouton de suivi désactivé');
   }
 
-  /// 🔧 Ouvre les paramètres de localisation
+  /// Ouvre les paramètres de localisation
   Future<void> _openLocationSettings() async {
     try {
       LogConfig.logInfo('📱 Ouverture des paramètres de localisation');
@@ -2801,7 +2725,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
     }
   }
 
-  /// 🆕 Ouvre les paramètres système de localisation via deep link
+  /// Ouvre les paramètres système de localisation via deep link
   Future<void> _openSystemLocationSettings() async {
     try {
       if (Platform.isIOS) {
@@ -2844,7 +2768,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
     }
   }
 
-  /// 🆕 Affiche un dialog informatif pour guider l'utilisateur
+  /// Affiche un dialog informatif pour guider l'utilisateur
   void _showLocationSettingsDialog() {
     showDialog(
       context: context,
@@ -2904,7 +2828,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
       screenName: 'home_screen',
       child: MultiBlocListener(
         listeners: [
-          // 1️⃣  Génération de parcours
           BlocListener<RouteGenerationBloc, RouteGenerationState>(
             listenWhen: (previous, current) => 
               previous.generatedRoute != current.generatedRoute ||
@@ -2913,10 +2836,16 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
             listener: _onRouteGenerationStateChanged,
           ),
       
-          // 2️⃣  Sauvegarde de parcours
           BlocListener<AppDataBloc, AppDataState>(
             listenWhen: (previous, current) => previous.isSavingRoute != current.isSavingRoute,
-            listener: (context, state) => _toggleLoader(context, state.isSavingRoute, context.l10n.saving),
+            listener: (context, state) {
+              if (state.isSavingRoute) {
+                _toggleLoader(context, true, LoadingType.saving);
+              } else {
+                // Pas besoin de callback pour la sauvegarde car on n'affiche rien après
+                _toggleLoader(context, false, null);
+              }
+            },
           ),
         ],
         child: BlocBuilder<RouteGenerationBloc, RouteGenerationState>(
@@ -3104,7 +3033,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
     );
   }
 
-  // 🆕 Getter pour vérifier l'état de sauvegarde
+  // Getter pour vérifier l'état de sauvegarde
   bool get _isSavingRoute {
     try {
       final routeState = context.routeGenerationBloc.state;

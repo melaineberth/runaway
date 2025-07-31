@@ -2,21 +2,18 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:pull_down_button/pull_down_button.dart';
 import 'package:runaway/core/helper/config/log_config.dart';
 import 'package:runaway/core/utils/constant/constants.dart';
 import 'package:runaway/core/helper/extensions/extensions.dart';
-import 'package:runaway/core/widgets/squircle_btn.dart';
 import 'package:runaway/core/widgets/squircle_container.dart';
 import 'package:runaway/features/route_generator/data/services/reverse_geocoding_service.dart';
 import 'package:runaway/core/widgets/top_snackbar.dart';
 import 'package:runaway/features/home/presentation/widgets/export_format_dialog.dart';
 import 'package:runaway/features/route_generator/data/services/route_export_service.dart';
-import 'package:runaway/features/route_generator/domain/models/activity_type.dart';
 import 'package:runaway/features/route_generator/domain/models/saved_route.dart';
-import 'package:runaway/features/route_generator/domain/models/terrain_type.dart';
-import 'package:runaway/features/route_generator/domain/models/urban_density.dart';
 import 'package:runaway/features/route_generator/presentation/widgets/overlay_view.dart';
 import 'package:smooth_gradient/smooth_gradient.dart';
 import 'package:soft_edge_blur/soft_edge_blur.dart';
@@ -92,7 +89,7 @@ class _HistoricCardState extends State<HistoricCard> {
             animation: animation,
             onTap: () => Navigator.of(context).pop(),
             isNumber: false, // 🆕 Mode texte
-            maxLength: 50, // 🆕 Limite de caractères
+            maxLength: 30, // 🆕 Limite de caractères
             textCapitalization: TextCapitalization.sentences, // 🆕 Capitalisation
             validator: (value) {
               // 🆕 Validateur personnalisé identique à _confirmRename
@@ -219,23 +216,13 @@ class _HistoricCardState extends State<HistoricCard> {
 
   @override
   Widget build(BuildContext context) {
-    const double imgHeight = 500;
-    const double paddingValue = 15.0;
-
-        // Calculer le temps estimé selon l'activité
-    final int estimatedMinutes = calculateEstimatedDuration(
-      widget.route.parameters.distanceKm, 
-      widget.route.parameters.activityType, 
-      widget.route.parameters.elevationGain,
-    );
-
-    // Formater le temps
-    final String timeString = formatDuration(estimatedMinutes);
+    const double imgHeight = 300;
+    const double paddingValue = 25.0;
 
     return SquircleContainer(
       height: imgHeight,
       onTap: widget.onShowOnMap,
-      radius: 80,
+      radius: 60,
       gradient: false,
       color: context.adaptiveBorder.withValues(alpha: 0.05),
       child: Stack(
@@ -257,167 +244,71 @@ class _HistoricCardState extends State<HistoricCard> {
           ),
       
           // Titre et localisation
-          Padding(
-            padding: const EdgeInsets.only(
-              bottom: paddingValue,
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 12.0),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Expanded(
-                            child: Text.rich(
-                              TextSpan(
-                                text: widget.route.name,
-                                  style: context.bodyMedium?.copyWith(
-                                  fontSize: 20,
-                                  color: context.adaptiveTextPrimary,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                                children: <InlineSpan>[
-                                  TextSpan(
-                                    text: " • ${widget.route.timeAgo}",
-                                    style: context.bodySmall?.copyWith(
-                                      fontSize: 16,
-                                      height: 1,
-                                      fontWeight: FontWeight.w400,
-                                      color: context.adaptiveTextPrimary.withValues(alpha: 0.7),
-                                    ),
-                                  )
-                                ]
-                              )
-                            ),
-                          ),
-                          
-                          _buildActionMenu(),
-                        ],
-                      ),
-                      2.h,
-                      Text(
-                        _getLocationName(),
-                        style: context.bodySmall?.copyWith(
-                          fontSize: 18,
-                          height: 1,
-                          fontWeight: FontWeight.w400,
-                          color: context.adaptiveTextPrimary.withValues(alpha: 0.7),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+          _buildRouteInfo(paddingValue),        
+        ],
+      ),
+    );
+  }
 
-                12.h,
-                
-                // Chips avec détails du parcours
-                SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  physics: const BouncingScrollPhysics(),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: paddingValue),
-                    child: Row(
-                      children: [
-                        // Distance
-                        _buildDetailChip(
-                          icon: HugeIcons.solidRoundedRouteBlock,
-                          text: "${widget.route.parameters.distanceKm.toStringAsFixed(0)}km",
-                        ),
-                        5.w,
-                        // Type d'activité
-                        _buildDetailChip(
-                          icon: getActivityIcon(widget.route.parameters.activityType.id),
-                          text: widget.route.parameters.activityType.label(context),
-                        ),
-                        5.w,
-                        // Temps estimé
-                        _buildDetailChip(
-                          icon: HugeIcons.solidRoundedTimeQuarter02,
-                          text: timeString,
-                        ),
-                        5.w,
-                        // Type de terrain
-                        _buildDetailChip(
-                          icon: HugeIcons.solidRoundedMountain,
-                          text: widget.route.parameters.terrainType.label(context),
-                        ),
-                        5.w,
-                        // Densité urbaine
-                        _buildDetailChip(
-                          icon: HugeIcons.solidRoundedPlant01,
-                          text: widget.route.parameters.urbanDensity.label(context),
-                        ),
-                        5.w,
-                        if (widget.route.parameters.elevationGain > 0) ...[
-                          _buildDetailChip(
-                            icon: HugeIcons.solidRoundedSine02,
-                            text: '${widget.route.parameters.elevationGain.toStringAsFixed(0)}m',
-                          ),
-                          5.w,
-                        ],
-                        if (widget.route.parameters.isLoop) ...[
-                          _buildDetailChip(
-                            icon: HugeIcons.solidRoundedRepeat,
-                            text: context.l10n.pathLoop,
-                          ),
-                          5.w,
-                        ]
-                        else ...[
-                          _buildDetailChip(
-                            icon: HugeIcons.solidRoundedNavigator01,
-                            text: context.l10n.pathSimple,
-                          ),
-                          5.w,
-                        ],
-                        if (widget.route.timesUsed > 0) ...[
-                          _buildDetailChip(
-                            icon: HugeIcons.solidRoundedFavourite,
-                            text: '${widget.route.timesUsed}x',
-                            color: Colors.orange,
-                          ),
-                          5.w,
-                        ],
-                        // Score paysage si supérieur à 6
-                        if (widget.route.metrics.scenicScore > 6) ...[
-                          _buildDetailChip(
-                            icon: HugeIcons.solidRoundedImage01,
-                            text: '${context.l10n.scenic} ${widget.route.metrics.scenicScore.toStringAsFixed(1)}/10',
-                          ),
-                          5.w,
-                        ],
-                        // Pente maximale si supérieure à 5%
-                        if (widget.route.metrics.maxIncline > 5) ...[
-                          _buildDetailChip(
-                            icon: HugeIcons.solidRoundedChart03,
-                            text: '${context.l10n.maxSlope} ${widget.route.metrics.maxIncline.toStringAsFixed(1)}%',
-                          ),
-                        ],
-                      ],
+  Widget _buildRouteInfo(double paddingValue) {
+    return Padding(
+      padding: EdgeInsets.all(paddingValue),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  // Nom de la route avec ellipsis
+                  Flexible(
+                    child: Text(
+                      widget.route.name,
+                      style: context.bodyMedium?.copyWith(
+                        fontSize: 20,
+                        color: context.adaptiveTextPrimary,
+                        fontWeight: FontWeight.w700,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                      maxLines: 1,
                     ),
                   ),
-                ),
-
-                25.h,
-                    
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: paddingValue),
-                  child: SquircleBtn(
-                    isPrimary: true,
-                    onTap: _showExportDialog,
-                    label: context.l10n.download,
+                  
+                  // TimeAgo toujours visible
+                  Text(
+                    " • ${widget.route.timeAgo}",
+                    style: GoogleFonts.inter(
+                      fontSize: 16,
+                      height: 1,
+                      fontWeight: FontWeight.w500,
+                      color: context.adaptiveTextPrimary.withValues(alpha: 0.7),
+                    ),
+                    maxLines: 1,
                   ),
+                ],
+              ),
+              2.h,
+              Text(
+                _getLocationName(),
+                style: GoogleFonts.inter(
+                  fontSize: 16,
+                  height: 1,
+                  fontWeight: FontWeight.w500,
+                  color: context.adaptiveTextPrimary.withValues(alpha: 0.7),
                 ),
-              ],
-            ),
-          ),        
+              ),
+            ],
+          ),
+          //  40.w,
+
+              
+          _buildActionMenu(),
         ],
       ),
     );
@@ -451,7 +342,7 @@ class _HistoricCardState extends State<HistoricCard> {
     return PullDownButton(
       itemBuilder: (context) => [
         PullDownMenuItem(
-          icon: HugeIcons.solidRoundedTypeCursor,
+          icon: HugeIcons.strokeStandardCursorText,
           title: context.l10n.renameRoute,
           onTap: _showRenameSheet,
         ),
@@ -461,6 +352,11 @@ class _HistoricCardState extends State<HistoricCard> {
             title: context.l10n.synchronizeRoute,
             onTap: widget.onSync,
           ),
+        PullDownMenuItem(
+          icon: HugeIcons.strokeRoundedDownloadSquare02,
+          title: context.l10n.download,
+          onTap: _showExportDialog,
+        ),
         PullDownMenuItem(
           isDestructive: true,
           icon: HugeIcons.strokeRoundedDelete02,
@@ -474,9 +370,9 @@ class _HistoricCardState extends State<HistoricCard> {
           HapticFeedback.mediumImpact();
         },
         child: Icon(
-          HugeIcons.solidRoundedMoreHorizontal,
+          HugeIcons.solidRoundedMoreVertical,
           color: context.adaptiveTextPrimary,
-          size: 28,
+          size: 25,
         ),
       ),
     );
@@ -487,7 +383,7 @@ class _HistoricCardState extends State<HistoricCard> {
       imageUrl: widget.route.imageUrl!,
       width: double.infinity,
       height: double.infinity,
-      fit: BoxFit.fitHeight,
+      fit: BoxFit.cover,
       placeholder: (context, url) {
         return _buildLoadingState();
       },
@@ -511,48 +407,14 @@ class _HistoricCardState extends State<HistoricCard> {
     return _locationName ?? 'Mars';
   }
 
-  /// Crée un chip de détail
-  Widget _buildDetailChip({
-    required IconData icon,
-    required String text,
-    Color? color,
-  }) {
-    return Container(
-      height: 40,
-      decoration: BoxDecoration(
-        color: context.adaptiveTextPrimary,
-        borderRadius: BorderRadius.circular(100),
-      ),
-      padding: EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            icon,
-            color: color ?? context.adaptiveBackground,
-            size: 17,
-          ),
-          5.w,
-          Text(
-            text,
-            style: context.bodySmall?.copyWith(
-              fontSize: 14,
-              color: context.adaptiveBackground,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  SoftEdgeBlur _buildBlurredImage(double imgSize) {
+  Widget _buildBlurredImage(double imgSize) {
     return SoftEdgeBlur(
       edges: [
         EdgeBlur(
           type: EdgeType.bottomEdge,
-          size: 300,
+          size: imgSize / 2,
           sigma: 80,
+          tintColor: context.adaptiveTextPrimary.withValues(alpha: 0.08),
           controlPoints: [
             ControlPoint(
               position: 0.5,

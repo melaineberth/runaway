@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:runaway/core/helper/extensions/extensions.dart';
 import 'package:runaway/core/widgets/squircle_container.dart';
@@ -80,16 +81,20 @@ class _AuthTextFieldState extends State<AuthTextField> {
                       FocusManager.instance.primaryFocus?.unfocus();
                     },
                     controller: widget.controller,
-                    style: context.bodySmall?.copyWith(
+                    style: GoogleFonts.inter(
                       color: widget.enabled ? context.adaptiveTextPrimary : context.adaptiveDisabled,
+                      fontWeight: FontWeight.w500,
+                      fontSize: 17,
                     ),
                     onChanged: widget.onChanged,
                     decoration: InputDecoration(
                       hintText: widget.hint,
                       border: InputBorder.none,
                       suffixText: widget.suffixText,
-                      hintStyle: context.bodySmall?.copyWith(
+                      hintStyle: GoogleFonts.inter(
                         color: widget.enabled ? context.adaptiveDisabled : context.adaptiveTextSecondary,
+                        fontWeight: FontWeight.w500,
+                      fontSize: 17,
                       ),
                       errorStyle: context.bodySmall?.copyWith(
                         color: Colors.red.shade300,

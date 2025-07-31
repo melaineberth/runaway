@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:runaway/core/helper/extensions/extensions.dart';
 
 class ListHeader extends StatelessWidget {
@@ -35,7 +36,7 @@ class ListHeader extends StatelessWidget {
         if (subtitle != null) ...[
           Text(
             subtitle!,
-            style: subtitleStyle ?? context.bodyMedium?.copyWith(
+            style: subtitleStyle ?? GoogleFonts.inter(
               fontSize: 16,
               color: context.adaptiveTextSecondary,
               fontWeight: FontWeight.w500,

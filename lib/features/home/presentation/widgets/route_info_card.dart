@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:runaway/core/utils/constant/constants.dart';
 import 'package:runaway/core/helper/extensions/extensions.dart';
@@ -61,10 +62,12 @@ class RouteInfoCard extends StatelessWidget {
                         fontSize: 20,
                         color: context.adaptiveTextPrimary,
                       ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                     Text(
                       routeDesc,
-                      style: context.bodySmall?.copyWith(
+                      style: GoogleFonts.inter(
                         fontSize: 18,
                         color: context.adaptiveTextSecondary,
                         fontWeight: FontWeight.w500
@@ -73,6 +76,7 @@ class RouteInfoCard extends StatelessWidget {
                   ],
                 ),
               ),
+              50.w,
               // Bouton fermer
               IconBtn(
                 padding: 0.0,

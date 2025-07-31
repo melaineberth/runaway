@@ -2,6 +2,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:runaway/core/blocs/app_data/app_data_bloc.dart';
 import 'package:runaway/core/blocs/app_data/app_data_state.dart';
@@ -315,7 +316,7 @@ class _RouteParameterScreenState extends State<RouteParameterScreen> with Ticker
                               },
                               enableHapticFeedback: true,
                               hapticIntensity: HapticIntensity.light,
-                              style: context.bodyMedium?.copyWith(
+                              style: GoogleFonts.inter(
                               fontSize: 16,
                               color: context.adaptiveTextSecondary,
                               fontWeight: FontWeight.w500,
@@ -348,7 +349,7 @@ class _RouteParameterScreenState extends State<RouteParameterScreen> with Ticker
                               },
                               enableHapticFeedback: true,
                               hapticIntensity: HapticIntensity.light,
-                              style: context.bodyMedium?.copyWith(
+                              style: GoogleFonts.inter(
                                 fontSize: 16,
                                 color: context.adaptiveTextSecondary,
                                 fontWeight: FontWeight.w500,
@@ -604,7 +605,7 @@ class _RouteParameterScreenState extends State<RouteParameterScreen> with Ticker
       ),
       subtitle: Text(
         subtitle,
-        style: context.bodyMedium?.copyWith(
+        style: GoogleFonts.inter(
           fontSize: 16,
           color: context.adaptiveTextSecondary,
           fontWeight: FontWeight.w500,
