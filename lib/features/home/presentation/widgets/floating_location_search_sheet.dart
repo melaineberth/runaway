@@ -35,12 +35,14 @@ class FloatingLocationSearchSheet extends StatefulWidget {
     this.userLongitude,
     this.userLatitude,
     this.onProfile,
+    required this.searchButtonKey,
   });
 
   final Function(double longitude, double latitude, String placeName)? onLocationSelected;
   final double? userLongitude;
   final double? userLatitude;
   final Function()? onProfile;
+  final GlobalKey searchButtonKey;
 
   @override
   State<FloatingLocationSearchSheet> createState() => _FloatingLocationSearchSheetState();
@@ -673,6 +675,7 @@ class _FloatingLocationSearchSheetState extends State<FloatingLocationSearchShee
   /// 🔍 Construit la barre de recherche
   Widget _buildSearchBar() {
     return Row(
+      key: widget.searchButtonKey,
       children: [
         Expanded(child: _buildSearchField()),
         _buildProfileButton(),

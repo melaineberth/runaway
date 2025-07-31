@@ -1870,4 +1870,70 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get tooManyAttempts => 'Too many login attempts. Please try again in a few minutes';
+
+  @override
+  String get welcomeTitle => 'Welcome to Trailix !';
+
+  @override
+  String get welcomeDesc => 'Discover how to generate your personalized sports courses in a few keys';
+
+  @override
+  String get benefitsGenerationTitle => 'Smart generation';
+
+  @override
+  String get benefitsGenerationDesc => 'Create courses adapted to your preferences';
+
+  @override
+  String get benefitsLocationTitle => 'Accurate geolocation';
+
+  @override
+  String get benefitsLocationDesc => 'Find the best paths near you';
+
+  @override
+  String get benefitsSavingTitle => 'Easy backup';
+
+  @override
+  String get benefitsSavingDesc => 'Keep your favorite routes close at hand';
+
+  @override
+  String get onStartTutorial => 'Discover the application';
+
+  @override
+  String get skipTutorial => 'Skip the introduction';
+
+  @override
+  String get searchKeyTitle => 'Search for a place';
+
+  @override
+  String get searchKeyDesc => 'Type here to search for a starting point or select your current location';
+
+  @override
+  String get generationKeyTitle => 'Generate a journey';
+
+  @override
+  String get generationKeyDesc => 'Tap here to open the generator and create your personalized journey';
+
+  @override
+  String get historyKeyTitle => 'Saved routes';
+
+  @override
+  String get historyKeyDesc => 'Find here all your favorite routes and your history';
+
+  @override
+  String get userTrackingKeyTitle => 'Location tracking';
+
+  @override
+  String get userTrackingKeyDesc => 'Activate the automatic tracking of your GPS position in real time';
+
+  @override
+  String get mapStyleKeyTitle => 'Map style';
+
+  @override
+  String get mapStyleKeyDesc => 'Change the appearance of the map : satellite, terrain, sombre, etc...';
+
+  @override
+  String get nextMessage => 'Next';
+
+  @override
+  String get finishMessage => 'Finish';
 }

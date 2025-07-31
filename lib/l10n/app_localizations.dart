@@ -3644,6 +3644,138 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Too many login attempts. Please try again in a few minutes'**
   String get tooManyAttempts;
+
+  /// Titre de bienvenue lors de la première ouverture.
+  ///
+  /// In en, this message translates to:
+  /// **'Welcome to Trailix !'**
+  String get welcomeTitle;
+
+  /// Description de bienvenue lors de la première ouverture.
+  ///
+  /// In en, this message translates to:
+  /// **'Discover how to generate your personalized sports courses in a few keys'**
+  String get welcomeDesc;
+
+  ///
+  ///
+  /// In en, this message translates to:
+  /// **'Smart generation'**
+  String get benefitsGenerationTitle;
+
+  ///
+  ///
+  /// In en, this message translates to:
+  /// **'Create courses adapted to your preferences'**
+  String get benefitsGenerationDesc;
+
+  ///
+  ///
+  /// In en, this message translates to:
+  /// **'Accurate geolocation'**
+  String get benefitsLocationTitle;
+
+  ///
+  ///
+  /// In en, this message translates to:
+  /// **'Find the best paths near you'**
+  String get benefitsLocationDesc;
+
+  ///
+  ///
+  /// In en, this message translates to:
+  /// **'Easy backup'**
+  String get benefitsSavingTitle;
+
+  ///
+  ///
+  /// In en, this message translates to:
+  /// **'Keep your favorite routes close at hand'**
+  String get benefitsSavingDesc;
+
+  ///
+  ///
+  /// In en, this message translates to:
+  /// **'Discover the application'**
+  String get onStartTutorial;
+
+  ///
+  ///
+  /// In en, this message translates to:
+  /// **'Skip the introduction'**
+  String get skipTutorial;
+
+  ///
+  ///
+  /// In en, this message translates to:
+  /// **'Search for a place'**
+  String get searchKeyTitle;
+
+  ///
+  ///
+  /// In en, this message translates to:
+  /// **'Type here to search for a starting point or select your current location'**
+  String get searchKeyDesc;
+
+  ///
+  ///
+  /// In en, this message translates to:
+  /// **'Generate a journey'**
+  String get generationKeyTitle;
+
+  ///
+  ///
+  /// In en, this message translates to:
+  /// **'Tap here to open the generator and create your personalized journey'**
+  String get generationKeyDesc;
+
+  ///
+  ///
+  /// In en, this message translates to:
+  /// **'Saved routes'**
+  String get historyKeyTitle;
+
+  ///
+  ///
+  /// In en, this message translates to:
+  /// **'Find here all your favorite routes and your history'**
+  String get historyKeyDesc;
+
+  ///
+  ///
+  /// In en, this message translates to:
+  /// **'Location tracking'**
+  String get userTrackingKeyTitle;
+
+  ///
+  ///
+  /// In en, this message translates to:
+  /// **'Activate the automatic tracking of your GPS position in real time'**
+  String get userTrackingKeyDesc;
+
+  ///
+  ///
+  /// In en, this message translates to:
+  /// **'Map style'**
+  String get mapStyleKeyTitle;
+
+  ///
+  ///
+  /// In en, this message translates to:
+  /// **'Change the appearance of the map : satellite, terrain, sombre, etc...'**
+  String get mapStyleKeyDesc;
+
+  ///
+  ///
+  /// In en, this message translates to:
+  /// **'Next'**
+  String get nextMessage;
+
+  ///
+  ///
+  /// In en, this message translates to:
+  /// **'Finish'**
+  String get finishMessage;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

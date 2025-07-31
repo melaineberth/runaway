@@ -2583,5 +2583,98 @@
   "tooManyAttempts": "Too many login attempts. Please try again in a few minutes",
   "@tooManyAttempts": {
     "description": "Error message when user has made too many login attempts."
+  },
+
+
+
+
+  "welcomeTitle": "Welcome to Trailix !",
+  "@welcomeTitle": {
+    "description": "Titre de bienvenue lors de la première ouverture."
+  },
+  "welcomeDesc": "Discover how to generate your personalized sports courses in a few keys",
+  "@welcomeDesc": {
+    "description": "Description de bienvenue lors de la première ouverture."
+  },
+  "benefitsGenerationTitle": "Smart generation",
+  "@benefitsGenerationTitle": {
+    "description": ""
+  },
+  "benefitsGenerationDesc": "Create courses adapted to your preferences",
+  "@benefitsGenerationDesc": {
+    "description": ""
+  },
+  "benefitsLocationTitle": "Accurate geolocation",
+  "@benefitsLocationTitle": {
+    "description": ""
+  },
+  "benefitsLocationDesc": "Find the best paths near you",
+  "@benefitsLocationDesc": {
+    "description": ""
+  },
+  "benefitsSavingTitle": "Easy backup",
+  "@benefitsSavingTitle": {
+    "description": ""
+  },
+  "benefitsSavingDesc": "Keep your favorite routes close at hand",
+  "@benefitsSavingDesc": {
+    "description": ""
+  },
+  "onStartTutorial": "Discover the application",
+  "@onStartTutorial": {
+    "description": ""
+  },
+  "skipTutorial": "Skip the introduction",
+  "@skipTutorial": {
+    "description": ""
+  },
+  "searchKeyTitle": "Search for a place",
+  "@searchKeyTitle": {
+    "description": ""
+  },
+  "searchKeyDesc": "Type here to search for a starting point or select your current location",
+  "@searchKeyDesc": {
+    "description": ""
+  },
+  "generationKeyTitle": "Generate a journey",
+  "@generationKeyTitle": {
+    "description": ""
+  },
+  "generationKeyDesc": "Tap here to open the generator and create your personalized journey",
+  "@generationKeyDesc": {
+    "description": ""
+  },
+  "historyKeyTitle": "Saved routes",
+  "@historyKeyTitle": {
+    "description": ""
+  },
+  "historyKeyDesc": "Find here all your favorite routes and your history",
+  "@historyKeyDesc": {
+    "description": ""
+  },
+  "userTrackingKeyTitle": "Location tracking",
+  "@userTrackingKeyTitle": {
+    "description": ""
+  },
+  "userTrackingKeyDesc": "Activate the automatic tracking of your GPS position in real time",
+  "@userTrackingKeyDesc": {
+    "description": ""
+  },
+  "mapStyleKeyTitle": "Map style",
+  "@mapStyleKeyTitle": {
+    "description": ""
+  },
+  "mapStyleKeyDesc": "Change the appearance of the map : satellite, terrain, sombre, etc...",
+  "@mapStyleKeyDesc": {
+    "description": ""
+  },
+  "nextMessage": "Next",
+  "@nextMessage": {
+    "description": ""
+  },
+  "finishMessage": "Finish",
+  "@finishMessage": {
+    "description": ""
   }
 }
+

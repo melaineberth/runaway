@@ -1870,4 +1870,70 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get tooManyAttempts => 'Trop de tentatives de connexion. Réessayez dans quelques minutes';
+
+  @override
+  String get welcomeTitle => 'Bienvenue sur Trailix !';
+
+  @override
+  String get welcomeDesc => 'Découvrez comment générer vos parcours sportifs personnalisés en quelques touches';
+
+  @override
+  String get benefitsGenerationTitle => 'Génération intelligente';
+
+  @override
+  String get benefitsGenerationDesc => 'Créez des parcours adaptés à vos préférences';
+
+  @override
+  String get benefitsLocationTitle => 'Géolocalisation précise';
+
+  @override
+  String get benefitsLocationDesc => 'Trouvez les meilleurs chemins près de vous';
+
+  @override
+  String get benefitsSavingTitle => 'Sauvegarde facile';
+
+  @override
+  String get benefitsSavingDesc => 'Gardez vos parcours favoris à portée de main';
+
+  @override
+  String get onStartTutorial => 'Découvrir l\'application';
+
+  @override
+  String get skipTutorial => 'Passer l\'introduction';
+
+  @override
+  String get searchKeyTitle => 'Rechercher un lieu';
+
+  @override
+  String get searchKeyDesc => 'Tapez ici pour chercher un point de départ ou sélectionnez votre position actuelle';
+
+  @override
+  String get generationKeyTitle => 'Générer un parcours';
+
+  @override
+  String get generationKeyDesc => 'Appuyez ici pour ouvrir le générateur et créer votre parcours personnalisé';
+
+  @override
+  String get historyKeyTitle => 'Parcours sauvegardés';
+
+  @override
+  String get historyKeyDesc => 'Retrouvez ici tous vos parcours favoris et votre historique';
+
+  @override
+  String get userTrackingKeyTitle => 'Suivi de position';
+
+  @override
+  String get userTrackingKeyDesc => 'Activez le suivi automatique de votre position GPS en temps réel';
+
+  @override
+  String get mapStyleKeyTitle => 'Style de carte';
+
+  @override
+  String get mapStyleKeyDesc => 'Changez l\'apparence de la carte : satellite, terrain, sombre, etc...';
+
+  @override
+  String get nextMessage => 'Suivant';
+
+  @override
+  String get finishMessage => 'Terminer';
 }

@@ -3,6 +3,7 @@ import 'dart:io';
 import 'dart:math' as math;
 import 'dart:ui' as ui;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -10,6 +11,7 @@ import 'package:go_router/go_router.dart';
 import 'package:lottie/lottie.dart';
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart' as mp;
 import 'package:permission_handler/permission_handler.dart';
+import 'package:runaway/core/helper/services/tutorial_integration_helper.dart';
 import 'package:runaway/core/utils/connectivity_helper.dart';
 import 'package:runaway/core/utils/constant/constants.dart';
 import 'package:runaway/core/blocs/app_data/app_data_bloc.dart';
@@ -20,7 +22,9 @@ import 'package:runaway/core/helper/extensions/monitoring_extensions.dart';
 import 'package:runaway/core/helper/services/conversion_triggers.dart';
 import 'package:runaway/core/helper/services/monitoring_service.dart';
 import 'package:runaway/core/widgets/full_screen_loader.dart';
+import 'package:runaway/core/widgets/modal_sheet.dart';
 import 'package:runaway/core/widgets/route_info_tracker.dart';
+import 'package:runaway/core/widgets/squircle_btn.dart';
 import 'package:runaway/features/account/presentation/screens/account_screen.dart';
 import 'package:runaway/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:runaway/features/credits/presentation/screens/credit_plans_screen.dart';
@@ -69,7 +73,7 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, TickerProviderStateMixin {
+class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, TickerProviderStateMixin, TutorialIntegrationMixin {
   // 🆕 Service de persistance
   final MapStateService _mapStateService = MapStateService();
   late String _screenLoadId;
@@ -157,6 +161,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
       
       // Métrique d'engagement utilisateur
       context.recordMetric('screen_view', 1, unit: 'count');
+
+      initializeTutorial();
 
       try {
         await context.ensureUserDataConsistency();
@@ -2905,9 +2911,111 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
                             Row(
                               spacing: 8.0,
                               mainAxisAlignment: MainAxisAlignment.end,
-                              children: [
-                                // Bouton droit
+                              children: [    
+                              if (kDebugMode) 
+                              // Bouton debug
+                              Container(
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: 5.0,
+                                  vertical: 5.0,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: context.adaptiveBackground,
+                                  borderRadius: BorderRadius.circular(100),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withValues(alpha: 0.15),
+                                      spreadRadius: 2,
+                                      blurRadius: 30,
+                                      offset: Offset(0, 0), // changes position of shadow
+                                    ),
+                                  ],
+                                ),
+                                child: IconButton(
+                                  icon: Icon(
+                                    HugeIcons.solidStandardBug01,
+                                    size: 25.0,
+                                  ),
+                                  onPressed: () {
+                                    showModalSheet(
+                                      context: context, 
+                                      backgroundColor: Colors.transparent,
+                                      child: ModalSheet(
+                                        child: Column(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            SquircleBtn(
+                                              label: "Tutorial direct",
+                                              labelColor: Colors.white,
+                                              backgroundColor: Colors.blue.withValues(alpha: 0.9),
+                                              onTap: () {
+                                                showCoachTutorialForDebug();
+
+                                                if (context.mounted) {
+                                                  context.pop();
+                                                }
+                                              },
+                                            ),
+
+                                            6.h,
+
+                                            SquircleBtn(
+                                              label: "Forcer la complétion",
+                                              labelColor: Colors.white,
+                                              backgroundColor: Colors.green.withValues(alpha: 0.9),
+                                              onTap: () async {
+                                                await completeTutorialForDebug();
+                                                
+                                                if (context.mounted) {
+                                                  ScaffoldMessenger.of(context).showSnackBar(
+                                                    SnackBar(
+                                                      content: Text('✅ Tutoriel marqué comme terminé'),
+                                                      duration: Duration(seconds: 2),
+                                                      backgroundColor: Colors.green,
+                                                    ),
+                                                  );
+
+                                                  context.pop();
+                                                }
+                                              },
+                                            ),
+
+                                            6.h,
+
+                                            SquircleBtn(
+                                              label: "Reset",
+                                              labelColor: Colors.white,
+                                              backgroundColor: Colors.red.withValues(alpha: 0.9),
+                                              onTap: () async {
+                                                await resetTutorialForDebug();
+                                                
+                                                if (context.mounted) {
+                                                  ScaffoldMessenger.of(context).showSnackBar(
+                                                    SnackBar(
+                                                      content: Text('🔧 Tutoriel réinitialisé'),
+                                                      duration: Duration(seconds: 2),
+                                                      backgroundColor: Colors.orange,
+                                                    ),
+                                                  );
+
+                                                  context.pop();
+                                                }
+                                              },
+                                            ),
+
+                                            6.h,
+                                          ],
+                                        ),
+                                      ),
+                                    );
+                                  }),
+                                ),
+
+                                const Spacer(),
+
+                                // Bouton gauche
                                 Container(
+                                  key: historyButtonKey,
                                   padding: EdgeInsets.symmetric(
                                     horizontal: 5.0,
                                     vertical: 5.0,
@@ -2933,59 +3041,57 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
                                   ),
                                 ),
     
-                                // Bouton gauche
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Container(
-                                      padding: EdgeInsets.symmetric(
-                                        horizontal: 5.0,
-                                        vertical: 5.0,
+                                // Bouton droit
+                                Container(
+                                  padding: EdgeInsets.symmetric(
+                                    horizontal: 5.0,
+                                    vertical: 5.0,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: context.adaptiveBackground,
+                                    borderRadius:BorderRadius.circular(100),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black.withValues(alpha: 0.15),
+                                        spreadRadius: 2,
+                                        blurRadius: 30,
+                                        offset: Offset(0, 0), // changes position of shadow
                                       ),
-                                      decoration: BoxDecoration(
-                                        color: context.adaptiveBackground,
-                                        borderRadius:BorderRadius.circular(100),
-                                        boxShadow: [
-                                          BoxShadow(
-                                            color: Colors.black.withValues(alpha: 0.15),
-                                            spreadRadius: 2,
-                                            blurRadius: 30,
-                                            offset: Offset(0, 0), // changes position of shadow
-                                          ),
-                                        ],
+                                    ],
+                                  ),
+                                  child: Row(
+                                    spacing: 5.0,
+                                    children: [
+                                      // User tracking
+                                      IconButton(
+                                        key: userTrackingButtonKey,
+                                        icon: Icon(
+                                          HugeIcons.solidRoundedMapsGlobal01,
+                                          color: _trackingMode == TrackingMode.userTracking
+                                            ? AppColors.primary
+                                            : context.adaptiveTextSecondary,
+                                          size: 28.0,
+                                        ),
+                                        onPressed: _activateUserTracking,
                                       ),
-                                      child: Row(
-                                        spacing: 5.0,
-                                        children: [
-                                          // User tracking
-                                          IconButton(
-                                            icon: Icon(
-                                              HugeIcons.solidRoundedMapsGlobal01,
-                                              color: _trackingMode == TrackingMode.userTracking
-                                                ? AppColors.primary
-                                                : context.adaptiveTextSecondary,
-                                              size: 28.0,
-                                            ),
-                                            onPressed: _activateUserTracking,
-                                          ),
-                                          // Map style
-                                          IconButton(
-                                            icon: Icon(
-                                              HugeIcons.solidRoundedLayerMask01,
-                                              size: 28.0,
-                                            ),
-                                            onPressed: _openMapStyleSelector,
-                                          ),
-                                        ],
+                                      // Map style
+                                      IconButton(
+                                        key: mapStyleButtonKey,
+                                        icon: Icon(
+                                          HugeIcons.solidRoundedLayerMask01,
+                                          size: 28.0,
+                                        ),
+                                        onPressed: _openMapStyleSelector,
                                       ),
-                                    ),
-                                  ],
+                                    ],
+                                  ),
                                 ),
                               ],
                             ),
     
                             // Bouton de génération
                             Container(
+                              key: aiButtonKey,
                               padding: EdgeInsets.symmetric(
                                 horizontal: 6.0,
                                 vertical: 6.0,
@@ -3021,6 +3127,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
 
               // Barre de recherche
               FloatingLocationSearchSheet(
+                searchButtonKey: searchButtonKey,
                 onLocationSelected: _onLocationSelected,
                 userLongitude: _userLongitude,
                 userLatitude: _userLatitude,

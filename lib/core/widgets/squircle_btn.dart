@@ -16,6 +16,7 @@ class SquircleBtn extends StatelessWidget {
   final EdgeInsetsGeometry? padding;
   final Color? backgroundColor;
   final Color? labelColor;
+  final double? radius;
 
   const SquircleBtn({
     super.key, 
@@ -30,6 +31,7 @@ class SquircleBtn extends StatelessWidget {
     this.padding,
     this.backgroundColor,
     this.labelColor,
+    this.radius,
   });
 
   @override
@@ -43,7 +45,7 @@ class SquircleBtn extends StatelessWidget {
         padding: padding,
         gradient: isGradient,
         color: backgroundColor ?? (isDisabled ? context.adaptiveDisabled.withValues(alpha: 0.05) : isLoading ? context.adaptivePrimary.withValues(alpha: 0.5) : isPrimary ? isDestructive ? Colors.red : context.adaptivePrimary : context.adaptiveDisabled.withValues(alpha: 0.1)),
-        radius: 50.0,
+        radius: radius ?? 50.0,
         child: AnimatedSwitcher(
           duration: Duration(milliseconds: 300),
           child: isLoading 

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:runaway/core/helper/extensions/extensions.dart';
 import 'package:runaway/core/helper/services/conversion_service.dart';
@@ -110,16 +111,15 @@ class _ConversionPromptModalState extends State<ConversionPromptModal> with Tick
           builder: (context, child) {
             return Transform.scale(
               scale: _pulseAnimation.value,
-              child: SquircleContainer(
-                width: 80,
-                height: 80,
-                radius: 50.0,
-                isGlow: true,
+              child: SquircleContainer(     
+                isGlow: true, 
+                radius: 50.0,     
+                height: 100,   
+                width: 100,   
                 color: context.adaptivePrimary,
-                child: Icon(
-                  HugeIcons.solidRoundedUserStar01,
-                  color: Colors.white,
-                  size: 36,
+                child: Image.asset(
+                  "assets/img/icon.png",
+                  fit: BoxFit.contain,
                 ),
               ),
             );
@@ -191,7 +191,7 @@ class _ConversionPromptModalState extends State<ConversionPromptModal> with Tick
           radius: 50.0,
           gradient: false,
           padding: EdgeInsets.all(8.0),
-          color: context.adaptiveDisabled.withValues(alpha: 0.08),
+          color: context.adaptiveDisabled.withValues(alpha: 0.05),
           child: Row(
             children: [
               SquircleContainer(
@@ -221,8 +221,9 @@ class _ConversionPromptModalState extends State<ConversionPromptModal> with Tick
                     ),
                     Text(
                       benefit['subtitle'] as String,
-                      style: context.bodySmall?.copyWith(
+                      style: GoogleFonts.inter(
                         color: context.adaptiveTextSecondary,
+                        fontWeight: FontWeight.w500,
                         fontSize: 13,
                       ),
                     ),

@@ -2583,5 +2583,97 @@
   "tooManyAttempts": "Trop de tentatives de connexion. Réessayez dans quelques minutes",
   "@tooManyAttempts": {
     "description": "Message d'erreur lorsque l'utilisateur a fait trop de tentatives de connexion."
+  },
+
+
+
+
+  "welcomeTitle": "Bienvenue sur Trailix !",
+  "@welcomeTitle": {
+    "description": "Titre de bienvenue lors de la première ouverture."
+  },
+  "welcomeDesc": "Découvrez comment générer vos parcours sportifs personnalisés en quelques touches",
+  "@welcomeDesc": {
+    "description": "Description de bienvenue lors de la première ouverture."
+  },
+  "benefitsGenerationTitle": "Génération intelligente",
+  "@benefitsGenerationTitle": {
+    "description": ""
+  },
+  "benefitsGenerationDesc": "Créez des parcours adaptés à vos préférences",
+  "@benefitsGenerationDesc": {
+    "description": ""
+  },
+  "benefitsLocationTitle": "Géolocalisation précise",
+  "@benefitsLocationTitle": {
+    "description": ""
+  },
+  "benefitsLocationDesc": "Trouvez les meilleurs chemins près de vous",
+  "@benefitsLocationDesc": {
+    "description": ""
+  },
+  "benefitsSavingTitle": "Sauvegarde facile",
+  "@benefitsSavingTitle": {
+    "description": ""
+  },
+  "benefitsSavingDesc": "Gardez vos parcours favoris à portée de main",
+  "@benefitsSavingDesc": {
+    "description": ""
+  },
+  "onStartTutorial": "Découvrir l'application",
+  "@onStartTutorial": {
+    "description": ""
+  },
+  "skipTutorial": "Passer l'introduction",
+  "@skipTutorial": {
+    "description": ""
+  },
+  "searchKeyTitle": "Rechercher un lieu",
+  "@searchKeyTitle": {
+    "description": ""
+  },
+  "searchKeyDesc": "Tapez ici pour chercher un point de départ ou sélectionnez votre position actuelle",
+  "@searchKeyDesc": {
+    "description": ""
+  },
+  "generationKeyTitle": "Générer un parcours",
+  "@generationKeyTitle": {
+    "description": ""
+  },
+  "generationKeyDesc": "Appuyez ici pour ouvrir le générateur et créer votre parcours personnalisé",
+  "@generationKeyDesc": {
+    "description": ""
+  },
+  "historyKeyTitle": "Parcours sauvegardés",
+  "@historyKeyTitle": {
+    "description": ""
+  },
+  "historyKeyDesc": "Retrouvez ici tous vos parcours favoris et votre historique",
+  "@historyKeyDesc": {
+    "description": ""
+  },
+  "userTrackingKeyTitle": "Suivi de position",
+  "@userTrackingKeyTitle": {
+    "description": ""
+  },
+  "userTrackingKeyDesc": "Activez le suivi automatique de votre position GPS en temps réel",
+  "@userTrackingKeyDesc": {
+    "description": ""
+  },
+  "mapStyleKeyTitle": "Style de carte",
+  "@mapStyleKeyTitle": {
+    "description": ""
+  },
+  "mapStyleKeyDesc": "Changez l'apparence de la carte : satellite, terrain, sombre, etc...",
+  "@mapStyleKeyDesc": {
+    "description": ""
+  },
+  "nextMessage": "Suivant",
+  "@nextMessage": {
+    "description": ""
+  },
+  "finishMessage": "Terminer",
+  "@finishMessage": {
+    "description": ""
   }
 }
