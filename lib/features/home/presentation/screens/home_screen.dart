@@ -288,7 +288,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
     }
   }
 
-  /// 💾 Sauvegarder l'état dans le service
+  /// Sauvegarder l'état dans le service
   void _saveStateToService() {
     LogConfig.logInfo('💾 Sauvegarde de l\'état dans le service...');
 
@@ -575,7 +575,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
     return degree * math.pi / 180;
   }
 
-  /// 🆕 Gestion de la sauvegarde manuelle
+  /// Gestion de la sauvegarde manuelle
   void _handleSaveRoute() {
     final overlay = Overlay.of(context, rootOverlay: true);
 
@@ -640,7 +640,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
     _performSaveRoute(routeName);
   }
 
-  /// 🆕 Exécution de la sauvegarde
+  /// Exécution de la sauvegarde
   void _performSaveRoute(String routeName) async {
     final overlay = Overlay.of(context, rootOverlay: true);
 
@@ -707,7 +707,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
     }
   }
 
-  /// 🆕 Dialogue pour demander la connexion
+  /// Dialogue pour demander la connexion
   void _showLoginRequiredDialog() {
     _presentModalSheet<void>(
       (_) => ModalDialog(
@@ -1196,24 +1196,62 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
     if (mapboxMap == null) return;
     if (await mapboxMap!.style.hasStyleImage('custom-pin')) return;
 
-    final bytes = await rootBundle.load('assets/img/pin.png');
-    final codec = await ui.instantiateImageCodec(bytes.buffer.asUint8List());
-    final frame = await codec.getNextFrame();
-    final img = frame.image;
+    try {
+      // 🆕 AMÉLIORATION : Utiliser une image haute résolution
+      final bytes = await rootBundle.load('assets/img/pin@3x.png'); // ou pin@2x.png
+      final codec = await ui.instantiateImageCodec(
+        bytes.buffer.asUint8List(),
+        // 🎯 FORCER la décompression en haute qualité
+        allowUpscaling: false,
+      );
+      final frame = await codec.getNextFrame();
+      final img = frame.image;
 
-    await mapboxMap!.style.addStyleImage(
-      'custom-pin',
-      1.0,
-      mp.MbxImage(
-        width: img.width,
-        height: img.height,
-        data: bytes.buffer.asUint8List(),
-      ),
-      false,
-      /* sdf ? */ [],
-      [],
-      null,
-    );
+      // 🆕 IMPORTANT : Spécifier le scale factor pour maintenir la taille
+      await mapboxMap!.style.addStyleImage(
+        'custom-pin',
+        3.0, // 🎯 Scale factor (3.0 pour @3x, 2.0 pour @2x, 1.0 pour normale)
+        mp.MbxImage(
+          width: img.width,
+          height: img.height,
+          data: bytes.buffer.asUint8List(),
+        ),
+        false,
+        [], // stretchX
+        [], // stretchY  
+        null, // content
+      );
+
+      LogConfig.logInfo('✅ Marqueur haute qualité ajouté (${img.width}x${img.height})');
+      
+    } catch (e) {
+      LogConfig.logError('❌ Erreur chargement marqueur HD: $e');
+      
+      // 🔄 FALLBACK : Version normale si HD indisponible
+      try {
+        final bytes = await rootBundle.load('assets/img/pin.png');
+        final codec = await ui.instantiateImageCodec(bytes.buffer.asUint8List());
+        final frame = await codec.getNextFrame();
+        final img = frame.image;
+
+        await mapboxMap!.style.addStyleImage(
+          'custom-pin',
+          1.0, // Scale normal
+          mp.MbxImage(
+            width: img.width,
+            height: img.height,
+            data: bytes.buffer.asUint8List(),
+          ),
+          false,
+          [],
+          [],
+          null,
+        );
+        LogConfig.logInfo('✅ Marqueur normal ajouté en fallback');
+      } catch (fallbackError) {
+        LogConfig.logError('❌ Erreur fallback marqueur: $fallbackError');
+      }
+    }
   }
 
   Future<void> _placeMarkerWithLottie(double lon, double lat) async {
@@ -1260,7 +1298,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
           iconImage: 'custom-pin',
           iconSize: 1,
           iconOffset: [0, -_markerSize / 2],
-          // 🆕 IMPORTANT: Définir un z-index élevé pour que le marqueur soit au premier plan
           symbolSortKey: 10.0, // Plus haut = premier plan
         ),
       );
@@ -1861,7 +1898,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
             subtitle: context.l10n.reallyContinueDesc,
             validLabel: context.l10n.continueForms,
             cancelLabel: context.l10n.cancel,
-            onValid: () => context.pop(true),
+            onValid: () {
+              context.pop(true);
+              HapticFeedback.mediumImpact();
+            },
             onCancel: () => context.pop(false),
           );
         });
@@ -2265,7 +2305,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
 
   Future<T?> _presentModalSheet<T>(
     Widget Function(BuildContext) builder,
-    { bool useSafeArea = false}
+    { bool useSafeArea = false, bool isDismissible = true, bool enableDrag = true}
   ) async {
     // 1️⃣ Masquer le panneau s’il est visible
     _removeRouteInfoPanel();
@@ -2275,6 +2315,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
       context: context,
       useRootNavigator: true,
       isScrollControlled: true,
+      isDismissible: isDismissible,
+      enableDrag: enableDrag,
       useSafeArea: useSafeArea,
       backgroundColor: Colors.transparent,
       constraints: BoxConstraints(
@@ -2578,7 +2620,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
         ));
       }
     } else {
-      _presentModalSheet((_) => child, useSafeArea: true);
+      _presentModalSheet((_) => child, enableDrag: false, isDismissible: false);
     }
   }
 
@@ -2861,7 +2903,19 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
               if (state.isSavingRoute) {
                 _toggleLoader(context, true, LoadingType.saving);
               } else {
-                // Pas besoin de callback pour la sauvegarde car on n'affiche rien après
+                if (mounted && state.lastError == null) {
+                  // Petit délai pour éviter les conflits avec d'autres actions
+                  Future.delayed(Duration(milliseconds: 2500), () {
+                    if (context.mounted) {
+                      showTopSnackBar(
+                        Overlay.of(context),
+                        TopSnackBar(title: context.l10n.savedRoute),
+                      );
+                    }
+                  });
+                }
+                
+                // Fermer le loader normalement
                 _toggleLoader(context, false, null);
               }
             },

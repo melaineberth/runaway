@@ -22,19 +22,23 @@ import 'package:top_snackbar_flutter/top_snack_bar.dart';
 class HistoricCard extends StatefulWidget {
   final SavedRoute route;
   final bool isEdit;
+  final bool isSelected; // 🆕 État de sélection
   final VoidCallback? onDelete;
-  final Function(String)? onRename;
   final VoidCallback? onSync;
+  final Function(String)? onRename;
   final VoidCallback? onShowOnMap;
+  final VoidCallback? onToggleSelection; // 🆕 Callback de sélection
 
   const HistoricCard({
     super.key,
     required this.route,
+    this.isEdit = false,
+    this.isSelected = false, // 🆕 Par défaut non sélectionné
     this.onDelete,
-    this.onRename,
     this.onSync,
-    required this.isEdit,
+    this.onRename,
     this.onShowOnMap,
+    this.onToggleSelection, // 🆕 Callback optionnel
   });
 
   @override
@@ -221,7 +225,13 @@ class _HistoricCardState extends State<HistoricCard> {
 
     return SquircleContainer(
       height: imgHeight,
-      onTap: widget.onShowOnMap,
+      onTap: () {
+        if (widget.isEdit) {
+          widget.onToggleSelection?.call();
+        } else {
+          widget.onShowOnMap?.call();
+        }
+      },
       radius: 60,
       gradient: false,
       color: context.adaptiveBorder.withValues(alpha: 0.05),
@@ -242,6 +252,30 @@ class _HistoricCardState extends State<HistoricCard> {
               ),
             ),
           ),
+
+          // Checkbox de sélection en mode édition
+          if (widget.isEdit)
+            Positioned(
+              top: 15,
+              right: 15,
+              child: AnimatedContainer(
+                duration: Duration(milliseconds: 200),
+                padding: EdgeInsets.all(4),
+                decoration: BoxDecoration(
+                  color: widget.isSelected 
+                    ? context.adaptivePrimary 
+                    : Colors.black.withValues(alpha: 0.25),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  widget.isSelected 
+                    ? HugeIcons.strokeRoundedTick02 
+                    : null,
+                  color: widget.isSelected ? Colors.white : context.adaptiveTextSecondary,
+                  size: 25,
+                ),
+              ),
+            ),
       
           // Titre et localisation
           _buildRouteInfo(paddingValue),        
@@ -305,9 +339,8 @@ class _HistoricCardState extends State<HistoricCard> {
               ),
             ],
           ),
-          //  40.w,
 
-              
+          if (!widget.isEdit)
           _buildActionMenu(),
         ],
       ),

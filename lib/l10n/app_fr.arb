@@ -973,6 +973,10 @@
   "@confirmRouteDeletionTitle": {
     "description": "Titre de la boîte de dialogue affiché quand l'utilisateur est sur le point de supprimer un parcours sauvegardé."
   },
+  "confirmMultipleRouteDeletionMessage": "Voulez-vous vraiment supprimer tous ces parcours ?",
+  "@confirmMultipleRouteDeletionMessage": {
+    "description": "Titre de la boîte de dialogue affiché quand l'utilisateur est sur le point de supprimer un parcours sauvegardé."
+  },
   "confirmRouteDeletionMessage": "Voulez-vous vraiment supprimer le parcours {routeName} ?",
   "@confirmRouteDeletionMessage": {
     "description": "Message de confirmation demandant si l'utilisateur veut vraiment supprimer un parcours spécifique.",

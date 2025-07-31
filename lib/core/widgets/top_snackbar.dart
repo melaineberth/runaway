@@ -23,19 +23,19 @@ class TopSnackBar extends StatelessWidget {
   Color get _getBorderColor {
     if (isWarning) return const Color.fromARGB(255, 253, 168, 21);
     if (isError) return const Color.fromARGB(255, 238, 56, 56);
-    return const Color.fromARGB(255, 77, 225, 87);
+    return const Color.fromARGB(255, 67, 197, 76);
   }
 
   Color get _getBackgroundColor {
     if (isWarning) return const Color.fromARGB(255, 253, 250, 238);
     if (isError) return const Color.fromARGB(255, 253, 238, 238);
-    return const Color.fromARGB(255, 239, 253, 238);
+    return const Color.fromARGB(255, 243, 254, 242);
   }
 
   Color get _getTextColor {
     if (isWarning) return const Color.fromARGB(255, 253, 168, 21);
     if (isError) return const Color.fromARGB(255, 238, 56, 56);
-    return const Color.fromARGB(255, 77, 225, 87);
+    return const Color.fromARGB(255, 67, 197, 76);
   }
 
   IconData get _getIcon {
@@ -49,6 +49,10 @@ class TopSnackBar extends StatelessWidget {
     return SquircleContainer(
       radius: 50.0,
       gradient: false,
+      isGlow: true,
+      isBorder: true,
+      borderColor: _getTextColor,
+      borderWidth: 2.0,
       padding: EdgeInsets.all(20.0),
       color: _getBackgroundColor,
       boxShadow: [

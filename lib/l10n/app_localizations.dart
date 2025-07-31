@@ -1497,6 +1497,12 @@ abstract class AppLocalizations {
   /// **'Confirm the deletion'**
   String get confirmRouteDeletionTitle;
 
+  /// Titre de la boîte de dialogue affiché quand l'utilisateur est sur le point de supprimer un parcours sauvegardé.
+  ///
+  /// In en, this message translates to:
+  /// **'Do you really want to delete all these courses?'**
+  String get confirmMultipleRouteDeletionMessage;
+
   /// Confirmation message asking whether the user truly wants to delete a specific route.
   ///
   /// In en, this message translates to:

@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:runaway/core/helper/config/log_config.dart';
@@ -266,10 +267,6 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
             topRight: Radius.circular(40),
           ),
           child: Container(
-            height: MediaQuery.of(context).size.height / 1.1,
-            padding: EdgeInsets.symmetric(
-              horizontal: 30.0,
-            ),
             color: context.adaptiveBackground,
             child: BlocBuilder<AuthBloc, AuthState>(
               // Empêcher le rebuild pendant la mise à jour du profil
@@ -280,7 +277,50 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
               builder: (_, authState) {          
                 // Si l'utilisateur est connecté, afficher le contenu
                 if (authState is Authenticated) {
-                  return _buildAuthenticatedView(authState);
+                  return Column(
+                    children: [
+                      Padding(
+                          padding: EdgeInsetsGeometry.only(
+                            top: kToolbarHeight * 1.2,
+                            left: 20.0,
+                            right: 20.0,
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              IconBtn(
+                                padding: 8.0,
+                                onPressed: () => context.pop(),
+                                backgroundColor: Colors.transparent,
+                                child: Icon(
+                                  HugeIcons.strokeStandardArrowDown01,
+                                  color: context.adaptiveWhite,
+                                  size: 28,
+                                ),
+                              ),
+                              Text(
+                                context.l10n.account,
+                                style: GoogleFonts.inter(
+                                  fontSize: 17,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                              IconBtn(
+                                padding: 8.0,
+                                onPressed: () => _navigateToEditProfile(context, authState.profile), // Nouvelle méthode
+                                backgroundColor: context.adaptivePrimary,
+                                child: Icon(
+                                  HugeIcons.solidRoundedDashboardCircleSettings,
+                                  color: Colors.white,
+                                  size: 28,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      Expanded(child: _buildAuthenticatedView(authState)),
+                    ],
+                  );
                 }
             
                 return _buildEmptyUnauthenticated();
@@ -372,6 +412,9 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
     final user = authState.profile;
 
     return BlurryPage(
+      contentPadding: EdgeInsets.symmetric(
+        horizontal: 20.0,
+      ),
       children: [
         50.h,
         AnimatedBuilder(
@@ -886,23 +929,6 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
               ),
             ),
           ],
-        ),
-    
-        20.h,
-    
-        IconBtn(
-          padding: 10,
-          trailling: HugeIcons.strokeStandardArrowRight01,
-          iconSize: 20,
-          label: context.l10n.editProfile,
-          textStyle: ctx.bodySmall?.copyWith(
-            fontWeight: FontWeight.w500,
-            color: Colors.white,
-          ),
-          iconColor: Colors.white,
-          backgroundColor: context.adaptivePrimary,
-          onPressed:
-              () => _navigateToEditProfile(context, user), // Nouvelle méthode
         ),
       ],
     );

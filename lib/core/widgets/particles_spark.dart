@@ -13,10 +13,11 @@ class ParticlesSpark extends StatefulWidget {
     super.key,
     this.quantity = 50,
     this.colors = const [
-      Color(0xFF4C40BB), // Deep purple/blue
-      Color(0xFF5DEC88), // Bright green
-      Color(0xFFFF4423), // Bright red/orange
-      Color(0xFF8157E8), // Bright purple
+      Color(0xFFE2E2E2), // Deep purple/blue
+      Color(0xFFFFB3E9), // Bright green
+      Color(0xFFA3D8FF), // Bright red/orange
+      Color(0xFF2E2A5C), // Bright red/orange
+      Color.fromARGB(255, 196, 119, 255), // Bright purple
     ],
     this.maxSize = 8,
     this.minSize = 3,

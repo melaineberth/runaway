@@ -1,7 +1,10 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:runaway/core/helper/config/log_config.dart';
 import 'package:runaway/core/helper/extensions/extensions.dart';
 import 'package:runaway/core/blocs/app_data/app_data_bloc.dart';
@@ -11,6 +14,7 @@ import 'package:runaway/core/utils/injections/bloc_provider_extension.dart';
 import 'package:runaway/core/helper/services/conversion_triggers.dart';
 import 'package:runaway/core/widgets/blurry_app_bar.dart';
 import 'package:runaway/core/widgets/blurry_page.dart';
+import 'package:runaway/core/widgets/icon_btn.dart';
 import 'package:runaway/core/widgets/modal_dialog.dart';
 import 'package:runaway/core/widgets/squircle_container.dart';
 import 'package:runaway/core/widgets/top_snackbar.dart';
@@ -38,9 +42,10 @@ class HistoricScreen extends StatefulWidget {
 }
 
 class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStateMixin {
-  bool isEditMode = true;
+  bool isEditMode = false; // Changé à false par défaut
+  Set<String> selectedRouteIds = {}; // Routes sélectionnées
 
-  // 🎭 Animation Controllers
+  // Animation Controllers
   late AnimationController _fadeController;
   late AnimationController _staggerController;
   late Animation<double> _fadeAnimation;
@@ -48,7 +53,7 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
   final List<Animation<double>> _slideAnimations = [];
   final List<Animation<double>> _scaleAnimations = [];
 
-  // 🆕 Variables pour LazyLoading
+  // Variables pour LazyLoading
   static const int _itemsPerPage = 8;
   static const int _initialItemCount = 5;
   List<SavedRoute> _allRoutes = [];
@@ -56,7 +61,7 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
   bool _isLoadingMore = false;
   bool _hasMoreData = true;
   
-  // ⏱️ Gestion du loading minimum
+  // Gestion du loading minimum
   final bool _shouldShowLoading = false;
   
   @override
@@ -64,7 +69,7 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
     super.initState();
     _initializeAnimations();
 
-    // 🔄 Charger les données si nécessaire
+    // Charger les données si nécessaire
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final appDataState = context.appDataBloc.state;
       if (!appDataState.hasHistoricData && !appDataState.isLoading) {
@@ -142,13 +147,101 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
     super.dispose();
   }
 
+  // Basculer le mode édition
+  void _toggleEditMode() {
+    debugPrint("Mode édition : $isEditMode");
+    setState(() {
+      isEditMode = !isEditMode;
+      if (!isEditMode) {
+        selectedRouteIds.clear(); // Vider la sélection en sortant du mode édition
+      }
+    });
+    HapticFeedback.lightImpact();
+    debugPrint("Mode édition : $isEditMode");
+  }
+
+  // Sélectionner/désélectionner un parcours
+  void _toggleRouteSelection(String routeId) {
+    setState(() {
+      if (selectedRouteIds.contains(routeId)) {
+        selectedRouteIds.remove(routeId);
+      } else {
+        selectedRouteIds.add(routeId);
+      }
+    });
+    HapticFeedback.selectionClick();
+  }
+
+  // // Sélectionner tous les parcours
+  // void _selectAllRoutes(List<SavedRoute> routes) {
+  //   setState(() {
+  //     selectedRouteIds = routes.map((route) => route.id).toSet();
+  //   });
+  //   HapticFeedback.lightImpact();
+  // }
+
+  // // Désélectionner tous les parcours
+  // void _deselectAllRoutes() {
+  //   setState(() {
+  //     selectedRouteIds.clear();
+  //   });
+  //   HapticFeedback.lightImpact();
+  // }
+
+  // Supprimer les parcours sélectionnés
+  Future<void> _deleteSelectedRoutes() async {
+    if (selectedRouteIds.isEmpty) return;
+    
+    try {
+      final confirmed = await _showDeleteConfirmationDialog(context.l10n.confirmMultipleRouteDeletionMessage);
+      if (confirmed != true) return;
+
+      LogConfig.logSuccess('🗑️ Suppression multiple via AppDataBloc: ${selectedRouteIds.length} parcours');
+      
+      // Supprimer chaque parcours sélectionné
+      for (final routeId in selectedRouteIds) {
+        if (mounted) {
+          context.appDataBloc.add(SavedRouteDeletedFromAppData(routeId));
+        }
+      }
+      
+      // Vider la sélection et quitter le mode édition
+      setState(() {
+        selectedRouteIds.clear();
+        isEditMode = false;
+      });
+
+      if (mounted) {
+        showTopSnackBar(
+          Overlay.of(context),
+          TopSnackBar(
+            title: context.l10n.successRouteDeleted,
+          ),
+        );
+      }
+      
+    } catch (e) {
+      LogConfig.logError('❌ Erreur suppression multiple: $e');
+      
+      if (mounted) {
+        showTopSnackBar(
+          Overlay.of(context),
+          TopSnackBar(
+            isError: true,
+            title: context.l10n.errorRouteDeleted,
+          ),
+        );
+      }
+    }
+  }
+
   /// Charge les parcours sauvegardés
   void _loadSavedRoutes() {
     LogConfig.logInfo('🔄 Chargement manuel des parcours via AppDataBloc');
     context.appDataBloc.add(const HistoricDataRefreshRequested());
   }
 
-  // 🆕 Méthode pour charger plus d'éléments
+  // Méthode pour charger plus d'éléments
   void _loadMoreRoutes() {
     if (_isLoadingMore || !_hasMoreData) return;
 
@@ -190,7 +283,7 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
   Future<void> _deleteRoute(SavedRoute route) async {
     final routeName = '"${route.name}"';
     try {
-      final confirmed = await _showDeleteConfirmationDialog(routeName);
+      final confirmed = await _showDeleteConfirmationDialog(context.l10n.confirmRouteDeletionMessage(routeName));
       if (confirmed != true) return;
 
       LogConfig.logSuccess('🗑️ Suppression via AppDataBloc: ${route.name}');
@@ -222,7 +315,7 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
     }
   }
 
-  // 🆕 Affiche le parcours sur la carte dans HomeScreen
+  // Affiche le parcours sur la carte dans HomeScreen
   Future<void> _showRouteOnMap(SavedRoute route) async {
     try {
       print('🗺️ Affichage du parcours sur la carte: ${route.id}');
@@ -304,7 +397,7 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
         return ModalDialog(
           isDestructive: true,
           title: context.l10n.confirmRouteDeletionTitle,
-          subtitle: context.l10n.confirmRouteDeletionMessage(routeName),
+          subtitle: routeName,
           validLabel: context.l10n.delete,
           onCancel: () => Navigator.of(context).pop(false),
           onValid: () {
@@ -319,9 +412,61 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
     return result ?? false;
   }
 
+  // Barre d'actions pour le mode édition
+  Widget _buildEditModeActions(List<SavedRoute> routes) {
+    if (!isEditMode || selectedRouteIds.isEmpty) return SizedBox.shrink();
+
+    return AnimatedBuilder(
+      animation: _fadeAnimation,
+      builder: (context, child) {
+        return Opacity(
+          opacity: _fadeAnimation.value,
+          child: SquircleContainer(
+            radius: 50.0,
+            isGlow: true,
+            gradient: false,
+            color: context.adaptivePrimary,
+            child: Padding(
+              padding: EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.only(
+                      left: 8.0,
+                    ),
+                    child: Text(
+                      '${selectedRouteIds.length} parcours sélectionné${selectedRouteIds.length > 1 ? 's' : ''}',
+                      style: context.bodySmall?.copyWith(
+                        fontSize: 17,
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                  SquircleContainer(
+                    radius: 30.0,
+                    isGlow: true,
+                    color: Colors.white,
+                    onTap: _deleteSelectedRoutes,
+                    padding: EdgeInsets.symmetric(horizontal: 20, vertical: 15),
+                    child: Icon(
+                      HugeIcons.solidRoundedDelete02,
+                      color: context.adaptivePrimary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   /// 🎭 Interface principale avec animations intégrées
   Widget _buildMainView(AppDataState appDataState, List<SavedRoute> routes) {    
-    // 🆕 Initialiser les routes pour LazyLoading si nécessaire
+    // Initialiser les routes pour LazyLoading si nécessaire
     if (_allRoutes != routes) {
       _allRoutes = routes;
       _displayedRoutes = routes.take(_initialItemCount).toList();
@@ -337,43 +482,70 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
       _updateAnimationsForRoutes(routesToDisplay.length);
     }
 
-    return BlurryPage(
-      // 🆕 Paramètres LazyLoading
-      enableLazyLoading: shouldUseLazyLoading,
-      initialItemCount: _initialItemCount,
-      itemsPerPage: _itemsPerPage,
-      onLoadMore: _loadMoreRoutes,
-      isLoading: _isLoadingMore,
-      hasMoreData: _hasMoreData,
+    return Stack(
       children: [
-        30.h,
-        AnimatedBuilder(
-          animation: _fadeAnimation,
-          builder: (context, child) {
-            return Opacity(
-              opacity: _fadeAnimation.value,
-              child: Transform.translate(
-                offset: Offset(0, 20 * (1 - _fadeAnimation.value)),
-                child: _buildStatsCard(routes),
+        Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: 20.0,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              30.h,
+              AnimatedBuilder(
+                animation: _fadeAnimation,
+                builder: (context, child) {
+                  return Opacity(
+                    opacity: _fadeAnimation.value,
+                    child: Transform.translate(
+                      offset: Offset(0, 20 * (1 - _fadeAnimation.value)),
+                      child: _buildStatsCard(routes),
+                    ),
+                  );
+                },
               ),
-            );
-          },
-        ),
-
-        30.h,
-
-        Text(
-          context.l10n.savedRoute,
-          style: context.bodyMedium?.copyWith(
-            fontSize: 18,
-            color: context.adaptiveTextSecondary,
-            fontWeight: FontWeight.w600,
+          
+              30.h,
+          
+              Text(
+                context.l10n.savedRoute,
+                style: context.bodyMedium?.copyWith(
+                  fontSize: 18,
+                  color: context.adaptiveTextSecondary,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              15.h,
+              
+              Expanded(
+                child: Builder(
+                  builder: (context) {
+                    return BlurryPage(
+                      physics: const BouncingScrollPhysics(),
+                      shrinkWrap: false,
+                      enableLazyLoading: shouldUseLazyLoading,
+                      initialItemCount: _initialItemCount,
+                      itemsPerPage: _itemsPerPage,
+                      onLoadMore: _loadMoreRoutes,
+                      isLoading: _isLoadingMore,
+                      hasMoreData: _hasMoreData,
+                      children: [
+                        _buildAnimatedRoutesList(routesToDisplay),
+                      ],
+                    );
+                  }
+                ),
+              ),
+            ],
           ),
         ),
-        
-        15.h,
-
-        _buildAnimatedRoutesList(routesToDisplay),
+        // 🆕 Barre d'actions pour le mode édition
+        Positioned(
+          left: 20.0,
+          right: 20.0,
+          bottom: 50.0,
+          child: _buildEditModeActions(routes),
+        ),
       ],
     );
   }
@@ -449,15 +621,17 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
                     scale: scaleValue,
                     child: Padding(
                       padding: EdgeInsets.only(
-                        bottom: index >= sortedRoutes.length - 1 ? 90.0 : 20.0,
+                        bottom: index >= sortedRoutes.length - 1 ? 0.0 : 20.0,
                       ),
                       child: HistoricCard(
                         route: route,
                         isEdit: isEditMode,
+                        isSelected: selectedRouteIds.contains(route.id), // 🆕 État de sélection
                         onDelete: () => _deleteRoute(route),
                         onSync: routes == routes.unsyncedRoutes ? _syncData : null,
-                        onRename: (newName) => _renameRoute(route, newName), // 🆕 Callback de renommage
-                        onShowOnMap: () => _showRouteOnMap(route), // 🆕 Callback ajouté
+                        onRename: (newName) => _renameRoute(route, newName),
+                        onShowOnMap: () => _showRouteOnMap(route),
+                        onToggleSelection: () => _toggleRouteSelection(route.id), // 🆕 Callback de sélection
                       ),
                     ),
                   ),
@@ -666,10 +840,6 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
         topRight: Radius.circular(40),
       ),
       child: Container(
-        height: MediaQuery.of(context).size.height / 1.1,
-        padding: EdgeInsets.symmetric(
-          horizontal: 30.0,
-        ),
         color: context.adaptiveBackground,
         child: BlocBuilder<AuthBloc, AuthState>(
           builder: (_, authState) {          
@@ -677,7 +847,53 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
             if (authState is Authenticated) {
               return BlocBuilder<AppDataBloc, AppDataState>(
                 builder: (context, appDataState) {
-                  return _buildMainContent(appDataState);
+                  final enableRoute = appDataState.savedRoutes.isNotEmpty;
+                  
+                  return Column(
+                    children: [
+                      Padding(
+                        padding: EdgeInsetsGeometry.only(
+                          top: kToolbarHeight * 1.2,
+                          left: 20.0,
+                          right: 20.0,
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            IconBtn(
+                              padding: 8.0,
+                              onPressed: () => context.pop(),
+                              backgroundColor: Colors.transparent,
+                              child: Icon(
+                                HugeIcons.strokeStandardArrowDown01,
+                                color: context.adaptiveWhite,
+                                size: 28,
+                              ),
+                            ),
+                            Text(
+                              context.l10n.historic,
+                              style: GoogleFonts.inter(
+                                fontSize: 17,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            IconBtn(
+                              padding: 8.0,
+                              onPressed: enableRoute ? _toggleEditMode : null,
+                              backgroundColor: isEditMode ? context.adaptivePrimary : Colors.transparent,
+                              child: Icon(isEditMode 
+                                ? HugeIcons.solidRoundedTick02
+                                : HugeIcons.strokeRoundedCheckmarkCircle02,
+                                color: enableRoute ? (isEditMode ? Colors.white : context.adaptiveWhite) : context.adaptiveDisabled.withValues(alpha: 0.15),
+                                size: 28,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Expanded(child: _buildMainContent(appDataState)),
+                    ],
+                  );
                 },
               );
             }

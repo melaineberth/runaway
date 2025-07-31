@@ -726,6 +726,9 @@ class AppLocalizationsFr extends AppLocalizations {
   String get confirmRouteDeletionTitle => 'Confirmer la suppression';
 
   @override
+  String get confirmMultipleRouteDeletionMessage => 'Voulez-vous vraiment supprimer tous ces parcours ?';
+
+  @override
   String confirmRouteDeletionMessage(String routeName) {
     return 'Voulez-vous vraiment supprimer le parcours $routeName ?';
   }

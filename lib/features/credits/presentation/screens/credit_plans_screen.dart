@@ -543,7 +543,7 @@ class _CreditPlansScreenState extends State<CreditPlansScreen> with TickerProvid
     );
   }
 
-  /// 🆕 Widget helper pour les statistiques
+  /// Widget helper pour les statistiques
   Widget _buildStatItem(String label, String value, Color color) {
     return Expanded(
       child: SquircleContainer(

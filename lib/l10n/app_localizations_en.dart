@@ -726,6 +726,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get confirmRouteDeletionTitle => 'Confirm the deletion';
 
   @override
+  String get confirmMultipleRouteDeletionMessage => 'Do you really want to delete all these courses?';
+
+  @override
   String confirmRouteDeletionMessage(String routeName) {
     return 'Do you really want to delete the $routeName route?';
   }
