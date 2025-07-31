@@ -24,6 +24,10 @@ class _FullScreenLoaderState extends State<FullScreenLoader> {
   int _currentMessageIndex = 0;
   String _currentMessage = '';
 
+  // 🆕 AMÉLIORATION : Intervalle optimisé pour synchronisation avec le temps minimum de 4s
+  // 1.6s permet d'afficher 2-3 messages pendant les 4 secondes minimum
+  static const Duration _messageRotationInterval = Duration(milliseconds: 1600);
+
   // Messages pour la génération de parcours - Version engageante
   List<String> get _generationMessages => [
     'Exploration de votre zone...',
@@ -74,11 +78,10 @@ class _FullScreenLoaderState extends State<FullScreenLoader> {
     }
   }
 
-  // Pour utiliser une version alternative, modifiez la méthode _getMessagesForType :
   List<String> _getMessagesForType(LoadingType type) {
     switch (type) {
       case LoadingType.generation:
-        return _generationMessages; // ou _generationMessagesSport ou _generationMessagesTech
+        return _generationMessages;
       case LoadingType.saving:
         return _savingMessages;
     }
@@ -93,7 +96,8 @@ class _FullScreenLoaderState extends State<FullScreenLoader> {
   void _startMessageRotation() {
     if (widget.loadingType == null) return;
     
-    _messageTimer = Timer.periodic(const Duration(seconds: 2), (timer) {
+    // 🆕 AMÉLIORATION : Intervalle optimisé pour meilleure expérience
+    _messageTimer = Timer.periodic(_messageRotationInterval, (timer) {
       if (!mounted) {
         timer.cancel();
         return;
@@ -101,8 +105,11 @@ class _FullScreenLoaderState extends State<FullScreenLoader> {
       
       setState(() {
         final messages = _getMessagesForType(widget.loadingType!);
-        _currentMessageIndex = (_currentMessageIndex + 1) % messages.length;
-        _currentMessage = messages[_currentMessageIndex];
+        if (messages.isNotEmpty) {
+          _currentMessageIndex = (_currentMessageIndex + 1) % messages.length;
+          _currentMessage = messages[_currentMessageIndex];
+          print('💬 Message ${_currentMessageIndex + 1}/${messages.length}: $_currentMessage');
+        }
       });
     });
   }
@@ -144,17 +151,14 @@ class _FullScreenLoaderState extends State<FullScreenLoader> {
                         16.h,
                         AnimatedSwitcher(
                           duration: const Duration(milliseconds: 300),
-                          transitionBuilder: (child, animation) {
+                          transitionBuilder: (Widget child, Animation<double> animation) {
                             return FadeTransition(
                               opacity: animation,
                               child: SlideTransition(
                                 position: Tween<Offset>(
                                   begin: const Offset(0.0, 0.3),
                                   end: Offset.zero,
-                                ).animate(CurvedAnimation(
-                                  parent: animation,
-                                  curve: Curves.easeOut,
-                                )),
+                                ).animate(animation),
                                 child: child,
                               ),
                             );

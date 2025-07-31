@@ -1,3 +1,4 @@
+// lib/core/widgets/loading_overlay.dart
 import 'package:flutter/material.dart';
 import 'package:runaway/core/widgets/full_screen_loader.dart';
 
@@ -12,7 +13,7 @@ class LoadingOverlay {
   bool _isHideScheduled = false;
   LoadingType? _currentLoadingType;
 
-  static const Duration _kDefaultMinDisplay = Duration(milliseconds: 1200);
+  static const Duration _kDefaultMinDisplay = Duration(milliseconds: 5000);
   Duration _minDisplay = _kDefaultMinDisplay;
 
   void show(
@@ -39,10 +40,9 @@ class LoadingOverlay {
     final overlayState = Overlay.of(context, rootOverlay: true);
     overlayState.insert(_entry!);
     
-    print('🔄 LoadingOverlay affiché à ${DateTime.now()}');
+    print('🔄 LoadingOverlay affiché à ${DateTime.now()} (minimum ${_minDisplay.inSeconds}s)');
   }
 
-  // 🆕 NOUVELLE SIGNATURE : callback au moment du hide()
   void hide({VoidCallback? onHidden}) {
     if (_entry == null) return;
 
@@ -66,7 +66,6 @@ class LoadingOverlay {
     }
   }
 
-  // 🆕 CALLBACK PASSÉ EN PARAMÈTRE
   void _remove(VoidCallback? onHidden) {
     if (_entry != null) {
       _entry!.remove();
@@ -77,7 +76,6 @@ class LoadingOverlay {
       
       print('❌ LoadingOverlay masqué à ${DateTime.now()}');
       
-      // 🆕 EXÉCUTER LE CALLBACK APRÈS FERMETURE RÉELLE
       if (onHidden != null) {
         print('📞 Exécution callback onHidden');
         onHidden();

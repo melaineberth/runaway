@@ -2388,7 +2388,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
       _loading.show(
         context, 
         loadingType: loadingType,
-        minDisplay: const Duration(milliseconds: 1200),
+        minDisplay: const Duration(milliseconds: 5000),
       );
     } else {
       print('🔴 Masquage loader demandé');
