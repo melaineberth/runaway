@@ -2464,6 +2464,25 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
     // Gestion du loader pour la génération
     if (state.isGeneratingRoute) {
       _toggleLoader(context, true, LoadingType.generation);
+
+      // Ajouter un timer de sécurité pour diagnostiquer les blocages
+      Timer(const Duration(seconds: 90), () {
+        if (mounted && _loading.isVisible && _loading.isStuck) {
+          LogConfig.logWarning('🚨 Loader bloqué détecté - fermeture forcée');
+          _loading.logStatus();
+          
+          // Forcer la fermeture du loader
+          _loading.hide();
+
+          showTopSnackBar(
+            Overlay.of(context),
+            TopSnackBar(
+              isWarning: true,
+              title: "Génération interrompue - veuillez réessayer",
+            )
+          );          
+        }
+      });
     } else if (!state.isGeneratingRoute && _loading.isVisible) {
       
       // Callback exécuté quand le loader est vraiment fermé
@@ -2471,7 +2490,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
         // Cette fonction sera appelée UNIQUEMENT quand le loader est complètement fermé
         if (state.hasGeneratedRoute && (state.isNewlyGenerated || state.isLoadedFromHistory)) {
           if (mounted && generatedRouteCoordinates != null) {
-            print('🎯 Affichage RouteInfoModal après fermeture complète du loader');
+            LogConfig.logInfo('🎯 Affichage RouteInfoModal après fermeture complète du loader');
             _showRouteInfoModal();
           }
         }
@@ -2505,7 +2524,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
         // Afficher le RouteInfoModal après un court délai
         Future.delayed(const Duration(milliseconds: 500), () {
           if (mounted && generatedRouteCoordinates != null) {
-            print('🎯 Affichage RouteInfoModal pour route historique');
+            LogConfig.logInfo('🎯 Affichage RouteInfoModal pour route historique');
             _showRouteInfoModal();
           }
         });
@@ -2513,7 +2532,14 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
       _mapStateService.saveTrackingMode(_trackingMode);
     }
 
+    // Amélioration de la gestion des erreurs
     if (state.errorMessage != null && !state.isGeneratingRoute) {
+      // S'assurer que le loader est fermé en cas d'erreur
+      if (_loading.isVisible) {
+        LogConfig.logInfo('🔴 Fermeture loader suite à erreur: ${state.errorMessage}');
+        _loading.hide();
+      }
+      
       _showRouteGenerationError(state.errorMessage!);
     }
   }

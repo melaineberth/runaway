@@ -116,6 +116,10 @@ class RouteGenerationBloc extends HydratedBloc<RouteGenerationEvent, RouteGenera
         'start_coordinates': [event.parameters.startLatitude, event.parameters.startLongitude],
       },
     );
+
+    // Variables pour assurer la finalisation
+    bool generationCompleted = false;
+    GraphHopperRouteResult? result;
     
     try {
       LogConfig.logInfo('🚀 === DÉBUT GÉNÉRATION UI FIRST (ID: $generationId) ===');
@@ -186,7 +190,7 @@ class RouteGenerationBloc extends HydratedBloc<RouteGenerationEvent, RouteGenera
       // ===== GÉNÉRATION DU PARCOURS =====
       LogConfig.logInfo('🛣️ === GÉNÉRATION DE ROUTE AVEC RETRY ===');
 
-      // 🆕 Tracking du début de génération
+      // Tracking du début de génération
       MonitoringService.instance.recordMetric(
         'route_generation_started',
         1,
@@ -197,8 +201,6 @@ class RouteGenerationBloc extends HydratedBloc<RouteGenerationEvent, RouteGenera
         },
       );
       
-      late GraphHopperRouteResult result;
-      
       try {
         // Retry automatique avec backoff exponentiel
         result = await _retryWithBackoff(() => 
@@ -206,7 +208,7 @@ class RouteGenerationBloc extends HydratedBloc<RouteGenerationEvent, RouteGenera
         );
         
         LogConfig.logInfo('✅ Parcours généré avec succès');
-        LogConfig.logInfo('Distance: ${result.distanceKm} km');
+        LogConfig.logInfo('Distance: ${result!.distanceKm} km');
         LogConfig.logInfo('Durée: ${result.durationMinutes} min');
         LogConfig.logInfo('Points: ${result.coordinates.length}');
 
@@ -241,55 +243,94 @@ class RouteGenerationBloc extends HydratedBloc<RouteGenerationEvent, RouteGenera
         return;
       }
 
+      // Marquer que la génération est réussie AVANT la consommation des crédits
+      generationCompleted = true;
+      LogConfig.logInfo('🎯 Génération terminée avec succès, finalisation en cours...');
+
       // ===== CONSOMMATION DES CRÉDITS (SEULEMENT POUR UTILISATEURS AUTHENTIFIÉS) =====
       
       if (!event.bypassCreditCheck) {
         LogConfig.logInfo('💳 === CONSOMMATION CRÉDITS (APRÈS GÉNÉRATION RÉUSSIE) ===');
         LogConfig.logInfo('💳 Consommation de $REQUIRED_CREDITS crédit(s)...');
 
-        final consumptionResult = await _creditService.consumeCreditsForGeneration(
-          amount: REQUIRED_CREDITS,
-          generationId: generationId,
-          metadata: {
-            'activity_type': event.parameters.activityType.name,
-            'distance_km': event.parameters.distanceKm,
-            'terrain_type': event.parameters.terrainType.name,
-            'urban_density': event.parameters.urbanDensity.name,
-            'actual_distance_km': result.distanceKm,
-            'actual_duration_min': result.durationMinutes,
-            'points_count': result.coordinates.length,
-          },
-        );
+        try {
+          // Timeout sur la consommation de crédits pour éviter les blocages
+          final consumptionResult = await _creditService.consumeCreditsForGeneration(
+            amount: REQUIRED_CREDITS,
+            generationId: generationId,
+            metadata: {
+              'activity_type': event.parameters.activityType.name,
+              'distance_km': event.parameters.distanceKm,
+              'terrain_type': event.parameters.terrainType.name,
+              'urban_density': event.parameters.urbanDensity.name,
+              'actual_distance_km': result.distanceKm,
+              'actual_duration_min': result.durationMinutes,
+              'points_count': result.coordinates.length,
+            },
+          ).timeout(const Duration(seconds: 10)); // 🔧 FIX: Timeout de 10s sur la consommation
 
-        if (!consumptionResult.success) {
-          LogConfig.logError('❌ Échec consommation crédits: ${consumptionResult.errorMessage}');
-          emit(state.copyWith(
-            isGeneratingRoute: false,
-            errorMessage: consumptionResult.errorMessage ?? 'Erreur lors de l\'utilisation des crédits',
-            stateId: '$generationId-consumption-error',
-          ));
+          if (!consumptionResult.success) {
+            LogConfig.logError('❌ Échec consommation crédits: ${consumptionResult.errorMessage}');
+            // Ne pas bloquer si la consommation échoue - on a déjà la route générée
+            LogConfig.logInfo('⚠️ Consommation échouée mais route générée - finalisation quand même');
+          } else {
+            LogConfig.logInfo('✅ Consommation réussie. Nouveau solde: ${consumptionResult.newBalance}');
+          }
 
-          MonitoringService.instance.finishOperation(
-            operationId,
-            success: false,
-            errorMessage: 'Credit consumption failed',
-          );
-
-          return;
+        } catch (e) {
+          LogConfig.logError('❌ Erreur lors de la consommation des crédits: $e');
+          LogConfig.logInfo('⚠️ Erreur consommation mais route générée - finalisation quand même');
+          // Ne pas bloquer - on a déjà la route générée
         }
 
-        LogConfig.logInfo('Consommation réussie. Nouveau solde: ${consumptionResult.newBalance}');
-
       } else {
-        print('🆕 === GÉNÉRATION GUEST - PAS D\'UTILISATION DE CRÉDITS ===');
+        LogConfig.logInfo('🆕 === GÉNÉRATION GUEST - PAS D\'UTILISATION DE CRÉDITS ===');
       }
 
-      // ===== FINALISATION =====
+    } catch (err, stackTrace) {
+      // Catch global pour s'assurer que isGeneratingRoute est toujours remis à false
+      LogConfig.logError('❌ Erreur globale dans _onRouteGenerationRequested: $err');
 
+      captureError(err, stackTrace, event: event, state: state, extra: {
+        'operation_id': operationId,
+        'parameters': event.parameters.toJson(),
+        'start_coordinates': [event.parameters.startLatitude, event.parameters.startLongitude],
+        'generation_completed': generationCompleted,
+      });
+
+      emit(state.copyWith(
+        isGeneratingRoute: false,
+        errorMessage: err.toString(),
+        stateId: '$generationId-error',
+      ));
+
+      MonitoringService.instance.finishOperation(
+        operationId,
+        success: false,
+        errorMessage: err.toString(),
+      );
+
+      // Métrique d'échec avec catégorisation
+      MonitoringService.instance.recordMetric(
+        'route_generation_failure',
+        1,
+        tags: {
+          'error_type': err.runtimeType.toString(),
+          'activity_type': event.parameters.activityType,
+          'error_category': _categorizeError(err),
+        },
+      );
+      return; // Return explicite pour éviter la finalisation
+    }
+
+    // Cette section s'exécute TOUJOURS si result != null
+    if (generationCompleted && result != null) {
+      LogConfig.logInfo('🎯 === FINALISATION GÉNÉRATION ===');
+      
       // Mettre à jour l'état avec le parcours généré
       emit(state.copyWith(
         generatedRoute: result.coordinates,
-        isGeneratingRoute: false,
+        isGeneratingRoute: false, // S'assurer que le loader s'arrête
         usedParameters: event.parameters,
         routeMetadata: result.metadata,
         errorMessage: null,
@@ -306,7 +347,7 @@ class RouteGenerationBloc extends HydratedBloc<RouteGenerationEvent, RouteGenera
         },
       );
 
-      // 🆕 Métriques business importantes
+      // Métriques business importantes
       MonitoringService.instance.recordMetric(
         'route_generation_success',
         1,
@@ -327,35 +368,20 @@ class RouteGenerationBloc extends HydratedBloc<RouteGenerationEvent, RouteGenera
         },
       );
 
-    } catch (err, stackTrace) {
-
-      captureError(err, stackTrace, event: event, state: state, extra: {
-        'operation_id': operationId,
-        'parameters': event.parameters.toJson(),
-        'start_coordinates': [event.parameters.startLatitude, event.parameters.startLongitude],
-      });
-
+      LogConfig.logInfo('🎉 === GÉNÉRATION TERMINÉE AVEC SUCCÈS (ID: $generationId) ===');
+    } else {
+      // Sécurité supplémentaire - s'assurer que isGeneratingRoute est false
+      LogConfig.logError('❌ Finalisation impossible - résultat manquant');
       emit(state.copyWith(
         isGeneratingRoute: false,
-        errorMessage: err.toString(),
-        stateId: '$generationId-error',
+        errorMessage: 'Erreur de génération - résultat invalide',
+        stateId: '$generationId-invalid-result',
       ));
 
       MonitoringService.instance.finishOperation(
         operationId,
         success: false,
-        errorMessage: err.toString(),
-      );
-
-      // 🆕 Métrique d'échec avec catégorisation
-      MonitoringService.instance.recordMetric(
-        'route_generation_failure',
-        1,
-        tags: {
-          'error_type': err.runtimeType.toString(),
-          'activity_type': event.parameters.activityType,
-          'error_category': _categorizeError(err),
-        },
+        errorMessage: 'Invalid result',
       );
     }
   }
