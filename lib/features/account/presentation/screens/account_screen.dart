@@ -10,6 +10,7 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+import 'package:runaway/core/blocs/locale/locale_bloc.dart';
 import 'package:runaway/core/helper/config/log_config.dart';
 import 'package:runaway/core/helper/extensions/extensions.dart';
 import 'package:runaway/core/blocs/app_data/app_data_bloc.dart';
@@ -163,6 +164,32 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
         'screen': 'account',
         ...?data,
       },
+    );
+  }
+
+  void _launchTermsUrl(Locale locale) {
+    // Construire l'URL en fonction de la langue
+    final String languageCode = locale.languageCode;
+    final String baseUrl = 'https://trailix.app';
+    
+    final String termsUrl;
+    switch (languageCode) {
+      case 'fr':
+        termsUrl = '$baseUrl/fr/legal/terms/site.html';
+        break;
+      case 'en':
+        termsUrl = '$baseUrl/en/legal/terms/site.html';
+        break;
+      default:
+        // Fallback vers l'anglais si langue non supportée
+        termsUrl = '$baseUrl/en/legal/terms/site.html';
+    }
+    
+    LogConfig.logInfo('🌐 Ouverture URL conditions: $termsUrl pour langue: $languageCode');
+    
+    launchUrl(
+      Uri.parse(termsUrl),
+      mode: LaunchMode.externalApplication,
     );
   }
 
@@ -807,17 +834,21 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
             );
           },
         ),
-        Text.rich(
-          TextSpan(
-            text: context.l10n.termsAndPrivacy,
-            recognizer: TapGestureRecognizer()
-              ..onTap = () => launchUrl(Uri.parse("https://trailix.app/fr/legal/terms/site.html")),
-          ),
-          style: context.bodySmall?.copyWith(
-            fontSize: 13,
-            fontWeight: FontWeight.w500,
-            color: context.adaptiveBorder.withValues(alpha: 0.2),
-          ),
+        BlocBuilder<LocaleBloc, LocaleState>(
+        builder: (context, localeState) {
+          return Text.rich(
+            TextSpan(
+                text: context.l10n.termsAndPrivacy,
+                recognizer: TapGestureRecognizer()
+                  ..onTap = () => _launchTermsUrl(localeState.locale),
+              ),
+              style: context.bodySmall?.copyWith(
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+                color: context.adaptiveBorder.withValues(alpha: 0.2),
+              ),
+            );
+          }
         ),
       ],
     );
@@ -1089,11 +1120,11 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
       backgroundColor: Colors.transparent,
       child: ModalDialog(
         isDestructive: true,
-        activeCancel: false,
         title: context.l10n.deleteAccountTitle,
         subtitle: context.l10n.deleteAccountMessage,
-        validLabel: context.l10n.delete,
-        onValid: () {
+        validLabel: context.l10n.cancel,
+        cancelLabel: context.l10n.delete,
+        onCancel: () {
           HapticFeedback.mediumImpact();
 
           // Fermer immédiatement la modal de confirmation
@@ -1111,6 +1142,12 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
 
           // Déclencher la suppression du compte
           context.authBloc.add(DeleteAccountRequested());
+        },
+        onValid: () {
+          HapticFeedback.mediumImpact();
+
+          // Fermer immédiatement la modal de confirmation
+          context.pop();
         },
       ),
     );

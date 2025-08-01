@@ -199,104 +199,6 @@ class _CreditPlanModalState extends State<CreditPlanModal> {
     );
   }
 
-  void _handleTestPurchase(String planId, int credits, double price) async {
-    if (selectedPlanId == null) return;
-
-    final operationId = MonitoringService.instance.trackOperation(
-      'test_credit_purchase',
-      description: 'Test simulation achat de crédits',
-      data: {
-        'plan_id': planId,
-        'credits': credits,
-        'price': price,
-      },
-    );
-
-    try {
-      LogConfig.logInfo('🧪 Début simulation achat pour plan: $selectedPlanId');
-      
-      // Récupérer le plan depuis AppDataBloc
-      final appDataState = context.appDataBloc.state;
-      
-      if (!appDataState.hasCreditData) {
-        _showErrorSnackBar(context.l10n.notAvailablePlans);
-        return;
-      }
-
-      final selectedPlan = appDataState.activePlans.firstWhere(
-        (plan) => plan.id == selectedPlanId,
-        orElse: () => throw Exception('Plan non trouvé dans AppDataBloc'),
-      );
-      
-      LogConfig.logInfo('🧪 Plan pour simulation: ${selectedPlan.name} (${selectedPlan.credits} crédits)');
-
-      // Afficher la confirmation de simulation
-      final shouldSimulate = await showDialog<bool>(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: Text(context.l10n.purchaseSimulated),
-          content: Text(context.l10n.purchaseSimulatedDescription),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(false),
-              child: Text(context.l10n.cancel),
-            ),
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(true),
-              child: Text(context.l10n.simulatePurchase),
-            ),
-          ],
-        ),
-      );
-
-      if (shouldSimulate != true || !mounted) return;
-
-      // Déclencher l'achat via CreditsBloc
-      context.creditsBloc.add(
-        CreditPurchaseRequested(selectedPlan.id),
-      );
-
-      // Attendre un délai pour simuler le processus d'achat
-      await Future.delayed(const Duration(seconds: 2));
-
-      if (mounted) {
-        // Générer un faux transactionId pour la simulation
-        final testTransactionId = 'test_${DateTime.now().millisecondsSinceEpoch}_${selectedPlan.id}';
-        
-        LogConfig.logInfo('✅ Simulation achat réussi avec transaction: $testTransactionId');
-        
-        // Confirmer l'achat via CreditsBloc
-        context.creditsBloc.add(
-          CreditPurchaseConfirmed(
-            planId: selectedPlan.id,
-            paymentIntentId: testTransactionId,
-          ),
-        );
-
-        MonitoringService.instance.finishOperation(operationId, success: true);
-
-        // Métrique business de test
-        MonitoringService.instance.recordMetric(
-          'test_revenue',
-          price,
-          unit: 'eur',
-          tags: {
-            'source': 'test_credit_purchase',
-            'plan_id': planId,
-            'credits': credits.toString(),
-          },
-        );
-      }
-
-    } catch (e) {
-      if (mounted) {
-        LogConfig.logError('❌ Erreur simulation achat: $e');
-        _showErrorSnackBar('Erreur lors de la simulation: ${e.toString()}');
-        MonitoringService.instance.finishOperation(operationId, success: false);
-      }
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return MultiBlocListener(
@@ -500,33 +402,6 @@ class _CreditPlanModalState extends State<CreditPlanModal> {
         ],
 
         12.h,
-
-        if(kDebugMode) ...[
-          SquircleBtn(
-            isPrimary: false,
-            onTap: () {
-              // Récupérer le plan sélectionné depuis appDataState
-              final selectedPlan = appDataState.activePlans.firstWhere(
-                (plan) => plan.id == selectedPlanId,
-                orElse: () => throw Exception(context.l10n.notAvailablePlans),
-              );
-
-              // Récupérer les ProductDetails pour le prix réel
-              final productDetails = IAPService.getProductDetails(selectedPlan.iapId);
-              final actualPrice = productDetails?.rawPrice ?? selectedPlan.price;
-              
-              // Appeler _handleTestPurchase avec les bons paramètres
-              _handleTestPurchase(
-                selectedPlan.id,      // String planId
-                selectedPlan.credits, // int credits
-                actualPrice,          // double price
-              );
-            },
-            label: "Test achat 🧪",
-          ),
-      
-          12.h,
-        ],
     
         Text(
           context.l10n.creditPlanModalWarning,
