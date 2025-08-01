@@ -65,7 +65,7 @@ class OfflineCreditsCacheService {
     if (_currentUserId == null) {
       throw StateError('OfflineCreditsCacheService non initialisé');
     }
-    return '$_keyPrefix$_currentUserId\_$key';
+    return '$_keyPrefix${_currentUserId}_$key';
   }
   
   // ========== GESTION DES CRÉDITS ==========

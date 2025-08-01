@@ -129,7 +129,7 @@ class ErrorScreen extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: context.colorScheme.surfaceVariant,
+                    color: context.colorScheme.surfaceContainerHighest,
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Column(
@@ -310,7 +310,7 @@ class ErrorDialog extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: context.colorScheme.surfaceVariant,
+                color: context.colorScheme.surfaceContainerHighest,
                 borderRadius: BorderRadius.circular(4),
               ),
               child: Column(

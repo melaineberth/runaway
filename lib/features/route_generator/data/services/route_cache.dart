@@ -256,7 +256,7 @@ class RouteCache {
       for (int i = 0; i < toRemove; i++) {
         await prefs.remove(keys[i]);
       }
-      LogConfig.logInfo('🧹 ${toRemove} anciennes entrées supprimées du cache');
+      LogConfig.logInfo('🧹 $toRemove anciennes entrées supprimées du cache');
     }
   }
 

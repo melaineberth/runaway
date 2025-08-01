@@ -141,7 +141,7 @@ class AuthInputValidator {
   /// Assainit une entrée en supprimant les caractères dangereux
   static String _sanitizeInput(String input) {
     return input
-        .replaceAll(RegExp(r'[<>"' + "']"), '') // Supprimer caractères HTML dangereux
+        .replaceAll(RegExp(r'[<>"'"']"), '') // Supprimer caractères HTML dangereux
         .replaceAll(RegExp(r'\s+'), ' ')    // Normaliser les espaces
         .trim();
   }

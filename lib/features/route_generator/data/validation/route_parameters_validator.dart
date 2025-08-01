@@ -205,7 +205,7 @@ class RouteParametersValidator {
       warnings.add(ValidationWarning(
         field: 'preferredWaypoints',
         message: 'Beaucoup de points d\'intérêt pour cette distance',
-        suggestion: 'Recommandé: ${recommendedWaypoints} points pour ${distance.toStringAsFixed(1)}km',
+        suggestion: 'Recommandé: $recommendedWaypoints points pour ${distance.toStringAsFixed(1)}km',
       ));
     }
   }

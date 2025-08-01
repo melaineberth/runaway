@@ -449,7 +449,12 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
               opacity: _fadeAnimation.value,
               child: Transform.translate(
                 offset: Offset(0, 20 * (1 - _fadeAnimation.value)),
-                child: _buildSettingContent(),
+                child: Padding(
+                  padding: EdgeInsets.only(
+                    bottom: Platform.isAndroid ? MediaQuery.of(context).padding.bottom : 0.0,
+                  ),
+                  child: _buildSettingContent(),
+                ),
               ),
             );
           }

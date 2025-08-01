@@ -163,9 +163,7 @@ class CrashReportingService {
           }
           
           if (extra != null) {
-            for (final entry in extra.entries) {
-              scope.setExtra(entry.key, entry.value);
-            }
+            scope.contexts.addEntries(extra.entries);
           }
           
           scope.level = level;
@@ -201,9 +199,7 @@ class CrashReportingService {
           }
           
           if (extra != null) {
-            for (final entry in extra.entries) {
-              scope.setExtra(entry.key, entry.value);
-            }
+            scope.contexts.addEntries(extra.entries);
           }
         },
       );

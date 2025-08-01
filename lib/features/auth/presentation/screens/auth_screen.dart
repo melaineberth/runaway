@@ -4,6 +4,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:runaway/core/blocs/theme_bloc/theme_bloc.dart';
 import 'package:runaway/core/helper/config/log_config.dart';
@@ -287,7 +288,8 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
           initialIndex == 0 
             ? context.l10n.createAccountSubtitle 
             : context.l10n.loginGreetingSubtitle,
-          style: context.bodySmall?.copyWith(
+          style: GoogleFonts.inter(
+            fontSize: 17,
             color: context.adaptiveTextSecondary,
             fontWeight: FontWeight.w400,
           ),

@@ -844,7 +844,25 @@ class RoutesRepository {
   Future<bool> _isConnected() async {
     try {
       final connectivityResult = await Connectivity().checkConnectivity();
-      return connectivityResult != ConnectivityResult.none;
+      final bool isConnected = false;
+      
+      if (connectivityResult.contains(ConnectivityResult.mobile)) {
+        // Mobile network available.
+        return isConnected == true;
+      } else if (connectivityResult.contains(ConnectivityResult.wifi)) {
+        // Wi-fi is available.
+        // Note for Android:
+        // When both mobile and Wi-Fi are turned on system will return Wi-Fi only as active network type
+        return isConnected == true;
+      } else if (connectivityResult.contains(ConnectivityResult.ethernet)) {
+        // Ethernet connection available.
+        return isConnected == true;
+      } else if (connectivityResult.contains(ConnectivityResult.none)) {
+        // No available network types
+        return isConnected == false;
+      }
+
+      return isConnected;
     } catch (e) {
       LogConfig.logError('❌ Erreur vérification connectivité: $e');
       return false;

@@ -319,7 +319,7 @@ class _HistoricCardState extends State<HistoricCard> {
         child: Icon(
           widget.isSelected 
             ? HugeIcons.strokeRoundedTick02 
-            : HugeIcons.strokeRoundedCircle,
+            : null,
           key: ValueKey(widget.isSelected),
           color: widget.isSelected 
             ? Colors.white 

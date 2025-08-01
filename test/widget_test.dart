@@ -66,7 +66,10 @@ void main() {
 
 /// Widget de test simple pour simuler un compteur
 class CounterTestWidget extends StatefulWidget {
+  const CounterTestWidget({super.key});
+
   @override
+  // ignore: library_private_types_in_public_api
   _CounterTestWidgetState createState() => _CounterTestWidgetState();
 }
 

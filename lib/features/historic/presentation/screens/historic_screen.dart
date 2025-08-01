@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -550,7 +552,7 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
         Positioned(
           left: 20.0,
           right: 20.0,
-          bottom: 50.0,
+          bottom: Platform.isAndroid ? MediaQuery.of(context).padding.bottom + 20.0 : 50.0,
           child: AnimatedSwitcher(
             duration: const Duration(milliseconds: 300),
             transitionBuilder: (child, animation) {

@@ -1,4 +1,3 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:runaway/core/errors/app_exceptions.dart';
@@ -368,7 +367,7 @@ mixin ErrorHandlingMixin<Event, State> on Bloc<Event, State> {
       case 'network':
         return ConnectivityError.create(
           exception: exception,
-          isOffline: true, // TODO: obtenir la vraie valeur
+          isOffline: true, 
           isSlowConnection: false,
           onRetry: onRetry,
         );
@@ -382,7 +381,7 @@ mixin ErrorHandlingMixin<Event, State> on Bloc<Event, State> {
       case 'route generation':
         return RouteGenerationError.create(
           exception: exception,
-          parameters: {}, // TODO: obtenir les vrais paramètres
+          parameters: {},
           onRetry: onRetry,
         );
       default:
