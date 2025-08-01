@@ -287,6 +287,37 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
     });
   }
 
+  Future<void> _deleteRouteWithoutConfirmation(SavedRoute route) async {
+    try {
+      LogConfig.logSuccess('🗑️ Suppression directe via AppDataBloc: ${route.name}');
+      
+      // Déclencher la suppression directement
+      if (mounted) {
+        context.appDataBloc.add(SavedRouteDeletedFromAppData(route.id));
+        
+        showTopSnackBar(
+          Overlay.of(context),
+          TopSnackBar(
+            title: context.l10n.successRouteDeleted,
+          ),
+        );
+      }
+      
+    } catch (e) {
+      LogConfig.logError('❌ Erreur suppression: $e');
+      
+      if (mounted) {
+        showTopSnackBar(
+          Overlay.of(context),
+          TopSnackBar(
+            isError: true,
+            title: context.l10n.errorRouteDeleted,
+          ),
+        );
+      }
+    }
+  }
+
   /// Suppression d'un parcours avec confirmation
   Future<void> _deleteRoute(SavedRoute route) async {
     final routeName = '"${route.name}"';
@@ -669,11 +700,10 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
                             // Retourner true seulement si confirmé
                             return confirmed;
                           },
-                          // 🆕 onDismissed se déclenche seulement si confirmDismiss retourne true
+                          // Appeler directement la suppression SANS modal
                           onDismissed: (DismissDirection direction) {
-                            // Appeler directement la logique de suppression SANS la modal
-                            // car la confirmation a déjà été faite dans confirmDismiss
-                            _deleteRoute(route);
+                            // Appeler la version sans confirmation car elle a déjà été faite
+                            _deleteRouteWithoutConfirmation(route);
                           },
                           background: Container(
                             color: Colors.transparent,

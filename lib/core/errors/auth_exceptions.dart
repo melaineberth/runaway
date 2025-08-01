@@ -1,4 +1,5 @@
 import 'package:runaway/core/errors/auth_exceptions.dart';
+import 'package:runaway/core/helper/config/log_config.dart';
 import 'package:runaway/core/helper/extensions/extensions.dart';
 import 'package:runaway/core/router/router.dart';
 
@@ -73,18 +74,36 @@ class AuthExceptionHandler {
         errorMessage.contains('invalid email or password') ||
         errorMessage.contains('email not confirmed') && errorMessage.contains('invalid login')) {
       return LoginException(
-       context.l10n.invalidCredentials,
+      context.l10n.invalidCredentials,
         code: 'INVALID_CREDENTIALS',
         originalError: error,
       );
     }
 
-    // Gestion des annulations utilisateur
+    // 🆕 Gestion améliorée des annulations utilisateur
     if (errorMessage.contains('canceled') || 
         errorMessage.contains('cancelled') ||
         errorMessage.contains('user canceled') ||
+        errorMessage.contains('user cancelled') ||
         errorMessage.contains('connexion google annulée') ||
-        errorMessage.contains('authorizationerrorcode.canceled')) {
+        errorMessage.contains('connexion apple annulée') ||
+        errorMessage.contains('authorizationerrorcode.canceled') ||
+        errorMessage.contains('authorizationerrorcode.cancelled') ||
+        errorMessage.contains('sign_in_canceled') ||
+        errorMessage.contains('sign_in_cancelled') ||
+        errorMessage.contains('operation_cancelled') ||
+        errorMessage.contains('user_cancelled') ||
+        errorMessage.contains('apple signin cancelled') ||
+        errorMessage.contains('google signin cancelled') ||
+        // 🔍 Messages spécifiques iOS/Android
+        errorMessage.contains('the user canceled') ||
+        errorMessage.contains('the operation was cancelled') ||
+        errorMessage.contains('kgidsigninerrorcodecanceled') ||
+        // 🔍 Codes d'erreur Apple
+        errorMessage.contains('1001') || // Apple Sign-In canceled
+        // 🔍 Messages en français
+        errorMessage.contains('annulé par l\'utilisateur') ||
+        errorMessage.contains('opération annulée')) {
       return UserCanceledException(
         context.l10n.userCanceledConnection,
         code: 'USER_CANCELED',
@@ -104,7 +123,7 @@ class AuthExceptionHandler {
       );
     }
     
-    // 🆕 Erreur de longueur de mot de passe
+    // Erreur de longueur de mot de passe
     if (errorMessage.contains('password should be at least') ||
         errorMessage.contains('password is too short')) {
       return SignUpException(
@@ -114,117 +133,33 @@ class AuthExceptionHandler {
       );
     }
 
-    // Email non confirmé spécifiquement
+    // Email non confirmé
     if (errorMessage.contains('email not confirmed') ||
-        errorMessage.contains('email_not_confirmed') ||
-        errorMessage.contains('unconfirmed')) {
+        errorMessage.contains('email address not confirmed') ||
+        errorMessage.contains('signup requires email confirmation')) {
       return LoginException(
         context.l10n.notConfirmedEmail,
         code: 'EMAIL_NOT_CONFIRMED',
         originalError: error,
       );
     }
-    
-    // 🆕 Gestion des null checks pour Google
-    if (errorMessage.contains('null check operator used on a null value')) {
-      return UserCanceledException(
-        context.l10n.userCanceledConnection,
-        code: 'USER_CANCELED_NULL',
-        originalError: error,
-      );
-    }
-    
-    // Erreurs de connexion existantes...
-    if (errorMessage.contains('invalid login credentials') ||
-        errorMessage.contains('invalid email or password')) {
-      return LoginException(
-        context.l10n.invalidCredentials,
-        code: 'INVALID_CREDENTIALS',
-        originalError: error,
-      );
-    }
 
-    // Utilisateur non trouvé
-    if (errorMessage.contains('user not found') ||
-        errorMessage.contains('user does not exist')) {
-      return LoginException(
-        context.l10n.invalidCredentials, // On reste vague pour la sécurité
-        code: 'USER_NOT_FOUND',
-        originalError: error,
-      );
-    }
-    
-    if (errorMessage.contains('email not confirmed')) {
-      return LoginException(
-        context.l10n.confirmEmailBeforeLogin,
-        code: 'EMAIL_NOT_CONFIRMED',
-        originalError: error,
-      );
-    }
-    
-    // Erreurs liées aux emails déjà utilisés
+    // Email déjà utilisé
     if (errorMessage.contains('user already registered') ||
-        errorMessage.contains('email already exists') ||
-        errorMessage.contains('duplicate key') ||
-        errorMessage.contains('already registered')) {
+        errorMessage.contains('email already taken') ||
+        errorMessage.contains('email already in use')) {
       return SignUpException(
-        context.l10n.emailAlreadyInUse,
-        code: 'EMAIL_ALREADY_IN_USE',
-        originalError: error,
-      );
-    }
-    
-    if (errorMessage.contains('password')) {
-      return SignUpException(
-        context.l10n.passwordTooSimple,
-        code: 'WEAK_PASSWORD',
-        originalError: error,
-      );
-    }
-    
-    if (errorMessage.contains('email')) {
-      return SignUpException(
-        context.l10n.emailInvalid,
-        code: 'INVALID_EMAIL',
-        originalError: error,
-      );
-    }
-    
-    // Erreurs de session - CORRECTION ICI
-    if (errorMessage.contains('jwt') || 
-        errorMessage.contains('token') ||
-        errorMessage.contains('session')) {
-      return SessionException(
-        context.l10n.pleaseReconnect,
-        code: 'SESSION_EXPIRED',
+        context.l10n.emailAlreadyUsed,
+        code: 'EMAIL_ALREADY_EXISTS',
         originalError: error,
       );
     }
 
-    if (errorMessage.contains('invalid refresh token') ||
-        errorMessage.contains('refresh token not found') ||
-        errorMessage.contains('jwt expired') ||
-        errorMessage.contains('session expired')) {
-      return SessionException(
-        context.l10n.sessionExpired,
-        code: 'SESSION_EXPIRED',
-        originalError: error,
-      );
-    }
-
-    // Erreurs de connexion réseau
-    if (errorMessage.contains('failed host lookup') ||
-        errorMessage.contains('network error') ||
-        errorMessage.contains('connection timeout') ||
-        errorMessage.contains('connection failed')) {
-      return NetworkException(
-        context.l10n.connectionProblem,
-        originalError: error.toString(),
-      );
-    }
-
-    // Erreurs de timeout
-    if (errorMessage.contains('timeout') ||
+    // Erreurs réseau
+    if (errorMessage.contains('network') ||
+        errorMessage.contains('connection') ||
+        errorMessage.contains('timeout') ||
+        errorMessage.contains('host') ||
         errorMessage.contains('timed out')) {
       return NetworkException(
         context.l10n.timeoutError,
@@ -269,6 +204,17 @@ class AuthExceptionHandler {
       return ProfileException(
         context.l10n.profileManagementError,
         code: 'PROFILE_ERROR',
+        originalError: error,
+      );
+    }
+    
+    // 🆕 Détection finale d'annulation avant le fallback générique
+    // Si aucune des conditions précédentes n'a été remplie mais qu'il semble que ce soit une annulation
+    if (errorMessage.contains('cancel') || errorMessage.contains('annul')) {
+      LogConfig.logInfo('🔍 Détection d\'annulation en fallback: $errorMessage');
+      return UserCanceledException(
+        context.l10n.userCanceledConnection,
+        code: 'USER_CANCELED_FALLBACK',
         originalError: error,
       );
     }

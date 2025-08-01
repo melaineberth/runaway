@@ -2,6 +2,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:runaway/core/helper/config/log_config.dart';
 import 'package:runaway/core/helper/extensions/monitoring_extensions.dart';
 import 'package:runaway/core/helper/services/monitoring_service.dart';
+import 'package:runaway/features/credits/data/services/offline_credits_cache_service.dart';
 import 'package:runaway/features/route_generator/data/services/screenshot_service.dart';
 import 'package:runaway/features/credits/data/repositories/credits_repository.dart';
 import 'package:runaway/features/credits/data/services/iap_service.dart';
@@ -11,11 +12,13 @@ import 'package:runaway/features/credits/domain/models/user_credits.dart';
 import 'package:runaway/features/home/data/services/map_state_service.dart';
 import 'package:runaway/features/route_generator/data/repositories/routes_repository.dart';
 import 'package:runaway/features/route_generator/domain/models/saved_route.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'app_data_event.dart';
 import 'app_data_state.dart';
 
 /// BLoC principal pour orchestrer le pré-chargement et la gestion des données de l'application
 class AppDataBloc extends Bloc<AppDataEvent, AppDataState> {
+  final SupabaseClient _supabase = Supabase.instance.client;
   final RoutesRepository _routesRepository;
   final MapStateService _mapStateService; // Injection du service
   final CreditsRepository _creditsRepository; // Ajout du repository crédits
@@ -102,6 +105,13 @@ class AppDataBloc extends Bloc<AppDataEvent, AppDataState> {
     _isCreditSyncInProgress = false;
     _isFullSyncInProgress = false;
     
+    // 🆕 IMPORTANT: Reset aussi les protections du CreditsRepository
+    try {
+      _creditsRepository.resetCoherenceProtection();
+    } catch (e) {
+      LogConfig.logError('❌ Erreur reset protection cohérence: $e');
+    }
+    
     LogConfig.logInfo('✅ État AppDataBloc réinitialisé pour nouveau utilisateur');
   }
 
@@ -150,39 +160,95 @@ class AppDataBloc extends Bloc<AppDataEvent, AppDataState> {
       return;
     }
 
+    // 🛡️ Protection avec gestion d'erreur garantie
     _isCreditSyncInProgress = true;
-    LogConfig.logInfo('🚀 Pré-chargement des données de crédits...');
-
+    
     try {
-      // Charger toutes les données de crédits en parallèle
-      final futures = await Future.wait([
-        _creditsRepository.getUserCredits(),
+      LogConfig.logInfo('🚀 Pré-chargement des données de crédits...');
+      
+      // Vérifier si les données sont déjà récentes
+      if (_lastCreditUpdate != null) {
+        final timeSinceUpdate = DateTime.now().difference(_lastCreditUpdate!);
+        if (timeSinceUpdate < Duration(seconds: 10) && state.isCreditDataLoaded) {
+          LogConfig.logInfo('🕒 Données crédits récentes, abandon du rechargement');
+          return;
+        }
+      }
+
+      // Récupérer l'utilisateur actuel
+      final user = _supabase.auth.currentUser;
+      if (user == null) {
+        LogConfig.logError('❌ Utilisateur non connecté pour preload crédits');
+        return;
+      }
+
+      // Initialiser le service de cache offline avec l'userId
+      final offlineCache = OfflineCreditsCacheService.instance;
+      await offlineCache.initialize(user.id);
+
+      // Charger en parallèle toutes les données nécessaires
+      final results = await Future.wait([
+        _creditsRepository.getUserCredits(forceRefresh: false),
         _creditsRepository.getCreditPlans(),
-        _creditsRepository.getCreditTransactions(limit: 50),
-      ]);
+        _creditsRepository.getCreditTransactions(limit: 50, offset: 0),
+      ], eagerError: true);
 
-      final userCredits = futures[0] as UserCredits;
-      final creditPlans = futures[1] as List<CreditPlan>;
-      final transactions = futures[2] as List<CreditTransaction>;
+      final userCredits = results[0] as UserCredits;
+      final creditPlans = results[1] as List<CreditPlan>;
+      final creditTransactions = results[2] as List<CreditTransaction>;
 
-      _lastCreditUpdate = DateTime.now();
-
+      // Mettre à jour l'état
       emit(state.copyWith(
         userCredits: userCredits,
         creditPlans: creditPlans,
-        creditTransactions: transactions,
+        creditTransactions: creditTransactions,
         isCreditDataLoaded: true,
         lastError: null,
       ));
 
-      LogConfig.logInfo('Données de crédits pré-chargées: ${userCredits.availableCredits} crédits, ${creditPlans.length} plans, ${transactions.length} transactions');
+      _lastCreditUpdate = DateTime.now();
 
-    } catch (e) {
+      LogConfig.logInfo('Données de crédits pré-chargées: ${userCredits.availableCredits} crédits, ${creditPlans.length} plans, ${creditTransactions.length} transactions');
+
+    } catch (e, stackTrace) {
       LogConfig.logError('❌ Erreur pré-chargement crédits: $e');
-      emit(state.copyWith(
-        lastError: 'Erreur lors du chargement des crédits: $e',
-      ));
+      
+      // En cas d'erreur, essayer de charger depuis le cache offline
+      try {
+        final user = _supabase.auth.currentUser;
+        if (user != null) {
+          final offlineCache = OfflineCreditsCacheService.instance;
+          await offlineCache.initialize(user.id);
+          final cachedCredits = await offlineCache.getUserCredits();
+          
+          if (cachedCredits != null) {
+            LogConfig.logInfo('📦 Utilisation des crédits en cache offline');
+            emit(state.copyWith(
+              userCredits: cachedCredits,
+              isCreditDataLoaded: true,
+              lastError: null,
+            ));
+          } else {
+            emit(state.copyWith(
+              lastError: 'Erreur chargement crédits: $e',
+            ));
+          }
+        }
+      } catch (cacheError) {
+        LogConfig.logError('❌ Erreur cache offline crédits: $cacheError');
+        emit(state.copyWith(
+          lastError: 'Erreur chargement crédits: $e',
+        ));
+      }
+
+      // Enregistrer l'erreur pour monitoring
+      MonitoringService.instance.captureError(
+        e,
+        stackTrace,
+        context: 'AppDataBloc.creditDataPreload',
+      );
     } finally {
+      // 🛡️ IMPORTANT: Toujours reset le flag même en cas d'erreur
       _isCreditSyncInProgress = false;
     }
   }
@@ -255,17 +321,29 @@ class AppDataBloc extends Bloc<AppDataEvent, AppDataState> {
     CreditDataClearRequested event,
     Emitter<AppDataState> emit,
   ) async {
-    LogConfig.logInfo('🗑️ Nettoyage des données de crédits');
-    
-    emit(state.copyWith(
-      userCredits: null,
-      creditPlans: [],
-      creditTransactions: [],
-      isCreditDataLoaded: false,
-    ));
-    
-    _lastCreditUpdate = null;
-    _lastCreditSync = null;
+    try {
+      LogConfig.logInfo('🗑️ Nettoyage des données de crédits');
+      
+      // Reset des flags de synchronisation pour éviter les blocages
+      _isCreditSyncInProgress = false;
+      _lastCreditUpdate = null;
+      
+      // Nettoyer l'état
+      emit(state.copyWith(
+        userCredits: null,
+        creditPlans: [],
+        creditTransactions: [],
+        isCreditDataLoaded: false,
+        lastError: null,
+      ));
+      
+      // Invalider le cache
+      await _creditsRepository.invalidateCreditsCache();
+      
+      LogConfig.logInfo('✅ Données de crédits nettoyées');
+    } catch (e) {
+      LogConfig.logError('❌ Erreur nettoyage données crédits: $e');
+    }
   }
 
   /// Méthode helper pour rafraîchir les données de crédits

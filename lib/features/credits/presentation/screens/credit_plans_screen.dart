@@ -57,13 +57,6 @@ class _CreditPlansScreenState extends State<CreditPlansScreen> with TickerProvid
   bool _minimumLoadingCompleted = false;
   bool _canShowContent = false;
   static const Duration _minimumLoadingDuration = Duration(milliseconds: 300);
-
-  static const int _itemsPerPage = 8;
-  static const int _initialItemCount = 5;
-  List<CreditTransaction> _allTransactions = [];
-  List<CreditTransaction> _displayedTransactions = [];
-  bool _isLoadingMore = false;
-  bool _hasMoreData = true;  
   final bool _shouldShowLoading = false;
   
   @override
@@ -190,79 +183,6 @@ class _CreditPlansScreenState extends State<CreditPlansScreen> with TickerProvid
       _slideAnimations.add(slideAnimation);
       _scaleAnimations.add(scaleAnimation);
     }
-  }
-
-  /// Vérifie si les transactions doivent être mises à jour
-  bool _needsTransactionUpdate(List<CreditTransaction> newTransactions) {
-    // Vérifier la longueur
-    if (_allTransactions.length != newTransactions.length) {
-      return true;
-    }
-    
-    // Vérifier les IDs des transactions (plus robuste que la comparaison d'objets)
-    final currentIds = _allTransactions.map((t) => t.id).toSet();
-    final newIds = newTransactions.map((t) => t.id).toSet();
-    
-    return !currentIds.containsAll(newIds) || !newIds.containsAll(currentIds);
-  }
-
-  /// Met à jour la liste des transactions avec reset du lazy loading
-  void _updateTransactionList(List<CreditTransaction> newTransactions) {
-    _allTransactions = List.from(newTransactions);
-    
-    // Reset du lazy loading
-    _displayedTransactions = _allTransactions.take(_initialItemCount).toList();
-    _hasMoreData = _allTransactions.length > _initialItemCount;
-    _isLoadingMore = false;
-    
-    LogConfig.logInfo('📋 Transactions mises à jour: ${_allTransactions.length} total, ${_displayedTransactions.length} affichées');
-  }
-
-  // Méthode pour charger plus d'éléments
-  void _loadMoreTransactions() {
-    if (_isLoadingMore || !_hasMoreData || _allTransactions.isEmpty) {
-      LogConfig.logInfo('⏸️ Chargement ignoré - isLoading: $_isLoadingMore, hasMore: $_hasMoreData, total: ${_allTransactions.length}');
-      return;
-    }
-
-    LogConfig.logInfo('📋 Chargement de plus de transactions...');
-    setState(() => _isLoadingMore = true);
-
-    // Simuler un délai de chargement léger pour l'UX
-    Future.delayed(const Duration(milliseconds: 300), () {
-      if (!mounted) return;
-
-      final currentCount = _displayedTransactions.length;
-      final remainingItems = _allTransactions.length - currentCount;
-      
-      LogConfig.logInfo('📊 État lazy loading: affiché=$currentCount, total=${_allTransactions.length}, restant=$remainingItems');
-      
-      if (remainingItems <= 0) {
-        setState(() {
-          _hasMoreData = false;
-          _isLoadingMore = false;
-        });
-        LogConfig.logInfo('✅ Fin du lazy loading - toutes les transactions affichées');
-        return;
-      }
-
-      final nextBatchSize = _itemsPerPage.clamp(0, remainingItems);
-      final nextBatch = _allTransactions
-          .skip(currentCount)
-          .take(nextBatchSize)
-          .toList();
-
-      setState(() {
-        _displayedTransactions.addAll(nextBatch);
-        _hasMoreData = _displayedTransactions.length < _allTransactions.length;
-        _isLoadingMore = false;
-      });
-
-      LogConfig.logInfo('📋 Batch chargé: +${nextBatch.length} transactions (${_displayedTransactions.length}/${_allTransactions.length})');
-
-      // Mettre à jour les animations pour les nouveaux éléments
-      _updateAnimationsForRoutes(_displayedTransactions.length);
-    });
   }
 
   @override
@@ -448,18 +368,11 @@ class _CreditPlansScreenState extends State<CreditPlansScreen> with TickerProvid
     final userCredits = appDataState.userCredits;
     final transactions = appDataState.creditTransactions;
 
-    // Utiliser une méthode plus robuste pour détecter les changements
-    if (_needsTransactionUpdate(transactions)) {
-      LogConfig.logInfo('🔄 Mise à jour des transactions: ${transactions.length} total');
-      _updateTransactionList(transactions);
-    }
+    LogConfig.logInfo('🔄 Affichage direct de ${transactions.length} transactions (sans lazy loading)');
 
-    final shouldUseLazyLoading = transactions.length > 12;
-    final transactionsToDisplay = shouldUseLazyLoading ? _displayedTransactions : transactions;
-
-    // Mettre à jour les animations en fonction du nombre de transactions
-    if (transactionsToDisplay.isNotEmpty) {
-      _updateAnimationsForRoutes(transactionsToDisplay.length);
+    // Mettre à jour les animations pour toutes les transactions
+    if (transactions.isNotEmpty) {
+      _updateAnimationsForRoutes(transactions.length);
     }
 
     return Stack(
@@ -470,12 +383,6 @@ class _CreditPlansScreenState extends State<CreditPlansScreen> with TickerProvid
           : BlurryPage(
             physics: const BouncingScrollPhysics(),
             shrinkWrap: false,
-            enableLazyLoading: shouldUseLazyLoading,
-            initialItemCount: _initialItemCount,
-            itemsPerPage: _itemsPerPage,
-            onLoadMore: _loadMoreTransactions,
-            isLoading: _isLoadingMore,
-            hasMoreData: _hasMoreData,
             children: [
               _buildCreditsHeader(userCredits!),
               
@@ -492,7 +399,7 @@ class _CreditPlansScreenState extends State<CreditPlansScreen> with TickerProvid
               
               15.h,
           
-              _buildAnimatedTransactionsList(transactionsToDisplay),
+              _buildAnimatedTransactionsList(transactions),
               
               // 🚀 Espace pour le bouton en bas (éviter que le dernier élément soit caché)
               SizedBox(height: 100 + (Platform.isAndroid ? MediaQuery.of(context).padding.bottom : 10)),
@@ -775,10 +682,9 @@ class _CreditPlansScreenState extends State<CreditPlansScreen> with TickerProvid
   /// Liste chargée avec animations staggered
   Widget _buildLoadedList(List<CreditTransaction> transactions) {
     // Utiliser _displayedTransactions pour le lazy loading
-    final transactionsToShow = transactions.length > 12 ? _displayedTransactions : transactions;
-    final sortedTransactions = transactionsToShow.sortByCreationDate();
+    final sortedTransactions = transactions.sortByCreationDate();
     
-    LogConfig.logInfo('📋 Affichage de ${sortedTransactions.length} transactions sur ${_allTransactions.length} total');
+    LogConfig.logInfo('📋 Affichage de ${sortedTransactions.length} transactions sur ${transactions.length} total');
     
     return Column(
       mainAxisAlignment: MainAxisAlignment.start,

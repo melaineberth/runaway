@@ -278,7 +278,7 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
             ? context.l10n.createAccountTitle 
             : context.l10n.loginGreetingTitle,
           style: context.bodyMedium?.copyWith(
-            fontSize: 22,
+            fontSize: 20,
             color: context.adaptiveTextPrimary,
           ),
           textAlign: TextAlign.center,

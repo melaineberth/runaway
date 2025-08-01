@@ -1033,8 +1033,28 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   void _handleAuthError(dynamic error, Emitter<AuthState> emit) {
     LogConfig.logError('❌ Erreur auth: $error');
     
+    // D'abord, vérifier directement si l'erreur brute contient des mots-clés d'annulation
+    final rawErrorMessage = error.toString().toLowerCase();
+    if (rawErrorMessage.contains('cancel') || 
+        rawErrorMessage.contains('annul') ||
+        rawErrorMessage.contains('user cancel') ||
+        rawErrorMessage.contains('1001')) { // Code erreur Apple
+      LogConfig.logInfo('🚫 Annulation détectée directement - pas d\'erreur à afficher');
+      emit(Unauthenticated());
+      return;
+    }
+    
     // Utiliser AuthExceptionHandler pour convertir l'erreur en exception typée avec message localisé
     final appException = AuthExceptionHandler.handleSupabaseError(error);
+    
+    // Vérifier si c'est une annulation utilisateur
+    if (appException is UserCanceledException) {
+      LogConfig.logInfo('🚫 Connexion annulée par l\'utilisateur via exception - pas d\'erreur à afficher');
+      emit(Unauthenticated());
+      return;
+    }
+    
+    // Pour toutes les autres erreurs, afficher le message d'erreur comme avant
     emit(AuthError(appException.toString()));
   }
 

@@ -1,14 +1,11 @@
 import 'dart:convert';
 import 'dart:math' as math;
 
-import 'package:runaway/core/blocs/app_data/app_data_bloc.dart';
-import 'package:runaway/core/blocs/app_data/app_data_event.dart';
 import 'package:runaway/core/errors/auth_exceptions.dart';
 import 'package:runaway/core/helper/services/app_data_initialization_service.dart';
 import 'package:runaway/core/helper/services/cache_service.dart';
 import 'package:runaway/core/helper/services/connectivity_service.dart';
 import 'package:runaway/core/helper/services/monitoring_service.dart';
-import 'package:runaway/core/utils/injections/service_locator.dart';
 import 'package:runaway/features/credits/data/services/offline_credits_cache_service.dart';
 import 'package:runaway/features/credits/domain/models/user_credits.dart';
 import 'package:runaway/features/credits/domain/models/credit_plan.dart';
@@ -22,7 +19,14 @@ class CreditsRepository {
   final SupabaseClient _supabase = Supabase.instance.client;
   final CacheService _cache = CacheService.instance;
 
-  // Nouveau service de cache offline
+  // 🛡️ Protection anti-boucle
+  bool _isCoherenceCheckInProgress = false;
+  DateTime? _lastCoherenceCheck;
+  int _coherenceCheckCount = 0;
+  static const Duration _minCoherenceInterval = Duration(seconds: 30);
+  static const int _maxCoherenceChecksPerSession = 3;
+
+  // Service de cache offline
   final OfflineCreditsCacheService _offlineCache = OfflineCreditsCacheService.instance;
 
   /// Récupère les crédits de l'utilisateur connecté avec cache intelligent
@@ -883,49 +887,110 @@ class CreditsRepository {
   // Vérifier la cohérence des crédits avec le système anti-abus
   Future<void> _verifyCreditsCoherence(String userId, UserCredits credits) async {
     try {
-      LogConfig.logInfo('🔍 Vérification cohérence crédits pour: $userId');
+      // Eviter les vérifications trop fréquentes
+      if (_lastCoherenceCheck != null) {
+        final timeSinceLastCheck = DateTime.now().difference(_lastCoherenceCheck!);
+        if (timeSinceLastCheck < _minCoherenceInterval) {
+          LogConfig.logInfo('🕒 Vérification cohérence trop récente, abandon');
+          return;
+        }
+      }
+
+      // Limiter le nombre de vérifications par session
+      if (_coherenceCheckCount >= _maxCoherenceChecksPerSession) {
+        LogConfig.logInfo('🛡️ Limite de vérifications cohérence atteinte, abandon');
+        return;
+      }
+
+      // Eviter les vérifications simultanées
+      if (_isCoherenceCheckInProgress) {
+        LogConfig.logInfo('🔄 Vérification cohérence déjà en cours, abandon');
+        return;
+      }
+
+      _isCoherenceCheckInProgress = true;
+      _lastCoherenceCheck = DateTime.now();
+      _coherenceCheckCount++;
+
+      LogConfig.logInfo('🔍 Vérification cohérence crédits pour: $userId (tentative $_coherenceCheckCount/$_maxCoherenceChecksPerSession)');
       
       final result = await _supabase.rpc('force_check_user_device', params: {
         'p_user_id': userId,
-      });
+      }).timeout(Duration(seconds: 5)); // Timeout pour éviter les blocages
       
       if (result != null) {
         final shouldHaveCredits = result['should_have_credits'] == true;
         final serverCredits = result['current_credits'] ?? 0;
         
-        // AMÉLIORATION : Comparaison plus précise
-        final hasInconsistency = (!shouldHaveCredits && credits.availableCredits > 0) || 
-                                (shouldHaveCredits && credits.availableCredits == 0 && serverCredits == 0) ||
-                                (credits.availableCredits != serverCredits);
+        // Seulement détecter les vraies incohérences
+        final hasRealInconsistency = _detectRealInconsistency(
+          shouldHaveCredits: shouldHaveCredits,
+          localCredits: credits.availableCredits,
+          serverCredits: serverCredits,
+        );
         
-        if (hasInconsistency) {
-          LogConfig.logInfo('⚠️ Incohérence majeure détectée:');
+        if (hasRealInconsistency) {
+          LogConfig.logInfo('⚠️ Vraie incohérence détectée:');
           LogConfig.logInfo('  Devrait avoir crédits: $shouldHaveCredits');
           LogConfig.logInfo('  Crédits locaux: ${credits.availableCredits}');
           LogConfig.logInfo('  Crédits serveur: $serverCredits');
           
-          // Nettoyage immédiat
-          await _supabase.rpc('cleanup_abusive_credits');
-          await invalidateCreditsCache();
-          
-          // Forcer le refresh de AppDataBloc
-          try {
-            final appDataBloc = sl.get<AppDataBloc>();
-            appDataBloc.add(CreditDataClearRequested());
-            
-            // Attendre un peu puis recharger
-            Future.delayed(Duration(milliseconds: 500), () {
-              appDataBloc.add(CreditDataPreloadRequested());
-            });
-          } catch (e) {
-            LogConfig.logInfo('⚠️ AppDataBloc non disponible: $e');
-          }
-          
-          LogConfig.logInfo('🧹 Nettoyage et synchronisation terminés');
+          // Actions correctives modérées
+          await _handleInconsistencyGently(userId);
+        } else {
+          LogConfig.logInfo('✅ Cohérence vérifiée - aucun problème détecté');
         }
       }
     } catch (e) {
       LogConfig.logError('❌ Erreur vérification cohérence: $e');
+      // En cas d'erreur, on ne fait pas de nettoyage pour éviter les boucles
+    } finally {
+      _isCoherenceCheckInProgress = false;
+    }
+  }
+
+  // Détection intelligente des vraies incohérences
+  bool _detectRealInconsistency({
+    required bool shouldHaveCredits,
+    required int localCredits,
+    required int serverCredits,
+  }) {
+    // Tolérance pour les différences mineures
+    const tolerance = 2;
+    
+    // Cas 1: L'utilisateur ne devrait pas avoir de crédits ET il en a plus que la tolérance
+    if (!shouldHaveCredits && localCredits > tolerance) {
+      return true;
+    }
+    
+    // Cas 2: L'utilisateur devrait avoir des crédits mais n'en a aucun
+    if (shouldHaveCredits && localCredits == 0 && serverCredits == 0) {
+      return true;
+    }
+    
+    // Cas 3: Différence significative entre local et serveur
+    final creditsDiff = (localCredits - serverCredits).abs();
+    if (creditsDiff > tolerance) {
+      return true;
+    }
+    
+    return false;
+  }
+
+  // Gestion douce des incohérences
+  Future<void> _handleInconsistencyGently(String userId) async {
+    try {
+      LogConfig.logInfo('🔧 Correction douce de l\'incohérence');
+      
+      // Seulement invalider le cache, sans déclencher AppDataBloc
+      await invalidateCreditsCache();
+      
+      // Pas de notification immediate à AppDataBloc pour éviter la boucle
+      // L'AppDataBloc sera mis à jour au prochain accès aux crédits
+      
+      LogConfig.logInfo('✅ Correction terminée - cache invalidé');
+    } catch (e) {
+      LogConfig.logError('❌ Erreur correction incohérence: $e');
     }
   }
 
@@ -951,66 +1016,16 @@ class CreditsRepository {
     return isInconsistent;
   }
 
-  /// Gère les incohérences détectées
   Future<void> _handleCreditsInconsistency(String userId, UserCredits cached, UserCredits server) async {
     try {
       LogConfig.logInfo('🔄 Traitement incohérence crédits pour: $userId');
       
-      // Invalider tout le cache des crédits
+      // Invalider seulement le cache, sans déclencher AppDataBloc
       await invalidateCreditsCache();
-      
-      // Déclencher une vérification anti-abus
-      await _forceAntiAbuseCheck(userId);
-      
-      // Notifier AppDataBloc de l'incohérence
-      try {
-        final appDataBloc = sl.get<AppDataBloc>();
-        appDataBloc.add(CreditDataClearRequested());
-        appDataBloc.add(CreditDataPreloadRequested());
-      } catch (e) {
-        LogConfig.logInfo('⚠️ AppDataBloc non disponible pour notification: $e');
-      }
       
       LogConfig.logInfo('✅ Incohérence traitée, cache nettoyé');
     } catch (e) {
       LogConfig.logError('❌ Erreur traitement incohérence: $e');
-    }
-  }
-
-  /// Force une vérification anti-abus complète
-  Future<void> _forceAntiAbuseCheck(String userId) async {
-    try {
-      LogConfig.logInfo('🛡️ Vérification anti-abus forcée pour: $userId');
-      
-      final result = await _supabase.rpc('force_check_user_device', params: {
-        'p_user_id': userId,
-      });
-      
-      if (result != null) {
-        final shouldHaveCredits = result['should_have_credits'] == true;
-        final currentCredits = result['current_credits'] ?? 0;
-        
-        LogConfig.logInfo('📊 Résultat vérification anti-abus:');
-        LogConfig.logInfo('  Devrait avoir crédits: $shouldHaveCredits');
-        LogConfig.logInfo('  Crédits actuels: $currentCredits');
-        
-        // Si abus détecté, nettoyer
-        if (!shouldHaveCredits && currentCredits > 0) {
-          LogConfig.logInfo('🧹 Nettoyage abus détecté');
-          await _supabase.rpc('cleanup_abusive_credits');
-        }
-        // Si utilisateur légitime sans crédits, corriger
-        else if (shouldHaveCredits && currentCredits == 0) {
-          LogConfig.logInfo('🔄 Correction utilisateur légitime');
-          await _supabase.rpc('admin_grant_credits', params: {
-            'p_user_email': result['email'],
-            'p_amount': 10,
-            'p_reason': 'Correction automatique suite à vérification d\'incohérence'
-          });
-        }
-      }
-    } catch (e) {
-      LogConfig.logError('❌ Erreur vérification anti-abus: $e');
     }
   }
 
@@ -1106,5 +1121,13 @@ class CreditsRepository {
     await _offlineCache.initialize(user.id);
     await _offlineCache.clearAll();
     LogConfig.logInfo('🧹 Cache offline nettoyé');
+  }
+
+  // Reset les compteurs lors d'une nouvelle session
+  void resetCoherenceProtection() {
+    _isCoherenceCheckInProgress = false;
+    _lastCoherenceCheck = null;
+    _coherenceCheckCount = 0;
+    LogConfig.logInfo('🔄 Protection cohérence réinitialisée');
   }
 }

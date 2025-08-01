@@ -13,6 +13,10 @@ class CacheService {
   final Map<String, Timer> _expirationTimers = {};
   final Map<String, StreamController<CacheEvent>> _listeners = {};
 
+  // Protection anti-invalidation excessive
+  DateTime? _lastCreditsInvalidation;
+  static const Duration _minInvalidationInterval = Duration(seconds: 15);
+
   // Configuration des durées de cache par type
   static const Map<String, Duration> _cacheDurations = {
     'user_credits': Duration(minutes: 15),
@@ -223,51 +227,48 @@ class CacheService {
 
   /// Stratégies d'invalidation automatique
   Future<void> invalidateCreditsCache() async {
-    // CORRECTION 1: Liste étendue de clés à supprimer incluant TOUTES les transactions
-    final keysToRemove = [
-      'cache_user_credits',
-      'user_credits_cache', 
-      'cached_credits_data',
-      'last_credits_sync',
-      'last_cache_validation',
-      'credit_plans_cache',
-      'credit_transactions_cache',
-      'credits_timestamp',
-      'user_credits_timestamp',
-      'last_credits_update',
-      'credits_verification_cache',
-      'transaction_history_cache',
-    ];
-    
-    // CORRECTION 2: Supprimer aussi toutes les variantes de cache de transactions
     try {
-      final allKeys = await getAllKeys();
-      final transactionKeys = allKeys.where((key) => 
-        key.contains('credit_transactions_') ||
-        key.contains('transaction_history') ||
-        key.startsWith('cache_credit_transactions_')
+      // 🛡️ Protection contre les invalidations trop fréquentes
+      if (_lastCreditsInvalidation != null) {
+        final timeSinceLastInvalidation = DateTime.now().difference(_lastCreditsInvalidation!);
+        if (timeSinceLastInvalidation < _minInvalidationInterval) {
+          LogConfig.logInfo('🕒 Invalidation cache crédits trop récente, abandon');
+          return;
+        }
+      }
+
+      _lastCreditsInvalidation = DateTime.now();
+      
+      await _ensureInitialized();
+      
+      // Détecter toutes les clés de crédits et transactions
+      final allKeys = _prefs!.getKeys().toList();
+      final creditKeys = allKeys.where((key) => 
+        key.startsWith('cache_user_credits') ||
+        key.startsWith('user_credits_timestamp') ||
+        key.startsWith('cache_credit_transactions_') ||
+        key == 'last_cache_validation'
       ).toList();
       
-      keysToRemove.addAll(transactionKeys);
-      LogConfig.logInfo('🧹 Clés de transactions détectées: ${transactionKeys.length}');
-    } catch (e) {
-      LogConfig.logError('❌ Erreur récupération clés transactions: $e');
-    }
-    
-    int removedCount = 0;
-    for (final key in keysToRemove) {
-      try {
-        final existed = _prefs!.containsKey(key);
-        if (existed) {
-          await remove(key);
-          removedCount++;
-        }
-      } catch (e) {
-        LogConfig.logError('❌ Erreur suppression clé $key: $e');
+      LogConfig.logInfo('🧹 Clés de transactions détectées: ${creditKeys.length}');
+      
+      // Supprimer toutes les clés liées aux crédits
+      int removedCount = 0;
+      for (final key in creditKeys) {
+        await _prefs!.remove(key);
+        LogConfig.logInfo('🗑️ Cache supprimé: $key');
+        removedCount++;
       }
+      
+      if (removedCount > 0) {
+        LogConfig.logInfo('💳 Cache crédits ET transactions complètement invalidé ($removedCount clés supprimées)');
+      } else {
+        LogConfig.logInfo('🧹 Cache crédits déjà vide');
+      }
+      
+    } catch (e) {
+      LogConfig.logError('❌ Erreur invalidation cache crédits: $e');
     }
-        
-    LogConfig.logInfo('💳 Cache crédits ET transactions complètement invalidé ($removedCount clés supprimées)');
   }
 
   Future<void> invalidateTransactionsCache() async {
@@ -339,7 +340,7 @@ class CacheService {
     }
   }
 
-  /// 🆕 Vide complètement le cache avec confirmation
+  /// Vide complètement le cache avec confirmation
   Future<void> forceCompleteClearing() async {
     await _ensureInitialized();
     
@@ -454,7 +455,7 @@ class CacheService {
 
   // ===== SÉRIALISATION SIMPLIFIÉE =====
 
-  /// ✅ Convertit une valeur en JSON sérialisable de manière sécurisée
+  /// Convertit une valeur en JSON sérialisable de manière sécurisée
   dynamic _convertToJson(dynamic value) {
     if (value == null) return null;
     
@@ -610,6 +611,23 @@ class CacheService {
         }
       }
     }
+  }
+
+  // Forcer l'invalidation (en cas d'urgence)
+  Future<void> forceInvalidateCreditsCache() async {
+    try {
+      LogConfig.logInfo('🚨 Invalidation forcée du cache crédits');
+      _lastCreditsInvalidation = null; // Reset de la protection
+      await invalidateCreditsCache();
+    } catch (e) {
+      LogConfig.logError('❌ Erreur invalidation forcée: $e');
+    }
+  }
+
+  // Reset les protections
+  void resetInvalidationProtection() {
+    _lastCreditsInvalidation = null;
+    LogConfig.logInfo('🔄 Protection invalidation réinitialisée');
   }
 
   /// Dispose le service
