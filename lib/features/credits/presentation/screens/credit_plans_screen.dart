@@ -10,6 +10,7 @@ import 'package:runaway/core/helper/config/log_config.dart';
 import 'package:runaway/core/helper/extensions/extensions.dart';
 import 'package:runaway/core/blocs/app_data/app_data_bloc.dart';
 import 'package:runaway/core/blocs/app_data/app_data_state.dart';
+import 'package:runaway/core/styles/colors.dart';
 import 'package:runaway/core/utils/constant/constants.dart';
 import 'package:runaway/core/utils/injections/bloc_provider_extension.dart';
 import 'package:runaway/core/helper/extensions/monitoring_extensions.dart';
@@ -39,7 +40,7 @@ class _CreditPlansScreenState extends State<CreditPlansScreen> with TickerProvid
   
   late String _screenLoadId;
 
-  // 🎭 Animation Controllers
+  // Animation Controllers
   late AnimationController _fadeController;
   late AnimationController _staggerController;
   late Animation<double> _fadeAnimation;
@@ -51,7 +52,7 @@ class _CreditPlansScreenState extends State<CreditPlansScreen> with TickerProvid
   final List<Animation<double>> _slideAnimations = [];
   final List<Animation<double>> _scaleAnimations = [];
 
-  // 🆕 Gestion du délai minimum et transition
+  // Gestion du délai minimum et transition
   Timer? _minimumLoadingTimer;
   bool _minimumLoadingCompleted = false;
   bool _canShowContent = false;
@@ -544,7 +545,7 @@ class _CreditPlansScreenState extends State<CreditPlansScreen> with TickerProvid
                     _buildStatItem(
                       context.l10n.availableCredits,
                       '${userCredits.availableCredits}',
-                      Colors.blue,
+                      AppColors.thirty,
                     ),
                   ],
                 ),
@@ -558,13 +559,13 @@ class _CreditPlansScreenState extends State<CreditPlansScreen> with TickerProvid
                       _buildStatItem(
                         context.l10n.purchasedCredits,
                         '${userCredits.totalCreditsPurchased}',
-                        Colors.green,
+                        AppColors.secondary,
                       ),
                       8.w,
                       _buildStatItem(
                         context.l10n.usedCredits,
                         '${userCredits.totalCreditsUsed}',
-                        Colors.orange,
+                        AppColors.binary,
                       ),
                     ],
                   ),
@@ -713,21 +714,42 @@ class _CreditPlansScreenState extends State<CreditPlansScreen> with TickerProvid
   /// Liste animée avec transition shimmer ↔ chargé
   Widget _buildAnimatedTransactionsList(List<CreditTransaction> transactions) {
     return AnimatedSwitcher(
-      duration: const Duration(milliseconds: 400),
-      switchInCurve: Curves.easeIn,
-      switchOutCurve: Curves.easeOut,
+      duration: const Duration(milliseconds: 550), // Timing optimisé
+      switchInCurve: Curves.easeInOutCubic,
+      switchOutCurve: Curves.easeInOutCubic,
       transitionBuilder: (child, animation) {
+        // Animation de fondu progressive
+        final fadeAnimation = CurvedAnimation(
+          parent: animation,
+          curve: Curves.easeInOutCubic,
+        );
+        
+        // Animation de glissement subtile avec rebond
+        final slideAnimation = Tween<Offset>(
+          begin: const Offset(0.0, 0.03), // Mouvement très subtil
+          end: Offset.zero,
+        ).animate(CurvedAnimation(
+          parent: animation,
+          curve: Curves.easeOutBack, // Léger effet de rebond
+        ));
+        
+        // Animation de scale pour la fluidité
+        final scaleAnimation = Tween<double>(
+          begin: 0.96,
+          end: 1.0,
+        ).animate(CurvedAnimation(
+          parent: animation,
+          curve: Curves.easeOutCubic,
+        ));
+
         return FadeTransition(
-          opacity: animation,
+          opacity: fadeAnimation,
           child: SlideTransition(
-            position: Tween<Offset>(
-              begin: const Offset(0.0, 0.1),
-              end: Offset.zero,
-            ).animate(CurvedAnimation(
-              parent: animation,
-              curve: Curves.easeOutCubic,
-            )),
-            child: child,
+            position: slideAnimation,
+            child: ScaleTransition(
+              scale: scaleAnimation,
+              child: child,
+            ),
           ),
         );
       },
@@ -750,7 +772,7 @@ class _CreditPlansScreenState extends State<CreditPlansScreen> with TickerProvid
     );
   }
 
-    /// Liste chargée avec animations staggered
+  /// Liste chargée avec animations staggered
   Widget _buildLoadedList(List<CreditTransaction> transactions) {
     // Utiliser _displayedTransactions pour le lazy loading
     final transactionsToShow = transactions.length > 12 ? _displayedTransactions : transactions;
@@ -777,17 +799,27 @@ class _CreditPlansScreenState extends State<CreditPlansScreen> with TickerProvid
               final scaleValue = index < _scaleAnimations.length 
                   ? _scaleAnimations[index].value 
                   : 1.0;
+
+              // Animation d'apparition progressive améliorée
+              final itemAnimation = CurvedAnimation(
+                parent: _staggerController,
+                curve: Interval(
+                  (index * 0.06).clamp(0.0, 0.7), // Timing optimisé
+                  ((index * 0.06) + 0.35).clamp(0.2, 1.0),
+                  curve: Curves.easeOutExpo, // Courbe d'accélération naturelle
+                ),
+              );
               
               return Opacity(
-                opacity: _fadeAnimation.value,
+                opacity: _fadeAnimation.value * itemAnimation.value,
                 child: Transform.translate(
-                  offset: Offset(0, slideValue),
-                  child: Transform.scale(
-                    scale: scaleValue,
-                    child: Padding(
-                      padding: EdgeInsets.only(
-                        bottom: index == sortedTransactions.length - 1 ? 0.0 : 12.0
-                      ),
+                offset: Offset(0, slideValue * (1.0 - itemAnimation.value)),
+                child: Transform.scale(
+                  scale: 0.85 + (scaleValue * itemAnimation.value * 0.15),
+                  child: Padding(
+                    padding: EdgeInsets.only(
+                      bottom: index == sortedTransactions.length - 1 ? 0.0 : 12.0,
+                    ),
                       child: _buildTransactionItem(transaction),
                     ),
                   ),

@@ -1190,6 +1190,15 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
     );
   }
 
+  void _showRouteGenerationWarning(String info) {
+    if (!mounted) return;
+
+    showTopSnackBar(
+      Overlay.of(context),
+      TopSnackBar(isWarning: true, title: info),
+    );
+  }
+
   // === GESTION DES POSITIONS ===
 
   Future<void> _ensureCustomMarkerImage() async {
@@ -2054,6 +2063,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
 
   // Gestionnaire de génération de route
   void _handleGenerateRoute() async {
+    // Vérifier la disponibilité d'une position
+    if (!_isPositionAvailableForGeneration()) {
+      LogConfig.logWarning('❌ Génération bloquée : aucune position disponible');
+      _showRouteGenerationWarning(context.l10n.generationEmptyLocation);
+      return;
+    }
+
     // Vérifier la connexion avant la connexion Google  
     if (!ConnectivityHelper.checkConnectionAndShowModal(context)) {
       return;
@@ -2098,9 +2114,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
           }
         }
       } else {
-        // 🆕 Logique pour utilisateurs authentifiés avec UI adaptée
-        final creditResult = await context.creditService
-            .verifyCreditsForGeneration(requiredCredits: 1);
+        // Logique pour utilisateurs authentifiés avec UI adaptée
+        final creditResult = await context.creditService.verifyCreditsForGeneration(requiredCredits: 1);
 
         if (!creditResult.isValid) {
           LogConfig.logError('❌ Crédits insuffisants pour utilisateur authentifié');
@@ -2158,6 +2173,29 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver, Ti
         errorMessage: e.toString(),
       );
     }
+  }
+
+  // Validation de sécurité pour la disponibilité d'une position
+  bool _isPositionAvailableForGeneration() {
+    // Si on est en mode userTracking, la position GPS est toujours disponible
+    if (_trackingMode == TrackingMode.userTracking) {
+      LogConfig.logInfo('✅ Position disponible : mode GPS actif');
+      return true;
+    }
+
+    // Si on est en mode manual ou searchSelected, vérifier qu'il y a des marqueurs
+    final hasLottieMarker = _showLottieMarker && 
+                            _lottieMarkerLat != null && 
+                            _lottieMarkerLng != null;
+    final hasLocationMarkers = locationMarkers.isNotEmpty;
+
+    if (hasLottieMarker || hasLocationMarkers) {
+      LogConfig.logInfo('✅ Position disponible : marqueurs présents');
+      return true;
+    }
+
+    LogConfig.logWarning('❌ Position indisponible : mode ${_trackingMode.toString()} sans marqueurs');
+    return false;
   }
 
   void _showInsufficientCreditsBottomSheet({

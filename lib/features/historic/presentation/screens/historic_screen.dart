@@ -10,6 +10,7 @@ import 'package:runaway/core/helper/extensions/extensions.dart';
 import 'package:runaway/core/blocs/app_data/app_data_bloc.dart';
 import 'package:runaway/core/blocs/app_data/app_data_event.dart';
 import 'package:runaway/core/blocs/app_data/app_data_state.dart';
+import 'package:runaway/core/styles/colors.dart';
 import 'package:runaway/core/utils/injections/bloc_provider_extension.dart';
 import 'package:runaway/core/helper/services/conversion_triggers.dart';
 import 'package:runaway/core/widgets/blurry_app_bar.dart';
@@ -64,7 +65,6 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
   List<SavedRoute> _displayedRoutes = [];
   bool _isLoadingMore = false;
   bool _hasMoreData = true;  
-  final bool _shouldShowLoading = false;
   
   @override
   void initState() {
@@ -572,37 +572,46 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
   /// Liste animée avec transition shimmer ↔ chargé
   Widget _buildAnimatedRoutesList(List<SavedRoute> routes) {
     return AnimatedSwitcher(
-      duration: const Duration(milliseconds: 400),
-      switchInCurve: Curves.easeIn,
-      switchOutCurve: Curves.easeOut,
+      duration: const Duration(milliseconds: 600), // Durée légèrement augmentée
+      switchInCurve: Curves.easeInOutCubic, // Courbe plus fluide
+      switchOutCurve: Curves.easeInOutCubic,
       transitionBuilder: (child, animation) {
+        // Animation de fondu améliorée
+        final fadeAnimation = CurvedAnimation(
+          parent: animation,
+          curve: Curves.easeInOutCubic,
+        );
+        
+        // Animation de glissement avec courbe elastic subtile
+        final slideAnimation = Tween<Offset>(
+          begin: const Offset(0.0, 0.05), // Mouvement plus subtil
+          end: Offset.zero,
+        ).animate(CurvedAnimation(
+          parent: animation,
+          curve: Curves.easeOutBack, // Léger rebond
+        ));
+        
+        // Animation de scale pour plus de fluidité
+        final scaleAnimation = Tween<double>(
+          begin: 0.95,
+          end: 1.0,
+        ).animate(CurvedAnimation(
+          parent: animation,
+          curve: Curves.easeOutCubic,
+        ));
+
         return FadeTransition(
-          opacity: animation,
+          opacity: fadeAnimation,
           child: SlideTransition(
-            position: Tween<Offset>(
-              begin: const Offset(0.0, 0.1),
-              end: Offset.zero,
-            ).animate(CurvedAnimation(
-              parent: animation,
-              curve: Curves.easeOutCubic,
-            )),
-            child: child,
+            position: slideAnimation,
+            child: ScaleTransition(
+              scale: scaleAnimation,
+              child: child,
+            ),
           ),
         );
       },
-      child: _shouldShowLoading ? _buildShimmerList() : _buildLoadedList(routes),
-    );
-  }
-
-  /// Liste shimmer pendant le chargement
-  Widget _buildShimmerList() {
-    return Column(
-      key: const ValueKey('shimmer'),
-      children: List.generate(3, (index) => Padding(
-          padding: EdgeInsets.only(bottom: index >= 2 ? 90.0 : 15.0),
-          child: ShimmerHistoricCard(),
-        ),
-      ),
+      child: _buildLoadedList(routes),
     );
   }
 
@@ -789,7 +798,7 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
   Widget _buildStatsCard(List<SavedRoute> routes) {
     final totalDistance = routes.fold<double>(
       0, 
-      (sum, route) => sum + (route.parameters.distanceKm),
+      (sum, route) => sum + (route.actualDistance ?? route.parameters.distanceKm),
     );
     final totalRoutes = routes.length;
     
@@ -818,14 +827,14 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
                 icon: HugeIcons.strokeRoundedRoute01,
                 value: totalRoutes.toString(),
                 label: context.l10n.route,
-                color: Colors.blue,
+                color: AppColors.secondary,
               ),
               8.w,
               _buildStatItem(
                 icon: HugeIcons.strokeRoundedNavigator01,
-                value: '${totalDistance.toStringAsFixed(0)}km',
+                value: '${totalDistance.toStringAsFixed(1)}km',
                 label: context.l10n.total,
-                color: Colors.green,
+                color: AppColors.binary,
               ),
             ],
           ),
@@ -1016,121 +1025,64 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
   }
 
   Widget _buildEmptyUnauthenticated() {
-    return Scaffold(
-      extendBodyBehindAppBar: true,
-      appBar: AppBar(
-        forceMaterialTransparency: true,
-        automaticallyImplyLeading: false,
-        title: FadeTransition(
-          opacity: _fadeAnimation,
-          child: Text(
-            context.l10n.historic,
-            style: context.bodySmall?.copyWith(
-              color: context.adaptiveTextPrimary,
+    return AnimatedBuilder(
+      animation: _fadeAnimation,
+      builder: (context, child) {
+        return Opacity(
+          opacity: _fadeAnimation.value,
+          child: Transform.translate(
+            offset: Offset(0, 20 * (1 - _fadeAnimation.value)),
+            child: BlurryPage(
+              physics: const NeverScrollableScrollPhysics(),
+              children: [ 
+                ...List.generate(3, (index) {
+                  return Padding(
+                    padding: const EdgeInsets.all(20.0),
+                      child: SquircleContainer(
+                        height: 300,
+                        radius: 60,
+                        gradient: false,
+                        color: context.adaptiveBorder.withValues(alpha: 0.05),
+                        child: Stack(
+                          alignment: Alignment.bottomCenter,
+                          children: [            
+                            Padding(
+                              padding: const EdgeInsets.all(25.0),
+                              child: Row(
+                                children: [
+                                  Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      SquircleContainer(
+                                        width: 200,
+                                        radius: 15.0,
+                                        height: 20,
+                                        color: context.adaptivePrimary,
+                                      ),
+                                      8.h,
+                                      SquircleContainer(
+                                        width: 300,
+                                        radius: 20.0,
+                                        height: 30,
+                                        color: context.adaptivePrimary,
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),            
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ],
             ),
           ),
-        ),
-      ),
-      body: AnimatedBuilder(
-        animation: _fadeAnimation,
-        builder: (context, child) {
-          return Opacity(
-            opacity: _fadeAnimation.value,
-            child: Transform.translate(
-              offset: Offset(0, 20 * (1 - _fadeAnimation.value)),
-              child: BlurryPage(
-                physics: const NeverScrollableScrollPhysics(),
-                children: [ 
-                  ...List.generate(3, (index) {
-                    return Padding(
-                      padding: const EdgeInsets.all(20.0),
-                        child: SquircleContainer(
-                          radius: 50.0,
-                          gradient: false,
-                          padding: EdgeInsets.all(15.0),
-                          color: context.adaptiveBorder.withValues(alpha: 0.08),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              SizedBox(
-                                child: SquircleContainer(
-                                  height: 250,
-                                  width: double.infinity,
-                                  radius: 30.0,
-                                  color: context.adaptivePrimary,
-                                  padding: EdgeInsets.zero,
-                                ),
-                              ),
-              
-                              15.h,
-              
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  SquircleContainer(
-                                    width: 200,
-                                    radius: 15.0,
-                                    height: 20,
-                                    color: context.adaptivePrimary,
-                                  ),
-                                  8.h,
-                                  SquircleContainer(
-                                    width: 300,
-                                    radius: 20.0,
-                                    height: 30,
-                                    color: context.adaptivePrimary,
-                                  ),
-                                ],
-                              ),
-              
-                              25.h,
-              
-                              Wrap(
-                                spacing: 8.0,
-                                runSpacing: 8.0,
-                                children: [
-                                  _buildEmptyDetailChip(40, 90),
-                                  _buildEmptyDetailChip(40, 80),
-                                  _buildEmptyDetailChip(40, 80),
-                                  _buildEmptyDetailChip(40, 80),
-                                  _buildEmptyDetailChip(40, 80),
-                                  _buildEmptyDetailChip(40, 100),
-                                  _buildEmptyDetailChip(40, 100),
-                                ],
-                              ),
-                          
-                              25.h,
-                          
-                              // Boutons d'action
-                              SquircleContainer(
-                                height: 50,
-                                radius: 30.0,
-                                color: context.adaptivePrimary,
-                                padding: EdgeInsets.symmetric(vertical: 15.0),
-                              ),
-                            ],
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                ],
-              ),
-            ),
-          );
-        }
-      ),
-    );
-  }
-
-  Widget _buildEmptyDetailChip(double height, double width) {
-    return Container(
-      height: height,
-      width: width,
-      decoration: BoxDecoration(
-        color: context.adaptivePrimary,
-        borderRadius: BorderRadius.circular(100),
-      ),
+        );
+      }
     );
   }
 

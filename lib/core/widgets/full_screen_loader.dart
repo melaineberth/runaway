@@ -24,12 +24,17 @@ class _FullScreenLoaderState extends State<FullScreenLoader> {
   Timer? _messageTimer;
   int _currentMessageIndex = 0;
   String _currentMessage = '';
+  bool _hasInitializedMessages = false; // Flag pour savoir si les messages sont initialisés
 
   // 1.6s permet d'afficher 2-3 messages pendant les 4 secondes minimum
   static const Duration _messageRotationInterval = Duration(milliseconds: 1600);
 
-  // Messages pour la génération de parcours - Version engageante
-  List<String> get _generationMessages => [
+  // 🔧 FIX : Messages par défaut pour éviter l'accès à context.l10n dans initState
+  static const String _defaultGenerationMessage = 'Génération en cours...';
+  static const String _defaultSavingMessage = 'Sauvegarde en cours...';
+
+  // Messages pour la génération de parcours - Maintenant dans une méthode
+  List<String> _getGenerationMessages() => [
     context.l10n.generationMessage1,
     context.l10n.generationMessage2,
     context.l10n.generationMessage3,
@@ -39,7 +44,7 @@ class _FullScreenLoaderState extends State<FullScreenLoader> {
   ];
 
   // Messages pour la sauvegarde - Version engageante
-  List<String> get _savingMessages => [
+  List<String> _getSavingMessages() => [
     context.l10n.savingMessage1,
     context.l10n.savingMessage2,
     context.l10n.savingMessage3,
@@ -49,8 +54,21 @@ class _FullScreenLoaderState extends State<FullScreenLoader> {
   @override
   void initState() {
     super.initState();
-    _initializeMessage();
-    _startMessageRotation();
+    // Utiliser un message par défaut et ne pas démarrer la rotation
+    _currentMessage = widget.loadingType == LoadingType.saving 
+        ? _defaultSavingMessage 
+        : _defaultGenerationMessage;
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Initialiser les messages localisés ICI au lieu de initState()
+    if (!_hasInitializedMessages) {
+      _initializeMessage();
+      _startMessageRotation();
+      _hasInitializedMessages = true;
+    }
   }
 
   @override
@@ -81,9 +99,9 @@ class _FullScreenLoaderState extends State<FullScreenLoader> {
   List<String> _getMessagesForType(LoadingType type) {
     switch (type) {
       case LoadingType.generation:
-        return _generationMessages;
+        return _getGenerationMessages(); // 🔧 FIX : Utiliser la méthode au lieu du getter
       case LoadingType.saving:
-        return _savingMessages;
+        return _getSavingMessages(); // 🔧 FIX : Utiliser la méthode au lieu du getter
     }
   }
 

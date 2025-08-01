@@ -3,7 +3,9 @@ import 'package:flutter/material.dart';
 class AppColors {
   // Thème CLAIR
   static const Color primary = Color.fromARGB(255, 196, 119, 255); // Violet conservé
-  static const Color secondary = Color(0xFF0984E3); // Bleu
+  static const Color secondary = Color(0xFF2E2A5C); // Bleu
+  static const Color binary = Color(0xFFA3D8FF); // Bleu
+  static const Color thirty = Color(0xFFFFB3E9); // Bleu
   static const Color background = Color(0xFFF9F9F9); // Gris très clair
   static const Color surface = Color(0xFFFFFFFF); // Blanc
   static const Color textPrimary = Color(0xFF2D3436); // Noir-gris foncé
@@ -15,7 +17,9 @@ class AppColors {
 class AppColorsDark {
   // Thème SOMBRE
   static const Color primary = Color.fromARGB(255, 196, 119, 255); // Même violet pour cohérence
-  static const Color secondary = Color(0xFF74B9FF); // Bleu plus clair pour le dark
+  static const Color secondary = Color(0xFF2E2A5C); // Bleu
+  static const Color binary = Color(0xFFA3D8FF); // Bleu
+  static const Color thirty = Color(0xFFFFB3E9);
   static const Color background = Color(0xFF121212); // Noir très sombre
   static const Color surface = Color(0xFF1E1E1E); // Gris très sombre
   static const Color textPrimary = Color(0xFFECECEC); // Blanc cassé

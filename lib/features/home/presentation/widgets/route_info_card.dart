@@ -141,7 +141,7 @@ class RouteInfoCard extends StatelessWidget {
           // Distance
           _InfoChip(
             icon: HugeIcons.solidRoundedRouteBlock,
-            label: "${parameters.distanceKm}km",
+            label: "${metrics.distanceKm.toStringAsFixed(1)}km",
           ),
           10.w,
 
