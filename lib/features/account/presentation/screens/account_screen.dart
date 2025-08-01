@@ -1035,6 +1035,8 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
         });
       }
     });
+
+    HapticFeedback.lightImpact();
   }
 
   void _showLogoutDialog(BuildContext context) {

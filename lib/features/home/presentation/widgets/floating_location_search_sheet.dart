@@ -162,54 +162,6 @@ class _FloatingLocationSearchSheetState extends State<FloatingLocationSearchShee
 
     _scrollController = ScrollController()
       ..addListener(() => _updateEdgeState(_scrollController.position));
-
-    // Vérification initiale après le premier build
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _checkAndResetSheetPosition();
-    });
-  }
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    // Vérifier et réinitialiser la position quand on revient sur cette page
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _checkAndResetSheetPosition();
-    });
-  }
-
-  /// 🔄 Vérifie et réinitialise la position du sheet si nécessaire
-  void _checkAndResetSheetPosition() {
-    if (_isDisposed || !mounted) return;
-
-    // Vérifier l'état actuel du clavier
-    final keyboardController = KeyboardVisibilityController();
-    final currentKeyboardState = keyboardController.isVisible;
-    
-    // 🆕 Ne pas réagir si on n'est pas sur l'écran principal
-    if (!_isCurrentRouteHome()) {
-      return;
-    }
-    
-    // Mettre à jour l'état du clavier si nécessaire
-    if (_isKeyboardVisible != currentKeyboardState) {
-      _isKeyboardVisible = currentKeyboardState;
-    }
-
-    // Si le clavier est fermé, pas de suggestions et pas de texte
-    final shouldCollapse = !_isKeyboardVisible && 
-                          _suggestions.isEmpty && 
-                          _searchController.text.isEmpty;
-
-    if (shouldCollapse && _sheetCtrl.isAttached) {
-      // Vérifier si le sheet n'est pas déjà en position minimale
-      final currentSize = _sheetCtrl.size;
-      final minRatio = _getMinimumCollapsedRatio(context); // 🔧 CHANGEMENT
-      if (currentSize > minRatio + 0.01) {
-        // Fermer le sheet avec animation
-        _scheduleConditionalCollapse();
-      }
-    }
   }
 
   /// 🆕 Vérifie si on est sur la route Home

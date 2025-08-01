@@ -1,5 +1,6 @@
 import 'package:bounce/bounce.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:runaway/core/helper/extensions/extensions.dart';
 import 'package:runaway/core/widgets/squircle_container.dart';
@@ -7,7 +8,7 @@ import 'package:runaway/core/widgets/squircle_container.dart';
 class SquircleBtn extends StatelessWidget {
   final String? label;
   final Widget? child;
-  final Function()? onTap;
+  final VoidCallback? onTap;
   final bool isGradient;
   final bool isPrimary;
   final bool isDestructive;
@@ -39,7 +40,11 @@ class SquircleBtn extends StatelessWidget {
     return Bounce(
       scale: isDisabled ? false : true,
       tilt: isDisabled ? false : true,
-      onTap: isDisabled ? null : onTap,
+      onTap: isDisabled ? null : () {
+        onTap?.call();
+
+        HapticFeedback.lightImpact();
+      },
       child: SquircleContainer(
         height: 60,
         padding: padding,
