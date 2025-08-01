@@ -254,32 +254,78 @@ class _HistoricCardState extends State<HistoricCard> {
           ),
 
           // Checkbox de sélection en mode édition
-          if (widget.isEdit)
-            Positioned(
-              top: 15,
-              right: 15,
-              child: AnimatedContainer(
-                duration: Duration(milliseconds: 200),
-                padding: EdgeInsets.all(4),
-                decoration: BoxDecoration(
-                  color: widget.isSelected 
-                    ? context.adaptivePrimary 
-                    : Colors.black.withValues(alpha: 0.25),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  widget.isSelected 
-                    ? HugeIcons.strokeRoundedTick02 
-                    : null,
-                  color: widget.isSelected ? Colors.white : context.adaptiveTextSecondary,
-                  size: 25,
-                ),
-              ),
+          Positioned(
+            top: 15,
+            right: 15,
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 250),
+              transitionBuilder: (child, animation) {
+                return ScaleTransition(
+                  scale: Tween<double>(
+                    begin: 0.0,
+                    end: 1.0,
+                  ).animate(CurvedAnimation(
+                    parent: animation,
+                    curve: Curves.easeInBack,
+                    reverseCurve: Curves.easeOutBack,
+                  )),
+                  child: FadeTransition(
+                    opacity: animation,
+                    child: child,
+                  ),
+                );
+              },
+              child: widget.isEdit
+                ? _buildEditModeCheckbox()
+                : SizedBox.shrink(key: ValueKey('hidden')),
             ),
+          ),
       
           // Titre et localisation
           _buildRouteInfo(paddingValue),        
         ],
+      ),
+    );
+  }
+
+  Widget _buildEditModeCheckbox() {
+    return AnimatedContainer(
+      key: ValueKey('checkbox'),
+      duration: const Duration(milliseconds: 300),
+      padding: EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: widget.isSelected 
+          ? context.adaptivePrimary 
+          : Colors.black.withValues(alpha: 0.25),
+        shape: BoxShape.circle,
+        boxShadow: widget.isSelected 
+          ? [
+              BoxShadow(
+                color: context.adaptivePrimary.withValues(alpha: 0.3),
+                blurRadius: 8,
+                spreadRadius: 0,
+              )
+            ] 
+          : null,
+      ),
+      child: AnimatedSwitcher(
+        duration: const Duration(milliseconds: 150),
+        transitionBuilder: (child, animation) {
+          return ScaleTransition(
+            scale: animation,
+            child: child,
+          );
+        },
+        child: Icon(
+          widget.isSelected 
+            ? HugeIcons.strokeRoundedTick02 
+            : HugeIcons.strokeRoundedCircle,
+          key: ValueKey(widget.isSelected),
+          color: widget.isSelected 
+            ? Colors.white 
+            : context.adaptiveTextSecondary.withValues(alpha: 0.6),
+          size: 25,
+        ),
       ),
     );
   }
@@ -340,7 +386,6 @@ class _HistoricCardState extends State<HistoricCard> {
             ],
           ),
 
-          if (!widget.isEdit)
           _buildActionMenu(),
         ],
       ),
@@ -398,13 +443,13 @@ class _HistoricCardState extends State<HistoricCard> {
         ),
       ],
       buttonBuilder: (context, showMenu) => GestureDetector(
-        onTap: () {
+        onTap: widget.isEdit ? null : () {
           showMenu();
           HapticFeedback.mediumImpact();
         },
         child: Icon(
           HugeIcons.solidRoundedMoreVertical,
-          color: context.adaptiveTextPrimary,
+          color: widget.isEdit ? context.adaptiveDisabled.withValues(alpha: 0.15) : context.adaptiveTextPrimary,
           size: 25,
         ),
       ),
@@ -447,7 +492,7 @@ class _HistoricCardState extends State<HistoricCard> {
           type: EdgeType.bottomEdge,
           size: imgSize / 2,
           sigma: 80,
-          tintColor: context.adaptiveTextPrimary.withValues(alpha: 0.08),
+          tintColor: context.adaptiveTextPrimary.withValues(alpha: 0.15),
           controlPoints: [
             ControlPoint(
               position: 0.5,

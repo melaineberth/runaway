@@ -418,9 +418,16 @@ class AppDataBloc extends Bloc<AppDataEvent, AppDataState> {
       LogConfig.logInfo('Parcours supprimé avec succès');
     } catch (e) {
       LogConfig.logError('❌ Erreur lors de la suppression du parcours: $e');
-      emit(state.copyWith(
-        lastError: 'Erreur lors de la suppression du parcours: $e',
-      ));
+      // Ne pas écraser isHistoricDataLoaded si l'erreur est liée aux crédits
+      if (state.isHistoricDataLoaded) {
+        emit(state.copyWith(
+          lastError: 'Erreur lors de la suppression du parcours: $e',
+        ));
+      } else {
+        emit(state.copyWith(
+          lastError: 'Erreur lors de la suppression du parcours: $e',
+        ));
+      }
     }
   }
 
@@ -440,6 +447,7 @@ class AppDataBloc extends Bloc<AppDataEvent, AppDataState> {
       LogConfig.logInfo('Statistiques d\'utilisation mises à jour');
     } catch (e) {
       LogConfig.logError('❌ Erreur lors de la mise à jour des statistiques: $e');
+      // Préserver isHistoricDataLoaded en cas d'erreur
       emit(state.copyWith(
         lastError: 'Erreur lors de la mise à jour des statistiques: $e',
       ));
@@ -462,6 +470,7 @@ class AppDataBloc extends Bloc<AppDataEvent, AppDataState> {
       LogConfig.logInfo('Parcours renommé avec succès');
     } catch (e) {
       LogConfig.logError('❌ Erreur lors du renommage du parcours: $e');
+      // Préserver isHistoricDataLoaded en cas d'erreur
       emit(state.copyWith(
         lastError: 'Erreur lors du renommage du parcours: $e',
       ));
@@ -480,6 +489,7 @@ class AppDataBloc extends Bloc<AppDataEvent, AppDataState> {
         _lastHistoricUpdate = DateTime.now();
         emit(state.copyWith(
           savedRoutes: historicData,
+          isHistoricDataLoaded: true,
           isLoading: false,
           lastError: null,
         ));
@@ -541,6 +551,7 @@ class AppDataBloc extends Bloc<AppDataEvent, AppDataState> {
       emit(state.copyWith(
         // Historique
         savedRoutes: historicData ?? [],
+        isHistoricDataLoaded: true,
         
         // Crédits
         userCredits: creditData?.userCredits,
@@ -657,6 +668,7 @@ class AppDataBloc extends Bloc<AppDataEvent, AppDataState> {
         _lastHistoricUpdate = DateTime.now();
         emit(state.copyWith(
           savedRoutes: historicData,
+          isHistoricDataLoaded: true,
           lastCacheUpdate: _lastHistoricUpdate,
         ));
         LogConfig.logInfo('Historique mis à jour (${historicData.length} routes)');
@@ -697,7 +709,12 @@ class AppDataBloc extends Bloc<AppDataEvent, AppDataState> {
     } catch (e, st) {
       // On capture l’erreur proprement ; on peut aussi émettre un état d’erreur ici
       LogConfig.logError('❌ Erreur sync suppression : $e\n$st');
-      // emit(ErrorState(message: e.toString()));
+      // Préserver isHistoricDataLoaded en cas d'erreur
+      if (state.isHistoricDataLoaded) {
+        emit(state.copyWith(
+          lastError: 'Erreur de synchronisation: $e',
+        ));
+      }
     }
   }
 
@@ -731,6 +748,7 @@ class AppDataBloc extends Bloc<AppDataEvent, AppDataState> {
         _lastHistoricUpdate = DateTime.now();
         emit(state.copyWith(
           savedRoutes: historicData,
+          isHistoricDataLoaded: true,
           lastCacheUpdate: _lastHistoricUpdate,
         ));
         LogConfig.logInfo('Sync historique sécurisée terminée');

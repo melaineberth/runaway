@@ -6,6 +6,7 @@ class SquircleContainer extends StatelessWidget {
   final EdgeInsetsGeometry? padding;
   final EdgeInsetsGeometry? margin;
   final Color? color;
+  final Color? glowColor;
   final List<BoxShadow>? boxShadow;
   final double? width;
   final double? height;
@@ -31,6 +32,7 @@ class SquircleContainer extends StatelessWidget {
     this.isGlow = false,
     this.gradient = true,
     this.borderColor,
+    this.glowColor,
     this.borderWidth,
   });
 
@@ -40,7 +42,7 @@ class SquircleContainer extends StatelessWidget {
       decoration: isGlow ? BoxDecoration(
         boxShadow: [
           BoxShadow(
-            color: color!.withValues(alpha: 0.4),
+            color: glowColor ?? color!.withValues(alpha: 0.4),
             blurRadius: 30.0,
             spreadRadius: 1.0,
             offset: const Offset(0.0, 0.0),

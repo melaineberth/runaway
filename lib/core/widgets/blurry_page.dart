@@ -13,7 +13,7 @@ class BlurryPage extends StatefulWidget {
   final ScrollPhysics? physics;
   final Axis scrollDirection;
 
-  // 🆕 Paramètres pour LazyLoading
+  // Paramètres pour LazyLoading
   final bool enableLazyLoading;
   final int initialItemCount;
   final int itemsPerPage;
@@ -39,7 +39,7 @@ class BlurryPage extends StatefulWidget {
     this.onScrollStateChanged,
     this.onScrollControllerReady,
     this.scrollDirection = Axis.vertical,
-    // 🆕 Paramètres LazyLoading par défaut
+    // Paramètres LazyLoading par défaut
     this.enableLazyLoading = false,
     this.initialItemCount = 10,
     this.itemsPerPage = 10,
@@ -58,10 +58,10 @@ class _BlurryPageState extends State<BlurryPage> with TickerProviderStateMixin {
   late final Animation<double> _blurAnimation;
   bool _isCutByTop = false;
   bool _isCutByBottom = false;
-  bool _isCutByLeft = false; // 🆕 si scroll horizontal
-  bool _isCutByRight = false; // 🆕 si scroll horizontal
+  bool _isCutByLeft = false; 
+  bool _isCutByRight = false;
 
-  // 🆕 Variables pour LazyLoading
+  // Variables pour LazyLoading
   int _currentItemCount = 0;
   bool _isLoadingMore = false;
 
@@ -69,7 +69,7 @@ class _BlurryPageState extends State<BlurryPage> with TickerProviderStateMixin {
   void initState() {
     super.initState();
 
-    // 🆕 Initialiser le nombre d'éléments pour LazyLoading
+    // Initialiser le nombre d'éléments pour LazyLoading
     _currentItemCount = widget.enableLazyLoading 
       ? widget.initialItemCount 
       : widget.children.length;
@@ -92,7 +92,7 @@ class _BlurryPageState extends State<BlurryPage> with TickerProviderStateMixin {
 
     _scrollController = ScrollController();
     
-    // 🆕 Listener pour détection fin de liste
+    // Listener pour détection fin de liste
     if (widget.enableLazyLoading) {
       _scrollController.addListener(_checkForLoadMore);
     }
@@ -108,7 +108,7 @@ class _BlurryPageState extends State<BlurryPage> with TickerProviderStateMixin {
     });
   }
 
-  // 🆕 Méthode pour détecter quand charger plus d'éléments
+  // Méthode pour détecter quand charger plus d'éléments
   void _checkForLoadMore() {
     if (!widget.enableLazyLoading || 
         _isLoadingMore || 
@@ -149,7 +149,7 @@ class _BlurryPageState extends State<BlurryPage> with TickerProviderStateMixin {
   void didUpdateWidget(BlurryPage oldWidget) {
     super.didUpdateWidget(oldWidget);
     
-    // 🆕 Mettre à jour le compteur d'éléments
+    // Mettre à jour le compteur d'éléments
     if (widget.enableLazyLoading) {
       final newCount = (_currentItemCount + widget.itemsPerPage)
           .clamp(0, widget.children.length);
@@ -207,7 +207,7 @@ class _BlurryPageState extends State<BlurryPage> with TickerProviderStateMixin {
     }
   }
 
-  // 🆕 Construire la liste avec LazyLoading
+  // Construire la liste avec LazyLoading
   Widget _buildLazyLoadingList() {
     final displayItemCount = _currentItemCount.clamp(0, widget.children.length);
     final displayItems = widget.children.take(displayItemCount).toList();
@@ -227,7 +227,7 @@ class _BlurryPageState extends State<BlurryPage> with TickerProviderStateMixin {
     );
   }
 
-  // 🆕 Indicateur de chargement simple
+  // Indicateur de chargement simple
   Widget _buildLoadingIndicator() {
     return Container(
       padding: const EdgeInsets.all(16.0),
@@ -268,7 +268,7 @@ class _BlurryPageState extends State<BlurryPage> with TickerProviderStateMixin {
                       return false;
                     },
                     child: widget.child ?? 
-                    // 🆕 Utiliser la liste LazyLoading si activée
+                    // Utiliser la liste LazyLoading si activée
                     (widget.enableLazyLoading 
                       ? _buildLazyLoadingList()
                       : ListView(

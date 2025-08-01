@@ -280,45 +280,16 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
                   return Column(
                     children: [
                       Padding(
-                          padding: EdgeInsetsGeometry.only(
-                            top: kToolbarHeight * 1.2,
-                            left: 20.0,
-                            right: 20.0,
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              IconBtn(
-                                padding: 8.0,
-                                onPressed: () => context.pop(),
-                                backgroundColor: Colors.transparent,
-                                child: Icon(
-                                  HugeIcons.strokeStandardArrowDown01,
-                                  color: context.adaptiveWhite,
-                                  size: 28,
-                                ),
-                              ),
-                              Text(
-                                context.l10n.account,
-                                style: GoogleFonts.inter(
-                                  fontSize: 17,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                              IconBtn(
-                                padding: 8.0,
-                                onPressed: () => _navigateToEditProfile(context, authState.profile), // Nouvelle méthode
-                                backgroundColor: context.adaptivePrimary,
-                                child: Icon(
-                                  HugeIcons.solidRoundedDashboardCircleSettings,
-                                  color: Colors.white,
-                                  size: 28,
-                                ),
-                              ),
-                            ],
-                          ),
+                        padding: EdgeInsetsGeometry.only(
+                          top: kToolbarHeight * 1.2,
+                          left: 20.0,
+                          right: 20.0,
                         ),
-                      Expanded(child: _buildAuthenticatedView(authState)),
+                        child: _buildAppBar(authState),
+                      ),
+                      Expanded(
+                        child: _buildAuthenticatedView(authState),
+                      ),
                     ],
                   );
                 }
@@ -329,6 +300,41 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildAppBar(Authenticated authState) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        IconBtn(
+          padding: 8.0,
+          onPressed: () => context.pop(),
+          backgroundColor: Colors.transparent,
+          child: Icon(
+            HugeIcons.strokeStandardArrowDown01,
+            color: context.adaptiveWhite,
+            size: 28,
+          ),
+        ),
+        Text(
+          context.l10n.account,
+          style: GoogleFonts.inter(
+            fontSize: 17,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        IconBtn(
+          padding: 8.0,
+          onPressed: () => _navigateToEditProfile(context, authState.profile), // Nouvelle méthode
+          backgroundColor: context.adaptivePrimary,
+          child: Icon(
+            HugeIcons.solidRoundedAccountSetting03,
+            color: Colors.white,
+            size: 28,
+          ),
+        ),
+      ],
     );
   }
 
@@ -474,6 +480,11 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
                 labelColor: context.adaptiveTextSecondary,
                 iconColor: context.adaptiveTextSecondary,
                 trailling: HugeIcons.strokeStandardArrowRight01,
+                textStyle: GoogleFonts.inter(
+                  fontSize: 16,
+                  color: context.adaptiveTextSecondary,
+                  fontWeight: FontWeight.w500,
+                ),
               ),
             ),
       
@@ -566,6 +577,11 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
                     labelColor: context.adaptiveTextSecondary,
                     iconColor: context.adaptiveTextSecondary,
                     trailling: HugeIcons.strokeStandardArrowRight01,
+                    textStyle: GoogleFonts.inter(
+                      fontSize: 16,
+                      color: context.adaptiveTextSecondary,
+                      fontWeight: FontWeight.w500,
+                    ),
                   );
                 },
               ),
@@ -723,8 +739,10 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
               // Affichage des crédits
               Text(
                 creditsDisplay,
-                  style: context.bodySmall?.copyWith(
+                style: GoogleFonts.inter(
+                  fontSize: 16,
                   color: context.adaptiveTextSecondary,
+                  fontWeight: FontWeight.w500,
                 ),
               ),
 
@@ -810,10 +828,10 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
       children: [
         Text(
           title,
-          style: context.bodyMedium?.copyWith(
+          style: GoogleFonts.inter(
             fontSize: 18,
             color: context.adaptiveTextSecondary,
-            fontWeight: FontWeight.w600,
+            fontWeight: FontWeight.w500,
           ),
         ),
         15.h,
@@ -923,9 +941,10 @@ class _AccountScreenState extends State<AccountScreen> with TickerProviderStateM
             ),
             Text(
               "@${user.username}",
-              style: ctx.bodySmall?.copyWith(
-                fontWeight: FontWeight.w500,
+              style: GoogleFonts.inter(
+                fontSize: 17,
                 color: context.adaptiveTextSecondary,
+                fontWeight: FontWeight.w500,
               ),
             ),
           ],

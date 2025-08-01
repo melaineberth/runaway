@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:runaway/core/helper/extensions/extensions.dart';
 import 'package:runaway/core/widgets/particles_spark.dart';
 import 'package:runaway/core/widgets/particles_spark_loader.dart';
@@ -166,8 +167,8 @@ class _FullScreenLoaderState extends State<FullScreenLoader> {
                           child: Text(
                             _currentMessage,
                             key: ValueKey(_currentMessage),
-                            style: TextStyle(
-                              fontSize: 16,
+                            style: GoogleFonts.inter(
+                              fontSize: 17,
                               color: Colors.white,
                               fontWeight: FontWeight.w500,
                             ),

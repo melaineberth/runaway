@@ -267,6 +267,9 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       await _repo.deleteAccount();
       
       LogConfig.logInfo('Compte supprimé avec succès');
+
+      // Émettre l'état Unauthenticated après suppression réussie
+      emit(Unauthenticated());
             
     } catch (e) {
       LogConfig.logError('❌ Erreur suppression compte: $e');

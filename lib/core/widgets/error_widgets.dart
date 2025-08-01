@@ -1,125 +1,11 @@
+import 'dart:async';
+import 'package:flutter/foundation.dart'; // Ajout pour kDebugMode
 import 'package:flutter/material.dart';
 import 'package:runaway/core/errors/app_exceptions.dart';
 import 'package:runaway/core/errors/error_service.dart';
 import 'package:runaway/core/helper/extensions/extensions.dart';
 
-/// Widget pour afficher une erreur dans une card
-class ErrorCard extends StatelessWidget {
-  final AppException exception;
-  final VoidCallback? onRetry;
-  final VoidCallback? onDismiss;
-  final bool showDetails;
-  final bool canRetry;
-
-  const ErrorCard({
-    super.key,
-    required this.exception,
-    this.onRetry,
-    this.onDismiss,
-    this.showDetails = false,
-    this.canRetry = true,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final message = ErrorService.instance.getLocalizedMessage(exception, context);
-    
-    return Card(
-      margin: const EdgeInsets.all(16),
-      color: context.colorScheme.errorContainer,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Row(
-              children: [
-                Icon(
-                  _getErrorIcon(),
-                  color: context.colorScheme.error,
-                  size: 24,
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    context.l10n.errorDialogTitle,
-                    style: context.textTheme.titleMedium?.copyWith(
-                      color: context.colorScheme.error,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-                if (onDismiss != null)
-                  IconButton(
-                    onPressed: onDismiss,
-                    icon: const Icon(Icons.close),
-                    color: context.colorScheme.error,
-                  ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Text(
-              message,
-              style: context.textTheme.bodyMedium?.copyWith(
-                color: context.colorScheme.onErrorContainer,
-              ),
-            ),
-            if (showDetails && exception.code != null) ...[
-              const SizedBox(height: 8),
-              Text(
-                context.l10n.errorCode(exception.code!),
-                style: context.textTheme.bodySmall?.copyWith(
-                  color: context.colorScheme.onErrorContainer.withOpacity(0.7),
-                ),
-              ),
-            ],
-            const SizedBox(height: 16),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                if (canRetry && onRetry != null)
-                  TextButton(
-                    onPressed: onRetry,
-                    child: Text(context.l10n.retryAction),
-                  ),
-                if (onDismiss != null)
-                  TextButton(
-                    onPressed: onDismiss,
-                    child: Text(context.l10n.closeAction),
-                  ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  IconData _getErrorIcon() {
-    if (exception is NetworkException || exception is ConnectivityException) {
-      return Icons.wifi_off;
-    }
-    if (exception is TimeoutException) {
-      return Icons.timer;
-    }
-    if (exception is AuthException) {
-      return Icons.lock;
-    }
-    if (exception is ValidationException) {
-      return Icons.warning;
-    }
-    if (exception is RouteGenerationException) {
-      return Icons.route;
-    }
-    if (exception is LocationException) {
-      return Icons.location_off;
-    }
-    return Icons.error;
-  }
-}
-
-/// Widget compact pour afficher une erreur en banner
+/// Banner pour les erreurs légères  
 class ErrorBanner extends StatelessWidget {
   final AppException exception;
   final VoidCallback? onRetry;
@@ -237,7 +123,8 @@ class ErrorScreen extends StatelessWidget {
                 style: context.textTheme.bodyLarge,
                 textAlign: TextAlign.center,
               ),
-              if (showDetails && exception.code != null) ...[
+              // Afficher les détails seulement en mode debug
+              if (showDetails && kDebugMode && exception.code != null) ...[
                 const SizedBox(height: 16),
                 Container(
                   padding: const EdgeInsets.all(12),
@@ -351,7 +238,7 @@ class ErrorSnackBar {
   }
 }
 
-/// Dialog pour les erreurs importantes
+/// Dialog pour les erreurs importantes (MODE DEBUG UNIQUEMENT)
 class ErrorDialog extends StatelessWidget {
   final AppException exception;
   final VoidCallback? onRetry;
@@ -373,6 +260,18 @@ class ErrorDialog extends StatelessWidget {
     bool showDetails = false,
     bool barrierDismissible = true,
   }) {
+    // Protection supplémentaire : ne pas afficher en production
+    if (!kDebugMode) {
+      // En production, fallback vers SnackBar
+      ErrorSnackBar.show(
+        context,
+        exception,
+        onRetry: onRetry,
+        duration: const Duration(seconds: 5),
+      );
+      return Future.value();
+    }
+
     return showDialog<void>(
       context: context,
       barrierDismissible: barrierDismissible,
@@ -387,6 +286,11 @@ class ErrorDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Protection supplémentaire au niveau du build
+    if (!kDebugMode) {
+      return const SizedBox.shrink();
+    }
+
     final message = ErrorService.instance.getLocalizedMessage(exception, context);
     
     return AlertDialog(

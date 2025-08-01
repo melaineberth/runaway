@@ -7,6 +7,7 @@ import 'package:runaway/features/route_generator/domain/models/saved_route.dart'
 class AppDataState extends Equatable {
   // ===== HISTORIQUE =====
   final List<SavedRoute> savedRoutes;
+  final bool isHistoricDataLoaded;
   
   // ===== 🆕 CRÉDITS =====
   final UserCredits? userCredits;
@@ -25,6 +26,7 @@ class AppDataState extends Equatable {
   const AppDataState({    
     // Historique
     this.savedRoutes = const [],
+    this.isHistoricDataLoaded = false,
     
     // 🆕 Crédits
     this.userCredits,
@@ -44,6 +46,7 @@ class AppDataState extends Equatable {
   AppDataState copyWith({    
     // Historique
     List<SavedRoute>? savedRoutes,
+    bool? isHistoricDataLoaded,
     
     // 🆕 Crédits
     UserCredits? userCredits,
@@ -62,6 +65,7 @@ class AppDataState extends Equatable {
     return AppDataState(      
       // Historique
       savedRoutes: savedRoutes ?? this.savedRoutes,
+      isHistoricDataLoaded: isHistoricDataLoaded ?? this.isHistoricDataLoaded,
       
       // 🆕 Crédits
       userCredits: userCredits ?? this.userCredits,
@@ -83,6 +87,7 @@ class AppDataState extends Equatable {
   List<Object?> get props => [
     // Historique
     savedRoutes,
+    isHistoricDataLoaded,
     
     // 🆕 Crédits
     userCredits,
@@ -100,11 +105,10 @@ class AppDataState extends Equatable {
   ];
 
   /// Vérifie si toutes les données sont chargées
-  bool get isDataLoadedFinish=> hasHistoricData && 
-                          isCreditDataLoaded;
+  bool get isDataLoadedFinish=> hasHistoricData && isCreditDataLoaded;
 
   /// Vérifie si les données d'historique sont présentes
-  bool get hasHistoricData => savedRoutes.isNotEmpty;
+  bool get hasHistoricData => isHistoricDataLoaded;
 
   // ===== 🆕 GETTERS CRÉDITS =====
   

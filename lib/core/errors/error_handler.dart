@@ -1,6 +1,6 @@
 import 'dart:async';
+import 'package:flutter/foundation.dart'; 
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 import 'package:runaway/core/errors/app_exceptions.dart';
 import 'package:runaway/core/errors/error_service.dart';
 import 'package:runaway/core/helper/config/log_config.dart';
@@ -46,16 +46,49 @@ class ErrorHandler {
 
   /// Configuration par défaut selon le type d'exception
   ErrorDisplayConfig _getDefaultDisplayConfig(AppException exception) {
-    // Erreurs critiques -> Dialog ou Screen
-    if (exception is AuthException || 
-        exception is ServerException && exception.statusCode >= 500) {
-      return const ErrorDisplayConfig(
-        type: ErrorDisplayType.dialog,
-        showDetails: true,
-      );
+    // En production, pas de dialogs d'erreur - utiliser des SnackBar à la place
+    if (!kDebugMode) {
+      // En production, toutes les erreurs critiques deviennent des SnackBar
+      if (exception is AuthException || 
+          exception is ServerException && exception.statusCode >= 500) {
+        return const ErrorDisplayConfig(
+          type: ErrorDisplayType.snackBar,
+          showDetails: false,
+          duration: Duration(seconds: 6),
+        );
+      }
+
+      // Erreurs de permissions aussi en SnackBar en production
+      if (exception is PermissionException || exception is LocationException) {
+        return const ErrorDisplayConfig(
+          type: ErrorDisplayType.snackBar,
+          canRetry: false,
+          showDetails: false,
+          duration: Duration(seconds: 5),
+        );
+      }
+    } else {
+      // En mode debug, garder le comportement original avec dialogs
+      // Erreurs critiques -> Dialog ou Screen
+      if (exception is AuthException || 
+          exception is ServerException && exception.statusCode >= 500) {
+        return const ErrorDisplayConfig(
+          type: ErrorDisplayType.dialog,
+          showDetails: true,
+        );
+      }
+
+      // Erreurs de permissions -> Dialog
+      if (exception is PermissionException || exception is LocationException) {
+        return const ErrorDisplayConfig(
+          type: ErrorDisplayType.dialog,
+          canRetry: false,
+          showDetails: true,
+        );
+      }
     }
 
-    // Erreurs réseau -> SnackBar avec retry
+    // Erreurs réseau -> SnackBar avec retry (même comportement debug/prod)
     if (exception is NetworkException || 
         exception is TimeoutException ||
         exception is ConnectivityException) {
@@ -66,21 +99,12 @@ class ErrorHandler {
       );
     }
 
-    // Erreurs de validation -> Banner
+    // Erreurs de validation -> Banner (même comportement debug/prod)
     if (exception is ValidationException) {
       return const ErrorDisplayConfig(
         type: ErrorDisplayType.banner,
         canRetry: false,
-        showDetails: true,
-      );
-    }
-
-    // Erreurs de permissions -> Dialog
-    if (exception is PermissionException || exception is LocationException) {
-      return const ErrorDisplayConfig(
-        type: ErrorDisplayType.dialog,
-        canRetry: false,
-        showDetails: true,
+        showDetails: kDebugMode, // Détails seulement en debug
       );
     }
 
@@ -113,7 +137,7 @@ class ErrorHandler {
     } catch (e) {
       LogConfig.logError('Erreur dans ErrorHandler.handleError: $e');
       // Fallback critique
-      if (context!.mounted) {
+      if (context != null && context.mounted) {
         _showFallbackError(context);
       }
     }
@@ -139,12 +163,23 @@ class ErrorHandler {
         break;
 
       case ErrorDisplayType.dialog:
-        await ErrorDialog.show(
-          context,
-          exception,
-          onRetry: config.canRetry ? config.onRetry : null,
-          showDetails: config.showDetails,
-        );
+        // Vérification kDebugMode avant d'afficher un dialog
+        if (kDebugMode) {
+          await ErrorDialog.show(
+            context,
+            exception,
+            onRetry: config.canRetry ? config.onRetry : null,
+            showDetails: config.showDetails,
+          );
+        } else {
+          // En production, remplacer par une SnackBar
+          ErrorSnackBar.show(
+            context,
+            exception,
+            onRetry: config.canRetry ? config.onRetry : null,
+            duration: const Duration(seconds: 5),
+          );
+        }
         break;
 
       case ErrorDisplayType.banner:
@@ -192,16 +227,14 @@ class ErrorHandler {
     overlay.insert(overlayEntry);
 
     // Auto-remove après délai
-    Timer(config.duration ?? const Duration(seconds: 5), () {
-      try {
+    Timer(config.duration ?? const Duration(seconds: 4), () {
+      if (overlayEntry.mounted) {
         overlayEntry.remove();
-      } catch (e) {
-        // Overlay entry déjà supprimé
       }
     });
   }
 
-  /// Navigation vers une page d'erreur complète
+  /// Affiche une page d'erreur complète
   Future<void> _showErrorScreen(
     BuildContext context,
     AppException exception,
@@ -211,55 +244,71 @@ class ErrorHandler {
       MaterialPageRoute(
         builder: (context) => ErrorScreen(
           exception: exception,
-          onRetry: config.canRetry ? config.onRetry : null,
-          onGoHome: () => Navigator.of(context).popUntil((route) => route.isFirst),
-          showDetails: config.showDetails,
+          onRetry: config.onRetry,
+          showDetails: config.showDetails && kDebugMode, // Détails seulement en debug
         ),
       ),
     );
   }
 
-  /// Affichage d'erreur de fallback en cas de problème critique
-  void _showFallbackError(BuildContext? context) {
-    context ??= rootNavigatorKey.currentContext;
-    if (context == null) return;
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(context.l10n.unknownError),
-        backgroundColor: Colors.red,
-        duration: const Duration(seconds: 3),
-      ),
-    );
-  }
-
-  /// Log structuré de l'erreur
+  /// Log une erreur avec contexte
   void _logError(AppException exception, String? contextInfo) {
     LoggingService.instance.error(
       'ErrorHandler',
-      'Erreur gérée: ${exception.runtimeType}',
+      'Erreur dans ${contextInfo ?? 'Application'}',
       data: {
         'exception': exception.toJson(),
         'context': contextInfo,
-        'timestamp': DateTime.now().toIso8601String(),
+        'debug_mode': kDebugMode,
       },
     );
   }
 
-  // ===== MÉTHODES DE CONVERSION LEGACY =====
-  // Pour maintenir la compatibilité avec l'ancien code
-
-  /// Méthode legacy pour la compatibilité
-  static AppException handleHttpError(http.Response response) {
-    return ErrorService.instance.handleError(response);
+  /// Fallback pour les erreurs critiques
+  void _showFallbackError(BuildContext context) {
+    if (!context.mounted) return;
+    
+    // En production, utiliser une SnackBar simple même pour les fallbacks
+    if (!kDebugMode) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              Icon(
+                Icons.error_outline,
+                color: context.colorScheme.onError,
+                size: 20,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  context.l10n.unknownError,
+                  style: TextStyle(color: context.colorScheme.onError),
+                ),
+              ),
+            ],
+          ),
+          backgroundColor: context.colorScheme.error,
+          duration: const Duration(seconds: 4),
+        ),
+      );
+    } else {
+      // En debug, garder le dialog de fallback
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Text(context.l10n.errorDialogTitle),
+          content: Text(context.l10n.unknownError),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: Text(context.l10n.closeAction),
+            ),
+          ],
+        ),
+      );
+    }
   }
-
-  /// Méthode legacy pour la compatibilité
-  static AppException handleNetworkError(dynamic error) {
-    return ErrorService.instance.handleError(error);
-  }
-
-  // ===== MÉTHODES SPÉCIALISÉES =====
 
   /// Gère spécifiquement les erreurs de génération de parcours
   Future<void> handleRouteGenerationError(
@@ -272,10 +321,11 @@ class ErrorHandler {
       error,
       context: context,
       config: ErrorDisplayConfig(
-        type: ErrorDisplayType.dialog,
+        type: kDebugMode ? ErrorDisplayType.dialog : ErrorDisplayType.snackBar,
         canRetry: true,
         onRetry: onRetry,
-        showDetails: true,
+        showDetails: kDebugMode,
+        duration: const Duration(seconds: 6),
       ),
       contextInfo: contextInfo ?? 'Route Generation',
     );
@@ -292,9 +342,10 @@ class ErrorHandler {
       error,
       context: context,
       config: ErrorDisplayConfig(
-        type: ErrorDisplayType.dialog,
+        type: kDebugMode ? ErrorDisplayType.dialog : ErrorDisplayType.snackBar,
         canRetry: false,
         showDetails: false,
+        duration: const Duration(seconds: 5),
       ),
       contextInfo: contextInfo ?? 'Authentication',
     );
@@ -329,10 +380,10 @@ class ErrorHandler {
     await handleError(
       error,
       context: context,
-      config: const ErrorDisplayConfig(
+      config: ErrorDisplayConfig(
         type: ErrorDisplayType.banner,
         canRetry: false,
-        showDetails: true,
+        showDetails: kDebugMode,
       ),
       contextInfo: contextInfo ?? 'Validation',
     );

@@ -50,6 +50,7 @@ class TopSnackBar extends StatelessWidget {
       radius: 50.0,
       gradient: false,
       isGlow: true,
+      glowColor: Colors.black.withValues(alpha: 0.15),
       isBorder: true,
       borderColor: _getTextColor,
       borderWidth: 2.0,

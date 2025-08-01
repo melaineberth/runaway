@@ -85,7 +85,7 @@ class GraphHopperApiService {
     } else {
       // Gestion des erreurs HTTP
       LogConfig.logError('❌ Erreur HTTP ${response.statusCode}: ${response.body}');
-      throw ErrorHandler.handleHttpError(response);
+      throw ErrorHandler.instance.handleError(response);
     }
     
   } on AppException {
@@ -102,7 +102,7 @@ class GraphHopperApiService {
     );
   } catch (e) {
     LogConfig.logError('❌ Erreur inattendue: $e');
-    throw ErrorHandler.handleNetworkError(e);
+    throw ErrorHandler.instance.handleError(e);
   }
 }
 
@@ -161,7 +161,7 @@ class GraphHopperApiService {
           throw Exception('Échec génération itinéraire: ${data['error'] ?? 'Erreur inconnue'}');
         }
       } else {
-        throw ErrorHandler.handleHttpError(response);
+        throw ErrorHandler.instance.handleError(response);
       }
       
     } catch (e) {
