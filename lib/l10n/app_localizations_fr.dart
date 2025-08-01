@@ -1939,4 +1939,34 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get finishMessage => 'Terminer';
+
+  @override
+  String get generationMessage1 => 'Exploration de votre zone...';
+
+  @override
+  String get generationMessage2 => 'Recherche des meilleurs chemins...';
+
+  @override
+  String get generationMessage3 => 'Création de votre parcours...';
+
+  @override
+  String get generationMessage4 => 'Vérification de la qualité...';
+
+  @override
+  String get generationMessage5 => 'Optimisation finale...';
+
+  @override
+  String get generationMessage6 => 'Votre parcours est presque prêt !';
+
+  @override
+  String get savingMessage1 => 'Sauvegarde de votre parcours...';
+
+  @override
+  String get savingMessage2 => 'Capture de l\'aperçu...';
+
+  @override
+  String get savingMessage3 => 'Synchronisation cloud...';
+
+  @override
+  String get savingMessage4 => 'Finalisation...';
 }

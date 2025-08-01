@@ -25,26 +25,25 @@ class _FullScreenLoaderState extends State<FullScreenLoader> {
   int _currentMessageIndex = 0;
   String _currentMessage = '';
 
-  // 🆕 AMÉLIORATION : Intervalle optimisé pour synchronisation avec le temps minimum de 4s
   // 1.6s permet d'afficher 2-3 messages pendant les 4 secondes minimum
   static const Duration _messageRotationInterval = Duration(milliseconds: 1600);
 
   // Messages pour la génération de parcours - Version engageante
   List<String> get _generationMessages => [
-    'Exploration de votre zone...',
-    'Recherche des meilleurs chemins...',
-    'Création de votre parcours...',
-    'Vérification de la qualité...',
-    'Optimisation finale...',
-    'Votre parcours est presque prêt !',
+    context.l10n.generationMessage1,
+    context.l10n.generationMessage2,
+    context.l10n.generationMessage3,
+    context.l10n.generationMessage4,
+    context.l10n.generationMessage5,
+    context.l10n.generationMessage6,
   ];
 
   // Messages pour la sauvegarde - Version engageante
   List<String> get _savingMessages => [
-    'Sauvegarde de votre parcours...',
-    'Capture de l\'aperçu...',
-    'Synchronisation cloud...',
-    'Finalisation...',
+    context.l10n.savingMessage1,
+    context.l10n.savingMessage2,
+    context.l10n.savingMessage3,
+    context.l10n.savingMessage4,
   ];
 
   @override
@@ -90,8 +89,8 @@ class _FullScreenLoaderState extends State<FullScreenLoader> {
 
   String _getFallbackMessage() {
     return widget.loadingType == LoadingType.saving 
-        ? 'Sauvegarde...' 
-        : 'Génération...';
+        ? context.l10n.saving 
+        : context.l10n.generateInProgress;
   }
 
   void _startMessageRotation() {
@@ -109,7 +108,7 @@ class _FullScreenLoaderState extends State<FullScreenLoader> {
         if (messages.isNotEmpty) {
           _currentMessageIndex = (_currentMessageIndex + 1) % messages.length;
           _currentMessage = messages[_currentMessageIndex];
-          print('💬 Message ${_currentMessageIndex + 1}/${messages.length}: $_currentMessage');
+          debugPrint('💬 Message ${_currentMessageIndex + 1}/${messages.length}: $_currentMessage');
         }
       });
     });
@@ -128,7 +127,7 @@ class _FullScreenLoaderState extends State<FullScreenLoader> {
         children: [
           Positioned.fill(
             child: Container(
-              color: Colors.black,
+              color: context.adaptiveBackground,
               height: double.infinity,
               width: double.infinity,
               child: ClipRRect(
@@ -169,7 +168,7 @@ class _FullScreenLoaderState extends State<FullScreenLoader> {
                             key: ValueKey(_currentMessage),
                             style: GoogleFonts.inter(
                               fontSize: 17,
-                              color: Colors.white,
+                              color: context.adaptiveTextPrimary,
                               fontWeight: FontWeight.w500,
                             ),
                             textAlign: TextAlign.center,

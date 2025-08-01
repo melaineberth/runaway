@@ -91,3 +91,15 @@ class CreditTransaction extends Equatable {
     createdAt,
   ];
 }
+
+/// Extension pour les listes de parcours sauvegardés
+extension SavedRouteListExtensions on List<CreditTransaction> {
+  /// Tri par date de création
+  List<CreditTransaction> sortByCreationDate({bool ascending = false}) {
+    final sorted = List<CreditTransaction>.from(this);
+    sorted.sort((a, b) => ascending 
+        ? a.createdAt.compareTo(b.createdAt)
+        : b.createdAt.compareTo(a.createdAt));
+    return sorted;
+  }
+}

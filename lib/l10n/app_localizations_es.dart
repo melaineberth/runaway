@@ -1939,4 +1939,34 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get finishMessage => 'Finish';
+
+  @override
+  String get generationMessage1 => 'Exploring your area...';
+
+  @override
+  String get generationMessage2 => 'Searching for the best paths...';
+
+  @override
+  String get generationMessage3 => 'Creating your route...';
+
+  @override
+  String get generationMessage4 => 'Checking quality...';
+
+  @override
+  String get generationMessage5 => 'Final optimization...';
+
+  @override
+  String get generationMessage6 => 'Your route is almost ready!';
+
+  @override
+  String get savingMessage1 => 'Saving your route...';
+
+  @override
+  String get savingMessage2 => 'Capturing preview...';
+
+  @override
+  String get savingMessage3 => 'Cloud sync in progress...';
+
+  @override
+  String get savingMessage4 => 'Finalizing...';
 }

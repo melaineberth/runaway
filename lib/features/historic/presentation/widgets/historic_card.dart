@@ -253,6 +253,13 @@ class _HistoricCardState extends State<HistoricCard> {
             ),
           ),
 
+          // Indicateur de synchronisation dans le coin supérieur gauche
+          Positioned(
+            top: 15,
+            left: 15,
+            child: _buildSyncStatusIndicator(),
+          ),
+
           // Checkbox de sélection en mode édition
           Positioned(
             top: 15,
@@ -326,6 +333,36 @@ class _HistoricCardState extends State<HistoricCard> {
             : context.adaptiveTextSecondary.withValues(alpha: 0.6),
           size: 25,
         ),
+      ),
+    );
+  }
+
+  /// Indicateur de non-synchronisation dans le coin supérieur gauche
+  Widget _buildSyncStatusIndicator() {
+    // N'afficher que si la route n'est pas synchronisée
+    if (widget.route.isSynced) {
+      return SizedBox.shrink();
+    }
+
+    return AnimatedContainer(
+      key: ValueKey('sync_indicator'),
+      duration: const Duration(milliseconds: 300),
+      padding: EdgeInsets.all(6),
+      decoration: BoxDecoration(
+        color: Colors.orange.withValues(alpha: 0.9),
+        shape: BoxShape.circle,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.orange.withValues(alpha: 0.3),
+            blurRadius: 8,
+            spreadRadius: 0,
+          )
+        ],
+      ),
+      child: Icon(
+        HugeIcons.solidRoundedWifiOff02,
+        color: Colors.white,
+        size: 20,
       ),
     );
   }
@@ -424,9 +461,10 @@ class _HistoricCardState extends State<HistoricCard> {
           title: context.l10n.renameRoute,
           onTap: _showRenameSheet,
         ),
-        if (widget.onSync != null)
+        // Afficher l'option de synchronisation SEULEMENT si la route n'est pas synchronisée
+        if (!widget.route.isSynced && widget.onSync != null)
           PullDownMenuItem(
-            icon: HugeIcons.strokeRoundedLayerSendToBack,
+            icon: HugeIcons.strokeRoundedCloudUpload,
             title: context.l10n.synchronizeRoute,
             onTap: widget.onSync,
           ),
@@ -449,8 +487,10 @@ class _HistoricCardState extends State<HistoricCard> {
         },
         child: Icon(
           HugeIcons.solidRoundedMoreVertical,
-          color: widget.isEdit ? context.adaptiveDisabled.withValues(alpha: 0.15) : context.adaptiveTextPrimary,
-          size: 25,
+          color: widget.isEdit 
+            ? context.adaptiveTextSecondary.withValues(alpha: 0.3)
+            : context.adaptiveTextSecondary,
+          size: 30,
         ),
       ),
     );

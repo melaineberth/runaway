@@ -2588,10 +2588,6 @@
   "@tooManyAttempts": {
     "description": "Message d'erreur lorsque l'utilisateur a fait trop de tentatives de connexion."
   },
-
-
-
-
   "welcomeTitle": "Bienvenue sur Trailix !",
   "@welcomeTitle": {
     "description": "Titre de bienvenue lors de la première ouverture."
@@ -2679,5 +2675,56 @@
   "finishMessage": "Terminer",
   "@finishMessage": {
     "description": ""
+  },
+
+
+  "generationMessage1": "Exploration de votre zone...",
+  "@generationMessage1": {
+    "description": "Message displayed while generating the route: step 1, exploration phase."
+  },
+
+  "generationMessage2": "Recherche des meilleurs chemins...",
+  "@generationMessage2": {
+    "description": "Message displayed while generating the route: step 2, finding optimal paths."
+  },
+
+  "generationMessage3": "Création de votre parcours...",
+  "@generationMessage3": {
+    "description": "Message displayed while generating the route: step 3, route creation phase."
+  },
+
+  "generationMessage4": "Vérification de la qualité...",
+  "@generationMessage4": {
+    "description": "Message displayed while generating the route: step 4, quality control."
+  },
+
+  "generationMessage5": "Optimisation finale...",
+  "@generationMessage5": {
+    "description": "Message displayed while generating the route: step 5, final optimization step."
+  },
+
+  "generationMessage6": "Votre parcours est presque prêt !",
+  "@generationMessage6": {
+    "description": "Message displayed while generating the route: final message before completion."
+  },
+
+  "savingMessage1": "Sauvegarde de votre parcours...",
+  "@savingMessage1": {
+    "description": "Message displayed while saving the route: step 1, saving process."
+  },
+
+  "savingMessage2": "Capture de l'aperçu...",
+  "@savingMessage2": {
+    "description": "Message displayed while saving the route: step 2, generating preview image."
+  },
+
+  "savingMessage3": "Synchronisation cloud...",
+  "@savingMessage3": {
+    "description": "Message displayed while saving the route: step 3, synchronizing with the cloud."
+  },
+
+  "savingMessage4": "Finalisation...",
+  "@savingMessage4": {
+    "description": "Message displayed while saving the route: step 4, finalization."
   }
 }

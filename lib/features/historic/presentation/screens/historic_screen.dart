@@ -82,7 +82,7 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
     });
   }
 
-  /// 🎬 Initialise les contrôleurs d'animation
+  /// Initialise les contrôleurs d'animation
   void _initializeAnimations() {
     _fadeController = AnimationController(
       duration: const Duration(milliseconds: 800),
@@ -492,8 +492,15 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
 
     return Stack(
       children: [
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        BlurryPage(
+          physics: const BouncingScrollPhysics(),
+          shrinkWrap: false,
+          enableLazyLoading: shouldUseLazyLoading,
+          initialItemCount: _initialItemCount,
+          itemsPerPage: _itemsPerPage,
+          onLoadMore: _loadMoreRoutes,
+          isLoading: _isLoadingMore,
+          hasMoreData: _hasMoreData,
           children: [
             30.h,
             AnimatedBuilder(
@@ -526,25 +533,7 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
             ),
             15.h,
             
-            Expanded(
-              child: Builder(
-                builder: (context) {
-                  return BlurryPage(
-                    physics: const BouncingScrollPhysics(),
-                    shrinkWrap: false,
-                    enableLazyLoading: shouldUseLazyLoading,
-                    initialItemCount: _initialItemCount,
-                    itemsPerPage: _itemsPerPage,
-                    onLoadMore: _loadMoreRoutes,
-                    isLoading: _isLoadingMore,
-                    hasMoreData: _hasMoreData,
-                    children: [
-                      _buildAnimatedRoutesList(routesToDisplay),
-                    ],
-                  );
-                }
-              ),
-            ),
+            _buildAnimatedRoutesList(routesToDisplay),
           ],
         ),
 
@@ -691,7 +680,7 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
                             isEdit: isEditMode,
                             isSelected: selectedRouteIds.contains(route.id),
                             onDelete: () => _deleteRoute(route),
-                            onSync: routes == routes.unsyncedRoutes ? _syncData : null,
+                            onSync: !route.isSynced ? _syncData : null,
                             onRename: (newName) => _renameRoute(route, newName),
                             onShowOnMap: () => _showRouteOnMap(route),
                             onToggleSelection: () => _toggleRouteSelection(route.id),
@@ -803,7 +792,6 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
       (sum, route) => sum + (route.parameters.distanceKm),
     );
     final totalRoutes = routes.length;
-    final unsyncedCount = routes.unsyncedRoutes.length;
     
     return Padding(
       padding: const EdgeInsets.symmetric(
@@ -820,7 +808,9 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
               fontWeight: FontWeight.w600,
             ),
           ), 
+
           15.h,
+
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
@@ -837,15 +827,6 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
                 label: context.l10n.total,
                 color: Colors.green,
               ),
-              if (unsyncedCount > 0) ...[
-                _buildStatItem(
-                  icon: HugeIcons.strokeRoundedWifiOff01,
-                  value: unsyncedCount.toString(),
-                  label: context.l10n.unsynchronized,
-                  color: Colors.orange,
-                ),
-                8.w,
-              ]
             ],
           ),
         ],
@@ -890,16 +871,39 @@ class _HistoricScreenState extends State<HistoricScreen> with TickerProviderStat
     );
   }
 
-  void _syncData() {
-    print('☁️ Synchronisation des données demandée');
-    context.routeGenerationBloc.add(SyncPendingRoutesRequested());
-    
-    // Ensuite rafraîchir les données
-    Future.delayed(Duration(seconds: 2), () {
+  Future<void> _syncData() async {
+    try {
+      LogConfig.logInfo('🔄 Démarrage de la synchronisation manuelle');
+      
+      // Déclencher la synchronisation via AppDataBloc
+      context.appDataBloc.add(const ForceDataSyncRequested());
+      
+      // Feedback visuel pour l'utilisateur
       if (mounted) {
-        context.appDataBloc.add(const HistoricDataRefreshRequested());
+        showTopSnackBar(
+          Overlay.of(context),
+          TopSnackBar(
+            title: 'Synchronisation en cours...',
+          ),
+        );
       }
-    });
+      
+      // Feedback haptique
+      HapticFeedback.lightImpact();
+      
+    } catch (e) {
+      LogConfig.logError('❌ Erreur lors de la synchronisation: $e');
+      
+      if (mounted) {
+        showTopSnackBar(
+          Overlay.of(context),
+          TopSnackBar(
+            isError: true,
+            title: context.l10n.syncError,
+          ),
+        );
+      }
+    }
   }
 
   // Bouton d'édition avec effet d'aspiration

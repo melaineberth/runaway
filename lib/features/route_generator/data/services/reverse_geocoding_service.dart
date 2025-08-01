@@ -23,7 +23,6 @@ class ReverseGeocodingService {
       if (useCache) {
         final cachedResult = await _getCachedLocation(cacheKey);
         if (cachedResult != null) {
-          LogConfig.logInfo('📍 Localisation depuis cache: ${cachedResult.displayName}');
           return cachedResult;
         }
       }

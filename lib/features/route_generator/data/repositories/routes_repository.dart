@@ -35,7 +35,7 @@ class RoutesRepository {
   Future<void> initialize() async {
     await _routeCache.initialize();
     
-    // 🆕 Validation d'intégrité au démarrage
+    // Validation d'intégrité au démarrage
     final integrityReport = await _persistenceService.validateDataIntegrity();
     if (!integrityReport.isHealthy) {
       LogConfig.logInfo('Problèmes d\'intégrité détectés: ${integrityReport.errors.length} erreurs');
@@ -54,13 +54,13 @@ class RoutesRepository {
     // Optimisation en arrière-plan
     _persistenceService.performBackgroundOptimization();
 
-    // 🆕 Maintenance automatique en arrière-plan toutes les 24h
+    // Maintenance automatique en arrière-plan toutes les 24h
     _schedulePeriodicMaintenance();
     
     await _performSmartSync();
   }
 
-  /// 🆕 Sauvegarde un nouveau parcours avec image_url
+  /// Sauvegarde un nouveau parcours avec image_url
   Future<SavedRoute> saveRoute({
     required String name,
     required RouteParameters parameters,
@@ -95,7 +95,7 @@ class RoutesRepository {
       // 2. Sauvegarde locale immédiate
       await _saveRouteLocally(route);
 
-      // 🆕 3. Créer une sauvegarde de sécurité après chaque 5e route
+      // 3. Créer une sauvegarde de sécurité après chaque 5e route
       await _createSecurityBackupIfNeeded();
 
       // 4. Tentative de sync cloud (non bloquante)
@@ -152,7 +152,7 @@ class RoutesRepository {
           await _updateAllCacheLevels(routes);
           await _updateLastSyncTime();
 
-          // 🆕 Créer une sauvegarde de sécurité après récupération réussie
+          // Créer une sauvegarde de sécurité après récupération réussie
           if (routes.isNotEmpty) {
             await _persistenceService.createSecurityBackup(routes);
           }
@@ -189,7 +189,7 @@ class RoutesRepository {
         
         LogConfig.logError('❌ Erreur récupération routes, tentative de restauration: $e');
 
-        // 🆕 Tentative de restauration automatique en cas d'erreur
+        // Tentative de restauration automatique en cas d'erreur
         final restoredRoutes = await _persistenceService.restoreFromLatestBackup();
         if (restoredRoutes != null && restoredRoutes.isNotEmpty) {
           LogConfig.logInfo('🔄 Routes restaurées depuis backup: ${restoredRoutes.length}');
@@ -242,7 +242,7 @@ class RoutesRepository {
           lastUsedAt = lastUsedUtc.toLocal();
         }
 
-        // 🆕 Construire ElevationRange depuis les nouvelles colonnes ou fallback ancien
+        // Construire ElevationRange depuis les nouvelles colonnes ou fallback ancien
         ElevationRange elevationRange;
         if (item['elevation_range_min'] != null && item['elevation_range_max'] != null) {
           elevationRange = ElevationRange(
@@ -340,7 +340,7 @@ class RoutesRepository {
         }
       }
 
-      // 🆕 5. Créer une sauvegarde après suppression importante
+      // 5. Créer une sauvegarde après suppression importante
       final remainingRoutes = await _getLocalRoutes();
       if (remainingRoutes.isNotEmpty) {
         await _persistenceService.createSecurityBackup(remainingRoutes);
@@ -374,7 +374,7 @@ class RoutesRepository {
     // 1. Mise à jour locale
     await _renameRouteLocally(routeId, newName);
 
-    // 🆕 2. Mettre à jour le cache individuel de la route
+    // 2. Mettre à jour le cache individuel de la route
     final cachedRoute = await _routeCache.getRoute(routeId);
     if (cachedRoute != null) {
       final updatedRoute = cachedRoute.copyWith(name: newName);
@@ -382,13 +382,13 @@ class RoutesRepository {
       LogConfig.logSuccess('✅ Cache individuel mis à jour pour: $routeId');
     }
 
-    // 🆕 3. Invalider le cache rapide pour forcer le refresh
+    // 3. Invalider le cache rapide pour forcer le refresh
     await _invalidateRoutesCache();
 
     // 2. Synchronisation avec Supabase si connecté
     try {
       if (await _isConnected()) {
-        // 🆕 Vérifier d'abord si la route existe dans Supabase
+        // Vérifier d'abord si la route existe dans Supabase
         final routeExists = await _checkRouteExistsInSupabase(routeId, user.id);
         
         if (routeExists) {
@@ -411,7 +411,7 @@ class RoutesRepository {
     }
   }
 
-  /// 🆕 Vérifie si une route existe dans Supabase
+  /// Vérifie si une route existe dans Supabase
   Future<bool> _checkRouteExistsInSupabase(String routeId, String userId) async {
     try {
       final response = await _supabase
@@ -430,7 +430,7 @@ class RoutesRepository {
     }
   }
 
-  /// 🆕 Met à jour uniquement le nom d'une route existante dans Supabase
+  /// Met à jour uniquement le nom d'une route existante dans Supabase
   Future<void> _updateRouteNameInSupabase(String routeId, String newName, String userId) async {
     try {
       final response = await _supabase
@@ -502,7 +502,7 @@ class RoutesRepository {
     }
   }
 
-  /// 🆕 Met à jour les statistiques d'usage dans le cache local
+  /// Met à jour les statistiques d'usage dans le cache local
   Future<void> _updateLocalRouteUsage(String routeId) async {
     try {
       final routes = await _getLocalRoutes();
@@ -533,15 +533,15 @@ class RoutesRepository {
     await _cleanupInvalidPendingRoutes();
     await _syncPendingRoutes();
     
-    // 🆕 Compression des anciennes données après sync réussie
+    // Compression des anciennes données après sync réussie
     await _persistenceService.compressOldRoutes();
 
-    // 🆕 Logs des statistiques après sync
+    // Logs des statistiques après sync
     final stats = await getSystemStats();
     LogConfig.logInfo('📊 Stats post-sync: ${stats['cache']['total_routes']} routes, ${stats['cache']['size_formatted']}');
   }
 
-  /// 🆕 Planifie la maintenance périodique (toutes les 24h)
+  /// Planifie la maintenance périodique (toutes les 24h)
   void _schedulePeriodicMaintenance() {
     // Maintenance en arrière-plan sans bloquer l'utilisateur
     Future.delayed(Duration(hours: 24), () async {
@@ -557,7 +557,7 @@ class RoutesRepository {
     });
   }
 
-  /// 🆕 Méthode de maintenance complète
+  /// Méthode de maintenance complète
   Future<void> performMaintenanceTasks() async {
     LogConfig.logInfo('🔧 Démarrage des tâches de maintenance...');
     
@@ -589,7 +589,7 @@ class RoutesRepository {
     }
   }
 
-  /// 🆕 Crée une sauvegarde de sécurité si nécessaire (toutes les 5 routes)
+  /// Crée une sauvegarde de sécurité si nécessaire (toutes les 5 routes)
   Future<void> _createSecurityBackupIfNeeded() async {
     try {
       final routes = await _getLocalRoutes();
@@ -604,7 +604,7 @@ class RoutesRepository {
     }
   }
 
-  /// 🆕 Obtient les statistiques complètes du système
+  /// Obtient les statistiques complètes du système
   Future<Map<String, dynamic>> getSystemStats() async {
     final cacheStats = await _routeCache.getCacheStats();
     final integrityReport = await _persistenceService.validateDataIntegrity();
@@ -626,7 +626,7 @@ class RoutesRepository {
     };
   }
 
-  /// 🆕 Sauvegarde un parcours dans Supabase avec image_url
+  /// Sauvegarde un parcours dans Supabase avec image_url
   Future<void> _saveRouteToSupabase(SavedRoute route, String userId) async {
     try {
       LogConfig.logInfo('📤 Envoi vers Supabase: ${route.id}');
@@ -676,7 +676,7 @@ class RoutesRepository {
     }
   }
 
-  /// 🆕 Récupère les parcours depuis Supabase avec image_url
+  /// Récupère les parcours depuis Supabase avec image_url
   Future<List<SavedRoute>> _getRoutesFromSupabase(String userId) async {
     final response = await _supabase
         .from('user_routes')
@@ -711,7 +711,7 @@ class RoutesRepository {
         }
       }
 
-      // 🆕 Construire ElevationRange depuis les nouvelles colonnes ou fallback ancien
+      // Construire ElevationRange depuis les nouvelles colonnes ou fallback ancien
       ElevationRange elevationRange;
       if (data['elevation_range_min'] != null && data['elevation_range_max'] != null) {
         elevationRange = ElevationRange(
@@ -774,7 +774,7 @@ class RoutesRepository {
     }
   }
 
-  /// 🆕 Sauvegarde locale avec support image_url
+  /// Sauvegarde locale avec support image_url
   Future<void> _saveRouteLocally(SavedRoute route) async {
     final prefs = await SharedPreferences.getInstance();
     final routes = await _getLocalRoutes();
@@ -792,7 +792,7 @@ class RoutesRepository {
     LogConfig.logInfo('💾 Route sauvée localement: ${route.id} - Image: ${route.hasImage ? "✅" : "❌"}');
   }
 
-  /// 🆕 Récupération locale avec support image_url
+  /// Récupération locale avec support image_url
   Future<List<SavedRoute>> _getLocalRoutes({int? limit, int? offset}) async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -843,26 +843,14 @@ class RoutesRepository {
 
   Future<bool> _isConnected() async {
     try {
-      final connectivityResult = await Connectivity().checkConnectivity();
-      final bool isConnected = false;
+      final connectivityResults = await Connectivity().checkConnectivity();
       
-      if (connectivityResult.contains(ConnectivityResult.mobile)) {
-        // Mobile network available.
-        return isConnected == true;
-      } else if (connectivityResult.contains(ConnectivityResult.wifi)) {
-        // Wi-fi is available.
-        // Note for Android:
-        // When both mobile and Wi-Fi are turned on system will return Wi-Fi only as active network type
-        return isConnected == true;
-      } else if (connectivityResult.contains(ConnectivityResult.ethernet)) {
-        // Ethernet connection available.
-        return isConnected == true;
-      } else if (connectivityResult.contains(ConnectivityResult.none)) {
-        // No available network types
-        return isConnected == false;
-      }
-
-      return isConnected;
+      // Vérifier si au moins une connexion est disponible
+      return connectivityResults.any((result) => 
+        result == ConnectivityResult.wifi ||
+        result == ConnectivityResult.mobile ||
+        result == ConnectivityResult.ethernet
+      );
     } catch (e) {
       LogConfig.logError('❌ Erreur vérification connectivité: $e');
       return false;
@@ -885,10 +873,45 @@ class RoutesRepository {
   }
 
   Future<void> _markRouteSynced(String routeId) async {
-    final prefs = await SharedPreferences.getInstance();
-    final pendingIds = prefs.getStringList(_pendingSyncKey) ?? [];
-    pendingIds.remove(routeId);
-    await prefs.setStringList(_pendingSyncKey, pendingIds);
+    try {
+      // Retirer de la liste des synchronisations en attente
+      final prefs = await SharedPreferences.getInstance();
+      final pendingIds = prefs.getStringList(_pendingSyncKey) ?? [];
+      pendingIds.remove(routeId);
+      await prefs.setStringList(_pendingSyncKey, pendingIds);
+      
+      // Mettre à jour la route locale pour marquer isSynced = true
+      await _updateLocalRouteSyncStatus(routeId, true);
+      
+      LogConfig.logInfo('✅ Route marquée comme synchronisée: $routeId');
+    } catch (e) {
+      LogConfig.logError('❌ Erreur marquage route synchronisée: $e');
+    }
+  }
+
+  /// Met à jour le statut de synchronisation d'une route dans le cache local
+  Future<void> _updateLocalRouteSyncStatus(String routeId, bool isSynced) async {
+    try {
+      final routes = await _getLocalRoutes();
+      final routeIndex = routes.indexWhere((r) => r.id == routeId);
+      
+      if (routeIndex != -1) {
+        final route = routes[routeIndex];
+        final updatedRoute = route.copyWith(isSynced: isSynced);
+        
+        routes[routeIndex] = updatedRoute;
+        await _updateLocalCache(routes);
+        
+        // Mettre à jour aussi le cache rapide
+        await _routeCache.cacheRoute(routeId, updatedRoute);
+        
+        LogConfig.logInfo('🔄 Statut sync mis à jour pour route: $routeId -> $isSynced');
+      } else {
+        LogConfig.logError('❌ Route non trouvée pour mise à jour sync: $routeId');
+      }
+    } catch (e) {
+      LogConfig.logError('❌ Erreur mise à jour statut sync: $e');
+    }
   }
 
   Future<void> _removeFromPendingSync(String routeId) async {
@@ -924,7 +947,7 @@ class RoutesRepository {
             orElse: () => throw Exception('Route locale introuvable: $routeId'),
           );
 
-          // 🆕 Vérifier si la route existe déjà sur le serveur
+          // Vérifier si la route existe déjà sur le serveur
           final exists = await _checkRouteExistsInSupabase(routeId, user.id);
           
           if (exists) {
@@ -1070,11 +1093,18 @@ class RoutesRepository {
     Future.microtask(() async {
       try {
         if (await _isConnected()) {
+          LogConfig.logInfo('☁️ Tentative sync immédiate: ${route.id}');
+          
+          // Tenter la synchronisation immédiate
           await _saveRouteToSupabase(route, userId);
-          print('☁️ Sync cloud réussie: ${route.id}');
+          
+          // Marquer comme synchronisée après succès
+          await _updateLocalRouteSyncStatus(route.id, true);
+          
+          LogConfig.logInfo('✅ Sync cloud réussie et route marquée: ${route.id}');
         } else {
           await _markRouteForSync(route.id);
-          print('📡 Route marquée pour sync ultérieure: ${route.id}');
+          LogConfig.logInfo('📡 Pas de connexion - Route marquée pour sync ultérieure: ${route.id}');
         }
       } catch (e) {
         LogConfig.logError('❌ Erreur sync cloud asynchrone: $e');

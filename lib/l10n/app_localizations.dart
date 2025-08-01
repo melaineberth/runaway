@@ -3782,6 +3782,66 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Finish'**
   String get finishMessage;
+
+  /// Message displayed while generating the route: step 1, exploration phase.
+  ///
+  /// In en, this message translates to:
+  /// **'Exploring your area...'**
+  String get generationMessage1;
+
+  /// Message displayed while generating the route: step 2, finding optimal paths.
+  ///
+  /// In en, this message translates to:
+  /// **'Searching for the best paths...'**
+  String get generationMessage2;
+
+  /// Message displayed while generating the route: step 3, route creation phase.
+  ///
+  /// In en, this message translates to:
+  /// **'Creating your route...'**
+  String get generationMessage3;
+
+  /// Message displayed while generating the route: step 4, quality control.
+  ///
+  /// In en, this message translates to:
+  /// **'Checking quality...'**
+  String get generationMessage4;
+
+  /// Message displayed while generating the route: step 5, final optimization step.
+  ///
+  /// In en, this message translates to:
+  /// **'Final optimization...'**
+  String get generationMessage5;
+
+  /// Message displayed while generating the route: final message before completion.
+  ///
+  /// In en, this message translates to:
+  /// **'Your route is almost ready!'**
+  String get generationMessage6;
+
+  /// Message displayed while saving the route: step 1, saving process.
+  ///
+  /// In en, this message translates to:
+  /// **'Saving your route...'**
+  String get savingMessage1;
+
+  /// Message displayed while saving the route: step 2, generating preview image.
+  ///
+  /// In en, this message translates to:
+  /// **'Capturing preview...'**
+  String get savingMessage2;
+
+  /// Message displayed while saving the route: step 3, synchronizing with the cloud.
+  ///
+  /// In en, this message translates to:
+  /// **'Cloud sync in progress...'**
+  String get savingMessage3;
+
+  /// Message displayed while saving the route: step 4, finalization.
+  ///
+  /// In en, this message translates to:
+  /// **'Finalizing...'**
+  String get savingMessage4;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {
